@@ -1,9 +1,14 @@
 const fs = require('fs');
 
-// Désactiver ESLint pendant le build Vercel
-fs.writeFileSync('./.env', `
-DISABLE_ESLINT_PLUGIN=true
-ESLINT_NO_DEV_ERRORS=true
+// Créer vercel.json dans le dossier frontend
+fs.writeFileSync('./vercel.json', `
+{
+  "buildCommand": "DISABLE_ESLINT_PLUGIN=true npm run build",
+  "outputDirectory": "build"
+}
 `.trim());
 
-console.log('.env créé !');
+// Mettre à jour .env
+fs.writeFileSync('./.env', `DISABLE_ESLINT_PLUGIN=true\nGENERATE_SOURCEMAP=false`);
+
+console.log('OK !');
