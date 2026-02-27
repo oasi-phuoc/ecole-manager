@@ -509,7 +509,7 @@ export default function EmploiDuTemps() {
                           ...crsPer.map((cr, idx) => (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
-                                P{idx+1} — {cr.heure_debut}–{cr.heure_fin}
+                                Période {idx+1}
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectations.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
@@ -517,10 +517,21 @@ export default function EmploiDuTemps() {
                                   <td key={prof.id} style={{...styles.td,padding:4}}>
                                     <select style={{...styles.cellSel,background:aff?'#e8f5e9':'#fff'}}
                                       value={aff?aff.classe_id:''}
-                                      onChange={e => {
+                                      onChange={async e => {
                                         const classe_id = e.target.value;
-                                        if (!classe_id) { const a=affectations.find(x=>x.prof_id==prof.id&&x.creneau_id==cr.id); if(a) axios.delete(API+'/planning/affectations/'+a.id,{headers}).then(chargerTout); }
-                                        else axios.post(API+'/planning/affectations',{prof_id:prof.id,classe_id,creneau_id:cr.id},{headers}).then(chargerTout);
+                                        if (!classe_id) {
+                                          const a = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
+                                          if (a) { await axios.delete(API+'/planning/affectations/'+a.id, {headers}); chargerTout(); }
+                                        } else {
+                                          // Vérifier si cette classe est déjà prise ce créneau par un autre prof
+                                          const conflit = affectations.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id);
+                                          if (conflit) { alert('⚠️ ' + classe_id + ' est déjà affectée à un autre prof ce créneau !'); return; }
+                                          // Supprimer ancienne affectation de CE prof pour CE créneau
+                                          const ancienne = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
+                                          if (ancienne) await axios.delete(API+'/planning/affectations/'+ancienne.id, {headers});
+                                          await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
+                                          chargerTout();
+                                        }
                                       }}
                                       disabled={!isAdmin()}>
                                       <option value="">—</option>
@@ -649,8 +660,23 @@ export default function EmploiDuTemps() {
                               return (
                                 <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
                                   background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
-                                  {aff?<><b style={{color:'#2e7d32'}}>{aff.prof_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</span></>}</>:
-                                   aCours?<span style={{color:'#f57c00',fontSize:11}}>à affecter</span>:''}
+                                  {aff ? (
+                                    <div>
+                                      <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
+                                      {isAdmin() && (
+                                        <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
+                                          value={aff.matiere_id||''}
+                                          onChange={async ev => {
+                                            await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
+                                            chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                                          }}>
+                                          <option value="">— Branche —</option>
+                                          {(branchesPoolP.length>0?branchesPoolP:matieres).map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                        </select>
+                                      )}
+                                      {!isAdmin() && aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>}
+                                    </div>
+                                  ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
                                 </td>
                               );
                             })}

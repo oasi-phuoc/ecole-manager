@@ -10,30 +10,31 @@ const getBranches = async (req, res) => {
 };
 
 const creerBranche = async (req, res) => {
-  const { nom, code, coefficient } = req.body;
+  const { nom, periodes_semaine, coefficient } = req.body;
+  if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
   try {
     const result = await pool.query(
-      'INSERT INTO matieres (nom, code, coefficient) VALUES ($1,$2,$3) RETURNING *',
-      [nom, code || null, coefficient || 1]
+      'INSERT INTO matieres (nom, periodes_semaine, coefficient) VALUES ($1, $2, $3) RETURNING *',
+      [nom, parseInt(periodes_semaine) || 1, parseFloat(coefficient) || 1]
     );
-    res.status(201).json({ message: 'Branche creee', branche: result.rows[0] });
+    res.status(201).json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(400).json({ message: 'Cette branche existe déjà !' });
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
   }
 };
 
 const modifierBranche = async (req, res) => {
-  const { nom, code, coefficient } = req.body;
+  const { id } = req.params;
+  const { nom, periodes_semaine, coefficient } = req.body;
+  if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
   try {
     const result = await pool.query(
-      'UPDATE matieres SET nom=$1, code=$2, coefficient=$3 WHERE id=$4 RETURNING *',
-      [nom, code || null, coefficient || 1, req.params.id]
+      'UPDATE matieres SET nom=$1, periodes_semaine=$2, coefficient=$3 WHERE id=$4 RETURNING *',
+      [nom, parseInt(periodes_semaine) || 1, parseFloat(coefficient) || 1, id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Branche non trouvee' });
-    res.json({ message: 'Branche modifiee' });
+    res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(400).json({ message: 'Cette branche existe déjà !' });
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
   }
 };

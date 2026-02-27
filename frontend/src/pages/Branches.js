@@ -62,7 +62,7 @@ export default function Branches() {
 
   const branchesFiltrees = branches.filter(b =>
     b.nom.toLowerCase().includes(recherche.toLowerCase()) ||
-    (b.periodes_semaine && b.periodes_semaine.toLowerCase().includes(recherche.toLowerCase()))
+    (b.periodes_semaine && String(b.periodes_semaine).includes(recherche))
   );
 
   return (
@@ -89,7 +89,7 @@ export default function Branches() {
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Périodes/sem</label>
-                  <input style={styles.input} type="text" value={form.periodes_semaine} onChange={e => setForm({ ...form, periodes_semaine: e.target.value })} placeholder="Ex: MATH, FR..." />
+                  <input style={styles.input} type="text" value={form.periodes_semaine} onChange={e => setForm({ ...form, periodes_semaine: e.target.value })} placeholder="Ex: 4" type="number" min="1" max="40" />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Coefficient</label>
