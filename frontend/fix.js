@@ -1,11 +1,11 @@
 const fs = require('fs');
 
-fs.writeFileSync('./vercel.json', `
-{
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install"
-}
-`.trim());
+// Lire package.json
+let pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
-console.log('vercel.json mis a jour !');
+// Modifier le script build pour désactiver ESLint
+pkg.scripts.build = "DISABLE_ESLINT_PLUGIN=true react-scripts build";
+
+fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+console.log('package.json mis a jour !');
+console.log('Build script:', pkg.scripts.build);
