@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:5000/api';
+const API = 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Evenement', 'Conge', 'Examen', 'Reunion', 'Sortie', 'Autre'];
 const COULEURS = ['#1a73e8', '#34a853', '#ea4335', '#fbbc04', '#9c27b0', '#ff9800'];
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];

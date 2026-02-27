@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
+const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);

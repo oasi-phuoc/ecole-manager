@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:5000/api';
+const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');

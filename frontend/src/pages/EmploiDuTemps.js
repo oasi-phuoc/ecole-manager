@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:5000/api';
+const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const COULEURS = { 'Lundi': '#1a73e8', 'Mardi': '#34a853', 'Mercredi': '#fbbc04', 'Jeudi': '#ea4335', 'Vendredi': '#9c27b0' };
 
