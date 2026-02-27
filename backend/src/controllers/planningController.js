@@ -175,7 +175,7 @@ const getPlanningClasse = async (req, res) => {
   const classe = await pool.query('SELECT id,nom FROM classes WHERE id=$1', [classe_id]);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
   const affectations = await pool.query(`
-    SELECT a.creneau_id, u.nom||' '||u.prenom as prof_nom, m.nom as matiere_nom
+    SELECT a.id, a.creneau_id, a.prof_id, a.matiere_id, u.nom||' '||u.prenom as prof_nom, m.nom as matiere_nom
     FROM affectations a
     JOIN utilisateurs u ON u.id=a.prof_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
