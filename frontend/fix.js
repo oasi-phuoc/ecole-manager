@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const COULEURS = ['#1a73e8','#34a853','#ea4335','#9c27b0','#ff9800','#00bcd4','#795548'];
+const TYPES_COURS = ['cours','titulariat','atelier','autre'];
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('disponibilites');
@@ -21,20 +22,21 @@ export default function EmploiDuTemps() {
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [dispos, setDispos] = useState({});
   const [planningGeneral, setPlanningGeneral] = useState(null);
+  const [planningPoolId, setPlanningPoolId] = useState('');
   const [planningProf, setPlanningProf] = useState(null);
   const [profPlanningId, setProfPlanningId] = useState('');
+  const [planningClasse, setPlanningClasse] = useState(null);
+  const [classePlanningId, setClassePlanningId] = useState('');
   const [showPoolForm, setShowPoolForm] = useState(false);
   const [poolEdit, setPoolEdit] = useState(null);
-  const [poolForm, setPoolForm] = useState({ nom: '', site: '', couleur: '#1a73e8', prof_ids: [] });
-  const [showAffForm, setShowAffForm] = useState(false);
-  const [affForm, setAffForm] = useState({ prof_id: '', classe_id: '', matiere_id: '', creneau_id: '' });
+  const [poolForm, setPoolForm] = useState({ nom:'', site:'', couleur:'#1a73e8', prof_ids:[], classe_ids:[] });
+  const [poolAffId, setPoolAffId] = useState('');
+  const [classePeriodesMap, setClassePeriodesMap] = useState({});
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
-  useEffect(() => {
-    chargerTout();
-  }, []);
+  useEffect(() => { chargerTout(); }, []);
 
   const chargerTout = async () => {
     try {
@@ -52,14 +54,14 @@ export default function EmploiDuTemps() {
       setCreneaux(cr.data);
       setPools(po.data);
       setAffectations(af.data);
-    } catch (err) { console.error(err); }
+    } catch(err) { console.error(err); }
   };
 
   const chargerDispos = async (prof_id) => {
     const r = await axios.get(API + '/planning/disponibilites/' + prof_id, { headers });
     const map = {};
+    creneaux.forEach(c => { map[c.id] = true; });
     r.data.forEach(d => { map[d.creneau_id] = d.disponible; });
-    creneaux.forEach(c => { if (map[c.id] === undefined) map[c.id] = true; });
     setDispos(map);
     setProfSelectionne(prof_id);
   };
@@ -70,9 +72,7 @@ export default function EmploiDuTemps() {
     alert('Disponibilités sauvegardées !');
   };
 
-  const toggleDispo = (creneau_id) => {
-    setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
-  };
+  const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
 
   const creneauxParJour = (jour) => creneaux.filter(c => c.jour === jour);
 
@@ -83,53 +83,56 @@ export default function EmploiDuTemps() {
       } else {
         await axios.post(API + '/planning/pools', poolForm, { headers });
       }
-      setShowPoolForm(false);
-      setPoolEdit(null);
-      setPoolForm({ nom: '', site: '', couleur: '#1a73e8', prof_ids: [] });
+      setShowPoolForm(false); setPoolEdit(null);
+      setPoolForm({ nom:'', site:'', couleur:'#1a73e8', prof_ids:[], classe_ids:[] });
       chargerTout();
-    } catch (err) { alert(err.response?.data?.message || err.message); }
+    } catch(err) { alert(err.response?.data?.message || err.message); }
   };
 
-  const handleDeletePool = async (id) => {
-    if (window.confirm('Supprimer ce pool ?')) {
-      await axios.delete(API + '/planning/pools/' + id, { headers });
-      chargerTout();
+  const toggleProfPool = (id) => setPoolForm(prev => ({ ...prev, prof_ids: prev.prof_ids.includes(id) ? prev.prof_ids.filter(x => x !== id) : [...prev.prof_ids, id] }));
+  const toggleClassePool = (id) => setPoolForm(prev => ({ ...prev, classe_ids: prev.classe_ids.includes(id) ? prev.classe_ids.filter(x => x !== id) : [...prev.classe_ids, id] }));
+
+  const poolSelectionne = pools.find(p => p.id == poolAffId);
+  const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
+  const classesPool = poolSelectionne ? poolSelectionne.classes : classes;
+
+  const getAffectation = (classe_id, creneau_id) => affectations.find(a => a.classe_id == classe_id && a.creneau_id == creneau_id);
+
+  const handleCellChange = async (classe_id, creneau_id, value) => {
+    if (!isAdmin()) return;
+    if (!value) {
+      const aff = getAffectation(classe_id, creneau_id);
+      if (aff) await axios.delete(API + '/planning/affectations/' + aff.id, { headers });
+    } else {
+      const [type, prof_id, matiere_id] = value.split('|');
+      if (type === 'special') {
+        await axios.post(API + '/planning/affectations', { prof_id: prof_id || null, classe_id, creneau_id, matiere_id: matiere_id || null }, { headers });
+      } else {
+        await axios.post(API + '/planning/affectations', { prof_id: value, classe_id, creneau_id }, { headers });
+      }
     }
+    chargerTout();
   };
 
-  const toggleProfPool = (prof_id) => {
-    setPoolForm(prev => ({
-      ...prev,
-      prof_ids: prev.prof_ids.includes(prof_id)
-        ? prev.prof_ids.filter(id => id !== prof_id)
-        : [...prev.prof_ids, prof_id]
-    }));
-  };
-
-  const handleSaveAff = async () => {
-    try {
-      await axios.post(API + '/planning/affectations', affForm, { headers });
-      setShowAffForm(false);
-      setAffForm({ prof_id: '', classe_id: '', matiere_id: '', creneau_id: '' });
-      chargerTout();
-    } catch (err) { alert(err.response?.data?.message || err.message); }
-  };
-
-  const handleDeleteAff = async (id) => {
-    if (window.confirm('Supprimer cette affectation ?')) {
-      await axios.delete(API + '/planning/affectations/' + id, { headers });
-      chargerTout();
-    }
-  };
-
-  const chargerPlanningGeneral = async () => {
-    const r = await axios.get(API + '/planning/general', { headers });
+  const chargerPlanningGeneral = async (pool_id) => {
+    const url = API + '/planning/general' + (pool_id ? '?pool_id=' + pool_id : '');
+    const r = await axios.get(url, { headers });
     setPlanningGeneral(r.data);
   };
 
   const chargerPlanningProf = async (id) => {
     const r = await axios.get(API + '/planning/prof/' + id, { headers });
     setPlanningProf(r.data);
+  };
+
+  const chargerPlanningClasse = async (id) => {
+    const r = await axios.get(API + '/planning/classe/' + id, { headers });
+    setPlanningClasse(r.data);
+  };
+
+  const periodeLabel = (ordre, periode) => {
+    const num = periode === 'Matin' ? ordre : ordre;
+    return 'P' + num;
   };
 
   return (
@@ -141,14 +144,15 @@ export default function EmploiDuTemps() {
 
       <div style={styles.onglets}>
         {[
-          { id: 'disponibilites', label: '✅ Disponibilités' },
-          { id: 'pools', label: '👥 Pools' },
-          { id: 'affectations', label: '📌 Affectations' },
-          { id: 'general', label: '📊 Planning Général' },
-          { id: 'prof', label: '👨‍🏫 Planning Prof' },
+          {id:'disponibilites', label:'✅ Disponibilités'},
+          {id:'pools', label:'👥 Pools'},
+          {id:'affectations', label:'📌 Affectations'},
+          {id:'general', label:'📊 Planning Général'},
+          {id:'prof', label:'👨‍🏫 Planning Prof'},
+          {id:'classe', label:'🏫 Planning Classe'},
         ].map(o => (
-          <button key={o.id} style={{ ...styles.onglet, ...(onglet === o.id ? styles.ongletActif : {}) }}
-            onClick={() => { setOnglet(o.id); if (o.id === 'general') chargerPlanningGeneral(); }}>
+          <button key={o.id} style={{...styles.onglet, ...(onglet===o.id?styles.ongletActif:{})}}
+            onClick={() => { setOnglet(o.id); if(o.id==='general') chargerPlanningGeneral(''); }}>
             {o.label}
           </button>
         ))}
@@ -157,12 +161,11 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitre}>Sélectionner un professeur</h3>
-            <div style={styles.profsGrid}>
+          <div style={styles.card}>
+            <h3 style={styles.cardTitre}>Sélectionner un professeur</h3>
+            <div style={styles.flexWrap}>
               {profs.map(p => (
-                <button key={p.id}
-                  style={{ ...styles.profBtn, ...(profSelectionne == p.id ? styles.profBtnActif : {}) }}
+                <button key={p.id} style={{...styles.profBtn, ...(profSelectionne==p.id?styles.profBtnActif:{})}}
                   onClick={() => chargerDispos(p.id)}>
                   {p.nom} {p.prenom}
                 </button>
@@ -171,49 +174,43 @@ export default function EmploiDuTemps() {
           </div>
 
           {profSelectionne && (
-            <div style={styles.section}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitre}>
-                  Disponibilités — {profs.find(p => p.id == profSelectionne)?.nom} {profs.find(p => p.id == profSelectionne)?.prenom}
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <h3 style={styles.cardTitre}>
+                  {profs.find(p=>p.id==profSelectionne)?.nom} {profs.find(p=>p.id==profSelectionne)?.prenom}
                 </h3>
-                {isAdmin() && <button style={styles.btnSauver} onClick={sauverDispos}>💾 Sauvegarder</button>}
+                {isAdmin() && <button style={styles.btnBleu} onClick={sauverDispos}>💾 Sauvegarder</button>}
               </div>
-              <div style={styles.dispoGrid}>
-                {JOURS.map(jour => {
-                  const crs = creneauxParJour(jour);
-                  if (crs.length === 0) return null;
-                  const matin = crs.filter(c => c.periode === 'Matin');
-                  const aprem = crs.filter(c => c.periode === 'Après-midi');
-                  return (
-                    <div key={jour} style={styles.jourCol}>
-                      <div style={styles.jourHeader}>{jour}</div>
-                      {matin.length > 0 && (
-                        <>
-                          <div style={styles.periodeLabel}>Matin</div>
-                          {matin.map(c => (
-                            <div key={c.id} style={{ ...styles.creneauCase, background: dispos[c.id] ? '#e8f5e9' : '#fce4ec' }}
-                              onClick={() => isAdmin() && toggleDispo(c.id)}>
-                              <input type="checkbox" checked={!!dispos[c.id]} onChange={() => isAdmin() && toggleDispo(c.id)} />
-                              <span style={styles.creneauHeure}>{c.heure_debut}-{c.heure_fin}</span>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                      {aprem.length > 0 && (
-                        <>
-                          <div style={styles.periodeLabel}>Après-midi</div>
-                          {aprem.map(c => (
-                            <div key={c.id} style={{ ...styles.creneauCase, background: dispos[c.id] ? '#e8f5e9' : '#fce4ec' }}
-                              onClick={() => isAdmin() && toggleDispo(c.id)}>
-                              <input type="checkbox" checked={!!dispos[c.id]} onChange={() => isAdmin() && toggleDispo(c.id)} />
-                              <span style={styles.creneauHeure}>{c.heure_debut}-{c.heure_fin}</span>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+              <div style={{overflowX:'auto'}}>
+                <table style={styles.tableDispos}>
+                  <thead>
+                    <tr>
+                      <th style={styles.thDispo}>Période</th>
+                      {JOURS.map(j => <th key={j} style={styles.thDispo}>{j}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Matin','Après-midi'].map(periode => {
+                      const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
+                      return crsBase.map((crBase, idx) => (
+                        <tr key={crBase.id}>
+                          <td style={styles.tdPeriode}>P{idx+1} {periode==='Après-midi'?'(AM)':'(M)'}<br/><span style={{fontSize:11,color:'#888'}}>{crBase.heure_debut}–{crBase.heure_fin}</span></td>
+                          {JOURS.map(jour => {
+                            const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
+                            if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f5f5f5'}}></td>;
+                            const ok = dispos[cr.id] !== false;
+                            return (
+                              <td key={jour} style={{...styles.tdDispo, background: ok?'#e8f5e9':'#fce4ec', cursor: isAdmin()?'pointer':'default'}}
+                                onClick={() => isAdmin() && toggleDispo(cr.id)}>
+                                <span style={{fontSize:18}}>{ok?'✅':'❌'}</span>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ));
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -223,41 +220,49 @@ export default function EmploiDuTemps() {
       {/* ===== POOLS ===== */}
       {onglet === 'pools' && (
         <div>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitre}>Pools de professeurs</h3>
-            {isAdmin() && <button style={styles.btnAjouter} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({ nom: '', site: '', couleur: '#1a73e8', prof_ids: [] }); }}>+ Nouveau pool</button>}
+          <div style={styles.cardHeader}>
+            <h3 style={styles.cardTitre}>Pools de professeurs</h3>
+            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[]}); }}>+ Nouveau pool</button>}
           </div>
 
           {showPoolForm && (
             <div style={styles.overlay}>
               <div style={styles.modal}>
-                <h3 style={styles.modalTitre}>{poolEdit ? 'Modifier' : 'Créer'} un pool</h3>
+                <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
                 <div style={styles.formGrid}>
                   <div style={styles.formChamp}>
-                    <label style={styles.label}>Nom du pool *</label>
-                    <input style={styles.input} value={poolForm.nom} onChange={e => setPoolForm({...poolForm, nom: e.target.value})} placeholder="Ex: Site Sion" />
+                    <label style={styles.label}>Nom *</label>
+                    <input style={styles.input} value={poolForm.nom} onChange={e => setPoolForm({...poolForm, nom:e.target.value})} />
                   </div>
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Site</label>
-                    <input style={styles.input} value={poolForm.site} onChange={e => setPoolForm({...poolForm, site: e.target.value})} placeholder="Ex: Sion" />
+                    <input style={styles.input} value={poolForm.site} onChange={e => setPoolForm({...poolForm, site:e.target.value})} />
                   </div>
-                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
                     <label style={styles.label}>Couleur</label>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {COULEURS.map(c => (
-                        <div key={c} onClick={() => setPoolForm({...poolForm, couleur: c})}
-                          style={{ width: 30, height: 30, borderRadius: '50%', background: c, cursor: 'pointer',
-                            border: poolForm.couleur === c ? '3px solid #333' : '3px solid transparent' }} />
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:6}}>
+                      {COULEURS.map(c => <div key={c} onClick={() => setPoolForm({...poolForm,couleur:c})}
+                        style={{width:28,height:28,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
+                    </div>
+                  </div>
+                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
+                    <label style={styles.label}>Professeurs</label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                      {profs.map(p => (
+                        <label key={p.id} style={{...styles.checkBadge, background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0', color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
+                          <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => toggleProfPool(p.id)} style={{marginRight:4}} />
+                          {p.nom} {p.prenom}
+                        </label>
                       ))}
                     </div>
                   </div>
-                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
-                    <label style={styles.label}>Professeurs dans ce pool</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                      {profs.map(p => (
-                        <label key={p.id} style={{ ...styles.checkLabel, background: poolForm.prof_ids.includes(p.id) ? poolForm.couleur : '#f5f5f5', color: poolForm.prof_ids.includes(p.id) ? 'white' : '#333' }}>
-                          <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => toggleProfPool(p.id)} style={{ marginRight: 6 }} />
-                          {p.nom} {p.prenom}
+                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
+                    <label style={styles.label}>Classes</label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                      {classes.map(c => (
+                        <label key={c.id} style={{...styles.checkBadge, background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0', color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
+                          <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => toggleClassePool(c.id)} style={{marginRight:4}} />
+                          {c.nom}
                         </label>
                       ))}
                     </div>
@@ -265,7 +270,7 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={styles.formActions}>
                   <button style={styles.btnAnnuler} onClick={() => setShowPoolForm(false)}>Annuler</button>
-                  <button style={styles.btnSauver} onClick={handleSavePool}>Sauvegarder</button>
+                  <button style={styles.btnVert} onClick={handleSavePool}>Sauvegarder</button>
                 </div>
               </div>
             </div>
@@ -273,29 +278,28 @@ export default function EmploiDuTemps() {
 
           <div style={styles.poolsGrid}>
             {pools.map(pool => (
-              <div key={pool.id} style={{ ...styles.poolCard, borderTop: '4px solid ' + pool.couleur }}>
-                <div style={styles.poolHeader}>
+              <div key={pool.id} style={{...styles.poolCard, borderTop:'4px solid '+pool.couleur}}>
+                <div style={styles.cardHeader}>
                   <div>
-                    <div style={styles.poolNom}>{pool.nom}</div>
-                    {pool.site && <div style={styles.poolSite}>📍 {pool.site}</div>}
+                    <div style={{fontWeight:700,fontSize:16}}>{pool.nom}</div>
+                    {pool.site && <div style={{color:'#888',fontSize:13}}>📍 {pool.site}</div>}
                   </div>
                   {isAdmin() && (
                     <div>
-                      <button style={styles.btnEdit} onClick={() => {
-                        setPoolEdit(pool); setShowPoolForm(true);
-                        setPoolForm({ nom: pool.nom, site: pool.site || '', couleur: pool.couleur, prof_ids: pool.profs.map(p => p.id) });
-                      }}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeletePool(pool.id)}>🗑️</button>
+                      <button style={styles.btnIcon} onClick={() => { setPoolEdit(pool); setShowPoolForm(true); setPoolForm({nom:pool.nom,site:pool.site||'',couleur:pool.couleur,prof_ids:pool.profs.map(p=>p.id),classe_ids:pool.classes.map(c=>c.id)}); }}>✏️</button>
+                      <button style={styles.btnIcon} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
                     </div>
                   )}
                 </div>
-                <div style={{ marginTop: 10 }}>
-                  {pool.profs.map(p => (
-                    <span key={p.id} style={{ ...styles.profBadge, background: pool.couleur + '22', color: pool.couleur }}>
-                      {p.nom} {p.prenom}
-                    </span>
-                  ))}
-                  {pool.profs.length === 0 && <span style={{ color: '#aaa', fontSize: 13 }}>Aucun prof</span>}
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:4}}>PROFS</div>
+                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge, background:pool.couleur+'22', color:pool.couleur}}>{p.nom} {p.prenom}</span>)}
+                  {pool.profs.length===0 && <span style={{color:'#ccc',fontSize:12}}>Aucun</span>}
+                </div>
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:4}}>CLASSES</div>
+                  {pool.classes.map(c => <span key={c.id} style={{...styles.badge, background:'#e8f0fe', color:'#1a73e8'}}>{c.nom}</span>)}
+                  {pool.classes.length===0 && <span style={{color:'#ccc',fontSize:12}}>Aucune</span>}
                 </div>
               </div>
             ))}
@@ -306,118 +310,124 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitre}>Affectations Prof → Classe → Branche</h3>
-            {isAdmin() && <button style={styles.btnAjouter} onClick={() => setShowAffForm(true)}>+ Affecter</button>}
-          </div>
-
-          {showAffForm && (
-            <div style={styles.overlay}>
-              <div style={styles.modal}>
-                <h3 style={styles.modalTitre}>Nouvelle affectation</h3>
-                <div style={styles.formGrid}>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Professeur *</label>
-                    <select style={styles.input} value={affForm.prof_id} onChange={e => setAffForm({...affForm, prof_id: e.target.value})}>
-                      <option value="">-- Choisir --</option>
-                      {profs.map(p => <option key={p.id} value={p.id}>{p.nom} {p.prenom}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Classe *</label>
-                    <select style={styles.input} value={affForm.classe_id} onChange={e => setAffForm({...affForm, classe_id: e.target.value})}>
-                      <option value="">-- Choisir --</option>
-                      {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Branche</label>
-                    <select style={styles.input} value={affForm.matiere_id} onChange={e => setAffForm({...affForm, matiere_id: e.target.value})}>
-                      <option value="">-- Choisir --</option>
-                      {matieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Créneau *</label>
-                    <select style={styles.input} value={affForm.creneau_id} onChange={e => setAffForm({...affForm, creneau_id: e.target.value})}>
-                      <option value="">-- Choisir --</option>
-                      {JOURS.map(jour => {
-                        const crs = creneauxParJour(jour);
-                        if (crs.length === 0) return null;
-                        return <optgroup key={jour} label={jour}>{crs.map(c => <option key={c.id} value={c.id}>{c.heure_debut}-{c.heure_fin} ({c.periode})</option>)}</optgroup>;
-                      })}
-                    </select>
-                  </div>
-                </div>
-                <div style={styles.formActions}>
-                  <button style={styles.btnAnnuler} onClick={() => setShowAffForm(false)}>Annuler</button>
-                  <button style={styles.btnSauver} onClick={handleSaveAff}>Sauvegarder</button>
-                </div>
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <h3 style={styles.cardTitre}>Grille d'affectation</h3>
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                <select style={styles.selectPool} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
+                  <option value="">— Tous les profs/classes —</option>
+                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
               </div>
             </div>
-          )}
 
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.theadRow}>
-                {['Professeur','Classe','Branche','Jour','Créneau','Période'].map(h => <th key={h} style={styles.th}>{h}</th>)}
-                {isAdmin() && <th style={styles.th}>Action</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {affectations.length === 0 ? (
-                <tr><td colSpan="7" style={styles.vide}>Aucune affectation</td></tr>
-              ) : affectations.map(a => (
-                <tr key={a.id} style={styles.tr}>
-                  <td style={styles.td}><b>{a.prof_nom}</b></td>
-                  <td style={styles.td}><span style={styles.badgeBleu}>{a.classe_nom}</span></td>
-                  <td style={styles.td}>{a.matiere_nom || '—'}</td>
-                  <td style={styles.td}>{a.jour}</td>
-                  <td style={styles.td}>{a.heure_debut}–{a.heure_fin}</td>
-                  <td style={styles.td}>{a.periode}</td>
-                  {isAdmin() && <td style={styles.td}><button style={styles.btnDelete} onClick={() => handleDeleteAff(a.id)}>🗑️</button></td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {classesPool.length === 0 ? (
+              <p style={{color:'#888'}}>Sélectionne un pool ou vérifie que des classes y sont associées.</p>
+            ) : (
+              <div style={{overflowX:'auto'}}>
+                <table style={{...styles.table, minWidth: 200 + classesPool.length * 150}}>
+                  <thead>
+                    <tr style={styles.theadRow}>
+                      <th style={{...styles.th, minWidth:130}}>Créneau</th>
+                      {classesPool.map(c => <th key={c.id} style={{...styles.th, minWidth:140}}>{c.nom}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {JOURS.map(jour => {
+                      const crs = creneaux.filter(c => c.jour===jour);
+                      if (crs.length===0) return null;
+                      return [
+                        <tr key={jour+'_h'}>
+                          <td colSpan={classesPool.length+1} style={styles.jourBande}>{jour}</td>
+                        </tr>,
+                        ...['Matin','Après-midi'].map(periode => {
+                          const crsPeriode = crs.filter(c => c.periode===periode);
+                          if (crsPeriode.length===0) return null;
+                          return [
+                            <tr key={jour+periode+'_ph'}>
+                              <td colSpan={classesPool.length+1} style={styles.periodeBande}>{periode}</td>
+                            </tr>,
+                            ...crsPeriode.map((cr, idx) => (
+                              <tr key={cr.id} style={styles.tr}>
+                                <td style={{...styles.td, background:'#f8f9fa', fontWeight:600, fontSize:12, whiteSpace:'nowrap'}}>
+                                  P{idx+1} — {cr.heure_debut}–{cr.heure_fin}
+                                </td>
+                                {classesPool.map(classe => {
+                                  const aff = getAffectation(classe.id, cr.id);
+                                  return (
+                                    <td key={classe.id} style={{...styles.td, padding:4}}>
+                                      <select style={{...styles.cellSelect, background: aff ? '#e8f5e9' : '#fff'}}
+                                        value={aff ? aff.prof_id : ''}
+                                        onChange={e => handleCellChange(classe.id, cr.id, e.target.value)}
+                                        disabled={!isAdmin()}>
+                                        <option value="">—</option>
+                                        <optgroup label="Professeurs">
+                                          {profsPool.map(p => <option key={p.id} value={p.id}>{p.nom} {p.prenom}</option>)}
+                                        </optgroup>
+                                        <optgroup label="Spécial">
+                                          <option value="special|null|titulariat">Titulariat</option>
+                                          <option value="special|null|atelier">Atelier</option>
+                                          <option value="special|null|autre">Autre</option>
+                                        </optgroup>
+                                      </select>
+                                      {aff && aff.matiere_nom && <div style={{fontSize:10,color:'#666',textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))
+                          ];
+                        })
+                      ];
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* ===== PLANNING GÉNÉRAL ===== */}
       {onglet === 'general' && (
         <div>
-          <h3 style={styles.sectionTitre}>📊 Vue générale — Tous les professeurs</h3>
-          {planningGeneral ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ ...styles.table, minWidth: 900 }}>
+          <div style={styles.cardHeader}>
+            <h3 style={styles.cardTitre}>Planning général</h3>
+            <select style={styles.selectPool} value={planningPoolId}
+              onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
+              <option value="">Tous les professeurs</option>
+              {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          </div>
+
+          {planningGeneral && (
+            <div style={{overflowX:'auto'}}>
+              <table style={{...styles.table, minWidth: 200 + planningGeneral.profs.length * 120}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{ ...styles.th, minWidth: 120 }}>Créneau</th>
-                    {planningGeneral.profs.map(p => (
-                      <th key={p.id} style={styles.th}>{p.nom}<br/><span style={{ fontWeight: 400, fontSize: 11 }}>{p.prenom}</span></th>
-                    ))}
+                    <th style={{...styles.th, minWidth:130}}>Créneau</th>
+                    {planningGeneral.profs.map(p => <th key={p.id} style={styles.th}>{p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span></th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {JOURS.map(jour => {
-                    const crs = planningGeneral.creneaux.filter(c => c.jour === jour);
-                    if (crs.length === 0) return null;
+                    const crs = planningGeneral.creneaux.filter(c => c.jour===jour);
+                    if (crs.length===0) return null;
                     return [
-                      <tr key={jour + '_header'}>
-                        <td colSpan={planningGeneral.profs.length + 1} style={styles.jourBande}>{jour}</td>
-                      </tr>,
+                      <tr key={jour+'_h'}><td colSpan={planningGeneral.profs.length+1} style={styles.jourBande}>{jour}</td></tr>,
                       ...crs.map(cr => (
                         <tr key={cr.id} style={styles.tr}>
-                          <td style={{ ...styles.td, background: '#f8f9fa', fontWeight: 600, fontSize: 12 }}>
-                            {cr.heure_debut}–{cr.heure_fin}<br/>
-                            <span style={{ color: '#888', fontSize: 11 }}>{cr.periode}</span>
+                          <td style={{...styles.td, background:'#f8f9fa', fontSize:11, fontWeight:600, whiteSpace:'nowrap'}}>
+                            {cr.heure_debut}–{cr.heure_fin}<br/><span style={{color:'#999'}}>{cr.periode}</span>
                           </td>
                           {planningGeneral.profs.map(p => {
-                            const aff = planningGeneral.affectations.find(a => a.prof_id === p.id && a.creneau_id === cr.id);
-                            const dispo = true;
+                            const aff = planningGeneral.affectations.find(a => a.prof_id===p.id && a.creneau_id===cr.id);
+                            const dispo = planningGeneral.dispos.find(d => d.prof_id===p.id && d.creneau_id===cr.id);
+                            const indispo = dispo && !dispo.disponible;
                             return (
-                              <td key={p.id} style={{ ...styles.td, textAlign: 'center', background: aff ? '#e8f5e9' : '#fff', fontSize: 12 }}>
-                                {aff ? <><b>{aff.classe_nom}</b><br/><span style={{ color: '#666' }}>{aff.matiere_nom || ''}</span></> : ''}
+                              <td key={p.id} style={{...styles.td, textAlign:'center', fontSize:11,
+                                background: aff?'#e8f5e9': indispo?'#eeeeee':'#fff'}}>
+                                {aff ? <><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#888'}}>{aff.matiere_nom}</span></>}</> : ''}
                               </td>
                             );
                           })}
@@ -428,63 +438,120 @@ export default function EmploiDuTemps() {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div style={styles.vide}>Chargement...</div>
           )}
         </div>
       )}
 
-      {/* ===== PLANNING PAR PROF ===== */}
+      {/* ===== PLANNING PROF ===== */}
       {onglet === 'prof' && (
         <div>
-          <h3 style={styles.sectionTitre}>👨‍🏫 Planning individuel</h3>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-            {profs.map(p => (
-              <button key={p.id}
-                style={{ ...styles.profBtn, ...(profPlanningId == p.id ? styles.profBtnActif : {}) }}
-                onClick={() => { setProfPlanningId(p.id); chargerPlanningProf(p.id); }}>
-                {p.nom} {p.prenom}
-              </button>
-            ))}
+          <div style={{...styles.card, marginBottom:16}}>
+            <h3 style={styles.cardTitre}>Sélectionner un professeur</h3>
+            <div style={styles.flexWrap}>
+              {profs.map(p => (
+                <button key={p.id} style={{...styles.profBtn,...(profPlanningId==p.id?styles.profBtnActif:{})}}
+                  onClick={() => { setProfPlanningId(p.id); chargerPlanningProf(p.id); }}>
+                  {p.nom} {p.prenom}
+                </button>
+              ))}
+            </div>
           </div>
 
           {planningProf && profPlanningId && (
-            <div style={{ overflowX: 'auto' }}>
-              <div style={{ marginBottom: 12, fontWeight: 700, fontSize: 18 }}>
-                {planningProf.prof?.nom} {planningProf.prof?.prenom}
-              </div>
-              <table style={{ ...styles.table, minWidth: 700 }}>
+            <div style={{overflowX:'auto'}}>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.nom} {planningProf.prof?.prenom}</div>
+              <table style={{...styles.table, minWidth:700}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{ ...styles.th, minWidth: 130 }}>Horaire</th>
+                    <th style={{...styles.th,minWidth:130}}>Créneau</th>
                     {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {['Matin','Après-midi'].map(periode => {
-                    const crsBase = (planningProf.creneaux || []).filter(c => c.periode === periode && c.jour === 'Lundi');
-                    if (crsBase.length === 0) return null;
+                    const crsBase = (planningProf.creneaux||[]).filter(c => c.jour==='Lundi' && c.periode===periode);
+                    if (crsBase.length===0) return null;
                     return [
-                      <tr key={periode}>
-                        <td colSpan="6" style={styles.jourBande}>{periode}</td>
-                      </tr>,
+                      <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                       ...crsBase.map((crBase, idx) => (
                         <tr key={crBase.id} style={styles.tr}>
-                          <td style={{ ...styles.td, background: '#f8f9fa', fontWeight: 600, fontSize: 12 }}>
-                            {crBase.heure_debut}–{crBase.heure_fin}
+                          <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                            P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                           </td>
                           {JOURS.map(jour => {
-                            const cr = (planningProf.creneaux || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-                            if (!cr) return <td key={jour} style={styles.td}></td>;
-                            const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
-                            const dispo = planningProf.dispos?.find(d => d.creneau_id === cr.id);
-                            const estDispo = dispo ? dispo.disponible : true;
+                            const cr = (planningProf.creneaux||[]).find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                            const aff = (planningProf.affectations||[]).find(a => a.creneau_id===cr.id);
+                            const dispo = planningProf.dispos?.find(d => d.creneau_id===cr.id);
+                            const indispo = dispo && !dispo.disponible;
                             return (
-                              <td key={jour} style={{ ...styles.td, textAlign: 'center', fontSize: 12,
-                                background: aff ? '#e8f5e9' : estDispo ? '#fff' : '#fce4ec' }}>
-                                {aff ? <><b style={{ color: '#2e7d32' }}>{aff.classe_nom}</b><br/><span style={{ color: '#666' }}>{aff.matiere_nom || ''}</span></> :
-                                  estDispo ? <span style={{ color: '#bbb' }}>libre</span> :
-                                  <span style={{ color: '#e53935', fontSize: 11 }}>indispo</span>}
+                              <td key={jour} style={{...styles.td, textAlign:'center', fontSize:12,
+                                background: aff?'#e8f5e9': indispo?'#eeeeee':'#fff'}}>
+                                {aff ? <>
+                                  <b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>
+                                  {aff.matiere_nom && <><br/><span style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</span></>}
+                                </> : indispo ? '' : <span style={{color:'#ccc',fontSize:11}}>libre</span>}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))
+                    ];
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== PLANNING CLASSE ===== */}
+      {onglet === 'classe' && (
+        <div>
+          <div style={{...styles.card, marginBottom:16}}>
+            <h3 style={styles.cardTitre}>Sélectionner une classe</h3>
+            <div style={styles.flexWrap}>
+              {classes.map(c => (
+                <button key={c.id} style={{...styles.profBtn,...(classePlanningId==c.id?styles.profBtnActif:{})}}
+                  onClick={() => { setClassePlanningId(c.id); chargerPlanningClasse(c.id); }}>
+                  {c.nom}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {planningClasse && classePlanningId && (
+            <div style={{overflowX:'auto'}}>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>Classe : {planningClasse.classe?.nom}</div>
+              <table style={{...styles.table, minWidth:700}}>
+                <thead>
+                  <tr style={styles.theadRow}>
+                    <th style={{...styles.th,minWidth:130}}>Créneau</th>
+                    {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {['Matin','Après-midi'].map(periode => {
+                    const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi' && c.periode===periode);
+                    if (crsBase.length===0) return null;
+                    return [
+                      <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                      ...crsBase.map((crBase, idx) => (
+                        <tr key={crBase.id} style={styles.tr}>
+                          <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                            P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                          </td>
+                          {JOURS.map(jour => {
+                            const cr = (planningClasse.creneaux||[]).find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                            const aff = (planningClasse.affectations||[]).find(a => a.creneau_id===cr.id);
+                            const periode_cl = planningClasse.periodes?.find(p => p.creneau_id===cr.id);
+                            return (
+                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12, background: aff?'#e8f5e9':periode_cl?'#fff3e0':'#f5f5f5'}}>
+                                {aff ? <>
+                                  <b style={{color:'#2e7d32'}}>{aff.prof_nom}</b>
+                                  {aff.matiere_nom && <><br/><span style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</span></>}
+                                </> : periode_cl ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
                               </td>
                             );
                           })}
@@ -503,53 +570,48 @@ export default function EmploiDuTemps() {
 }
 
 const styles = {
-  page: { padding: '20px', background: '#f0f2f5', minHeight: '100vh' },
-  header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20 },
-  btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
-  titre: { fontSize: 24, fontWeight: 700 },
-  onglets: { display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' },
-  onglet: { padding: '10px 18px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  ongletActif: { background: '#1a73e8', color: 'white', border: '2px solid #1a73e8' },
-  section: { background: 'white', borderRadius: 12, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitre: { fontSize: 16, fontWeight: 700, color: '#333', margin: 0 },
-  profsGrid: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  profBtn: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 20, cursor: 'pointer', fontSize: 13 },
-  profBtnActif: { background: '#1a73e8', color: 'white', border: '2px solid #1a73e8' },
-  dispoGrid: { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 },
-  jourCol: { minWidth: 140, flex: '0 0 auto' },
-  jourHeader: { background: '#1a73e8', color: 'white', padding: '8px 12px', borderRadius: 8, fontWeight: 700, textAlign: 'center', marginBottom: 8 },
-  periodeLabel: { fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', marginBottom: 4, marginTop: 8 },
-  creneauCase: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 6, marginBottom: 4, cursor: 'pointer', border: '1px solid #e0e0e0' },
-  creneauHeure: { fontSize: 12, fontWeight: 600 },
-  btnAjouter: { padding: '10px 20px', background: '#34a853', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  btnSauver: { padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  btnAnnuler: { padding: '10px 20px', background: '#f5f5f5', border: 'none', borderRadius: 8, cursor: 'pointer' },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, marginRight: 8 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'white', padding: 30, borderRadius: 16, width: 560, maxHeight: '85vh', overflowY: 'auto' },
-  modalTitre: { fontSize: 20, fontWeight: 700, marginBottom: 20 },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 },
-  formChamp: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#555' },
-  input: { padding: 10, border: '2px solid #e0e0e0', borderRadius: 8, fontSize: 14 },
-  formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
-  checkLabel: { padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center' },
-  poolsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 },
-  poolCard: { background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  poolHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
-  poolNom: { fontSize: 16, fontWeight: 700 },
-  poolSite: { fontSize: 13, color: '#888', marginTop: 4 },
-  profBadge: { display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, margin: '2px 4px 2px 0' },
-  table: { width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  theadRow: { background: '#1a73e8', color: 'white' },
-  th: { padding: '12px 14px', textAlign: 'left', fontSize: 12, fontWeight: 600 },
-  tr: { borderBottom: '1px solid #f0f0f0' },
-  td: { padding: '10px 14px', fontSize: 13 },
-  vide: { padding: 40, textAlign: 'center', color: '#888' },
-  badgeBleu: { background: '#e8f0fe', color: '#1a73e8', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 },
-  jourBande: { background: '#e8eaf6', padding: '8px 14px', fontWeight: 700, fontSize: 13, color: '#3949ab' },
+  page: { padding:20, background:'#f0f2f5', minHeight:'100vh' },
+  header: { display:'flex', alignItems:'center', gap:15, marginBottom:20 },
+  btnRetour: { padding:'8px 16px', background:'white', border:'2px solid #e0e0e0', borderRadius:8, cursor:'pointer' },
+  titre: { fontSize:24, fontWeight:700 },
+  onglets: { display:'flex', gap:8, marginBottom:24, flexWrap:'wrap' },
+  onglet: { padding:'10px 16px', background:'white', border:'2px solid #e0e0e0', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 },
+  ongletActif: { background:'#1a73e8', color:'white', border:'2px solid #1a73e8' },
+  card: { background:'white', borderRadius:12, padding:20, marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+  cardHeader: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 },
+  cardTitre: { fontSize:16, fontWeight:700, margin:0 },
+  flexWrap: { display:'flex', flexWrap:'wrap', gap:8 },
+  profBtn: { padding:'8px 14px', background:'white', border:'2px solid #e0e0e0', borderRadius:20, cursor:'pointer', fontSize:13 },
+  profBtnActif: { background:'#1a73e8', color:'white', border:'2px solid #1a73e8' },
+  tableDispos: { width:'100%', borderCollapse:'collapse', fontSize:13 },
+  thDispo: { padding:'10px 14px', background:'#1a73e8', color:'white', fontWeight:600, textAlign:'center', border:'1px solid #1565c0' },
+  tdPeriode: { padding:'8px 12px', background:'#f8f9fa', fontWeight:600, fontSize:12, border:'1px solid #e0e0e0', whiteSpace:'nowrap' },
+  tdDispo: { padding:'6px', textAlign:'center', border:'1px solid #e0e0e0', cursor:'pointer' },
+  btnBleu: { padding:'8px 16px', background:'#1a73e8', color:'white', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 },
+  btnVert: { padding:'10px 18px', background:'#34a853', color:'white', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600 },
+  btnAnnuler: { padding:'10px 18px', background:'#f5f5f5', border:'none', borderRadius:8, cursor:'pointer' },
+  btnIcon: { background:'none', border:'none', cursor:'pointer', fontSize:16, marginLeft:6 },
+  selectPool: { padding:'8px 12px', border:'2px solid #e0e0e0', borderRadius:8, fontSize:14, cursor:'pointer' },
+  overlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
+  modal: { background:'white', padding:30, borderRadius:16, width:580, maxHeight:'85vh', overflowY:'auto' },
+  modalTitre: { fontSize:20, fontWeight:700, marginBottom:20 },
+  formGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:15 },
+  formChamp: { display:'flex', flexDirection:'column' },
+  label: { fontSize:13, fontWeight:600, marginBottom:5, color:'#555' },
+  input: { padding:10, border:'2px solid #e0e0e0', borderRadius:8, fontSize:14 },
+  formActions: { display:'flex', justifyContent:'flex-end', gap:10, marginTop:20 },
+  checkBadge: { padding:'5px 10px', borderRadius:16, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center' },
+  poolsGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:16, marginTop:16 },
+  poolCard: { background:'white', borderRadius:12, padding:20, boxShadow:'0 2px 8px rgba(0,0,0,0.08)' },
+  badge: { display:'inline-block', padding:'3px 10px', borderRadius:12, fontSize:12, fontWeight:600, margin:'2px 3px 2px 0' },
+  table: { width:'100%', borderCollapse:'collapse', background:'white', borderRadius:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.08)' },
+  theadRow: { background:'#1a73e8', color:'white' },
+  th: { padding:'11px 12px', textAlign:'left', fontSize:12, fontWeight:600 },
+  tr: { borderBottom:'1px solid #f0f0f0' },
+  td: { padding:'8px 12px', fontSize:13 },
+  jourBande: { background:'#e8eaf6', padding:'7px 14px', fontWeight:700, fontSize:13, color:'#3949ab' },
+  periodeBande: { background:'#f3f4f6', padding:'5px 14px', fontWeight:600, fontSize:12, color:'#666' },
+  cellSelect: { width:'100%', padding:'5px 6px', border:'1px solid #e0e0e0', borderRadius:6, fontSize:12, cursor:'pointer' },
 };
 `.trim());
 

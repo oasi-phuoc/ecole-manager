@@ -11,10 +11,13 @@ router.get('/pools', c.getPools);
 router.post('/pools', autoriser('admin'), c.createPool);
 router.put('/pools/:id', autoriser('admin'), c.updatePool);
 router.delete('/pools/:id', autoriser('admin'), c.deletePool);
+router.get('/classe-periodes/:classe_id', c.getClassePeriodes);
+router.post('/classe-periodes/:classe_id', c.saveClassePeriodes);
 router.get('/affectations', c.getAffectations);
 router.post('/affectations', autoriser('admin'), c.saveAffectation);
 router.delete('/affectations/:id', autoriser('admin'), c.deleteAffectation);
 router.get('/general', c.getPlanningGeneral);
 router.get('/prof/:prof_id', c.getPlanningProf);
+router.get('/classe/:classe_id', c.getPlanningClasse);
 
 module.exports = router;
