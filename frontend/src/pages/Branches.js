@@ -116,7 +116,7 @@ export default function Branches() {
               <div style={styles.cardIcon}>📚</div>
               <div style={{ flex: 1 }}>
                 <div style={styles.cardNom}>{b.nom}</div>
-                {b.periodes_semaine && <div style={styles.cardPériodes/sem}>{b.periodes_semaine}</div>}
+                {b.periodes_semaine && <div style={styles.cardCode}>{b.periodes_semaine}</div>}
               </div>
               <div style={styles.coefBadge}>Coef. {b.coefficient}</div>
             </div>
@@ -145,7 +145,7 @@ const styles = {
   cardHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
   cardIcon: { fontSize: '24px' },
   cardNom: { fontSize: '16px', fontWeight: '700' },
-  cardPériodes/sem: { fontSize: '12px', color: '#888', marginTop: '2px' },
+  cardCode: { fontSize: '12px', color: '#888', marginTop: '2px' },
   coefBadge: { background: '#f3e5f5', color: '#9c27b0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
   cardActions: { display: 'flex', gap: '8px' },
   btnEdit: { flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' },
