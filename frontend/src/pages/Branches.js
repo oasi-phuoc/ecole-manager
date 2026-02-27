@@ -8,7 +8,7 @@ export default function Branches() {
   const [branches, setBranches] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [brancheEdit, setBrancheEdit] = useState(null);
-  const [form, setForm] = useState({ nom: '', code: '', coefficient: '1' });
+  const [form, setForm] = useState({ nom: '', periodes_semaine: '', coefficient: '1' });
   const [erreur, setErreur] = useState('');
   const [recherche, setRecherche] = useState('');
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export default function Branches() {
       }
       setShowForm(false);
       setBrancheEdit(null);
-      setForm({ nom: '', code: '', coefficient: '1' });
+      setForm({ nom: '', periodes_semaine: '', coefficient: '1' });
       chargerBranches();
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur lors de la sauvegarde');
@@ -44,7 +44,7 @@ export default function Branches() {
 
   const handleEdit = (b) => {
     setBrancheEdit(b);
-    setForm({ nom: b.nom, code: b.code || '', coefficient: b.coefficient || '1' });
+    setForm({ nom: b.nom, periodes_semaine: b.periodes_semaine || '', coefficient: b.coefficient || '1' });
     setErreur('');
     setShowForm(true);
   };
@@ -62,7 +62,7 @@ export default function Branches() {
 
   const branchesFiltrees = branches.filter(b =>
     b.nom.toLowerCase().includes(recherche.toLowerCase()) ||
-    (b.code && b.code.toLowerCase().includes(recherche.toLowerCase()))
+    (b.periodes_semaine && b.periodes_semaine.toLowerCase().includes(recherche.toLowerCase()))
   );
 
   return (
@@ -72,7 +72,7 @@ export default function Branches() {
         <h2 style={styles.titre}>📚 Branches / Matières</h2>
         <div style={styles.headerRight}>
           <input style={styles.recherche} placeholder="🔍 Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-          <button style={styles.btnAjouter} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({ nom: '', code: '', coefficient: '1' }); setErreur(''); }}>+ Ajouter</button>
+          <button style={styles.btnAjouter} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({ nom: '', periodes_semaine: '', coefficient: '1' }); setErreur(''); }}>+ Ajouter</button>
         </div>
       </div>
 
@@ -88,8 +88,8 @@ export default function Branches() {
                   <input style={styles.input} type="text" required value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Ex: Mathématiques, Français..." />
                 </div>
                 <div style={styles.formChamp}>
-                  <label style={styles.label}>Code</label>
-                  <input style={styles.input} type="text" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="Ex: MATH, FR..." />
+                  <label style={styles.label}>Périodes/sem</label>
+                  <input style={styles.input} type="text" value={form.periodes_semaine} onChange={e => setForm({ ...form, periodes_semaine: e.target.value })} placeholder="Ex: MATH, FR..." />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Coefficient</label>
@@ -116,7 +116,7 @@ export default function Branches() {
               <div style={styles.cardIcon}>📚</div>
               <div style={{ flex: 1 }}>
                 <div style={styles.cardNom}>{b.nom}</div>
-                {b.code && <div style={styles.cardCode}>{b.code}</div>}
+                {b.periodes_semaine && <div style={styles.cardPériodes/sem}>{b.periodes_semaine}</div>}
               </div>
               <div style={styles.coefBadge}>Coef. {b.coefficient}</div>
             </div>
@@ -145,7 +145,7 @@ const styles = {
   cardHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
   cardIcon: { fontSize: '24px' },
   cardNom: { fontSize: '16px', fontWeight: '700' },
-  cardCode: { fontSize: '12px', color: '#888', marginTop: '2px' },
+  cardPériodes/sem: { fontSize: '12px', color: '#888', marginTop: '2px' },
   coefBadge: { background: '#f3e5f5', color: '#9c27b0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
   cardActions: { display: 'flex', gap: '8px' },
   btnEdit: { flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' },
