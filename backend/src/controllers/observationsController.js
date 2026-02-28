@@ -31,4 +31,12 @@ const supprimerObservation = async (req, res) => {
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-module.exports = { getObservations, creerObservation, supprimerObservation };
+const modifierObservation = async (req, res) => {
+  const { titre, contenu } = req.body;
+  try {
+    await pool.query('UPDATE observations SET titre=$1, contenu=$2 WHERE id=$3', [titre, contenu, req.params.id]);
+    res.json({ message: 'Observation modifiée' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
+};
+
+module.exports = { getObservations, creerObservation, supprimerObservation, modifierObservation };

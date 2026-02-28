@@ -1,36 +1,37 @@
 const fs = require('fs');
-let ctrl = fs.readFileSync('./src/controllers/elevesController.js', 'utf8');
 
-// Ajouter endpoint photo
-if (!ctrl.includes('updatePhoto')) {
+let ctrl = fs.readFileSync('./src/controllers/observationsController.js', 'utf8');
+if (!ctrl.includes('modifierObservation')) {
   ctrl = ctrl.replace(
     'module.exports = {',
-    `const updatePhoto = async (req, res) => {
-  const { photo } = req.body;
+    `const modifierObservation = async (req, res) => {
+  const { titre, contenu } = req.body;
   try {
-    await pool.query('UPDATE eleves SET photo=$1 WHERE id=$2', [photo, req.params.id]);
-    res.json({ message: 'Photo mise à jour' });
+    await pool.query('UPDATE observations SET titre=$1, contenu=$2 WHERE id=$3', [titre, contenu, req.params.id]);
+    res.json({ message: 'Observation modifiée' });
   } catch(err) { res.status(500).json({ message: err.message }); }
 };
 
 module.exports = {`
   );
   ctrl = ctrl.replace(
-    /module\.exports = \{([^}]+)\}/,
-    (match, content) => match.replace(content, content.trimEnd() + ',\n  updatePhoto')
+    'module.exports = { getObservations, creerObservation, supprimerObservation }',
+    'module.exports = { getObservations, creerObservation, supprimerObservation, modifierObservation }'
   );
-  fs.writeFileSync('./src/controllers/elevesController.js', ctrl);
-  console.log('elevesController OK');
+  fs.writeFileSync('./src/controllers/observationsController.js', ctrl);
+  console.log('observationsController OK');
 }
 
-// Ajouter route photo
-let routes = fs.readFileSync('./src/routes/eleves.js', 'utf8');
-if (!routes.includes('photo')) {
+let routes = fs.readFileSync('./src/routes/observations.js', 'utf8');
+if (!routes.includes('put')) {
   routes = routes.replace(
-    'module.exports = router;',
-    `router.put('/:id/photo', require('../controllers/elevesController').updatePhoto);
-module.exports = router;`
+    `const { getObservations, creerObservation, supprimerObservation } = require('../controllers/observationsController');`,
+    `const { getObservations, creerObservation, supprimerObservation, modifierObservation } = require('../controllers/observationsController');`
   );
-  fs.writeFileSync('./src/routes/eleves.js', routes);
-  console.log('eleves routes OK');
+  routes = routes.replace(
+    'router.delete',
+    `router.put('/:id', modifierObservation);\nrouter.delete`
+  );
+  fs.writeFileSync('./src/routes/observations.js', routes);
+  console.log('observations routes OK');
 }
