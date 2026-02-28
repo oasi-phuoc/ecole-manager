@@ -131,14 +131,15 @@ const supprimerEleve = async (req, res) => {
     // Vider photo
     await client.query('UPDATE eleves SET photo=null WHERE id=$1', [req.params.id]);
 
-    // Supprimer toutes les dépendances élève
+    // Supprimer TOUTES les dépendances élève
+    await client.query('DELETE FROM presences WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM notes WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM paiements WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM observations WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM absences WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM presences WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM plan_classe WHERE classe_id IN (SELECT id FROM classes WHERE id IS NOT NULL)');
     await client.query('DELETE FROM eleves WHERE id=$1', [req.params.id]);
 
-    // Supprimer toutes les dépendances utilisateur
+    // Supprimer utilisateur et ses dépendances
     if (userId) {
       await client.query('DELETE FROM messages WHERE expediteur_id=$1 OR destinataire_id=$1', [userId]);
       await client.query('DELETE FROM notifications WHERE utilisateur_id=$1', [userId]);
@@ -150,7 +151,7 @@ const supprimerEleve = async (req, res) => {
     res.json({ message: 'Eleve supprime' });
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+    res.status(500).json({ message: err.message });
   } finally { client.release(); }
 };
 
