@@ -58,7 +58,7 @@ export default function EmploiDuTemps() {
         axios.get(API + '/planning/affectations', { headers }),
         axios.get(API + '/planning/classe-horaires', { headers }),
       ]);
-      setProfs(p.data);
+      setProfs(p.data.filter(x => x.actif !== false));
       setClasses(cl.data);
       setMatieres(m.data);
       setCreneaux(cr.data);
@@ -584,7 +584,7 @@ export default function EmploiDuTemps() {
 
           {planningClasse && classePlanningId && (
             <div>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>Classe : {planningClasse.classe?.nom}</div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
               {/* Tableau branches - periodes attribuées */}
               {classePlanningPoolId && branchesPoolP.length > 0 && (
@@ -711,7 +711,7 @@ export default function EmploiDuTemps() {
 
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.nom} {planningProf.prof?.prenom}</div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.nom} {planningProf.prof?.prenom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
               <table style={{...styles.tbl,minWidth:700}}>
                 <thead>
                   <tr style={styles.theadRow}>
@@ -774,7 +774,13 @@ export default function EmploiDuTemps() {
                 <thead>
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,minWidth:130}}>Créneau</th>
-                    {planningGeneral.profs.map(p => <th key={p.id} style={styles.th}>{p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span></th>)}
+                    {planningGeneral.profs.map(p => {
+                      const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
+                      return <th key={p.id} style={styles.th}>
+                        {p.nom} {p.prenom}
+                        {tits.length>0 && <div style={{fontSize:10,fontWeight:400,color:'#c8e6c9',marginTop:2}}>{tits.map(t=>t.classe_nom).join(', ')}</div>}
+                      </th>;
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -795,7 +801,19 @@ export default function EmploiDuTemps() {
                             return (
                               <td key={p.id} style={{...styles.td,textAlign:'center',fontSize:11,
                                 background:aff?'#e8f5e9':indispo?'#eeeeee':'#fff'}}>
-                                {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#888'}}>{aff.matiere_nom}</span></>}</>:''}
+                                {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>
+                                {isAdmin() ? (
+                                  <select style={{...styles.cellSel,marginTop:3,fontSize:11}}
+                                    value={aff.matiere_id||''}
+                                    onChange={async ev => {
+                                      await axios.post(API+'/planning/affectations',{prof_id:profPlanningId,classe_id:aff.classe_id,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
+                                      chargerPlanningProf(profPlanningId);
+                                    }}>
+                                    <option value="">— Branche —</option>
+                                    {matieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                  </select>
+                                ) : aff.matiere_nom ? <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div> : null}
+                              </> : ''}
                               </td>
                             );
                           })}
