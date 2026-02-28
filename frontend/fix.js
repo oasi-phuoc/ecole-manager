@@ -1,234 +1,210 @@
 const fs = require('fs');
-const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
+let c = fs.readFileSync('./src/pages/Classes.js', 'utf8');
 
-fs.writeFileSync('./src/pages/Eleves.js', `
-import { isAdmin } from '../utils/permissions';
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+// Ajouter état plan de classe
+c = c.replace(
+  `  const [showTrombinoscope, setShowTrombinoscope] = useState(false);`,
+  `  const [showTrombinoscope, setShowTrombinoscope] = useState(false);
+  const [showPlanClasse, setShowPlanClasse] = useState(false);
+  const [planPositions, setPlanPositions] = useState({});
+  const [dragEleve, setDragEleve] = useState(null);`
+);
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
-
-export default function Eleves() {
-  const [eleves, setEleves] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [eleveEdit, setEleveEdit] = useState(null);
-  const [recherche, setRecherche] = useState('');
-  const [filtreClasse, setFiltreClasse] = useState('tous');
-  const [form, setForm] = useState({
-    nom:'', prenom:'', email:'', classe_id:'',
-    date_naissance:'', adresse:'', telephone:'',
-    nom_parent:'', telephone_parent:'', statut:'actif'
-  });
-  const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-
-  useEffect(() => { chargerTout(); }, []);
-
-  const chargerTout = async () => {
+// Ajouter fonctions plan de classe
+c = c.replace(
+  `  const imprimerTrombinoscope = () => {`,
+  `  const chargerPlanClasse = async () => {
     try {
-      const [el, cl] = await Promise.all([
-        axios.get(API+'/eleves', {headers}),
-        axios.get(API+'/classes', {headers}),
-      ]);
-      setEleves(el.data);
-      setClasses(cl.data.filter(c => c.actif !== false));
-    } catch(err) { console.error(err); }
+      const r = await axios.get(API+'/plan-classe/'+detailClasse.id, {headers});
+      setPlanPositions(r.data.positions || {});
+    } catch(err) { setPlanPositions({}); }
   };
 
-  const resetForm = () => setForm({nom:'',prenom:'',email:'',classe_id:'',date_naissance:'',adresse:'',telephone:'',nom_parent:'',telephone_parent:'',statut:'actif'});
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const sauverPlanClasse = async () => {
     try {
-      const data = {...form, classe_id: form.classe_id||null, date_naissance: form.date_naissance||null};
-      if (eleveEdit) await axios.put(API+'/eleves/'+eleveEdit.id, data, {headers});
-      else await axios.post(API+'/eleves', data, {headers});
-      setShowForm(false); setEleveEdit(null); resetForm(); chargerTout();
-    } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+      await axios.post(API+'/plan-classe/'+detailClasse.id, {positions: planPositions}, {headers});
+      alert('Plan sauvegardé !');
+    } catch(err) { alert('Erreur sauvegarde'); }
   };
 
-  const handleEdit = (el) => {
-    setEleveEdit(el);
-    setForm({
-      nom:el.nom||'', prenom:el.prenom||'', email:el.email||'',
-      classe_id:el.classe_id||'',
-      date_naissance:el.date_naissance?el.date_naissance.substring(0,10):'',
-      adresse:el.adresse||'', telephone:el.telephone||'',
-      nom_parent:el.nom_parent||'', telephone_parent:el.telephone_parent||'',
-      statut:el.statut||'actif'
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Supprimer cet élève ?')) {
-      await axios.delete(API+'/eleves/'+id, {headers});
-      chargerTout();
+  const imprimerPlanClasse = () => {
+    const COLS = 12; const ROWS = 13;
+    let cells = '';
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const key = row+'-'+col;
+        const eleveId = planPositions[key];
+        const el = eleveId === 'PROF' ? null : elevesClasse.find(e => String(e.id) === String(eleveId));
+        const isProf = row === ROWS-1;
+        if (isProf && col === 0) {
+          cells += \`<td colspan="12" style="background:#0f172a;color:white;text-align:center;font-weight:800;font-size:14px;padding:12px;border-radius:6px">🎓 Bureau du professeur — \${detailClasse.prof_prenom||''} \${detailClasse.prof_nom||''}</td>\`;
+          break;
+        } else if (!isProf) {
+          cells += \`<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;width:80px;height:80px;background:\${eleveId?'#f0f4ff':'#f8fafc'};vertical-align:middle">
+            \${el ? \`
+              \${el.photo?\`<img src="\${el.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #6366f1;margin:0 auto;display:block"/>\`:\`<div style="width:44px;height:44px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#6366f1;margin:0 auto">\${(el.prenom||'?')[0]}</div>\`}
+              <div style="font-size:10px;font-weight:700;color:#1e293b;margin-top:3px;line-height:1.2">\${el.prenom}</div>
+              <div style="font-size:9px;color:#475569">\${el.nom}</div>
+            \` : ''}
+          </td>\`;
+        }
+      }
+      cells += '</tr><tr>';
     }
+
+    const win = window.open('', '_blank');
+    win.document.write(\`<!DOCTYPE html><html><head>
+      <title>Plan de classe - \${detailClasse.nom}</title>
+      <style>
+        body{font-family:'Century Gothic',sans-serif;padding:24px;background:#f8fafc}
+        h1{font-size:20px;font-weight:800;margin-bottom:4px}
+        .sub{font-size:12px;color:#64748b;margin-bottom:20px}
+        table{border-collapse:collapse;width:100%;background:white;border-radius:8px}
+        .no-print{margin-bottom:16px}
+        @media print{.no-print{display:none}body{padding:12px}@page{margin:1cm}}
+      </style></head><body>
+      <div class="no-print">
+        <button onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
+      </div>
+      <h1>🏫 Plan de classe — \${detailClasse.nom}</h1>
+      <div class="sub">\${detailClasse.annee_scolaire||''} · Titulaire : \${detailClasse.prof_prenom||''} \${detailClasse.prof_nom||''}</div>
+      <table><tbody><tr>\${cells}</tr></tbody></table>
+    </body></html>\`);
+    win.document.close();
   };
 
-  const getClasse = (id) => classes.find(c => c.id == id);
+  const ouvrirPlanClasse = async () => {
+    await chargerPlanClasse();
+    setShowPlanClasse(true);
+  };
 
-  const elevesFiltres = eleves.filter(el => {
-    const matchR = (el.nom+' '+el.prenom+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchC = filtreClasse==='tous' || String(el.classe_id)===String(filtreClasse);
-    return matchR && matchC;
-  });
+  const dropOnCell = (row, col) => {
+    if (dragEleve === null) return;
+    const key = row+'-'+col;
+    // Retirer élève de son ancienne position
+    const newPos = {...planPositions};
+    Object.keys(newPos).forEach(k => { if (String(newPos[k]) === String(dragEleve)) delete newPos[k]; });
+    if (dragEleve !== 'VIDE') newPos[key] = dragEleve;
+    setPlanPositions(newPos);
+    setDragEleve(null);
+  };
 
-  return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.title}>🎓 Élèves</h2>
-        <div style={s.headerRight}>
-          <div style={s.searchBox}>
-            <span style={s.searchIcon}>🔍</span>
-            <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+  const imprimerTrombinoscope = () => {`
+);
+
+// Ajouter bouton Plan de classe à côté de Trombinoscope
+c = c.replace(
+  `<button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerTrombinoscope}>
+          📸 Trombinoscope
+        </button>`,
+  `<div style={{display:'flex',gap:8}}>
+          <button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerTrombinoscope}>
+            📸 Trombinoscope
+          </button>
+          <button style={{...s.btnAdd,background:'#0f172a',display:'flex',alignItems:'center',gap:6}} onClick={ouvrirPlanClasse}>
+            🪑 Plan de classe
+          </button>
+        </div>`
+);
+
+// Ajouter le composant Plan de classe avant le return de détail classe
+c = c.replace(
+  `  // Vue détail classe - liste élèves
+  if (detailClasse) return (`,
+  `  // Vue PLAN DE CLASSE
+  if (showPlanClasse && detailClasse) {
+    const COLS = 12; const ROWS = 13;
+    const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
+
+    return (
+      <div style={{...s.page, padding:'20px 24px'}}>
+        <div style={s.header}>
+          <button style={s.btnBack} onClick={() => setShowPlanClasse(false)}>← Retour liste</button>
+          <h2 style={{...s.title, fontSize:18}}>🪑 Plan de classe — {detailClasse.nom}</h2>
+          <div style={{display:'flex',gap:8}}>
+            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
+            <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
           </div>
-          <select style={s.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-            <option value="tous">Toutes les classes</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-          </select>
-          {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setEleveEdit(null); resetForm(); }}>+ Ajouter</button>}
         </div>
-      </div>
 
-      <div style={s.statsBar}>
-        <span style={s.statChip}>Total <b>{eleves.length}</b> élèves</span>
-        {classes.map(c => (
-          <span key={c.id} style={{...s.statChip,background:'#d1fae5',color:'#065f46'}}>
-            {c.nom} <b>{eleves.filter(e=>e.classe_id==c.id).length}</b>
-          </span>
-        ))}
-      </div>
+        <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
+          {/* Grille plan */}
+          <div style={{flex:1,overflowX:'auto'}}>
+            <div style={{fontSize:11,color:'#94a3b8',marginBottom:8,fontWeight:600}}>↑ Tableau / Entrée</div>
+            <table style={{borderCollapse:'collapse',width:'100%',minWidth:700}}>
+              <tbody>
+                {Array.from({length:ROWS}).map((_,row) => (
+                  <tr key={row}>
+                    {row === ROWS-1 ? (
+                      <td colSpan={COLS}
+                        style={{background:'#0f172a',color:'white',textAlign:'center',fontWeight:800,fontSize:13,padding:'10px',borderRadius:6,cursor:'default'}}>
+                        🎓 Bureau du professeur — {detailClasse.prof_prenom||''} {detailClasse.prof_nom||''}
+                      </td>
+                    ) : Array.from({length:COLS}).map((_,col) => {
+                      const key = row+'-'+col;
+                      const eleveId = planPositions[key];
+                      const el = eleveId ? elevesClasse.find(e => String(e.id)===String(eleveId)) : null;
+                      return (
+                        <td key={col}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => dropOnCell(row, col)}
+                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                          {el ? (
+                            <div draggable onDragStart={() => setDragEleve(String(el.id))}
+                              style={{cursor:'grab',padding:2}}>
+                              {el.photo
+                                ? <img src={el.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #6366f1',display:'block',margin:'0 auto'}} />
+                                : <div style={{width:36,height:36,borderRadius:'50%',background:'#6366f1',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:800,color:'white',margin:'0 auto'}}>{(el.prenom||'?')[0]}</div>
+                              }
+                              <div style={{fontSize:9,fontWeight:700,color:'#1e293b',marginTop:2,lineHeight:1.1}}>{el.prenom}</div>
+                              <div style={{fontSize:8,color:'#475569'}}>{el.nom}</div>
+                              <button onClick={() => {
+                                const np = {...planPositions}; delete np[key]; setPlanPositions(np);
+                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{color:'#e2e8f0',fontSize:10}}>·</div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {showForm && (
-        <div style={s.overlay}>
-          <div style={s.modal}>
-            <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>{eleveEdit?'Modifier':'Ajouter'} un élève</h3>
-              <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
+          {/* Panneau élèves */}
+          <div style={{width:160,flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+              Élèves non placés ({elevesNonPlaces.length})
             </div>
-            <form onSubmit={handleSubmit}>
-              <div style={s.section}>🎓 Informations élève</div>
-              <div style={s.grid2}>
-                <div style={s.field}><label style={s.lbl}>Nom *</label><input style={s.inp} required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Dupont" /></div>
-                <div style={s.field}><label style={s.lbl}>Prénom *</label><input style={s.inp} required value={form.prenom} onChange={e => setForm({...form,prenom:e.target.value})} placeholder="Marie" /></div>
-                <div style={s.field}><label style={s.lbl}>Email</label><input style={s.inp} type="email" value={form.email} onChange={e => setForm({...form,email:e.target.value})} placeholder="marie@ecole.ch" /></div>
-                <div style={s.field}><label style={s.lbl}>Date de naissance</label><input style={s.inp} type="date" value={form.date_naissance} onChange={e => setForm({...form,date_naissance:e.target.value})} /></div>
-                <div style={s.field}><label style={s.lbl}>Classe</label>
-                  <select style={s.inp} value={form.classe_id} onChange={e => setForm({...form,classe_id:e.target.value})}>
-                    <option value="">-- Choisir --</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                  </select>
+            <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
+              {elevesNonPlaces.map(el => (
+                <div key={el.id} draggable onDragStart={() => setDragEleve(String(el.id))}
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+                  {el.photo
+                    ? <img src={el.photo} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}} />
+                    : <div style={{width:32,height:32,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#6366f1',flexShrink:0}}>{(el.prenom||'?')[0]}</div>
+                  }
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{el.prenom}</div>
+                    <div style={{fontSize:10,color:'#64748b'}}>{el.nom}</div>
+                  </div>
                 </div>
-                <div style={s.field}><label style={s.lbl}>Téléphone</label><input style={s.inp} value={form.telephone} onChange={e => setForm({...form,telephone:e.target.value})} placeholder="079 123 45 67" /></div>
-                <div style={{...s.field,gridColumn:'1/-1'}}><label style={s.lbl}>Adresse</label><input style={s.inp} value={form.adresse} onChange={e => setForm({...form,adresse:e.target.value})} placeholder="Rue de la Paix 10, 1950 Sion" /></div>
-              </div>
-              <div style={s.section}>👨‍👩‍👦 Contact / Parent</div>
-              <div style={s.grid2}>
-                <div style={s.field}><label style={s.lbl}>Nom du parent / contact</label><input style={s.inp} value={form.nom_parent} onChange={e => setForm({...form,nom_parent:e.target.value})} placeholder="Dupont Jean" /></div>
-                <div style={s.field}><label style={s.lbl}>Téléphone parent</label><input style={s.inp} value={form.telephone_parent} onChange={e => setForm({...form,telephone_parent:e.target.value})} placeholder="079 987 65 43" /></div>
-              </div>
-              <div style={s.formActions}>
-                <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>Sauvegarder</button>
-              </div>
-            </form>
+              ))}
+              {elevesNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
+            </div>
           </div>
         </div>
-      )}
-
-      <div style={s.tableWrap}>
-        <table style={s.table}>
-          <thead>
-            <tr style={s.thead}>
-              {['Nom','Prénom','Classe','Date naissance','Téléphone','Parent / Contact','Statut','Actions'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {elevesFiltres.length===0 ? (
-              <tr><td colSpan="8" style={s.empty}>Aucun élève trouvé</td></tr>
-            ) : elevesFiltres.map(el => {
-              const cl = getClasse(el.classe_id);
-              return (
-                <tr key={el.id} style={s.tr}>
-                  <td style={{...s.td,fontWeight:700,color:'#1e293b'}}>{el.nom||'—'}</td>
-                  <td style={s.td}>{el.prenom||'—'}</td>
-                  <td style={s.td}>
-                    {cl ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{cl.nom}</span>
-                        : <span style={{color:'#94a3b8'}}>—</span>}
-                  </td>
-                  <td style={s.td}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                  <td style={s.td}>{el.telephone||'—'}</td>
-                  <td style={s.td}>
-                    <div>{el.nom_parent||'—'}</div>
-                    {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
-                  </td>
-                  <td style={s.td}>
-                    <span style={el.statut==='actif'?s.badgeActive:s.badgeInactive}>
-                      {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    {isAdmin() && <>
-                      <button style={s.btnEdit} onClick={() => handleEdit(el)} title="Modifier">✏️</button>
-                      <button style={s.btnDel} onClick={() => handleDelete(el.id)} title="Supprimer">🗑️</button>
-                    </>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"${FONT}"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'},
-  btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
-  title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
-  headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
-  searchBox:{position:'relative',display:'flex',alignItems:'center'},
-  searchIcon:{position:'absolute',left:10,fontSize:13},
-  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},
-  select:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white',outline:'none',cursor:'pointer'},
-  btnAdd:{padding:'8px 16px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  statsBar:{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'},
-  statChip:{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500},
-  overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},
-  modal:{background:'white',padding:32,borderRadius:16,width:560,maxHeight:'88vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
-  modalHeader:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24},
-  modalTitle:{fontSize:18,fontWeight:800,color:'#0f172a',margin:0},
-  btnClose:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'},
-  section:{fontSize:11,fontWeight:700,color:'#f59e0b',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:14,marginTop:10,textTransform:'uppercase',letterSpacing:'0.05em'},
-  grid2:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:8},
-  field:{display:'flex',flexDirection:'column'},
-  lbl:{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'},
-  inp:{padding:'9px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'},
-  formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
-  btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
-  btnSave:{padding:'9px 20px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
-  table:{width:'100%',borderCollapse:'collapse',background:'white'},
-  thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
-  tr:{borderBottom:'1px solid #f8fafc'},
-  td:{padding:'11px 14px',fontSize:13,color:'#374151'},
-  empty:{padding:40,textAlign:'center',color:'#94a3b8'},
-  badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600},
-  badgeInactive:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7},
-};
-`.trim());
+  // Vue détail classe - liste élèves
+  if (detailClasse) return (`
+);
 
-console.log('Eleves.js OK !');
+fs.writeFileSync('./src/pages/Classes.js', c);
+console.log('Plan de classe OK !');
