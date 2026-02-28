@@ -3,11 +3,15 @@
 const getEleves = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT e.id, u.nom, u.prenom, u.email, c.nom as classe, e.date_naissance, e.telephone, e.nom_parent, e.telephone_parent, e.statut
+      SELECT e.*,
+        COALESCE(e.nom, u.nom) as nom,
+        COALESCE(e.prenom, u.prenom) as prenom,
+        COALESCE(e.email, u.email) as email,
+        c.nom as classe_nom
       FROM eleves e
-      JOIN utilisateurs u ON e.utilisateur_id = u.id
+      LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id
-      ORDER BY u.nom, u.prenom
+      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
     `);
     res.json(result.rows);
   } catch (err) {
