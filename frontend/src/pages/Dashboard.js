@@ -13,7 +13,7 @@ export default function Dashboard() {
   const headers = { Authorization: 'Bearer ' + token };
 
   useEffect(() => {
-    const u = localStorage.getItem('user');
+    const u = localStorage.getItem('utilisateur');
     if (u) setUser(JSON.parse(u));
     chargerStats();
   }, []);
