@@ -9,4 +9,6 @@ router.post('/', autoriser('admin'), c.creerClasse);
 router.put('/:id', autoriser('admin'), c.modifierClasse);
 router.delete('/:id', autoriser('admin'), c.supprimerClasse);
 
+const cc = require('../controllers/classesController');
+router.get('/:id/eleves', cc.getElevesClasse);
 module.exports = router;
