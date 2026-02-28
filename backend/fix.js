@@ -1,44 +1,34 @@
 const fs = require('fs');
-
-fs.writeFileSync('./src/controllers/planClasseController.js', `const pool = require('../config/database');
-
-const getPlanClasse = async (req, res) => {
+let ctrl = fs.readFileSync('./src/controllers/branchesController.js', 'utf8');
+ctrl = ctrl.replace(
+  `const { nom, niveau, periodes_semaine, coefficient } = req.body;
+  if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
+  if (!periodes_semaine) return res.status(400).json({ message: 'Les périodes/semaine sont requises' });
+  if (!niveau) return res.status(400).json({ message: 'Le niveau est requis' });
   try {
-    const r = await pool.query('SELECT * FROM plan_classe WHERE classe_id=$1', [req.params.classe_id]);
-    res.json(r.rows[0] || { positions: {} });
-  } catch(err) { res.status(500).json({ message: err.message }); }
-};
-
-const savePlanClasse = async (req, res) => {
-  const { positions } = req.body;
+    const r = await pool.query(
+      'INSERT INTO matieres (nom, niveau, periodes_semaine, coefficient) VALUES ($1,$2,$3,$4) RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1]`,
+  `const { nom, niveau, periodes_semaine, coefficient, type_branche } = req.body;
+  if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
+  if (!periodes_semaine) return res.status(400).json({ message: 'Les périodes/semaine sont requises' });
+  if (!niveau) return res.status(400).json({ message: 'Le niveau est requis' });
   try {
-    await pool.query(
-      \`INSERT INTO plan_classe (classe_id, positions, updated_at) VALUES ($1,$2,NOW())
-       ON CONFLICT (classe_id) DO UPDATE SET positions=$2, updated_at=NOW()\`,
-      [req.params.classe_id, JSON.stringify(positions)]
-    );
-    res.json({ message: 'Plan sauvegardé' });
-  } catch(err) { res.status(500).json({ message: err.message }); }
-};
-
-module.exports = { getPlanClasse, savePlanClasse };`);
-
-fs.writeFileSync('./src/routes/planClasse.js', `const express = require('express');
-const router = express.Router();
-const { verifierToken } = require('../middleware/auth');
-const { getPlanClasse, savePlanClasse } = require('../controllers/planClasseController');
-router.use(verifierToken);
-router.get('/:classe_id', getPlanClasse);
-router.post('/:classe_id', savePlanClasse);
-module.exports = router;`);
-
-let server = fs.readFileSync('./server.js', 'utf8');
-if (!server.includes('plan-classe')) {
-  server = server.replace(
-    "app.use('/api/observations'",
-    "app.use('/api/plan-classe', require('./src/routes/planClasse'));\napp.use('/api/observations'"
-  );
-  fs.writeFileSync('./server.js', server);
-  console.log('server.js OK');
-}
-console.log('planClasse backend OK !');
+    const r = await pool.query(
+      'INSERT INTO matieres (nom, niveau, periodes_semaine, coefficient, type_branche) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1, type_branche||'principale']`
+);
+ctrl = ctrl.replace(
+  `const { nom, niveau, periodes_semaine, coefficient } = req.body;
+  try {
+    const r = await pool.query(
+      'UPDATE matieres SET nom=$1, niveau=$2, periodes_semaine=$3, coefficient=$4 WHERE id=$5 RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1, req.params.id]`,
+  `const { nom, niveau, periodes_semaine, coefficient, type_branche } = req.body;
+  try {
+    const r = await pool.query(
+      'UPDATE matieres SET nom=$1, niveau=$2, periodes_semaine=$3, coefficient=$4, type_branche=$5 WHERE id=$6 RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1, type_branche||'principale', req.params.id]`
+);
+fs.writeFileSync('./src/controllers/branchesController.js', ctrl);
+console.log('branchesController OK !');

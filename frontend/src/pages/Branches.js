@@ -10,7 +10,7 @@ export default function Branches() {
   const [branches, setBranches] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [brancheEdit, setBrancheEdit] = useState(null);
-  const [form, setForm] = useState({ nom:'', niveau:'', periodes_semaine:'', coefficient:'1' });
+  const [form, setForm] = useState({ nom:'', niveau:'', periodes_semaine:'', coefficient:'1', type_branche:'principale' });
   const [erreur, setErreur] = useState('');
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
@@ -31,14 +31,14 @@ export default function Branches() {
       if (brancheEdit) await axios.put(API+'/branches/'+brancheEdit.id, form, {headers});
       else await axios.post(API+'/branches', form, {headers});
       setShowForm(false); setBrancheEdit(null);
-      setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1'});
+      setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale'});
       chargerBranches();
     } catch(err) { setErreur(err.response?.data?.message||'Erreur serveur'); }
   };
 
   const handleEdit = (b) => {
     setBrancheEdit(b);
-    setForm({nom:b.nom||'',niveau:b.niveau||'',periodes_semaine:b.periodes_semaine||'',coefficient:b.coefficient||'1'});
+    setForm({nom:b.nom||'',niveau:b.niveau||'',periodes_semaine:b.periodes_semaine||'',coefficient:b.coefficient||'1',type_branche:b.type_branche||'principale'});
     setErreur(''); setShowForm(true);
   };
 
@@ -117,6 +117,18 @@ export default function Branches() {
                   <input style={s.inp} type="number" min="0.5" max="10" step="0.5" value={form.coefficient} onChange={e => setForm({...form,coefficient:e.target.value})} />
                 </div>
               </div>
+              <div style={{marginTop:14}}>
+                <label style={s.lbl}>Type de branche *</label>
+                <div style={{display:'flex',gap:10,marginTop:6}}>
+                  {['principale','secondaire'].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => setForm({...form,type_branche:t})}
+                      style={{flex:1,padding:'10px',borderRadius:8,border:'2px solid '+(form.type_branche===t?'#8b5cf6':'#e2e8f0'),background:form.type_branche===t?'#ede9fe':'#f8fafc',color:form.type_branche===t?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,textTransform:'capitalize',transition:'all 0.15s'}}>
+                      {t==='principale'?'⭐ Principale':'📎 Secondaire'}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
                 <button type="submit" style={s.btnSave}>Sauvegarder</button>
@@ -130,7 +142,7 @@ export default function Branches() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Branche','Niveau','Périodes/sem.','Coefficient','Actions'].map(h => (
+              {['Branche','Niveau','Type','Périodes/sem.','Coefficient','Actions'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
             </tr>
@@ -150,18 +162,23 @@ export default function Branches() {
                     </div>
                   </td>
                   <td style={s.td}>
+                    <span style={{background:b.type_branche==='principale'?'#fef3c7':'#f1f5f9',color:b.type_branche==='principale'?'#92400e':'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
+                      {b.type_branche==='principale'?'⭐ Principale':'📎 Secondaire'}
+                    </span>
+                  </td>
+                  <td style={s.td}>
                     {b.niveau
                       ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{b.niveau}</span>
                       : <span style={{color:'#94a3b8'}}>—</span>}
                   </td>
                   <td style={s.td}>
-                    <span style={{background:'#f0fdf4',color:'#166534',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
-                      {b.periodes_semaine||'—'} p/sem
+                    <span style={{background:'#f0fdf4',color:'#166534',padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:700}}>
+                      {b.periodes_semaine||'—'}
                     </span>
                   </td>
                   <td style={s.td}>
-                    <span style={{background:'#f8fafc',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
-                      Coef. {b.coefficient||1}
+                    <span style={{background:'#f8fafc',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:600}}>
+                      {b.coefficient||1}
                     </span>
                   </td>
                   <td style={s.td}>
