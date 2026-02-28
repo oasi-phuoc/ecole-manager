@@ -1,6 +1,4 @@
-const fs = require('fs');
-
-fs.writeFileSync('./src/controllers/importController.js', `const pool = require('../config/database');
+const pool = require('../config/database');
 const XLSX = require('xlsx');
 
 const importEleves = async (req, res) => {
@@ -47,7 +45,7 @@ const importEleves = async (req, res) => {
         return isNaN(n) ? null : n;
       };
 
-      await pool.query(\`
+      await pool.query(`
         INSERT INTO eleves (
           nom, prenom, date_naissance, statut,
           oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
@@ -67,7 +65,7 @@ const importEleves = async (req, res) => {
           $19,$20,$21,
           $22,$23,$24,$25
         )
-      \`, [
+      `, [
         nom, prenom, parseDate(row[6]),
         row[0]||null, row[1]||null, parseInt2(row[2]), ref, parseInt2(row[4]),
         nomComplet, parseDate(row[6]),
@@ -80,9 +78,8 @@ const importEleves = async (req, res) => {
       created++;
     }
 
-    res.json({ message: \`Import terminé : \${created} créé(s), \${skipped} déjà existant(s)\`, created, skipped });
+    res.json({ message: `Import terminé : ${created} créé(s), ${skipped} déjà existant(s)`, created, skipped });
   } catch(err) { res.status(500).json({ message: 'Erreur import: ' + err.message }); }
 };
 
-module.exports = { importEleves };`);
-console.log('importController OK !');
+module.exports = { importEleves };

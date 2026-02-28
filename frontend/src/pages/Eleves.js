@@ -17,6 +17,11 @@ export default function Eleves() {
     date_naissance:'', adresse:'', telephone:'',
     nom_parent:'', telephone_parent:'', statut:'actif'
   });
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [onglet, setOnglet] = useState('eleves'); // 'eleves' | 'oasi'
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -32,6 +37,22 @@ export default function Eleves() {
       setEleves(el.data);
       setClasses(cl.data.filter(c => c.actif !== false));
     } catch(err) { console.error(err); }
+  };
+
+  const handleImport = async (e) => {
+    e.preventDefault();
+    if (!importFile) return;
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('fichier', importFile);
+      const r = await axios.post(API+'/import/eleves', formData, {
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' }
+      });
+      setImportResult(r.data);
+      chargerTout();
+    } catch(err) { setImportResult({ message: 'Erreur: '+(err.response?.data?.message||err.message) }); }
+    setImportLoading(false);
   };
 
   const resetForm = () => setForm({nom:'',prenom:'',email:'',classe_id:'',date_naissance:'',adresse:'',telephone:'',nom_parent:'',telephone_parent:'',statut:'actif'});
@@ -71,7 +92,8 @@ export default function Eleves() {
   const elevesFiltres = eleves.filter(el => {
     const matchR = (el.nom+' '+el.prenom+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
     const matchC = filtreClasse==='tous' || String(el.classe_id)===String(filtreClasse);
-    return matchR && matchC;
+    const matchOnglet = onglet==='oasi' ? !!el.oasi_ref : !el.oasi_ref;
+    return matchR && matchC && matchOnglet;
   });
 
   return (
@@ -88,9 +110,66 @@ export default function Eleves() {
             <option value="tous">Toutes les classes</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
           </select>
+          <button style={{...s.btnAdd,background:'#6366f1'}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
           {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setEleveEdit(null); resetForm(); }}>+ Ajouter</button>}
         </div>
       </div>
+
+      {/* Onglets */}
+      <div style={{display:'flex',gap:4,marginBottom:16}}>
+        {[{id:'eleves',label:'👤 Élèves manuels'},{id:'oasi',label:'📋 Importés OASI'}].map(o => (
+          <button key={o.id} onClick={() => setOnglet(o.id)}
+            style={{padding:'8px 18px',borderRadius:8,border:'2px solid '+(onglet===o.id?'#f59e0b':'#e2e8f0'),background:onglet===o.id?'#fef3c7':'white',color:onglet===o.id?'#92400e':'#64748b',fontWeight:700,fontSize:13,cursor:'pointer'}}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Modal import */}
+      {showImport && (
+        <div style={s.overlay}>
+          <div style={{...s.modal,width:480}}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>📥 Importer depuis OASI</h3>
+              <button style={s.btnClose} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>✕</button>
+            </div>
+            {importResult ? (
+              <div>
+                <div style={{background: importResult.created >= 0 ? '#d1fae5':'#fee2e2', color: importResult.created >= 0 ? '#065f46':'#991b1b', padding:16, borderRadius:10, fontSize:14, fontWeight:600}}>
+                  {importResult.message}
+                </div>
+                {importResult.created >= 0 && (
+                  <div style={{marginTop:12,fontSize:13,color:'#475569'}}>
+                    <div>✅ <b>{importResult.created}</b> élève(s) créé(s)</div>
+                    <div>⏭️ <b>{importResult.skipped}</b> déjà existant(s) (ignorés)</div>
+                  </div>
+                )}
+                <div style={{marginTop:20,textAlign:'right'}}>
+                  <button style={s.btnSave} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>Fermer</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleImport}>
+                <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:10,padding:16,marginBottom:20,fontSize:13,color:'#0369a1'}}>
+                  ℹ️ Importez un fichier Excel OASI. Les élèves déjà présents (via REF) ne seront pas dupliqués.
+                </div>
+                <div style={s.field}>
+                  <label style={s.lbl}>Fichier Excel (.xlsx) *</label>
+                  <input type="file" accept=".xlsx,.xls" required style={{padding:'8px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13}}
+                    onChange={e => setImportFile(e.target.files[0])} />
+                </div>
+                {importFile && <div style={{marginTop:8,fontSize:12,color:'#10b981'}}>✅ {importFile.name} sélectionné</div>}
+                <div style={s.formActions}>
+                  <button type="button" style={s.btnCancel} onClick={() => setShowImport(false)}>Annuler</button>
+                  <button type="submit" style={{...s.btnSave,background:'#6366f1'}} disabled={importLoading}>
+                    {importLoading ? '⏳ Import en cours...' : '📥 Importer'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={s.statsBar}>
         <span style={s.statChip}>Total <b>{eleves.length}</b> élèves</span>
@@ -129,6 +208,37 @@ export default function Eleves() {
                 <div style={s.field}><label style={s.lbl}>Nom du parent / contact</label><input style={s.inp} value={form.nom_parent} onChange={e => setForm({...form,nom_parent:e.target.value})} placeholder="Dupont Jean" /></div>
                 <div style={s.field}><label style={s.lbl}>Téléphone parent</label><input style={s.inp} value={form.telephone_parent} onChange={e => setForm({...form,telephone_parent:e.target.value})} placeholder="079 987 65 43" /></div>
               </div>
+              {eleveEdit?.oasi_ref && (
+                <div style={{marginTop:20,borderTop:'2px dashed #c7d2fe',paddingTop:16}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#6366f1',background:'#e0e7ff',padding:'5px 12px',borderRadius:6,marginBottom:14,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                    🗂️ Données OASI (A → V)
+                  </div>
+                  <div style={s.grid2}>
+                    <div style={{...s.field,gridColumn:'1/-1'}}><label style={s.lbl}>A — PROG_NOM</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prog_nom||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>B — PROG_ENCADRANT</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prog_encadrant||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>C — N</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_n||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>D — REF</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_ref||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>E — POS</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_pos||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>F — NOM</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_nom||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>G — NAIS</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_nais?.substring(0,10)||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>H — NATIONALITE</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_nationalite||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>I — PRESENCE_DATE</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_presence_date?.substring(0,10)||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>J — JOUR_SEMAINE</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_jour_semaine||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>K — PRESENCE_PERIODE</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_presence_periode||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>L — PRESENCE_TYPE</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_presence_type||''} /></div>
+                    <div style={{...s.field,gridColumn:'1/-1'}}><label style={s.lbl}>M — REMARQUE</label><textarea style={{...s.inp,background:'#f8fafc',minHeight:50}} readOnly value={eleveEdit?.oasi_remarque||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>N — CONTROLE_DU</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_controle_du?.substring(0,10)||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>O — CONTROLE_AU</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_controle_au?.substring(0,10)||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>P — PROG_PRESENCES</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prog_presences||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>Q — PROG_ADMIN</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prog_admin||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>R — AS</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_as||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>S — PRG_ID</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prg_id||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>T — PRG_OCCUPATION_ID</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_prg_occupation_id||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>U — RA_ID</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_ra_id||''} /></div>
+                    <div style={s.field}><label style={s.lbl}>V — TEMPS_REPARTI_ID</label><input style={{...s.inp,background:'#f8fafc'}} readOnly value={eleveEdit?.oasi_temps_reparti_id||''} /></div>
+                  </div>
+                </div>
+              )}
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
                 <button type="submit" style={s.btnSave}>Sauvegarder</button>
@@ -142,9 +252,10 @@ export default function Eleves() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Classe','Date naissance','Téléphone','Parent / Contact','Statut','Actions'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
+              {onglet==='eleves'
+                ? ['Nom','Prénom','Classe','Date naissance','Téléphone','Parent / Contact','Statut','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)
+                : ['Nom','Prénom','REF','Nationalité','Programme','Encadrant','AS Référent','Classe','Statut','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)
+              }
             </tr>
           </thead>
           <tbody>
@@ -156,16 +267,28 @@ export default function Eleves() {
                 <tr key={el.id} style={s.tr}>
                   <td style={{...s.td,fontWeight:700,color:'#1e293b'}}>{el.nom||'—'}</td>
                   <td style={s.td}>{el.prenom||'—'}</td>
-                  <td style={s.td}>
-                    {cl ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{cl.nom}</span>
-                        : <span style={{color:'#94a3b8'}}>—</span>}
-                  </td>
-                  <td style={s.td}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                  <td style={s.td}>{el.telephone||'—'}</td>
-                  <td style={s.td}>
-                    <div>{el.nom_parent||'—'}</div>
-                    {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
-                  </td>
+                  {onglet==='eleves' ? <>
+                    <td style={s.td}>
+                      {cl ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{cl.nom}</span>
+                          : <span style={{color:'#94a3b8'}}>—</span>}
+                    </td>
+                    <td style={s.td}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
+                    <td style={s.td}>{el.telephone||'—'}</td>
+                    <td style={s.td}>
+                      <div>{el.nom_parent||'—'}</div>
+                      {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
+                    </td>
+                  </> : <>
+                    <td style={s.td}><span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{el.oasi_ref||'—'}</span></td>
+                    <td style={s.td}>{el.oasi_nationalite||'—'}</td>
+                    <td style={s.td}><div style={{fontSize:12,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{el.oasi_prog_nom||'—'}</div></td>
+                    <td style={s.td}>{el.oasi_encadrant||'—'}</td>
+                    <td style={s.td}>{el.oasi_as_ref||'—'}</td>
+                    <td style={s.td}>
+                      {cl ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{cl.nom}</span>
+                          : <span style={{color:'#94a3b8'}}>—</span>}
+                    </td>
+                  </>}
                   <td style={s.td}>
                     <span style={el.statut==='actif'?s.badgeActive:s.badgeInactive}>
                       {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
