@@ -14,14 +14,25 @@ const getObservations = async (req, res) => {
 };
 
 const creerObservation = async (req, res) => {
-  const { titre, contenu } = req.body;
+  const { titre, contenu, mesure_prise, intervention_responsable, demande_entretien } = req.body;
   try {
     const r = await pool.query(
-      'INSERT INTO observations (eleve_id, titre, contenu, auteur_id) VALUES ($1,$2,$3,$4) RETURNING *',
-      [req.params.eleve_id, titre, contenu, req.user.id]
+      'INSERT INTO observations (eleve_id, titre, contenu, mesure_prise, intervention_responsable, demande_entretien, auteur_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [req.params.eleve_id, titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.user.id]
     );
     res.status(201).json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const modifierObservation = async (req, res) => {
+  const { titre, contenu, mesure_prise, intervention_responsable, demande_entretien } = req.body;
+  try {
+    await pool.query(
+      'UPDATE observations SET titre=$1, contenu=$2, mesure_prise=$3, intervention_responsable=$4, demande_entretien=$5 WHERE id=$6',
+      [titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.params.id]
+    );
+    res.json({ message: 'Observation modifiée' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
 };
 
 const supprimerObservation = async (req, res) => {
@@ -29,14 +40,6 @@ const supprimerObservation = async (req, res) => {
     await pool.query('DELETE FROM observations WHERE id=$1', [req.params.id]);
     res.json({ message: 'Observation supprimée' });
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
-};
-
-const modifierObservation = async (req, res) => {
-  const { titre, contenu } = req.body;
-  try {
-    await pool.query('UPDATE observations SET titre=$1, contenu=$2 WHERE id=$3', [titre, contenu, req.params.id]);
-    res.json({ message: 'Observation modifiée' });
-  } catch(err) { res.status(500).json({ message: err.message }); }
 };
 
 module.exports = { getObservations, creerObservation, supprimerObservation, modifierObservation };

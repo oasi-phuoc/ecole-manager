@@ -148,7 +148,7 @@ export default function Classes() {
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Titre</th><th>Remarque</th><th>Mesure prise</th><th>Auteur</th><th>Intervention</th><th>Entretien</th>
+              <th>Date</th><th>Titre</th><th>Remarque</th><th>Mesure prise</th><th>Auteur</th><th style="text-align:center">Intervention</th><th style="text-align:center">Entretien</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
