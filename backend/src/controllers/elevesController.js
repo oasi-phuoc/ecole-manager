@@ -91,8 +91,10 @@ const supprimerEleve = async (req, res) => {
     const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id = $1', [req.params.id]);
     if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
     const userId = eleveResult.rows[0].utilisateur_id;
+    // Supprimer d'abord les dépendances
+    await client.query('DELETE FROM observations WHERE eleve_id = $1', [req.params.id]);
+    await client.query('DELETE FROM absences WHERE eleve_id = $1', [req.params.id]);
     await client.query('DELETE FROM eleves WHERE id = $1', [req.params.id]);
-    // Supprimer utilisateur seulement s'il existe
     if (userId) await client.query('DELETE FROM utilisateurs WHERE id = $1', [userId]);
     await client.query('COMMIT');
     res.json({ message: 'Eleve supprime' });
