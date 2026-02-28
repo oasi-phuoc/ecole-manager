@@ -1,48 +1,47 @@
 const fs = require('fs');
 
-fs.writeFileSync('./src/controllers/observationsController.js', `const pool = require('../config/database');
+fs.writeFileSync('./src/controllers/branchesController.js', `const pool = require('../config/database');
 
-const getObservations = async (req, res) => {
+const getBranches = async (req, res) => {
   try {
-    const r = await pool.query(\`
-      SELECT o.*, u.nom as auteur_nom, u.prenom as auteur_prenom
-      FROM observations o
-      LEFT JOIN utilisateurs u ON u.id=o.auteur_id
-      WHERE o.eleve_id=$1
-      ORDER BY o.created_at DESC
-    \`, [req.params.eleve_id]);
-    res.json(r.rows);
+    const result = await pool.query('SELECT * FROM matieres ORDER BY niveau, nom');
+    res.json(result.rows);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-const creerObservation = async (req, res) => {
-  const { titre, contenu, mesure_prise, intervention_responsable, demande_entretien } = req.body;
+const creerBranche = async (req, res) => {
+  const { nom, niveau, periodes_semaine, coefficient } = req.body;
+  if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
+  if (!periodes_semaine) return res.status(400).json({ message: 'Les périodes/semaine sont requises' });
+  if (!niveau) return res.status(400).json({ message: 'Le niveau est requis' });
   try {
     const r = await pool.query(
-      'INSERT INTO observations (eleve_id, titre, contenu, mesure_prise, intervention_responsable, demande_entretien, auteur_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [req.params.eleve_id, titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.user.id]
+      'INSERT INTO matieres (nom, niveau, periodes_semaine, coefficient) VALUES ($1,$2,$3,$4) RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1]
     );
     res.status(201).json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-const modifierObservation = async (req, res) => {
-  const { titre, contenu, mesure_prise, intervention_responsable, demande_entretien } = req.body;
+const modifierBranche = async (req, res) => {
+  const { nom, niveau, periodes_semaine, coefficient } = req.body;
   try {
-    await pool.query(
-      'UPDATE observations SET titre=$1, contenu=$2, mesure_prise=$3, intervention_responsable=$4, demande_entretien=$5 WHERE id=$6',
-      [titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.params.id]
+    const r = await pool.query(
+      'UPDATE matieres SET nom=$1, niveau=$2, periodes_semaine=$3, coefficient=$4 WHERE id=$5 RETURNING *',
+      [nom, niveau, parseInt(periodes_semaine), parseFloat(coefficient)||1, req.params.id]
     );
-    res.json({ message: 'Observation modifiée' });
-  } catch(err) { res.status(500).json({ message: err.message }); }
-};
-
-const supprimerObservation = async (req, res) => {
-  try {
-    await pool.query('DELETE FROM observations WHERE id=$1', [req.params.id]);
-    res.json({ message: 'Observation supprimée' });
+    if (!r.rows.length) return res.status(404).json({ message: 'Branche non trouvée' });
+    res.json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-module.exports = { getObservations, creerObservation, supprimerObservation, modifierObservation };`);
-console.log('observationsController OK !');
+const supprimerBranche = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM matieres WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Branche supprimée' });
+  } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+module.exports = { getBranches, creerBranche, modifierBranche, supprimerBranche };`);
+
+console.log('branchesController OK !');
