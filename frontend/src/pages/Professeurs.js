@@ -103,6 +103,7 @@ export default function Professeurs() {
                 <div style={s.field}><label style={s.lbl}>Email *</label><input style={s.inp} type="email" required value={form.email} onChange={e => setForm({...form,email:e.target.value})} /></div>
                 <div style={s.field}><label style={s.lbl}>{profEdit?'Nouveau mot de passe':'Mot de passe *'}</label><input style={s.inp} type="password" required={!profEdit} value={form.mot_de_passe} onChange={e => setForm({...form,mot_de_passe:e.target.value})} /></div>
               </div>
+              <div style={{marginTop:24}}></div>
               <div style={s.section}>👤 Informations personnelles</div>
               <div style={s.grid2}>
                 <div style={{...s.field,gridColumn:'1/-1'}}>
@@ -142,7 +143,7 @@ export default function Professeurs() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Email','Naissance','Téléphone','Taux','Périodes','Statut','Créé le'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Nom','Prénom','Email','Naissance','Téléphone','Statut','Créé le'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
@@ -156,8 +157,7 @@ export default function Professeurs() {
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
-                <td style={s.td}>{p.taux_activite?<span style={s.badgeGray}>{p.taux_activite}%</span>:'—'}</td>
-                <td style={s.td}>{p.periodes_semaine?<span style={s.badgePrimary}>{p.periodes_semaine}p</span>:'—'}</td>
+                
                 <td style={s.td}>
                   <button style={p.actif!==false?s.badgeActive:s.badgeInactive} onClick={() => toggleStatut(p)}>
                     {p.actif!==false?'✅ Actif':'❌ Inactif'}

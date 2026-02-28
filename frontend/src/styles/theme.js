@@ -37,7 +37,7 @@ export const radius = {
 };
 
 export const T = {
-  page: { padding: '28px 32px', background: colors.gray50, minHeight: '100vh', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif' },
+  page: { padding: '28px 32px', background: colors.gray50, minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   card: { background: colors.white, borderRadius: radius.lg, padding: '24px', marginBottom: '20px', boxShadow: shadows.md, border: '1px solid ' + colors.gray200 },
   cardTitle: { fontSize: '16px', fontWeight: '700', color: colors.gray800, margin: 0 },
   header: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' },
