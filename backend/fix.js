@@ -1,24 +1,18 @@
 const fs = require('fs');
-
-fs.writeFileSync('./src/routes/import.js', `const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const { verifierToken } = require('../middleware/auth');
-const { importEleves } = require('../controllers/importController');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-router.use(verifierToken);
-router.post('/eleves', upload.single('fichier'), importEleves);
-module.exports = router;`);
-console.log('Route import.js créée !');
-
-let server = fs.readFileSync('./server.js', 'utf8');
-if (!server.includes('/api/import')) {
-  server = server.replace(
-    "app.use('/api/plan-classe'",
-    "app.use('/api/import', require('./src/routes/import'));\napp.use('/api/plan-classe'"
+let routes = fs.readFileSync('./src/routes/eleves.js', 'utf8');
+if (!routes.includes('classe')) {
+  routes = routes.replace(
+    'module.exports = router;',
+    `router.put('/:id/classe', async (req, res) => {
+  const pool = require('../config/database');
+  const { classe_id } = req.body;
+  try {
+    await pool.query('UPDATE eleves SET classe_id=$1 WHERE id=$2', [classe_id||null, req.params.id]);
+    res.json({ message: 'Classe mise à jour' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
+});
+module.exports = router;`
   );
-  fs.writeFileSync('./server.js', server);
-  console.log('server.js mis à jour !');
-} else {
-  console.log('Route déjà présente dans server.js');
+  fs.writeFileSync('./src/routes/eleves.js', routes);
+  console.log('Route classe OK !');
 }
