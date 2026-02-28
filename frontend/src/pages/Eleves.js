@@ -5,6 +5,13 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
+const F = ({lbl, children, full}) => (
+  <div style={{display:'flex',flexDirection:'column', gridColumn: full?'1/-1':'auto'}}>
+    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{lbl}</label>
+    {children}
+  </div>
+);
+
 export default function Eleves() {
   const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
