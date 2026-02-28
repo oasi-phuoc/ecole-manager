@@ -94,7 +94,7 @@ export default function Classes() {
                   <input style={styles.input} type="text" value={form.annee_scolaire} onChange={e => setForm({ ...form, annee_scolaire: e.target.value })} />
                 </div>
                 <div style={styles.formChamp}>
-                  <label style={styles.label}>Professeur principal</label>
+                  <label style={styles.label}>Titulaire</label>
                   <select style={styles.input} value={form.prof_principal_id} onChange={e => setForm({ ...form, prof_principal_id: e.target.value })}>
                     <option value="">-- Choisir un prof --</option>
                     {profs.map(p => (
@@ -126,7 +126,7 @@ export default function Classes() {
             <div style={styles.cardInfo}>
               <div style={styles.cardRow}><span style={styles.cardLabel}>Niveau :</span> {c.niveau || '—'}</div>
               <div style={styles.cardRow}><span style={styles.cardLabel}>Année :</span> {c.annee_scolaire || '—'}</div>
-              <div style={styles.cardRow}><span style={styles.cardLabel}>Prof principal :</span> {c.prof_prenom ? c.prof_prenom + ' ' + c.prof_nom : '—'}</div>
+              <div style={styles.cardRow}><span style={styles.cardLabel}>Titulaire :</span> {c.prof_prenom ? c.prof_prenom + ' ' + c.prof_nom : '—'}</div>
               <div style={styles.cardRow}><span style={styles.cardLabel}>Élèves :</span> <span style={styles.badge}>{c.nb_eleves}</span></div>
             </div>
             <div style={styles.cardActions}>

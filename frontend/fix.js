@@ -1,52 +1,82 @@
 const fs = require('fs');
 
+// Fix 1: Classes.js - Titulaire
+let cl = fs.readFileSync('./src/pages/Classes.js', 'utf8');
+cl = cl.replace('Professeur principal</label>', 'Titulaire</label>');
+cl = cl.replace("Prof principal :</span>", 'Titulaire :</span>');
+fs.writeFileSync('./src/pages/Classes.js', cl);
+console.log('Classes OK:', (cl.match(/[Pp]rof[a-z]* principal/g)||[]).length, 'restants');
+
+// Fix 2: EmploiDuTemps - tous les problèmes
 let e = fs.readFileSync('./src/pages/EmploiDuTemps.js', 'utf8');
 
-// Fix branche planning profs - texte exact trouvé
+// Espacement disponibilités
 e = e.replace(
-  `aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#888'}}>{aff.matiere_nom}</span></>}</>:''}`,
-  `aff.classe_nom}</b>
-                                {isAdmin() ? (
-                                  <select style={{...styles.cellSel,marginTop:3,fontSize:11}}
-                                    value={aff.matiere_id||''}
-                                    onChange={async ev => {
-                                      await axios.post(API+'/planning/affectations',{prof_id:profPlanningId,classe_id:aff.classe_id,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                      chargerPlanningProf(profPlanningId);
-                                    }}>
-                                    <option value="">— Branche —</option>
-                                    {matieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                                  </select>
-                                ) : aff.matiere_nom ? <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div> : null}
-                              </> : ''}`
+  `<h3 style={{...styles.cardTitre, fontSize:18, marginBottom:16}}>👨‍🏫 Sélectionner un professeur</h3>
+            <div style={{...styles.flexWrap, gap:10}}>`,
+  `<h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>👨‍🏫 Sélectionner un professeur</h3>
+            <div style={{...styles.flexWrap, gap:12, marginTop:8}}>`
 );
 
-// Fix Professeurs - garder 1 seul filtreStatut
-let p = fs.readFileSync('./src/pages/Professeurs.js', 'utf8');
-let count = 0;
-p = p.replace(/const \[filtreStatut, setFiltreStatut\] = useState\('tous'\);/g, () => {
-  count++;
-  return count === 1 ? "const [filtreStatut, setFiltreStatut] = useState('tous');" : '';
-});
-fs.writeFileSync('./src/pages/Professeurs.js', p);
-
-// Fix planning général - titulaires
-const idx = e.indexOf('planningGeneral.profs.map(p => <th');
-if (idx > -1) {
-  console.log('Planning général profs header:', e.substring(idx, idx+200));
-} 
-
+// Si le texte précédent n'existait pas encore
 e = e.replace(
-  `planningGeneral.profs.map(p => <th key={p.id} style={styles.th}>{p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span></th>)}`,
-  `planningGeneral.profs.map(p => {
-                      const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
-                      return <th key={p.id} style={styles.th}>
-                        {p.nom} {p.prenom}
-                        {tits.length>0 && <div style={{fontSize:10,fontWeight:400,color:'#c8e6c9',marginTop:2}}>{tits.map(t=>t.classe_nom).join(', ')}</div>}
-                      </th>;
-                    })}`
+  `<h3 style={styles.cardTitre}>Sélectionner un professeur</h3>
+            <div style={styles.flexWrap}>`,
+  `<h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>👨‍🏫 Sélectionner un professeur</h3>
+            <div style={{...styles.flexWrap, gap:12, marginTop:8}}>`
+);
+
+// Espacement planning profs - sélectionner professeur
+e = e.replace(
+  `<h3 style={styles.cardTitre}>Sélectionner un professeur</h3>
+            <div style={styles.flexWrap}>
+              {profs.map(p => (
+                <button key={p.id} style={{...styles.chip,...(profPlanningId==p.id?styles.chipActif:{})}}`,
+  `<h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>👨‍🏫 Sélectionner un professeur</h3>
+            <div style={{...styles.flexWrap, gap:12, marginTop:8}}>
+              {profs.map(p => (
+                <button key={p.id} style={{...styles.chip,...(profPlanningId==p.id?styles.chipActif:{})}}`
+);
+
+// Fix planning général - tableau titulaires au-dessus + pas de combobox branche
+// D'abord enlever les combobox branche du planning général
+e = e.replace(
+  `{aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#888'}}>{aff.matiere_nom}</span></>}</>:''}`,
+  `{aff?<><b style={{color:'#2e7d32',fontSize:11}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#888',fontSize:10}}>{aff.matiere_nom}</span></>}</>:''}`
+);
+
+// Ajouter tableau titulaires avant le tableau planning général
+e = e.replace(
+  `{planningGeneral && (
+            <div style={{overflowX:'auto',marginTop:16}}>`,
+  `{planningGeneral && (
+            <div>
+              {/* Tableau titulaires des classes */}
+              <div style={{...styles.card, marginBottom:16}}>
+                <h4 style={{margin:'0 0 12px',fontSize:14,fontWeight:700,color:'#555'}}>🏫 Classes et titulaires</h4>
+                <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
+                  {(planningGeneral.titulaires||[]).filter(t=>t.classe_nom).map((t,i) => (
+                    <div key={i} style={{background:'#f8f9fa',borderRadius:10,padding:'10px 16px',border:'1px solid #e0e0e0',minWidth:160}}>
+                      <div style={{fontWeight:700,fontSize:14,color:'#1a73e8'}}>{t.classe_nom}</div>
+                      <div style={{fontSize:12,color:'#555',marginTop:4}}>{t.prof_nom || <span style={{color:'#bbb'}}>Pas de titulaire</span>}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {planningGeneral && (
+            <div style={{overflowX:'auto',marginTop:0}}>`
+);
+
+// Fermer le dernier div du planning général correctement
+e = e.replace(
+  `{planningGeneral && (
+            <div style={{overflowX:'auto',marginTop:16}}>`,
+  `{planningGeneral && (
+            <div style={{overflowX:'auto',marginTop:0}}>`
 );
 
 fs.writeFileSync('./src/pages/EmploiDuTemps.js', e);
-console.log('Branche profs OK:', e.includes('profPlanningId,classe_id:aff.classe_id'));
-console.log('Planning général titulaires OK:', e.includes('planningGeneral.titulaires'));
-console.log('Professeurs filtreStatut:', (p.match(/filtreStatut/g)||[]).length);
+console.log('EDT espacement dispo:', e.includes('marginBottom:20'));
+console.log('EDT titulaires tableau:', e.includes('Classes et titulaires'));
