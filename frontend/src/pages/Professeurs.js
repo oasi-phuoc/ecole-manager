@@ -13,6 +13,7 @@ export default function Professeurs() {
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
+  const [filtreStatut, setFiltreStatut] = useState('tous');
   const [form, setForm] = useState({
     nom: '', prenom: '', email: '', mot_de_passe: '', telephone: '',
     specialite: '', adresse: '', npa: '', lieu: '', sexe: '',
@@ -93,9 +94,11 @@ export default function Professeurs() {
     } catch (err) { alert('Erreur: ' + err.message); }
   };
 
-  const profsFiltres = profs.filter(p =>
-    (p.nom + ' ' + p.prenom + ' ' + p.email).toLowerCase().includes(recherche.toLowerCase())
-  );
+  const profsFiltres = profs.filter(p => {
+    const matchRecherche = (p.nom + ' ' + p.prenom + ' ' + p.email).toLowerCase().includes(recherche.toLowerCase());
+    const matchStatut = filtreStatut === 'tous' || (filtreStatut === 'actif' && p.actif !== false) || (filtreStatut === 'inactif' && p.actif === false);
+    return matchRecherche && matchStatut;
+  });
 
   return (
     <div style={styles.page}>
@@ -104,6 +107,15 @@ export default function Professeurs() {
         <h2 style={styles.titre}>👨‍🏫 Gestion des Professeurs</h2>
         <div style={styles.headerRight}>
           <input style={styles.recherche} placeholder="🔍 Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+          <div style={styles.filtreStatut}>
+            {[{id:'tous',label:'Tous'},{id:'actif',label:'✅ Actifs'},{id:'inactif',label:'❌ Inactifs'}].map(f => (
+              <button key={f.id}
+                style={{...styles.filtrBtn, ...(filtreStatut===f.id?styles.filtrBtnActif:{})}}
+                onClick={() => setFiltreStatut(f.id)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
           {isAdmin() && (
             <button style={styles.btnAjouter} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>
               + Ajouter
@@ -274,6 +286,9 @@ const styles = {
   titre: { fontSize: '24px', fontWeight: '700', flex: 1 },
   headerRight: { display: 'flex', gap: '10px', alignItems: 'center' },
   recherche: { padding: '10px 16px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', width: '250px' },
+  filtreStatut: { display: 'flex', gap: '6px' },
+  filtrBtn: { padding: '8px 14px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  filtrBtnActif: { background: '#34a853', color: 'white', border: '2px solid #34a853' },
   btnAjouter: { padding: '10px 20px', background: '#34a853', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
   statBadge: { display: 'inline-block', background: '#e8f5e9', padding: '6px 14px', borderRadius: '20px', fontSize: '14px', color: '#34a853', marginBottom: '15px' },
   table: { width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
