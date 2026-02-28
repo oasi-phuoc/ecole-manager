@@ -124,22 +124,29 @@ const supprimerEleve = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id = $1', [req.params.id]);
+    const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id=$1', [req.params.id]);
     if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
     const userId = eleveResult.rows[0].utilisateur_id;
-    // Supprimer d'abord les dépendances
-    await client.query('DELETE FROM observations WHERE eleve_id = $1', [req.params.id]);
-    await client.query('DELETE FROM absences WHERE eleve_id = $1', [req.params.id]);
-    await client.query('DELETE FROM eleves WHERE id = $1', [req.params.id]);
-    if (userId) await client.query('DELETE FROM utilisateurs WHERE id = $1', [userId]);
+
+    // Supprimer dépendances élève
+    await client.query('DELETE FROM observations WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM absences WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM eleves WHERE id=$1', [req.params.id]);
+
+    // Supprimer toutes les dépendances utilisateur avant de supprimer l'utilisateur
+    if (userId) {
+      await client.query('DELETE FROM messages WHERE expediteur_id=$1 OR destinataire_id=$1', [userId]);
+      await client.query('DELETE FROM notifications WHERE utilisateur_id=$1', [userId]);
+      await client.query('DELETE FROM observations WHERE auteur_id=$1', [userId]);
+      await client.query('DELETE FROM utilisateurs WHERE id=$1', [userId]);
+    }
+
     await client.query('COMMIT');
     res.json({ message: 'Eleve supprime' });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  } finally {
-    client.release();
-  }
+  } finally { client.release(); }
 };
 
 const updatePhoto = async (req, res) => {
