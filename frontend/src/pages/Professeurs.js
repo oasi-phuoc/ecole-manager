@@ -14,7 +14,6 @@ export default function Professeurs() {
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [filtreStatut, setFiltreStatut] = useState('tous');
   const [form, setForm] = useState({
     nom: '', prenom: '', email: '', mot_de_passe: '', telephone: '',
     specialite: '', adresse: '', npa: '', lieu: '', sexe: '',
