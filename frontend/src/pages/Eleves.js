@@ -4,9 +4,11 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
+const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 
-const F = ({lbl, children, full}) => (
-  <div style={{display:'flex',flexDirection:'column', gridColumn: full?'1/-1':'auto'}}>
+// Composant champ HORS du composant principal pour eviter perte de focus
+const Champ = ({ lbl, children }) => (
+  <div style={{display:'flex',flexDirection:'column',marginBottom:0}}>
     <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{lbl}</label>
     {children}
   </div>
@@ -23,18 +25,40 @@ export default function Eleves() {
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [form, setForm] = useState({
-    nom:'', prenom:'', email:'', classe_id:'',
-    date_naissance:'', adresse:'', telephone:'',
-    nom_parent:'', telephone_parent:'', statut:'actif',
-    oasi_prog_nom:'', oasi_prog_encadrant:'', oasi_n:'', oasi_ref:'', oasi_pos:'',
-    oasi_nom:'', oasi_nais:'', oasi_nationalite:'',
-    oasi_presence_date:'', oasi_jour_semaine:'', oasi_presence_periode:'',
-    oasi_presence_type:'', oasi_remarque:'', oasi_controle_du:'', oasi_controle_au:'',
-    oasi_prog_presences:'', oasi_prog_admin:'', oasi_as:'',
-    oasi_prg_id:'', oasi_prg_occupation_id:'', oasi_ra_id:'', oasi_temps_reparti_id:''
-  });
   const [photoZoom, setPhotoZoom] = useState(null);
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [email, setEmail] = useState('');
+  const [classeId, setClasseId] = useState('');
+  const [dateNaissance, setDateNaissance] = useState('');
+  const [adresse, setAdresse] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [nomParent, setNomParent] = useState('');
+  const [telephoneParent, setTelephoneParent] = useState('');
+  const [statut, setStatut] = useState('actif');
+  const [oasiProgNom, setOasiProgNom] = useState('');
+  const [oasiProgEncadrant, setOasiProgEncadrant] = useState('');
+  const [oasiN, setOasiN] = useState('');
+  const [oasiRef, setOasiRef] = useState('');
+  const [oasiPos, setOasiPos] = useState('');
+  const [oasiNom, setOasiNom] = useState('');
+  const [oasiNais, setOasiNais] = useState('');
+  const [oasiNationalite, setOasiNationalite] = useState('');
+  const [oasiPresenceDate, setOasiPresenceDate] = useState('');
+  const [oasiJourSemaine, setOasiJourSemaine] = useState('');
+  const [oasiPresencePeriode, setOasiPresencePeriode] = useState('');
+  const [oasiPresenceType, setOasiPresenceType] = useState('');
+  const [oasiRemarque, setOasiRemarque] = useState('');
+  const [oasiControleDu, setOasiControleDu] = useState('');
+  const [oasiControleAu, setOasiControleAu] = useState('');
+  const [oasiProgPresences, setOasiProgPresences] = useState('');
+  const [oasiProgAdmin, setOasiProgAdmin] = useState('');
+  const [oasiAs, setOasiAs] = useState('');
+  const [oasiPrgId, setOasiPrgId] = useState('');
+  const [oasiPrgOccupationId, setOasiPrgOccupationId] = useState('');
+  const [oasiRaId, setOasiRaId] = useState('');
+  const [oasiTempsRepartiId, setOasiTempsRepartiId] = useState('');
+
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -52,64 +76,68 @@ export default function Eleves() {
     } catch(err) { console.error(err); }
   };
 
-  const resetForm = () => setForm({
-    nom:'', prenom:'', email:'', classe_id:'',
-    date_naissance:'', adresse:'', telephone:'',
-    nom_parent:'', telephone_parent:'', statut:'actif',
-    oasi_prog_nom:'', oasi_prog_encadrant:'', oasi_n:'', oasi_ref:'', oasi_pos:'',
-    oasi_nom:'', oasi_nais:'', oasi_nationalite:'',
-    oasi_presence_date:'', oasi_jour_semaine:'', oasi_presence_periode:'',
-    oasi_presence_type:'', oasi_remarque:'', oasi_controle_du:'', oasi_controle_au:'',
-    oasi_prog_presences:'', oasi_prog_admin:'', oasi_as:'',
-    oasi_prg_id:'', oasi_prg_occupation_id:'', oasi_ra_id:'', oasi_temps_reparti_id:''
-  });
+  const resetForm = () => {
+    setNom(''); setPrenom(''); setEmail(''); setClasseId('');
+    setDateNaissance(''); setAdresse(''); setTelephone('');
+    setNomParent(''); setTelephoneParent(''); setStatut('actif');
+    setOasiProgNom(''); setOasiProgEncadrant(''); setOasiN(''); setOasiRef(''); setOasiPos('');
+    setOasiNom(''); setOasiNais(''); setOasiNationalite('');
+    setOasiPresenceDate(''); setOasiJourSemaine(''); setOasiPresencePeriode('');
+    setOasiPresenceType(''); setOasiRemarque(''); setOasiControleDu(''); setOasiControleAu('');
+    setOasiProgPresences(''); setOasiProgAdmin(''); setOasiAs('');
+    setOasiPrgId(''); setOasiPrgOccupationId(''); setOasiRaId(''); setOasiTempsRepartiId('');
+  };
+
+  const handleEdit = (el) => {
+    setEleveEdit(el);
+    setNom(el.nom||''); setPrenom(el.prenom||''); setEmail(el.email||'');
+    setClasseId(el.classe_id||'');
+    setDateNaissance(el.date_naissance?el.date_naissance.substring(0,10):'');
+    setAdresse(el.adresse||''); setTelephone(el.telephone||'');
+    setNomParent(el.nom_parent||''); setTelephoneParent(el.telephone_parent||'');
+    setStatut(el.statut||'actif');
+    setOasiProgNom(el.oasi_prog_nom||''); setOasiProgEncadrant(el.oasi_prog_encadrant||'');
+    setOasiN(el.oasi_n||''); setOasiRef(el.oasi_ref||''); setOasiPos(el.oasi_pos||'');
+    setOasiNom(el.oasi_nom||''); setOasiNais(el.oasi_nais?el.oasi_nais.substring(0,10):'');
+    setOasiNationalite(el.oasi_nationalite||'');
+    setOasiPresenceDate(el.oasi_presence_date?el.oasi_presence_date.substring(0,10):'');
+    setOasiJourSemaine(el.oasi_jour_semaine||''); setOasiPresencePeriode(el.oasi_presence_periode||'');
+    setOasiPresenceType(el.oasi_presence_type||''); setOasiRemarque(el.oasi_remarque||'');
+    setOasiControleDu(el.oasi_controle_du?el.oasi_controle_du.substring(0,10):'');
+    setOasiControleAu(el.oasi_controle_au?el.oasi_controle_au.substring(0,10):'');
+    setOasiProgPresences(el.oasi_prog_presences||''); setOasiProgAdmin(el.oasi_prog_admin||'');
+    setOasiAs(el.oasi_as||'');
+    setOasiPrgId(el.oasi_prg_id||''); setOasiPrgOccupationId(el.oasi_prg_occupation_id||'');
+    setOasiRaId(el.oasi_ra_id||''); setOasiTempsRepartiId(el.oasi_temps_reparti_id||'');
+    setShowForm(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const data = {
-        ...form,
-        classe_id: form.classe_id||null,
-        date_naissance: form.date_naissance||null,
-        oasi_nais: form.oasi_nais||null,
-        oasi_n: form.oasi_n ? parseInt(form.oasi_n) : null,
-        oasi_ref: form.oasi_ref ? parseInt(form.oasi_ref) : null,
-        oasi_pos: form.oasi_pos ? parseInt(form.oasi_pos) : null,
-        oasi_prg_id: form.oasi_prg_id ? parseInt(form.oasi_prg_id) : null,
-        oasi_prg_occupation_id: form.oasi_prg_occupation_id ? parseInt(form.oasi_prg_occupation_id) : null,
-        oasi_ra_id: form.oasi_ra_id ? parseInt(form.oasi_ra_id) : null,
-        oasi_temps_reparti_id: form.oasi_temps_reparti_id ? parseInt(form.oasi_temps_reparti_id) : null,
+        nom, prenom, email, classe_id: classeId||null,
+        date_naissance: dateNaissance||null, adresse, telephone,
+        nom_parent: nomParent, telephone_parent: telephoneParent, statut,
+        oasi_prog_nom: oasiProgNom, oasi_prog_encadrant: oasiProgEncadrant,
+        oasi_n: oasiN?parseInt(oasiN):null, oasi_ref: oasiRef?parseInt(oasiRef):null,
+        oasi_pos: oasiPos?parseInt(oasiPos):null,
+        oasi_nom: oasiNom, oasi_nais: oasiNais||null, oasi_nationalite: oasiNationalite,
+        oasi_presence_date: oasiPresenceDate||null, oasi_jour_semaine: oasiJourSemaine,
+        oasi_presence_periode: oasiPresencePeriode, oasi_presence_type: oasiPresenceType,
+        oasi_remarque: oasiRemarque, oasi_controle_du: oasiControleDu||null,
+        oasi_controle_au: oasiControleAu||null,
+        oasi_prog_presences: oasiProgPresences, oasi_prog_admin: oasiProgAdmin,
+        oasi_as: oasiAs,
+        oasi_prg_id: oasiPrgId?parseInt(oasiPrgId):null,
+        oasi_prg_occupation_id: oasiPrgOccupationId?parseInt(oasiPrgOccupationId):null,
+        oasi_ra_id: oasiRaId?parseInt(oasiRaId):null,
+        oasi_temps_reparti_id: oasiTempsRepartiId?parseInt(oasiTempsRepartiId):null,
       };
       if (eleveEdit) await axios.put(API+'/eleves/'+eleveEdit.id, data, {headers});
       else await axios.post(API+'/eleves', data, {headers});
       setShowForm(false); setEleveEdit(null); resetForm(); chargerTout();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
-  };
-
-  const handleEdit = (el) => {
-    setEleveEdit(el);
-    setForm({
-      nom:el.nom||'', prenom:el.prenom||'', email:el.email||'',
-      classe_id:el.classe_id||'',
-      date_naissance:el.date_naissance?el.date_naissance.substring(0,10):'',
-      adresse:el.adresse||'', telephone:el.telephone||'',
-      nom_parent:el.nom_parent||'', telephone_parent:el.telephone_parent||'',
-      statut:el.statut||'actif',
-      oasi_prog_nom:el.oasi_prog_nom||'', oasi_prog_encadrant:el.oasi_prog_encadrant||'',
-      oasi_n:el.oasi_n||'', oasi_ref:el.oasi_ref||'', oasi_pos:el.oasi_pos||'',
-      oasi_nom:el.oasi_nom||'', oasi_nais:el.oasi_nais?el.oasi_nais.substring(0,10):'',
-      oasi_nationalite:el.oasi_nationalite||'',
-      oasi_presence_date:el.oasi_presence_date?el.oasi_presence_date.substring(0,10):'',
-      oasi_jour_semaine:el.oasi_jour_semaine||'', oasi_presence_periode:el.oasi_presence_periode||'',
-      oasi_presence_type:el.oasi_presence_type||'', oasi_remarque:el.oasi_remarque||'',
-      oasi_controle_du:el.oasi_controle_du?el.oasi_controle_du.substring(0,10):'',
-      oasi_controle_au:el.oasi_controle_au?el.oasi_controle_au.substring(0,10):'',
-      oasi_prog_presences:el.oasi_prog_presences||'', oasi_prog_admin:el.oasi_prog_admin||'',
-      oasi_as:el.oasi_as||'',
-      oasi_prg_id:el.oasi_prg_id||'', oasi_prg_occupation_id:el.oasi_prg_occupation_id||'',
-      oasi_ra_id:el.oasi_ra_id||'', oasi_temps_reparti_id:el.oasi_temps_reparti_id||''
-    });
-    setShowForm(true);
   };
 
   const handleDelete = async (id) => {
@@ -119,10 +147,10 @@ export default function Eleves() {
     }
   };
 
-  const handleClasseChange = async (eleveId, classeId) => {
+  const handleClasseChange = async (eleveId, cId) => {
     try {
-      await axios.put(API+'/eleves/'+eleveId+'/classe', { classe_id: classeId||null }, {headers});
-      setEleves(prev => prev.map(el => el.id===eleveId ? {...el, classe_id: classeId||null} : el));
+      await axios.put(API+'/eleves/'+eleveId+'/classe', { classe_id: cId||null }, {headers});
+      setEleves(prev => prev.map(el => el.id===eleveId ? {...el, classe_id: cId||null} : el));
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
@@ -136,13 +164,13 @@ export default function Eleves() {
       const r = await axios.post(API+'/import/eleves', formData, {
         headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' }
       });
-      setImportResult(r.data);
-      chargerTout();
+      setImportResult(r.data); chargerTout();
     } catch(err) { setImportResult({ message: 'Erreur: '+(err.response?.data?.message||err.message) }); }
     setImportLoading(false);
   };
 
-  const getClasse = (id) => classes.find(c => c.id == id);
+  const inp = {padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:12,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'};
+  const secTitle = (color, bg) => ({fontSize:11,fontWeight:700,color,background:bg,padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.05em'});
 
   const elevesFiltres = eleves.filter(el => {
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
@@ -150,49 +178,45 @@ export default function Eleves() {
     return matchR && matchC;
   });
 
-  const F = ({lbl, children, full}) => (
-    <div style={{...s.field, gridColumn: full?'1/-1':'auto'}}>
-      <label style={s.lbl}>{lbl}</label>
-      {children}
-    </div>
-  );
-
-  const ModalZoom = () => photoZoom ? (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
-      <div style={{position:'relative'}} onClick={e => e.stopPropagation()}>
-        <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}} />
-        <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
-          <a href={photoZoom} download="photo.jpg" style={{padding:'8px 20px',background:'#6366f1',color:'white',borderRadius:8,textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Télécharger</a>
-          <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>✕ Fermer</button>
-        </div>
-      </div>
-    </div>
-  ) : null;
-
   return (
-    <div style={s.page}>
-      <ModalZoom />
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.title}>🎓 Élèves</h2>
-        <div style={s.headerRight}>
-          <div style={s.searchBox}>
-            <span style={s.searchIcon}>🔍</span>
-            <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+
+      {/* Zoom photo */}
+      {photoZoom && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
+          <div onClick={e => e.stopPropagation()}>
+            <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12}} />
+            <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
+              <a href={photoZoom} download="photo.jpg" style={{padding:'8px 20px',background:'#6366f1',color:'white',borderRadius:8,textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Télécharger</a>
+              <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>✕ Fermer</button>
+            </div>
           </div>
-          <select style={s.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'}}>
+        <button style={{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'}} onClick={() => navigate('/dashboard')}>← Retour</button>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>🎓 Élèves</h2>
+        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:10,top:9,fontSize:13}}>🔍</span>
+            <input style={{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200}} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+          </div>
+          <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
             <option value="tous">Toutes les classes</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
           </select>
-          <button style={{...s.btnAdd,background:'#6366f1'}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
-          {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setEleveEdit(null); resetForm(); }}>+ Ajouter</button>}
+          <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
+          {isAdmin() && <button style={{padding:'8px 16px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
         </div>
       </div>
 
-      <div style={s.statsBar}>
-        <span style={s.statChip}>Total <b>{eleves.length}</b> élèves</span>
+      {/* Stats */}
+      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'}}>
+        <span style={{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500}}>Total <b>{eleves.length}</b> élèves</span>
         {classes.map(c => (
-          <span key={c.id} style={{...s.statChip,background:'#d1fae5',color:'#065f46'}}>
+          <span key={c.id} style={{padding:'5px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:500}}>
             {c.nom} <b>{eleves.filter(e=>e.classe_id==c.id).length}</b>
           </span>
         ))}
@@ -200,42 +224,29 @@ export default function Eleves() {
 
       {/* Modal Import */}
       {showImport && (
-        <div style={s.overlay}>
-          <div style={{...s.modal,width:480}}>
-            <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>📥 Importer depuis OASI</h3>
-              <button style={s.btnClose} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>✕</button>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'white',padding:32,borderRadius:16,width:480,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <h3 style={{fontSize:18,fontWeight:800,margin:0}}>📥 Importer depuis OASI</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>✕</button>
             </div>
             {importResult ? (
               <div>
-                <div style={{background:importResult.created>=0?'#d1fae5':'#fee2e2',color:importResult.created>=0?'#065f46':'#991b1b',padding:16,borderRadius:10,fontSize:14,fontWeight:600}}>
-                  {importResult.message}
-                </div>
-                {importResult.created >= 0 && (
-                  <div style={{marginTop:12,fontSize:13,color:'#475569'}}>
-                    <div>✅ <b>{importResult.created}</b> élève(s) créé(s)</div>
-                    <div>⏭️ <b>{importResult.skipped}</b> déjà existant(s) ignorés</div>
-                  </div>
-                )}
-                <div style={{marginTop:20,textAlign:'right'}}>
-                  <button style={s.btnSave} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>Fermer</button>
-                </div>
+                <div style={{background:importResult.created>=0?'#d1fae5':'#fee2e2',color:importResult.created>=0?'#065f46':'#991b1b',padding:16,borderRadius:10,fontSize:14,fontWeight:600}}>{importResult.message}</div>
+                {importResult.created >= 0 && <div style={{marginTop:12,fontSize:13,color:'#475569'}}><div>✅ <b>{importResult.created}</b> créé(s)</div><div>⏭️ <b>{importResult.skipped}</b> ignorés</div></div>}
+                <div style={{marginTop:20,textAlign:'right'}}><button style={{padding:'9px 20px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600}} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>Fermer</button></div>
               </div>
             ) : (
               <form onSubmit={handleImport}>
-                <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:10,padding:16,marginBottom:20,fontSize:13,color:'#0369a1'}}>
-                  ℹ️ Les élèves avec un REF déjà existant ne seront pas dupliqués.
-                </div>
-                <div style={s.field}>
-                  <label style={s.lbl}>Fichier Excel (.xlsx) *</label>
+                <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:10,padding:16,marginBottom:20,fontSize:13,color:'#0369a1'}}>ℹ️ Les élèves avec un REF déjà existant ne seront pas dupliqués.</div>
+                <div style={{display:'flex',flexDirection:'column',marginBottom:16}}>
+                  <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Fichier Excel (.xlsx) *</label>
                   <input type="file" accept=".xlsx,.xls" required style={{padding:'8px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13}} onChange={e => setImportFile(e.target.files[0])} />
                 </div>
                 {importFile && <div style={{marginTop:8,fontSize:12,color:'#10b981'}}>✅ {importFile.name}</div>}
-                <div style={s.formActions}>
-                  <button type="button" style={s.btnCancel} onClick={() => setShowImport(false)}>Annuler</button>
-                  <button type="submit" style={{...s.btnSave,background:'#6366f1'}} disabled={importLoading}>
-                    {importLoading?'⏳ Import...':'📥 Importer'}
-                  </button>
+                <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24}}>
+                  <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}} onClick={() => setShowImport(false)}>Annuler</button>
+                  <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600}} disabled={importLoading}>{importLoading?'⏳...':'📥 Importer'}</button>
                 </div>
               </form>
             )}
@@ -243,85 +254,84 @@ export default function Eleves() {
         </div>
       )}
 
-      {/* Modal Formulaire élève */}
+      {/* Modal Formulaire */}
       {showForm && (
-        <div style={s.overlay}>
-          <div style={{...s.modal, width:980, maxWidth:'95vw'}}>
-            <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>{eleveEdit?'Modifier':'Ajouter'} un élève</h3>
-              <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'}}>
+          <div style={{background:'white',padding:32,borderRadius:16,width:'95vw',maxWidth:1100,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <h3 style={{fontSize:18,fontWeight:800,margin:0}}>{eleveEdit?'Modifier':'Ajouter'} un élève</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'}} onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:20,alignItems:'start'}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,alignItems:'start'}}>
 
-                {/* COLONNE 1 - Élève + Parent */}
+                {/* COL 1 */}
                 <div>
-                  <div style={s.sectionTitle}>🎓 Informations élève</div>
+                  <div style={secTitle('#92400e','#fef3c7')}>🎓 Informations élève</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <F lbl="Nom *"><input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value})} placeholder="DUPONT" /></F>
-                    <F lbl="Prénom *"><input style={s.inp} required value={form.prenom} onChange={e=>setForm({...form,prenom:e.target.value})} placeholder="Marie" /></F>
-                    <F lbl="Email"><input style={s.inp} type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="marie@ecole.ch" /></F>
-                    <F lbl="Date de naissance"><input style={s.inp} type="date" value={form.date_naissance} onChange={e=>setForm({...form,date_naissance:e.target.value})} /></F>
-                    <F lbl="Classe">
-                      <select style={s.inp} value={form.classe_id} onChange={e=>setForm({...form,classe_id:e.target.value})}>
+                    <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value)} placeholder="DUPONT" /></Champ>
+                    <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" /></Champ>
+                    <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="marie@ecole.ch" /></Champ>
+                    <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
+                    <Champ lbl="Classe">
+                      <select style={inp} value={classeId} onChange={e => setClasseId(e.target.value)}>
                         <option value="">-- Choisir --</option>
-                        {classes.map(c=><option key={c.id} value={c.id}>{c.nom}</option>)}
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                       </select>
-                    </F>
-                    <F lbl="Téléphone"><input style={s.inp} value={form.telephone} onChange={e=>setForm({...form,telephone:e.target.value})} placeholder="079 123 45 67" /></F>
-                    <F lbl="Adresse"><input style={s.inp} value={form.adresse} onChange={e=>setForm({...form,adresse:e.target.value})} placeholder="Rue de la Paix 10" /></F>
+                    </Champ>
+                    <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="079 123 45 67" /></Champ>
+                    <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="Rue de la Paix 10, 1950 Sion" /></Champ>
                   </div>
-                  <div style={{...s.sectionTitle,marginTop:14}}>👨‍👩‍👦 Contact / Parent</div>
+                  <div style={{...secTitle('#92400e','#fef3c7'),marginTop:16}}>👨‍👩‍👦 Contact / Parent</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <F lbl="Nom parent / contact"><input style={s.inp} value={form.nom_parent} onChange={e=>setForm({...form,nom_parent:e.target.value})} placeholder="Dupont Jean" /></F>
-                    <F lbl="Téléphone parent"><input style={s.inp} value={form.telephone_parent} onChange={e=>setForm({...form,telephone_parent:e.target.value})} placeholder="079 987 65 43" /></F>
+                    <Champ lbl="Nom parent"><input style={inp} value={nomParent} onChange={e => setNomParent(e.target.value)} placeholder="Dupont Jean" /></Champ>
+                    <Champ lbl="Téléphone parent"><input style={inp} value={telephoneParent} onChange={e => setTelephoneParent(e.target.value)} placeholder="079 987 65 43" /></Champ>
                   </div>
                 </div>
 
-                {/* COLONNE 2 - OASI obligatoires A-H + P-V */}
+                {/* COL 2 - OASI obligatoires */}
                 <div>
-                  <div style={{...s.sectionTitle,color:'#6366f1',background:'#e0e7ff'}}>🗂️ Données OASI</div>
+                  <div style={secTitle('#3730a3','#e0e7ff')}>🗂️ Données OASI</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <F lbl="A — PROG_NOM *"><input style={s.inp} required value={form.oasi_prog_nom} onChange={e=>setForm({...form,oasi_prog_nom:e.target.value})} placeholder="Programme..." /></F>
-                    <F lbl="B — PROG_ENCADRANT *"><input style={s.inp} required value={form.oasi_prog_encadrant} onChange={e=>setForm({...form,oasi_prog_encadrant:e.target.value})} placeholder="Encadrant..." /></F>
-                    <F lbl="C — N *"><input style={s.inp} required type="number" value={form.oasi_n} onChange={e=>setForm({...form,oasi_n:e.target.value})} placeholder="859056" /></F>
-                    <F lbl="D — REF *"><input style={s.inp} required type="number" value={form.oasi_ref} onChange={e=>setForm({...form,oasi_ref:e.target.value})} placeholder="21372" /></F>
-                    <F lbl="E — POS *"><input style={s.inp} required type="number" value={form.oasi_pos} onChange={e=>setForm({...form,oasi_pos:e.target.value})} placeholder="1" /></F>
-                    <F lbl="F — NOM complet *"><input style={s.inp} required value={form.oasi_nom} onChange={e=>setForm({...form,oasi_nom:e.target.value})} placeholder="AHMAD Riaz" /></F>
-                    <F lbl="G — NAIS *"><input style={s.inp} required type="date" value={form.oasi_nais} onChange={e=>setForm({...form,oasi_nais:e.target.value})} /></F>
-                    <F lbl="H — NATIONALITE *"><input style={s.inp} required value={form.oasi_nationalite} onChange={e=>setForm({...form,oasi_nationalite:e.target.value})} placeholder="AFGHANISTAN" /></F>
-                    <div style={{borderTop:'1px dashed #e2e8f0',paddingTop:10,marginTop:2}}>
-                      <F lbl="P — PROG_PRESENCES *"><input style={s.inp} required value={form.oasi_prog_presences} onChange={e=>setForm({...form,oasi_prog_presences:e.target.value})} /></F>
+                    <Champ lbl="A — PROG_NOM *"><input style={inp} required value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
+                    <Champ lbl="B — PROG_ENCADRANT *"><input style={inp} required value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
+                    <Champ lbl="C — N *"><input style={inp} required type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
+                    <Champ lbl="D — REF *"><input style={inp} required type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
+                    <Champ lbl="E — POS *"><input style={inp} required type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
+                    <Champ lbl="F — NOM complet *"><input style={inp} required value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
+                    <Champ lbl="G — NAIS *"><input style={inp} required type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
+                    <Champ lbl="H — NATIONALITE *"><input style={inp} required value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
+                    <div style={{borderTop:'1px dashed #c7d2fe',paddingTop:10}}>
+                      <div style={{fontSize:10,fontWeight:700,color:'#6366f1',marginBottom:8,textTransform:'uppercase'}}>P — V obligatoires</div>
                     </div>
-                    <F lbl="Q — PROG_ADMIN *"><input style={s.inp} required value={form.oasi_prog_admin} onChange={e=>setForm({...form,oasi_prog_admin:e.target.value})} /></F>
-                    <F lbl="R — AS *"><input style={s.inp} required value={form.oasi_as} onChange={e=>setForm({...form,oasi_as:e.target.value})} /></F>
-                    <F lbl="S — PRG_ID *"><input style={s.inp} required type="number" value={form.oasi_prg_id} onChange={e=>setForm({...form,oasi_prg_id:e.target.value})} /></F>
-                    <F lbl="T — PRG_OCCUPATION_ID *"><input style={s.inp} required type="number" value={form.oasi_prg_occupation_id} onChange={e=>setForm({...form,oasi_prg_occupation_id:e.target.value})} /></F>
-                    <F lbl="U — RA_ID *"><input style={s.inp} required type="number" value={form.oasi_ra_id} onChange={e=>setForm({...form,oasi_ra_id:e.target.value})} /></F>
-                    <F lbl="V — TEMPS_REPARTI_ID *"><input style={s.inp} required type="number" value={form.oasi_temps_reparti_id} onChange={e=>setForm({...form,oasi_temps_reparti_id:e.target.value})} /></F>
+                    <Champ lbl="P — PROG_PRESENCES *"><input style={inp} required value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
+                    <Champ lbl="Q — PROG_ADMIN *"><input style={inp} required value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
+                    <Champ lbl="R — AS *"><input style={inp} required value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
+                    <Champ lbl="S — PRG_ID *"><input style={inp} required type="number" value={oasiPrgId} onChange={e => setOasiPrgId(e.target.value)} /></Champ>
+                    <Champ lbl="T — PRG_OCCUPATION_ID *"><input style={inp} required type="number" value={oasiPrgOccupationId} onChange={e => setOasiPrgOccupationId(e.target.value)} /></Champ>
+                    <Champ lbl="U — RA_ID *"><input style={inp} required type="number" value={oasiRaId} onChange={e => setOasiRaId(e.target.value)} /></Champ>
+                    <Champ lbl="V — TEMPS_REPARTI_ID *"><input style={inp} required type="number" value={oasiTempsRepartiId} onChange={e => setOasiTempsRepartiId(e.target.value)} /></Champ>
                   </div>
                 </div>
 
-                {/* COLONNE 3 - OASI optionnels I-O */}
+                {/* COL 3 - OASI optionnels */}
                 <div>
-                  <div style={{...s.sectionTitle,color:'#94a3b8',background:'#f1f5f9'}}>📋 OASI optionnels (I–O)</div>
+                  <div style={secTitle('#475569','#f1f5f9')}>📋 OASI optionnels (I–O)</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <F lbl="I — PRESENCE_DATE"><input style={s.inp} type="date" value={form.oasi_presence_date} onChange={e=>setForm({...form,oasi_presence_date:e.target.value})} /></F>
-                    <F lbl="J — JOUR_SEMAINE"><input style={s.inp} value={form.oasi_jour_semaine} onChange={e=>setForm({...form,oasi_jour_semaine:e.target.value})} placeholder="lundi" /></F>
-                    <F lbl="K — PRESENCE_PERIODE"><input style={s.inp} value={form.oasi_presence_periode} onChange={e=>setForm({...form,oasi_presence_periode:e.target.value})} placeholder="Matin" /></F>
-                    <F lbl="L — PRESENCE_TYPE"><input style={s.inp} value={form.oasi_presence_type} onChange={e=>setForm({...form,oasi_presence_type:e.target.value})} placeholder="01 Présent" /></F>
-                    <F lbl="M — REMARQUE" full>
-                      <textarea style={{...s.inp,minHeight:70,resize:'vertical'}} value={form.oasi_remarque} onChange={e=>setForm({...form,oasi_remarque:e.target.value})} />
-                    </F>
-                    <F lbl="N — CONTROLE_DU"><input style={s.inp} type="date" value={form.oasi_controle_du} onChange={e=>setForm({...form,oasi_controle_du:e.target.value})} /></F>
-                    <F lbl="O — CONTROLE_AU"><input style={s.inp} type="date" value={form.oasi_controle_au} onChange={e=>setForm({...form,oasi_controle_au:e.target.value})} /></F>
+                    <Champ lbl="I — PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
+                    <Champ lbl="J — JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} placeholder="lundi" /></Champ>
+                    <Champ lbl="K — PRESENCE_PERIODE"><input style={inp} value={oasiPresencePeriode} onChange={e => setOasiPresencePeriode(e.target.value)} placeholder="Matin" /></Champ>
+                    <Champ lbl="L — PRESENCE_TYPE"><input style={inp} value={oasiPresenceType} onChange={e => setOasiPresenceType(e.target.value)} placeholder="01 Présent" /></Champ>
+                    <Champ lbl="M — REMARQUE"><textarea style={{...inp,minHeight:80,resize:'vertical'}} value={oasiRemarque} onChange={e => setOasiRemarque(e.target.value)} /></Champ>
+                    <Champ lbl="N — CONTROLE_DU"><input style={inp} type="date" value={oasiControleDu} onChange={e => setOasiControleDu(e.target.value)} /></Champ>
+                    <Champ lbl="O — CONTROLE_AU"><input style={inp} type="date" value={oasiControleAu} onChange={e => setOasiControleAu(e.target.value)} /></Champ>
                   </div>
                 </div>
               </div>
 
-              <div style={s.formActions}>
-                <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>Sauvegarder</button>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>
+                <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
+                <button type="submit" style={{padding:'9px 20px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
               </div>
             </form>
           </div>
@@ -329,27 +339,25 @@ export default function Eleves() {
       )}
 
       {/* Tableau */}
-      <div style={s.tableWrap}>
-        <table style={s.table}>
+      <div style={{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
-            <tr style={s.thead}>
+            <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
               {['Photo','Nom','Prénom','REF','Nationalité','Classe','Date naissance','Contact','Statut','Actions'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
+                <th key={h} style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {elevesFiltres.length===0 ? (
-              <tr><td colSpan="9" style={s.empty}>Aucun élève trouvé</td></tr>
+              <tr><td colSpan="10" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
-              <tr key={el.id} style={s.tr}>
-                <td style={s.td}>
+              <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
+                <td style={{padding:'10px 14px'}}>
                   <div style={{position:'relative',width:36,height:36}}>
                     {el.photo
-                      ? <img src={el.photo} onClick={() => setPhotoZoom && setPhotoZoom(el.photo)} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
-                      : <div style={{width:36,height:36,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#6366f1',fontWeight:700}}>
-                          {(el.prenom||'?')[0]}
-                        </div>
+                      ? <img src={el.photo} onClick={() => setPhotoZoom(el.photo)} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
+                      : <div style={{width:36,height:36,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#6366f1',fontWeight:700}}>{(el.prenom||'?')[0]}</div>
                     }
                     {isAdmin() && (
                       <div style={{position:'absolute',bottom:-2,right:-2,display:'flex',gap:1}}>
@@ -361,10 +369,8 @@ export default function Eleves() {
                             if (file.size > 2*1024*1024) { alert('Max 2MB'); return; }
                             const reader = new FileReader();
                             reader.onload = async (re) => {
-                              try {
-                                await axios.put(API+'/eleves/'+el.id+'/photo', {photo: re.target.result}, {headers});
-                                chargerTout();
-                              } catch(err) { alert('Erreur upload'); }
+                              try { await axios.put(API+'/eleves/'+el.id+'/photo', {photo: re.target.result}, {headers}); chargerTout(); }
+                              catch(err) { alert('Erreur upload'); }
                             };
                             reader.readAsDataURL(file);
                           }} />
@@ -375,45 +381,39 @@ export default function Eleves() {
                               await axios.put(API+'/eleves/'+el.id+'/photo', {photo: null}, {headers});
                               chargerTout();
                             }
-                          }} style={{width:14,height:14,background:'#ef4444',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'white'}} title="Supprimer photo">
-                            ✕
-                          </div>
+                          }} style={{width:14,height:14,background:'#ef4444',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'white'}} title="Supprimer photo">✕</div>
                         )}
                       </div>
                     )}
                   </div>
                 </td>
-                <td style={{...s.td,fontWeight:700,color:'#1e293b'}}>{el.nom||'—'}</td>
-                <td style={s.td}>{el.prenom||'—'}</td>
-                <td style={s.td}>
-                  {el.oasi_ref
-                    ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{el.oasi_ref}</span>
-                    : <span style={{color:'#94a3b8'}}>—</span>}
+                <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13}}>{el.nom||'—'}</td>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.prenom||'—'}</td>
+                <td style={{padding:'10px 14px',fontSize:13}}>
+                  {el.oasi_ref ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{el.oasi_ref}</span> : <span style={{color:'#94a3b8'}}>—</span>}
                 </td>
-                <td style={s.td}>{el.oasi_nationalite||'—'}</td>
-                <td style={s.td}>
-                  <select
-                    value={el.classe_id||''}
-                    onChange={e => handleClasseChange(el.id, e.target.value)}
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.oasi_nationalite||'—'}</td>
+                <td style={{padding:'10px 14px',fontSize:13}}>
+                  <select value={el.classe_id||''} onChange={e => handleClasseChange(el.id, e.target.value)}
                     style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,background:'white',cursor:'pointer',maxWidth:120}}>
                     <option value="">— Aucune —</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </td>
-                <td style={s.td}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={s.td}>
-                  <div style={{fontSize:12}}>{el.nom_parent||'—'}</div>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
+                <td style={{padding:'10px 14px',fontSize:13}}>
+                  <div>{el.nom_parent||'—'}</div>
                   {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
                 </td>
-                <td style={s.td}>
-                  <span style={el.statut==='actif'?s.badgeActive:s.badgeInactive}>
+                <td style={{padding:'10px 14px'}}>
+                  <span style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
                     {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
                   </span>
                 </td>
-                <td style={s.td}>
+                <td style={{padding:'10px 14px'}}>
                   {isAdmin() && <>
-                    <button style={s.btnEdit} onClick={() => handleEdit(el)} title="Modifier">✏️</button>
-                    <button style={s.btnDel} onClick={() => handleDelete(el.id)} title="Supprimer">🗑️</button>
+                    <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7}} onClick={() => handleEdit(el)}>✏️</button>
+                    <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7}} onClick={() => handleDelete(el.id)}>🗑️</button>
                   </>}
                 </td>
               </tr>
@@ -424,42 +424,3 @@ export default function Eleves() {
     </div>
   );
 }
-
-const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'},
-  btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
-  title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
-  headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
-  searchBox:{position:'relative',display:'flex',alignItems:'center'},
-  searchIcon:{position:'absolute',left:10,fontSize:13},
-  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},
-  select:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white',outline:'none',cursor:'pointer'},
-  btnAdd:{padding:'8px 16px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  statsBar:{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'},
-  statChip:{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500},
-  overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},
-  modal:{background:'white',padding:32,borderRadius:16,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
-  modalHeader:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24},
-  modalTitle:{fontSize:18,fontWeight:800,color:'#0f172a',margin:0},
-  btnClose:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'},
-  sectionTitle:{fontSize:11,fontWeight:700,color:'#f59e0b',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.05em'},
-  grid2:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:8},
-  field:{display:'flex',flexDirection:'column'},
-  lbl:{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'},
-  inp:{padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:12,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'},
-  formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
-  btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
-  btnSave:{padding:'9px 20px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
-  table:{width:'100%',borderCollapse:'collapse',background:'white'},
-  thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
-  tr:{borderBottom:'1px solid #f8fafc'},
-  td:{padding:'10px 14px',fontSize:13,color:'#374151'},
-  empty:{padding:40,textAlign:'center',color:'#94a3b8'},
-  badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600},
-  badgeInactive:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7},
-};
