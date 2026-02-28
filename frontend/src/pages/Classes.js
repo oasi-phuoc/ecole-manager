@@ -184,7 +184,7 @@ export default function Classes() {
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>
-        <h2 style={s.title}>🏫 {detailClasse.nom}</h2>
+        <h2 style={s.title}>🏫 {detailClasse.nom} — Liste des élèves</h2>
         {detailClasse.prof_prenom && <span style={{...s.chip,background:'#d1fae5',color:'#065f46'}}>Titulaire : {detailClasse.prof_prenom} {detailClasse.prof_nom}</span>}
       </div>
 
@@ -196,7 +196,7 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Contact','Absences','Excusées','Retards','Présence','Observations','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Nom','Prénom','Contact','Absences','Excusées','Retards','Présence','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -204,19 +204,16 @@ export default function Classes() {
               <tr><td colSpan="9" style={s.empty}>Aucun élève dans cette classe</td></tr>
             ) : elevesClasse.map(el => (
               <tr key={el.id} style={s.tr}>
-                <td style={{...s.td,fontWeight:700}}>{el.nom||'—'}</td>
+                <td style={{...s.td,fontWeight:700}}>{el.nom || el.nom_parent || '—'}</td>
                 <td style={s.td}>{el.prenom||'—'}</td>
-                <td style={s.td}>{el.personne_contact||'—'}</td>
+                <td style={s.td}>{el.personne_contact || el.telephone_parent || '—'}</td>
                 <td style={s.td}><span style={{...s.badge,background:'#fee2e2',color:'#991b1b'}}>{el.nb_absences||0}</span></td>
                 <td style={s.td}><span style={{...s.badge,background:'#fef3c7',color:'#92400e'}}>{el.nb_excuses||0}</span></td>
                 <td style={s.td}><span style={{...s.badge,background:'#ede9fe',color:'#5b21b6'}}>{el.nb_retards||0}</span></td>
                 <td style={s.td}>
                   <span style={{...s.badge,background:tauxPresence(el)>=80?'#d1fae5':'#fee2e2',color:tauxPresence(el)>=80?'#065f46':'#991b1b'}}>{tauxPresence(el)}%</span>
                 </td>
-                <td style={s.td}><span style={{...s.badge,background:'#e0e7ff',color:'#3730a3'}}>—</span></td>
-                <td style={s.td}>
-                  <button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button>
-                </td>
+                <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>
               </tr>
             ))}
           </tbody>
@@ -284,7 +281,8 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Classe','Année','Titulaire','Élèves','Statut','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['','Classe','Année','Titulaire','Élèves','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -292,6 +290,7 @@ export default function Classes() {
               <tr><td colSpan="6" style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => (
               <tr key={c.id} style={s.tr}>
+                <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
                 <td style={s.td}>
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                   {c.niveau && <div style={{fontSize:11,color:'#94a3b8'}}>{c.niveau}</div>}
@@ -304,13 +303,10 @@ export default function Classes() {
                     {c.actif!==false?'✅ Active':'📦 Archivée'}
                   </button>
                 </td>
-                <td style={s.td}>
-                  <button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button>
-                  {isAdmin() && <>
-                    <button style={s.btnEdit} onClick={() => handleEdit(c)}>✏️</button>
-                    <button style={s.btnDel} onClick={() => handleDelete(c.id)}>🗑️</button>
-                  </>}
-                </td>
+                {isAdmin() && <td style={s.td}>
+                  <button style={s.btnEdit} onClick={() => handleEdit(c)}>✏️</button>
+                  <button style={s.btnDel} onClick={() => handleDelete(c.id)}>🗑️</button>
+                </td>}
               </tr>
             ))}
           </tbody>
