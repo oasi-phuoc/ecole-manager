@@ -99,4 +99,13 @@ const supprimerEleve = async (req, res) => {
   }
 };
 
-module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve };
+const updatePhoto = async (req, res) => {
+  const { photo } = req.body;
+  try {
+    await pool.query('UPDATE eleves SET photo=$1 WHERE id=$2', [photo, req.params.id]);
+    res.json({ message: 'Photo mise à jour' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
+};
+
+module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve,
+  updatePhoto};
