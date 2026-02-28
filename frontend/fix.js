@@ -1,140 +1,82 @@
 const fs = require('fs');
 let c = fs.readFileSync('./src/pages/Classes.js', 'utf8');
 
-// 1. Fix nom/prénom élève - utiliser utilisateur si nom null
-// Chercher la cellule nom
+// Ajouter fonction impression PDF
 c = c.replace(
-  `<td style={{...s.td,fontWeight:700}}>{el.nom || el.nom_parent || '—'}</td>
-                <td style={s.td}>{el.prenom||'—'}</td>
-                <td style={s.td}>{el.personne_contact || el.telephone_parent || '—'}</td>`,
-  `<td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
-                <td style={s.td}>{el.prenom || '—'}</td>
-                <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>`
-);
+  `  const tauxPresence = (eleve) => {`,
+  `  const imprimerPDF = () => {
+    const win = window.open('', '_blank');
+    const rows = elevesClasse.map(el => \`
+      <tr>
+        <td style="text-align:center;padding:8px">
+          \${el.photo
+            ? \`<img src="\${el.photo}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0"/>\`
+            : \`<div style="width:48px;height:48px;border-radius:50%;background:#e0e7ff;display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:#6366f1;font-weight:700">\${(el.prenom||'?')[0]}</div>\`
+          }
+        </td>
+        <td style="padding:8px;font-weight:700">\${el.nom||'—'}</td>
+        <td style="padding:8px">\${el.prenom||'—'}</td>
+        <td style="padding:8px">\${el.nom_parent||el.personne_contact||'—'}</td>
+        <td style="padding:8px;text-align:center"><span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px;font-size:11px">\${el.nb_absences||0}</span></td>
+        <td style="padding:8px;text-align:center"><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-size:11px">\${tauxPresence(el)}%</span></td>
+      </tr>
+    \`).join('');
 
-// 2. Photo cliquable - voir en grand
-c = c.replace(
-  `{el.photo ? (
-                      <img src={el.photo} alt="photo" style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0'}} />
-                    ) : (`,
-  `{el.photo ? (
-                      <img src={el.photo} alt="photo" onClick={() => setPhotoZoom(el.photo)} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
-                    ) : (`
-);
-
-// 3. Ajouter état photoZoom
-c = c.replace(
-  `const [showObsForm, setShowObsForm] = useState(false);`,
-  `const [showObsForm, setShowObsForm] = useState(false);
-  const [photoZoom, setPhotoZoom] = useState(null);
-  const [obsEditId, setObsEditId] = useState(null);
-  const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:''});`
-);
-
-// 4. Ajouter modal photo zoom + modifier/supprimer observations
-// Ajouter avant le return principal
-c = c.replace(
-  `  // Vue détail élève`,
-  `  // Modal zoom photo
-  const ModalZoom = () => photoZoom ? (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
-      <div style={{position:'relative'}} onClick={e => e.stopPropagation()}>
-        <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}} />
-        <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
-          <a href={photoZoom} download="photo.jpg" style={{padding:'8px 20px',background:'#6366f1',color:'white',borderRadius:8,textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Télécharger</a>
-          <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>✕ Fermer</button>
+    win.document.write(\`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Liste - \${detailClasse.nom}</title>
+        <style>
+          body { font-family: 'Century Gothic', sans-serif; padding: 32px; color: #1e293b; }
+          h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+          .sub { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #f8fafc; padding: 10px 8px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+          tr:nth-child(even) { background: #f8fafc; }
+          td { border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 13px; }
+          .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: right; }
+          @media print { body { padding: 16px; } }
+        </style>
+      </head>
+      <body>
+        <h1>🏫 \${detailClasse.nom} — Liste des élèves</h1>
+        <div class="sub">
+          \${detailClasse.annee_scolaire ? 'Année : ' + detailClasse.annee_scolaire + ' · ' : ''}
+          \${detailClasse.prof_prenom ? 'Titulaire : ' + detailClasse.prof_prenom + ' ' + detailClasse.prof_nom + ' · ' : ''}
+          \${elevesClasse.length} élève(s)
         </div>
-      </div>
-    </div>
-  ) : null;
+        <table>
+          <thead>
+            <tr>
+              <th>Photo</th><th>Nom</th><th>Prénom</th><th>Contact</th><th>Absences</th><th>Présence</th>
+            </tr>
+          </thead>
+          <tbody>\${rows}</tbody>
+        </table>
+        <div class="footer">Imprimé le \${new Date().toLocaleDateString('fr-CH')} · École Manager</div>
+      </body>
+      </html>
+    \`);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  };
 
-  // Vue détail élève`
+  const tauxPresence = (eleve) => {`
 );
 
-// 5. Ajouter <ModalZoom /> dans les renders
+// Ajouter bouton imprimer dans la vue liste élèves
 c = c.replace(
-  `    <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => setEleveDetail(null)}>← Retour classe</button>`,
-  `    <div style={s.page}>
-      <ModalZoom />
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => setEleveDetail(null)}>← Retour classe</button>`
-);
-
-c = c.replace(
-  `    <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>`,
-  `    <div style={s.page}>
-      <ModalZoom />
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>`
-);
-
-// 6. Modifier/Supprimer observations
-c = c.replace(
-  `          {observations.length===0 ? (
-            <div style={{textAlign:'center',color:'#94a3b8',padding:30,fontSize:13}}>Aucune observation enregistrée</div>
-          ) : observations.map(obs => (
-            <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-                <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
-              </div>
-              <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
-              <div style={{fontSize:11,color:'#94a3b8',marginTop:8}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</div>
-            </div>
-          ))}`,
-  `          {observations.length===0 ? (
-            <div style={{textAlign:'center',color:'#94a3b8',padding:30,fontSize:13}}>Aucune observation enregistrée</div>
-          ) : observations.map(obs => {
-            const peutModifier = isAdmin() || (currentUser && obs.auteur_id === currentUser.id);
-            return obsEditId === obs.id ? (
-              <form key={obs.id} onSubmit={async (e) => {
-                e.preventDefault();
-                await axios.put(API+'/observations/'+obs.id, obsEditForm, {headers});
-                setObsEditId(null);
-                const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
-                setObservations(r.data);
-              }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
-                <div style={s.field}>
-                  <label style={s.lbl}>Titre</label>
-                  <input style={s.inp} value={obsEditForm.titre} onChange={e => setObsEditForm({...obsEditForm,titre:e.target.value})} required />
-                </div>
-                <div style={{...s.field,marginTop:10}}>
-                  <label style={s.lbl}>Remarque</label>
-                  <textarea style={{...s.inp,minHeight:70,resize:'vertical'}} value={obsEditForm.contenu} onChange={e => setObsEditForm({...obsEditForm,contenu:e.target.value})} required />
-                </div>
-                <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
-                  <button type="button" style={s.btnCancel} onClick={() => setObsEditId(null)}>Annuler</button>
-                  <button type="submit" style={s.btnSave}>Sauvegarder</button>
-                </div>
-              </form>
-            ) : (
-              <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                  <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
-                    {peutModifier && <>
-                      <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu}); }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Modifier">✏️</button>
-                      <button onClick={async () => {
-                        if (window.confirm('Supprimer cette observation ?')) {
-                          await axios.delete(API+'/observations/'+obs.id, {headers});
-                          const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
-                          setObservations(r.data);
-                        }
-                      }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Supprimer">🗑️</button>
-                    </>}
-                  </div>
-                </div>
-                <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
-                <div style={{fontSize:11,color:'#94a3b8',marginTop:8}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</div>
-              </div>
-            );
-          })}`
+  `      <div style={s.statsBar}>
+        <span style={s.statChip}><b>{elevesClasse.length}</b> élèves</span>
+      </div>`,
+  `      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <span style={s.statChip}><b>{elevesClasse.length}</b> élèves</span>
+        <button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerPDF}>
+          🖨️ Imprimer PDF
+        </button>
+      </div>`
 );
 
 fs.writeFileSync('./src/pages/Classes.js', c);
-console.log('Classes OK !');
+console.log('Classes PDF OK !');

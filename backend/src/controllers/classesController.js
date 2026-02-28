@@ -30,14 +30,17 @@ const getElevesClasse = async (req, res) => {
   try {
     const eleves = await pool.query(`
       SELECT e.*,
+        COALESCE(e.nom, u.nom) as nom,
+        COALESCE(e.prenom, u.prenom) as prenom,
         COUNT(DISTINCT a.id) FILTER (WHERE a.type='absence') as nb_absences,
         COUNT(DISTINCT a.id) FILTER (WHERE a.type='absence' AND a.excusee=true) as nb_excuses,
         COUNT(DISTINCT a.id) FILTER (WHERE a.type='retard') as nb_retards
       FROM eleves e
+      LEFT JOIN utilisateurs u ON u.id=e.utilisateur_id
       LEFT JOIN absences a ON a.eleve_id=e.id
       WHERE e.classe_id=$1
-      GROUP BY e.id
-      ORDER BY e.nom, e.prenom
+      GROUP BY e.id, u.nom, u.prenom
+      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
     `, [req.params.id]);
     res.json(eleves.rows);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
