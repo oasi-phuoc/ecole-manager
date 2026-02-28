@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
-const NIVEAUX = ['CSC','CFR','EPL','CFC','ECG','Gym','Autre'];
+const NIVEAUX = ['CSC','CFR','EPL'];
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
