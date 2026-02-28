@@ -1,116 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { T, colors } from '../styles/theme';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [classesProf, setClassesProf] = useState([]);
+  const [stats, setStats] = useState({ profs: 0, classes: 0, eleves: 0, branches: 0 });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
   useEffect(() => {
-    const u = localStorage.getItem('utilisateur');
+    const u = localStorage.getItem('user');
     if (u) setUser(JSON.parse(u));
-    chargerClassesProf();
+    chargerStats();
   }, []);
 
-  const chargerClassesProf = async () => {
+  const chargerStats = async () => {
     try {
-      const res = await axios.get(API + '/parametres/mes-classes', { headers });
-      setClassesProf(res.data);
+      const [p, cl, el, br] = await Promise.all([
+        axios.get(API + '/profs', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/branches', { headers }).catch(() => ({ data: [] })),
+      ]);
+      setStats({ profs: p.data.length, classes: cl.data.length, eleves: el.data.length, branches: br.data.length });
     } catch (err) { console.error(err); }
   };
 
-  const handleLogout = () => {
+  const deconnexion = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
   const isAdmin = user?.role === 'admin';
-  const isProf = user?.role === 'prof';
-  const perms = user?.permissions || {};
 
-  const MENUS_ADMIN = [
-    { icon: '👨‍🎓', label: 'Élèves', path: '/eleves', color: '#1a73e8' },
-    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#34a853' },
-    { icon: '🏫', label: 'Classes', path: '/classes', color: '#fbbc04' },
-    { icon: '📚', label: 'Branches', path: '/branches', color: '#9c27b0' },
-    { icon: '📅', label: 'Emploi du temps', path: '/emploi-du-temps', color: '#00bcd4' },
-    { icon: '✅', label: 'Présences', path: '/presences', color: '#ff9800' },
-    { icon: '📝', label: 'Notes', path: '/notes', color: '#e91e63' },
-    { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#009688' },
-    { icon: '💰', label: 'Comptabilité', path: '/comptabilite', color: '#4caf50' },
-    { icon: '📊', label: 'Statistiques', path: '/statistiques', color: '#3f51b5' },
-    { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#607d8b' },
-  ];
+  const modules = [
+    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: stats.profs, statLabel: 'actifs', admin: true },
+    { icon: '🏫', label: 'Classes', path: '/classes', color: '#10b981', bg: '#d1fae5', stat: stats.classes, statLabel: 'classes', admin: true },
+    { icon: '🎓', label: 'Élèves', path: '/eleves', color: '#f59e0b', bg: '#fef3c7', stat: stats.eleves, statLabel: 'élèves', admin: false },
+    { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: stats.branches, statLabel: 'branches', admin: true },
+    { icon: '📅', label: 'Emploi du Temps', path: '/emploi-du-temps', color: '#ef4444', bg: '#fee2e2', stat: null, statLabel: '', admin: false },
+    { icon: '✅', label: 'Présences', path: '/presences', color: '#06b6d4', bg: '#cffafe', stat: null, statLabel: '', admin: false },
+    { icon: '📝', label: 'Notes', path: '/notes', color: '#ec4899', bg: '#fce7f3', stat: null, statLabel: '', admin: false },
+    { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#14b8a6', bg: '#ccfbf1', stat: null, statLabel: '', admin: false },
+    { icon: '💰', label: 'Comptabilité', path: '/comptabilite', color: '#84cc16', bg: '#ecfccb', stat: null, statLabel: '', admin: true },
+    { icon: '📊', label: 'Statistiques', path: '/statistiques', color: '#f97316', bg: '#ffedd5', stat: null, statLabel: '', admin: true },
+    { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#64748b', bg: '#f1f5f9', stat: null, statLabel: '', admin: true },
+  ].filter(m => !m.admin || isAdmin);
 
-  const MENUS_PROF = [
-    { icon: '👨‍🎓', label: 'Élèves', path: '/eleves', color: '#1a73e8' },
-    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#34a853' },
-    { icon: '🏫', label: 'Classes', path: '/classes', color: '#fbbc04' },
-    { icon: '📅', label: 'Emploi du temps', path: '/emploi-du-temps', color: '#00bcd4' },
-    { icon: '✅', label: 'Présences', path: '/presences', color: '#ff9800' },
-    { icon: '📝', label: 'Notes', path: '/notes', color: '#e91e63' },
-    { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#009688' },
-    { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#607d8b' },
-  ];
-
-  const menus = isAdmin ? MENUS_ADMIN : MENUS_PROF;
+  const heure = new Date().getHours();
+  const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
 
   return (
     <div style={styles.page}>
-      <div style={styles.topbar}>
-        <h1 style={styles.appNom}>🎓 École Manager</h1>
-        <div style={styles.userInfo}>
-          <span style={styles.userName}>👤 {user?.prenom} {user?.nom} — <b>{user?.role}</b></span>
-          <button style={styles.btnLogout} onClick={handleLogout}>Déconnexion</button>
+      {/* Sidebar */}
+      <div style={styles.sidebar}>
+        <div style={styles.logo}>
+          <span style={styles.logoIcon}>🏛️</span>
+          <span style={styles.logoText}>École Manager</span>
+        </div>
+        <nav style={styles.nav}>
+          {modules.map(m => (
+            <button key={m.path} style={styles.navItem} onClick={() => navigate(m.path)}>
+              <span style={{...styles.navIcon, background: m.bg, color: m.color}}>{m.icon}</span>
+              <span style={styles.navLabel}>{m.label}</span>
+              {m.stat !== null && <span style={{...styles.navBadge, background: m.bg, color: m.color}}>{m.stat}</span>}
+            </button>
+          ))}
+        </nav>
+        <div style={styles.sidebarFooter}>
+          <div style={styles.userInfo}>
+            <div style={styles.avatar}>{user?.prenom?.[0]}{user?.nom?.[0]}</div>
+            <div>
+              <div style={styles.userName}>{user?.prenom} {user?.nom}</div>
+              <div style={styles.userRole}>{user?.role === 'admin' ? 'Administrateur' : 'Professeur'}</div>
+            </div>
+          </div>
+          <button style={styles.btnLogout} onClick={deconnexion}>↩ Déconnexion</button>
         </div>
       </div>
 
-      <div style={styles.content}>
-        <h2 style={styles.titre}>Tableau de bord</h2>
-
-        {/* Message de bienvenue */}
-        <div style={styles.welcome}>
-          <span style={{ fontSize: '20px' }}>🎉</span>
+      {/* Main */}
+      <div style={styles.main}>
+        <div style={styles.topBar}>
           <div>
-            <div style={{ fontWeight: '700', fontSize: '16px' }}>Bienvenue, {user?.prenom} {user?.nom} !</div>
-            <div style={{ color: '#888', fontSize: '14px' }}>Cliquez sur un module dans le menu pour commencer.</div>
+            <h1 style={styles.greeting}>{salut}, {user?.prenom} 👋</h1>
+            <p style={styles.subGreeting}>Bienvenue sur votre tableau de bord</p>
+          </div>
+          <div style={styles.topBarRight}>
+            <span style={styles.dateBadge}>{new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           </div>
         </div>
 
-        {/* Classes du professeur */}
-        {isProf && classesProf.length > 0 && (
-          <div style={{ marginBottom: '30px' }}>
-            <h3 style={styles.sectionTitre}>🏫 Mes classes</h3>
-            <div style={styles.classesGrid}>
-              {[...new Map(classesProf.map(c => [c.id, c])).values()].map(c => (
-                <div key={c.id} style={styles.classeCard}>
-                  <div style={styles.classeNom}>{c.nom}</div>
-                  <div style={styles.classeMatieres}>
-                    {classesProf.filter(x => x.id === c.id).map(x => (
-                      <span key={x.matiere} style={styles.matiereBadge}>{x.matiere}</span>
-                    ))}
-                  </div>
-                  {c.niveau && <div style={styles.classeInfo}>{c.niveau}</div>}
-                </div>
-              ))}
-            </div>
+        {/* Stats */}
+        {isAdmin && (
+          <div style={styles.statsRow}>
+            {[
+              { icon: '👨‍🏫', label: 'Professeurs', value: stats.profs, color: '#6366f1', bg: '#e0e7ff' },
+              { icon: '🏫', label: 'Classes', value: stats.classes, color: '#10b981', bg: '#d1fae5' },
+              { icon: '🎓', label: 'Élèves', value: stats.eleves, color: '#f59e0b', bg: '#fef3c7' },
+              { icon: '📚', label: 'Branches', value: stats.branches, color: '#8b5cf6', bg: '#ede9fe' },
+            ].map(s => (
+              <div key={s.label} style={styles.statCard}>
+                <div style={{...styles.statIcon, background: s.bg, color: s.color}}>{s.icon}</div>
+                <div style={styles.statValue}>{s.value}</div>
+                <div style={styles.statLabel}>{s.label}</div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Menu modules */}
-        <h3 style={styles.sectionTitre}>📋 Modules</h3>
-        <div style={styles.menuGrid}>
-          {menus.map((m, i) => (
-            <div key={i} style={{ ...styles.menuCard, borderTop: '4px solid ' + m.color }} onClick={() => navigate(m.path)}>
-              <div style={styles.menuIcon}>{m.icon}</div>
-              <div style={styles.menuLabel}>{m.label}</div>
-            </div>
+        {/* Modules Grid */}
+        <div style={styles.sectionTitle}>Accès rapide</div>
+        <div style={styles.grid}>
+          {modules.map(m => (
+            <button key={m.path} style={styles.moduleCard} onClick={() => navigate(m.path)}>
+              <div style={{...styles.moduleIcon, background: m.bg, color: m.color}}>{m.icon}</div>
+              <div style={styles.moduleLabel}>{m.label}</div>
+              {m.stat !== null && (
+                <div style={{...styles.moduleStat, color: m.color}}>{m.stat} {m.statLabel}</div>
+              )}
+              <div style={{...styles.moduleArrow, color: m.color}}>→</div>
+            </button>
           ))}
         </div>
       </div>
@@ -119,24 +134,38 @@ export default function Dashboard() {
 }
 
 const styles = {
-  page: { background: '#f0f2f5', minHeight: '100vh' },
-  topbar: { background: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  appNom: { fontSize: '20px', fontWeight: '700', color: '#1a73e8' },
-  userInfo: { display: 'flex', alignItems: 'center', gap: '15px' },
-  userName: { fontSize: '14px', color: '#555' },
-  btnLogout: { padding: '8px 16px', background: '#ffebee', color: '#c62828', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-  content: { padding: '30px' },
-  titre: { fontSize: '28px', fontWeight: '700', marginBottom: '20px' },
-  welcome: { background: 'white', borderRadius: '12px', padding: '20px 25px', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '30px' },
-  sectionTitre: { fontSize: '16px', fontWeight: '700', color: '#555', marginBottom: '15px' },
-  classesGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' },
-  classeCard: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', borderTop: '4px solid #1a73e8' },
-  classeNom: { fontSize: '18px', fontWeight: '700', marginBottom: '10px' },
-  classeMatieres: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' },
-  matiereBadge: { background: '#e3f2fd', color: '#1a73e8', padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
-  classeInfo: { fontSize: '12px', color: '#888', marginTop: '6px' },
-  menuGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' },
-  menuCard: { background: 'white', borderRadius: '12px', padding: '20px 15px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.2s' },
-  menuIcon: { fontSize: '32px', marginBottom: '10px' },
-  menuLabel: { fontSize: '14px', fontWeight: '600', color: '#333' },
+  page: { display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif' },
+  sidebar: { width: 240, background: '#0f172a', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100 },
+  logo: { padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #1e293b' },
+  logoIcon: { fontSize: 24 },
+  logoText: { fontSize: 15, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.3px' },
+  nav: { flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 },
+  navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.15s' },
+  navIcon: { width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
+  navLabel: { fontSize: 13, fontWeight: 500, color: '#cbd5e1', flex: 1 },
+  navBadge: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99 },
+  sidebarFooter: { padding: '16px', borderTop: '1px solid #1e293b' },
+  userInfo: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
+  avatar: { width: 36, height: 36, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
+  userName: { fontSize: 13, fontWeight: 600, color: '#f1f5f9' },
+  userRole: { fontSize: 11, color: '#64748b', marginTop: 1 },
+  btnLogout: { width: '100%', padding: '8px', background: '#1e293b', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#94a3b8', fontWeight: 500 },
+  main: { marginLeft: 240, flex: 1, padding: '32px 36px' },
+  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
+  greeting: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
+  subGreeting: { fontSize: 13, color: '#64748b', margin: '4px 0 0' },
+  topBarRight: { display: 'flex', alignItems: 'center', gap: 12 },
+  dateBadge: { fontSize: 12, color: '#64748b', background: 'white', padding: '6px 14px', borderRadius: 99, border: '1px solid #e2e8f0', fontWeight: 500, textTransform: 'capitalize' },
+  statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 },
+  statCard: { background: 'white', borderRadius: 14, padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: 8 },
+  statIcon: { width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 },
+  statValue: { fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1 },
+  statLabel: { fontSize: 12, color: '#64748b', fontWeight: 500 },
+  sectionTitle: { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 },
+  moduleCard: { background: 'white', borderRadius: 14, padding: '20px 16px', border: '1px solid #f1f5f9', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8, transition: 'box-shadow 0.15s', position: 'relative' },
+  moduleIcon: { width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 },
+  moduleLabel: { fontSize: 13, fontWeight: 700, color: '#1e293b' },
+  moduleStat: { fontSize: 12, fontWeight: 500 },
+  moduleArrow: { position: 'absolute', top: 16, right: 16, fontSize: 16, opacity: 0.4 },
 };
