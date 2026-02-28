@@ -128,12 +128,17 @@ const supprimerEleve = async (req, res) => {
     if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
     const userId = eleveResult.rows[0].utilisateur_id;
 
-    // Supprimer dépendances élève
+    // Vider photo
+    await client.query('UPDATE eleves SET photo=null WHERE id=$1', [req.params.id]);
+
+    // Supprimer toutes les dépendances élève
     await client.query('DELETE FROM observations WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM absences WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM presences WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM plan_classe WHERE classe_id IN (SELECT id FROM classes WHERE id IS NOT NULL)');
     await client.query('DELETE FROM eleves WHERE id=$1', [req.params.id]);
 
-    // Supprimer toutes les dépendances utilisateur avant de supprimer l'utilisateur
+    // Supprimer toutes les dépendances utilisateur
     if (userId) {
       await client.query('DELETE FROM messages WHERE expediteur_id=$1 OR destinataire_id=$1', [userId]);
       await client.query('DELETE FROM notifications WHERE utilisateur_id=$1', [userId]);
