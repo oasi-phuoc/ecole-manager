@@ -301,9 +301,7 @@ export default function Eleves() {
                     <Champ lbl="F — NOM complet *"><input style={inp} required value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
                     <Champ lbl="G — NAIS *"><input style={inp} required type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
                     <Champ lbl="H — NATIONALITE *"><input style={inp} required value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
-                    <div style={{borderTop:'1px dashed #c7d2fe',paddingTop:10}}>
-                      <div style={{fontSize:10,fontWeight:700,color:'#6366f1',marginBottom:8,textTransform:'uppercase'}}>P — V obligatoires</div>
-                    </div>
+
                     <Champ lbl="P — PROG_PRESENCES *"><input style={inp} required value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
                     <Champ lbl="Q — PROG_ADMIN *"><input style={inp} required value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
                     <Champ lbl="R — AS *"><input style={inp} required value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
