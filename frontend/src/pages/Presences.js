@@ -50,7 +50,7 @@ export default function Presences() {
   }, [classeSelectionnee, date]);
 
   const chargerApercuMois = async () => {
-    if (!classeSelectionnee) return;
+    if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
     setLoadingApercu(true);
     try {
       const mois = date.substring(0, 7);
@@ -59,7 +59,10 @@ export default function Presences() {
         axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
       ]);
       setApercuMois({ eleves: elevesRes.data, presences: presRes.data, mois });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setApercuMois({ erreur: err.response?.data?.message || err.message });
+    }
     setLoadingApercu(false);
   };
 
@@ -394,14 +397,18 @@ export default function Presences() {
         <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
-              Aperçu — {apercuMois.mois ? new Date(apercuMois.mois+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'}) : ''}
+              Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
             </span>
             <button onClick={chargerApercuMois} style={{padding:'6px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12}}>🔄 Actualiser</button>
           </div>
           {loadingApercu ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Chargement...</div>
           ) : !apercuMois.eleves ? (
-            <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Sélectionnez une classe puis cliquez sur Aperçu du mois</div>
+            <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>
+              {apercuMois.erreur
+                ? <span style={{color:'#ef4444'}}>❌ Erreur : {apercuMois.erreur}</span>
+                : 'Cliquez sur 🔄 Actualiser pour charger les données'}
+            </div>
           ) : (() => {
             const moisStr = apercuMois.mois;
             const [annee, moisNum] = moisStr.split('-').map(Number);
