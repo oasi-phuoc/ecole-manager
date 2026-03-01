@@ -102,4 +102,58 @@ const getClassesProf = async (req, res) => {
   }
 };
 
-module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf };
+module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout };
+const resetTout = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Présences
+    await client.query('DELETE FROM presences_v2');
+    await client.query('DELETE FROM presences');
+    await client.query('DELETE FROM absences');
+
+    // Notes & branches
+    await client.query('DELETE FROM notes');
+    await client.query('DELETE FROM planning_branches');
+    await client.query('DELETE FROM branches');
+
+    // Planning / Emploi du temps
+    await client.query('DELETE FROM classe_horaires');
+    await client.query('DELETE FROM planning_affectations');
+    await client.query('DELETE FROM planning_pools');
+    await client.query('DELETE FROM disponibilites');
+
+    // Comptabilité
+    await client.query('DELETE FROM paiements');
+    await client.query('DELETE FROM comptabilite');
+
+    // Calendrier
+    await client.query('DELETE FROM calendrier');
+
+    // Observations
+    await client.query('DELETE FROM observations');
+
+    // Élèves
+    await client.query('DELETE FROM eleves');
+
+    // Classes
+    await client.query('DELETE FROM classes');
+
+    // Professeurs
+    await client.query('DELETE FROM profs');
+
+    // Utilisateurs non-admin
+    await client.query("DELETE FROM utilisateurs WHERE role != 'admin'");
+
+    // Messages / notifications
+    await client.query('DELETE FROM messages');
+    await client.query('DELETE FROM notifications');
+
+    await client.query('COMMIT');
+    res.json({ message: 'Reset complet effectué' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ message: 'Erreur lors du reset', erreur: err.message });
+  } finally { client.release(); }
+};

@@ -13,4 +13,6 @@ router.get('/profs', autoriser('admin'), c.getProfs);
 router.put('/permissions/:id', autoriser('admin'), c.modifierPermissions);
 router.get('/mes-classes', c.getClassesProf);
 
+router.delete('/reset-tout', autoriser('admin'), c.resetTout);
+
 module.exports = router;
