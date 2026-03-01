@@ -407,7 +407,7 @@ export default function Calendrier() {
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
-            <div style={{maxHeight:300,overflowY:'auto'}}>
+            <div>
               {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
               : vacances.map(v => (
                 <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
