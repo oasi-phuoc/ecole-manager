@@ -353,233 +353,161 @@ export default function Calendrier() {
       <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gridTemplateRows:'auto auto',gap:20,isolation:'isolate'}}>
 
         {/* CELLULE 1 - Calendrier (haut gauche) */}
-        <div style={{gridColumn:1,gridRow:1}}>
+        <div style={{gridColumn:1,gridRow:1,background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9',position:'relative',zIndex:10}}>
-              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
-              <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
-              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
-              {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
-              {jours.map((jour, idx) => {
-                const evts = eventsJour(jour);
-                const estAuj = isToday(jour);
-                return (
-                  <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc'}}>
-                    {jour && (
-                      <>
-                        <div style={{fontSize:12,fontWeight:estAuj?800:500,width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
-                        {evts.slice(0,2).map((ev,i) => (
-                          <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'2px 4px',marginBottom:1}}>
-                            <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
-                            {ev.categorie==='retenue' && ev.description && ev.description.split(' & ').map((prof,pi) => (
-                              <div key={pi} style={{fontSize:8,fontWeight:500,opacity:0.9,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prof}</div>
-                            ))}
-                          </div>
-                        ))}
-                        {evts.length>2 && <div style={{fontSize:9,color:'#6366f1',fontWeight:700,cursor:'pointer'}} onClick={() => { setJourPopup(jour); setEvtsPopup(evts); }}>+{evts.length-2} voir tout</div>}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
+            <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
+            <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
+            {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
+            {jours.map((jour, idx) => {
+              const evts = eventsJour(jour);
+              const estAuj = isToday(jour);
+              return (
+                <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc'}}>
+                  {jour && (
+                    <>
+                      <div style={{fontSize:12,fontWeight:estAuj?800:500,width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
+                      {evts.slice(0,2).map((ev,i) => (
+                        <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'2px 4px',marginBottom:1}}>
+                          <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
+                          {ev.categorie==='retenue' && ev.description && ev.description.split(' & ').map((prof,pi) => (
+                            <div key={pi} style={{fontSize:8,fontWeight:500,opacity:0.9,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prof}</div>
+                          ))}
+                        </div>
+                      ))}
+                      {evts.length>2 && <div style={{fontSize:9,color:'#6366f1',fontWeight:700,cursor:'pointer'}} onClick={() => { setJourPopup(jour); setEvtsPopup(evts); }}>+{evts.length-2} voir tout</div>}
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* CELLULE 2 - Vacances (haut droite) */}
-        <div style={{gridColumn:2,gridRow:1}}>
-          {/* VACANCES */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',gridColumn:2,gridRow:1,display:'flex',flexDirection:'column'}}>
-            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb',flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
+        <div style={{gridColumn:2,gridRow:1,background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+          <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb',flexShrink:0}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
+          </div>
+          <div style={{overflowY:'auto'}}>
+            {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
+            : vacances.map(v => (
+              <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
+                  <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin&&v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
+                </div>
+                {isAdmin() && <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CELLULE 3 - Séances Retenues Particuliers (bas gauche) */}
+        <div style={{gridColumn:1,gridRow:2,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+
+          {/* SÉANCES */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#0369a1'}}>🤝 Séances</div>
+              {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'3px 8px',fontSize:10}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+</button>}
             </div>
-            <div style={{flex:1,overflowY:'auto',minHeight:0}}>
-              {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
-              : vacances.map(v => (
-                <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
+            <div style={{maxHeight:180,overflowY:'auto'}}>
+              {seances.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune séance</div>
+              : seances.map(s2 => (
+                <div key={s2.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:'#0369a1',flexShrink:0}}></div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
-                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin&&v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s2.titre}</div>
+                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(s2.date_debut)}{s2.heure_debut?' '+s2.heure_debut.substring(0,5):''}</div>
                   </div>
-                  {isAdmin() && <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>}
+                  {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                    <button style={s.btnIcon} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
+                    <button style={s.btnIcon} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
+                  </div>}
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* CELLULE 3 - Séances Retenues Particuliers (bas gauche) */}
-        <div style={{gridColumn:1,gridRow:2}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gridTemplateRows:'auto auto',gap:20,isolation:'isolate'}}>
-
-          {/* CALENDRIER */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',gridColumn:1,gridRow:1}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9',position:'relative',zIndex:10}}>
-              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
-              <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
-              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
+          {/* RETENUES */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fff1f2'}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#be123c'}}>🚫 Retenues</div>
+              {isAdmin() && <button style={{...s.btnSave,background:'#dc2626',padding:'3px 8px',fontSize:10}} onClick={() => { setRetenueEdit(null); setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'}); setShowFormRetenue(true); }}>+</button>}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
-              {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
-              {jours.map((jour, idx) => {
-                const evts = eventsJour(jour);
-                const estAuj = isToday(jour);
-                return (
-                  <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc'}}>
-                    {jour && (
-                      <>
-                        <div style={{fontSize:12,fontWeight:estAuj?800:500,width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
-                        {evts.slice(0,2).map((ev,i) => (
-                          <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'2px 4px',marginBottom:1}}>
-                            <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
-                            {ev.categorie==='retenue' && ev.description && ev.description.split(' & ').map((prof,pi) => (
-                              <div key={pi} style={{fontSize:8,fontWeight:500,opacity:0.9,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prof}</div>
-                            ))}
-                          </div>
-                        ))}
-                        {evts.length>2 && <div style={{fontSize:9,color:'#6366f1',fontWeight:700,cursor:'pointer'}} onClick={() => { setJourPopup(jour); setEvtsPopup(evts); }}>+{evts.length-2} voir tout</div>}
-                      </>
-                    )}
+            <div style={{maxHeight:180,overflowY:'auto'}}>
+              {retenues.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
+              : retenues.map(r => (
+                <div key={r.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:'#dc2626',flexShrink:0}}></div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.titre}</div>
+                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}{r.heure_debut?' '+r.heure_debut.substring(0,5):''}</div>
                   </div>
-                );
-              })}
+                  {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                    <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
+                    <button style={s.btnIcon} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
+                  </div>}
+                </div>
+              ))}
             </div>
           </div>
 
-        </div>
-
-        {/* CELLULE 2 - Vacances (haut droite) */}
-        <div style={{gridColumn:2,gridRow:1}}>
-
-        {/* PLACEHOLDER - sera remplacé ci-dessous */}
-        </div>
-
-        {/* CELLULE 3 - Séances Retenues Particuliers (bas gauche) */}
-        <div style={{gridColumn:1,gridRow:2}}>
+          {/* ÉVÉNEMENTS PARTICULIERS */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#7e22ce'}}>✨ Particuliers</div>
+              {isAdmin() && <button style={{...s.btnSave,background:'#9333ea',padding:'3px 8px',fontSize:10}} onClick={() => { setParticulierEdit(null); setFormParticulier({titre:'',date_debut:'',date_fin:''}); setShowFormParticulier(true); }}>+</button>}
+            </div>
+            <div style={{maxHeight:180,overflowY:'auto'}}>
+              {particuliers.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucun événement</div>
+              : particuliers.map(p => (
+                <div key={p.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:'#9333ea',flexShrink:0}}></div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.titre}</div>
+                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(p.date_debut)}{p.date_fin&&p.date_fin!==p.date_debut?' → '+formatDate(p.date_fin):''}</div>
+                  </div>
+                  {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                    <button style={s.btnIcon} onClick={() => { setParticulierEdit(p); setFormParticulier({titre:p.titre,date_debut:p.date_debut?.substring(0,10)||'',date_fin:p.date_fin?.substring(0,10)||''}); setShowFormParticulier(true); }}>✏️</button>
+                    <button style={s.btnIcon} onClick={() => supprimerEvenement(p.id)}>🗑️</button>
+                  </div>}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* CELLULE 4 - Évaluations (bas droite) */}
-        <div style={{gridColumn:2,gridRow:2}}>
+        <div style={{gridColumn:2,gridRow:2,background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f5f3ff'}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#5b21b6'}}>📝 Évaluations</div>
           </div>
-
-        </div>
-
-        {/* CELLULE 2 - Vacances (haut droite) */}
-        <div style={{gridColumn:2,gridRow:1}}>
-
-        {/* PLACEHOLDER - sera remplacé ci-dessous */}
-        </div>
-
-        {/* CELLULE 3 - Séances Retenues Particuliers (bas gauche) */}
-        <div style={{gridColumn:1,gridRow:2}}>
-          {/* SÉANCES + RETENUES + PARTICULIERS en 1/3 chacun */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,gridColumn:1,gridRow:2,alignContent:'stretch'}}>
-
-            {/* SÉANCES */}
-            <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
-                <div style={{fontSize:12,fontWeight:800,color:'#0369a1'}}>🤝 Séances</div>
-                {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'3px 8px',fontSize:10}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+</button>}
-              </div>
-              <div style={{maxHeight:180,overflowY:'auto'}}>
-                {seances.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune séance</div>
-                : seances.map(s2 => (
-                  <div key={s2.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
-                    <div style={{width:6,height:6,borderRadius:'50%',background:'#0369a1',flexShrink:0}}></div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s2.titre}</div>
-                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(s2.date_debut)}{s2.heure_debut?' '+s2.heure_debut.substring(0,5):''}</div>
-                    </div>
-                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                      <button style={s.btnIcon} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
-                      <button style={s.btnIcon} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
-                    </div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* RETENUES */}
-            <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fff1f2'}}>
-                <div style={{fontSize:12,fontWeight:800,color:'#be123c'}}>🚫 Retenues</div>
-                {isAdmin() && <button style={{...s.btnSave,background:'#dc2626',padding:'3px 8px',fontSize:10}} onClick={() => { setRetenueEdit(null); setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'}); setShowFormRetenue(true); }}>+</button>}
-              </div>
-              <div style={{maxHeight:180,overflowY:'auto'}}>
-                {retenues.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
-                : retenues.map(r => (
-                  <div key={r.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
-                    <div style={{width:6,height:6,borderRadius:'50%',background:'#dc2626',flexShrink:0}}></div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.titre}</div>
-                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}{r.heure_debut?' '+r.heure_debut.substring(0,5):''}</div>
-
-                    </div>
-                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                      <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
-                      <button style={s.btnIcon} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
-                    </div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ÉVÉNEMENTS PARTICULIERS */}
-            <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
-                <div style={{fontSize:12,fontWeight:800,color:'#7e22ce'}}>✨ Particuliers</div>
-                {isAdmin() && <button style={{...s.btnSave,background:'#9333ea',padding:'3px 8px',fontSize:10}} onClick={() => { setParticulierEdit(null); setFormParticulier({titre:'',date_debut:'',date_fin:''}); setShowFormParticulier(true); }}>+</button>}
-              </div>
-              <div style={{maxHeight:180,overflowY:'auto'}}>
-                {particuliers.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucun événement</div>
-                : particuliers.map(p => (
-                  <div key={p.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
-                    <div style={{width:6,height:6,borderRadius:'50%',background:'#9333ea',flexShrink:0}}></div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.titre}</div>
-                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(p.date_debut)}{p.date_fin&&p.date_fin!==p.date_debut?' → '+formatDate(p.date_fin):''}</div>
-                    </div>
-                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                      <button style={s.btnIcon} onClick={() => { setParticulierEdit(p); setFormParticulier({titre:p.titre,date_debut:p.date_debut?.substring(0,10)||'',date_fin:p.date_fin?.substring(0,10)||''}); setShowFormParticulier(true); }}>✏️</button>
-                      <button style={s.btnIcon} onClick={() => supprimerEvenement(p.id)}>🗑️</button>
-                    </div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-
-          {/* VACANCES */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',gridColumn:2,gridRow:1,display:'flex',flexDirection:'column'}}>
-            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb',flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
-            </div>
-            <div style={{flex:1,overflowY:'auto',minHeight:0}}>
-              {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
-              : vacances.map(v => (
-                <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
-                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin&&v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
-                  </div>
-                  {isAdmin() && <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>}
+          <div>
+            {evaluations.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune évaluation</div>
+            : evaluations.map(ev => (
+              <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#7c3aed',flexShrink:0}}></div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.nom_vacance||ev.titre}</div>
+                  <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(ev.date_debut)}{ev.date_fin&&ev.date_fin!==ev.date_debut?' → '+formatDate(ev.date_fin):''}</div>
                 </div>
-              ))}
-            </div>
+                {isAdmin() && <button style={s.btnIcon} onClick={() => editEval(ev)}>✏️</button>}
+              </div>
+            ))}
           </div>
         </div>
 
       </div>
     </div>
   );
+}  );
 }t s = {
   lbl:{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569',display:'block'},
   inp:{padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:13,outline:'none',width:'100%',boxSizing:'border-box'},
