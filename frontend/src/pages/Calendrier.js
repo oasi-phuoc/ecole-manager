@@ -280,7 +280,7 @@ export default function Calendrier() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'start',isolation:'isolate'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'stretch',isolation:'isolate'}}>
 
         {/* COLONNE GAUCHE */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -400,14 +400,14 @@ export default function Calendrier() {
         </div>
 
         {/* COLONNE DROITE */}
-        <div style={{display:'flex',flexDirection:'column',gap:16,position:'relative',zIndex:1}}>
+        <div style={{display:'flex',flexDirection:'column',gap:16,position:'relative',zIndex:1,height:'100%'}}>
 
           {/* VACANCES */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',flex:1,display:'flex',flexDirection:'column'}}>
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
-            <div>
+            <div style={{flex:1,overflowY:'auto'}}>
               {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
               : vacances.map(v => (
                 <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
@@ -427,7 +427,7 @@ export default function Calendrier() {
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f5f3ff'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#5b21b6'}}>📝 Évaluations</div>
             </div>
-            <div style={{maxHeight:200,overflowY:'auto'}}>
+            <div>
               {evaluations.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune évaluation</div>
               : evaluations.map(ev => (
                 <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
