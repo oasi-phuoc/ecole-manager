@@ -158,28 +158,6 @@ export default function Calendrier() {
   const isToday = (j) => j === today.getDate() && moisActuel === today.getMonth() && anneeActuelle === today.getFullYear();
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
-  const ModalDates = ({ show, onClose, onSubmit, titre, form, setForm, couleur }) => !show ? null : (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-      <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-          <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{titre}</h3>
-          <button style={s.btnX} onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={onSubmit}>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div><label style={s.lbl}>Désignation</label><input style={{...s.inp,background:'#f8fafc',color:'#64748b'}} readOnly value={form.nom_vacance} /></div>
-            <div><label style={s.lbl}>Date de début *</label><input style={s.inp} type="date" required value={form.date_debut} onChange={e => setForm({...form,date_debut:e.target.value})} /></div>
-            <div><label style={s.lbl}>Date de fin</label><input style={s.inp} type="date" value={form.date_fin} onChange={e => setForm({...form,date_fin:e.target.value})} /></div>
-          </div>
-          <div style={s.formActions}>
-            <button type="button" style={s.btnCancel} onClick={onClose}>Annuler</button>
-            <button type="submit" style={{...s.btnSave,background:couleur||'#f59e0b'}}>Sauvegarder</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
@@ -322,7 +300,7 @@ export default function Calendrier() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'stretch',isolation:'isolate'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'start',isolation:'isolate'}}>
 
         {/* COLONNE GAUCHE */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -442,14 +420,14 @@ export default function Calendrier() {
         </div>
 
         {/* COLONNE DROITE */}
-        <div style={{display:'flex',flexDirection:'column',gap:16,position:'relative',zIndex:1,height:'100%'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:16,position:'relative',zIndex:1}}>
 
           {/* VACANCES */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',flex:1,display:'flex',flexDirection:'column'}}>
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
-            <div style={{flex:1,overflowY:'auto'}}>
+            <div>
               {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
               : vacances.map(v => (
                 <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
