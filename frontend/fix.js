@@ -1,12 +1,11 @@
 const fs = require('fs');
 let c = fs.readFileSync('./src/pages/Classes.js', 'utf8');
 
-c = c.replace(
-  `<label style={s.lbl}>Niveau</label>
-                  <input style={s.inp}`,
-  `<label style={s.lbl}>Niveau *</label>
-                  <input style={{...s.inp}} required`
-);
+c = c.split('Archive').join('Inactif');
 
 fs.writeFileSync('./src/pages/Classes.js', c);
-console.log('Classes niveau obligatoire OK !');
+
+// Vérif
+const reste = fs.readFileSync('./src/pages/Classes.js', 'utf8');
+console.log('Restes archiv:', reste.match(/[Aa]rchiv\w*/g));
+console.log('OK !');

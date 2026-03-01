@@ -298,7 +298,7 @@ export default function Classes() {
 
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='archive'&&c.actif===false);
+    const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='inactif'&&c.actif===false);
     return matchR && matchA;
   });
 
@@ -652,7 +652,7 @@ export default function Classes() {
             <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
           </div>
           <div style={s.filtres}>
-            {[{id:'actif',label:'Actives'},{id:'archive',label:'Archivées'},{id:'tous',label:'Toutes'}].map(f => (
+            {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactifs'},{id:'tous',label:'Toutes'}].map(f => (
               <button key={f.id} style={{...s.filtrBtn,...(filtreActif===f.id?s.filtrActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
             ))}
           </div>
@@ -663,7 +663,7 @@ export default function Classes() {
       <div style={s.statsBar}>
         <span style={s.statChip}>Total <b>{classes.length}</b></span>
         <span style={{...s.statChip,background:'#d1fae5',color:'#065f46'}}>Actives <b>{classes.filter(c=>c.actif!==false).length}</b></span>
-        <span style={{...s.statChip,background:'#f1f5f9',color:'#475569'}}>Archivées <b>{classes.filter(c=>c.actif===false).length}</b></span>
+        <span style={{...s.statChip,background:'#f1f5f9',color:'#475569'}}>Inactifs <b>{classes.filter(c=>c.actif===false).length}</b></span>
       </div>
 
       {showForm && (
@@ -677,7 +677,7 @@ export default function Classes() {
               <div style={s.grid2}>
                 <div style={s.field}><label style={s.lbl}>Nom de la classe *</label><input style={s.inp} type="text" required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Ex: CFR 09, 6A..." /></div>
                 <div style={s.field}><label style={s.lbl}>Niveau</label><input style={s.inp} type="text" value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})} placeholder="Ex: CFR, CM2..." /></div>
-                <div style={s.field}><label style={s.lbl}>Année scolaire *</label><input style={s.inp} type="text" required value={form.annee_scolaire} onChange={e => setForm({...form,annee_scolaire:e.target.value})} placeholder="2025-2026" /></div>
+                
                 <div style={s.field}>
                   <label style={s.lbl}>Titulaire</label>
                   <select style={s.inp} value={form.prof_principal_id} onChange={e => setForm({...form,prof_principal_id:e.target.value})}>
@@ -717,8 +717,8 @@ export default function Classes() {
                 <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}><span style={{...s.badge,background:'#e0e7ff',color:'#3730a3'}}>{c.nb_eleves||0} élèves</span></td>
                 <td style={s.td}>
-                  <button style={c.actif!==false?s.badgeActive:s.badgeArchive} onClick={() => toggleActif(c)}>
-                    {c.actif!==false?'✅ Active':'📦 Archivée'}
+                  <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
+                    {c.actif!==false?'✅ Active':'❌ Inactif'}
                   </button>
                 </td>
                 {isAdmin() && <td style={s.td}>
@@ -776,7 +776,7 @@ const s = {
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
   badge:{display:'inline-flex',alignItems:'center',padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
-  badgeArchive:{background:'#f1f5f9',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
+  badgeInactif:{background:'#f1f5f9',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   btnDetail:{padding:'5px 10px',background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:4},
   btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:14,marginRight:4,opacity:0.6},
   btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:14,opacity:0.6},
