@@ -132,7 +132,7 @@ export default function Presences() {
 
           rows.push([
             eleve.oasi_prog_nom || '',
-            eleve.oasi_encadrant || '',
+            eleve.oasi_encadrant || eleve.oasi_prog_encadrant || '',
             eleve.oasi_n || '',
             eleve.oasi_ref || '',
             eleve.oasi_pos || '',
