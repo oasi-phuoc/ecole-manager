@@ -335,7 +335,7 @@ const s = {
   statsBar:{display:'flex',gap:10,marginBottom:16},
   statChip:{padding:'5px 12px',background:'#e0e7ff',color:'#3730a3',borderRadius:99,fontSize:12,fontWeight:500},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},
-  modal:{background:'white',padding:32,borderRadius:16,width:600,maxHeight:'88vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
+  modal:{background:'white',padding:32,borderRadius:16,width:'95vw',maxWidth:1100,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
   modalHeader:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24},
   modalTitle:{fontSize:18,fontWeight:800,color:'#0f172a',margin:0},
   btnClose:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8',padding:4},
