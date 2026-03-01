@@ -507,8 +507,9 @@ export default function Calendrier() {
       </div>
     </div>
   );
-}  );
-}t s = {
+}
+
+const s = {
   lbl:{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569',display:'block'},
   inp:{padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:13,outline:'none',width:'100%',boxSizing:'border-box'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
