@@ -305,7 +305,12 @@ export default function Calendrier() {
                       <>
                         <div style={{fontSize:12,fontWeight:estAuj?800:500,width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
                         {evts.slice(0,2).map((ev,i) => (
-                          <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'1px 4px',marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
+                          <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'2px 4px',marginBottom:1}}>
+                            <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
+                            {ev.categorie==='retenue' && ev.description && ev.description.split(' & ').map((prof,pi) => (
+                              <div key={pi} style={{fontSize:8,fontWeight:500,opacity:0.9,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prof}</div>
+                            ))}
+                          </div>
                         ))}
                         {evts.length>2 && <div style={{fontSize:9,color:'#94a3b8'}}>+{evts.length-2}</div>}
                       </>
@@ -357,7 +362,7 @@ export default function Calendrier() {
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.titre}</div>
                       <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}{r.heure_debut?' '+r.heure_debut.substring(0,5):''}</div>
-                      {r.description && <div style={{fontSize:10,color:'#dc2626',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>👤 {r.description}</div>}
+
                     </div>
                     {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
                       <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
