@@ -12,13 +12,7 @@ const VACANCES_LISTE = [
   "Vacances de Noël","Vacances d'hiver","St-Joseph",
   "Vacances de Pâques","Fête du travail","Ascension","Pentecôte","Fête-Dieu"
 ];
-const COULEURS_VACANCES = {
-  "Vacances d'automne":'#f59e0b',"La Toussaint":'#f59e0b',
-  "Immaculée Conception":'#f59e0b',"Vacances de Noël":'#f59e0b',
-  "Vacances d'hiver":'#f59e0b',"St-Joseph":'#f59e0b',
-  "Vacances de Pâques":'#f59e0b',"Fête du travail":'#f59e0b',
-  "Ascension":'#f59e0b',"Pentecôte":'#f59e0b',"Fête-Dieu":'#f59e0b'
-};
+const COULEURS_VACANCES = '#f59e0b';
 
 export default function Calendrier() {
   const [evenements, setEvenements] = useState([]);
@@ -34,6 +28,12 @@ export default function Calendrier() {
   const [showFormRetenue, setShowFormRetenue] = useState(false);
   const [retenueEdit, setRetenueEdit] = useState(null);
   const [formRetenue, setFormRetenue] = useState({ titre:'', prof1_id:'', prof2_id:'', date_debut:'', heure_debut:'10:00', heure_fin:'11:30' });
+  const [showFormEval, setShowFormEval] = useState(false);
+  const [evalEdit, setEvalEdit] = useState(null);
+  const [formEval, setFormEval] = useState({ nom_vacance:'', date_debut:'', date_fin:'' });
+  const [showFormParticulier, setShowFormParticulier] = useState(false);
+  const [particulierEdit, setParticulierEdit] = useState(null);
+  const [formParticulier, setFormParticulier] = useState({ titre:'', date_debut:'', date_fin:'' });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -54,13 +54,14 @@ export default function Calendrier() {
   const vacances = evenements.filter(e => e.categorie === 'vacance');
   const seances = evenements.filter(e => e.categorie === 'seance');
   const retenues = evenements.filter(e => e.categorie === 'retenue');
+  const evaluations = evenements.filter(e => e.categorie === 'evaluation');
+  const particuliers = evenements.filter(e => e.categorie === 'particulier');
 
   const sauverVacance = async (e) => {
     e.preventDefault();
     try {
-      const data = { titre: formVacance.nom_vacance, nom_vacance: formVacance.nom_vacance, date_debut: formVacance.date_debut, date_fin: formVacance.date_fin || formVacance.date_debut, categorie: 'vacance', couleur: COULEURS_VACANCES[formVacance.nom_vacance] || '#f59e0b', type: 'Conge' };
+      const data = { titre: formVacance.nom_vacance, nom_vacance: formVacance.nom_vacance, date_debut: formVacance.date_debut, date_fin: formVacance.date_fin||formVacance.date_debut, categorie: 'vacance', couleur: '#f59e0b', type: 'Conge' };
       if (vacanceEdit) await axios.put(API+'/calendrier/'+vacanceEdit.id, data, {headers});
-      else await axios.post(API+'/calendrier', data, {headers});
       setShowFormVacance(false); setVacanceEdit(null);
       setFormVacance({nom_vacance:'',date_debut:'',date_fin:''});
       chargerTout();
@@ -70,7 +71,7 @@ export default function Calendrier() {
   const sauverSeance = async (e) => {
     e.preventDefault();
     try {
-      const data = { titre: formSeance.titre, date_debut: formSeance.date_debut, date_fin: formSeance.date_debut, heure_debut: formSeance.heure_debut, heure_fin: formSeance.heure_fin || null, categorie: 'seance', couleur: '#0369a1', type: 'Reunion' };
+      const data = { titre: formSeance.titre, date_debut: formSeance.date_debut, date_fin: formSeance.date_debut, heure_debut: formSeance.heure_debut, heure_fin: formSeance.heure_fin||null, categorie: 'seance', couleur: '#0369a1', type: 'Reunion' };
       if (seanceEdit) await axios.put(API+'/calendrier/'+seanceEdit.id, data, {headers});
       else await axios.post(API+'/calendrier', data, {headers});
       setShowFormSeance(false); setSeanceEdit(null);
@@ -82,24 +83,37 @@ export default function Calendrier() {
   const sauverRetenue = async (e) => {
     e.preventDefault();
     try {
-      const prof1 = profs.find(p => String(p.id) === String(formRetenue.prof1_id));
-      const prof2 = profs.find(p => String(p.id) === String(formRetenue.prof2_id));
-      const profsNoms = [prof1,prof2].filter(Boolean).map(p => p.nom+' '+p.prenom).join(', ');
-      const data = {
-        titre: formRetenue.titre,
-        description: profsNoms,
-        date_debut: formRetenue.date_debut,
-        date_fin: formRetenue.date_debut,
-        heure_debut: formRetenue.heure_debut,
-        heure_fin: formRetenue.heure_fin || null,
-        categorie: 'retenue',
-        couleur: '#dc2626',
-        type: 'Autre'
-      };
+      const prof1 = profs.find(p => String(p.id)===String(formRetenue.prof1_id));
+      const prof2 = profs.find(p => String(p.id)===String(formRetenue.prof2_id));
+      const profsNoms = [prof1,prof2].filter(Boolean).map(p=>p.nom+' '+p.prenom).join(', ');
+      const data = { titre: formRetenue.titre, description: profsNoms, date_debut: formRetenue.date_debut, date_fin: formRetenue.date_debut, heure_debut: formRetenue.heure_debut, heure_fin: formRetenue.heure_fin||null, categorie: 'retenue', couleur: '#dc2626', type: 'Autre' };
       if (retenueEdit) await axios.put(API+'/calendrier/'+retenueEdit.id, data, {headers});
       else await axios.post(API+'/calendrier', data, {headers});
       setShowFormRetenue(false); setRetenueEdit(null);
       setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'});
+      chargerTout();
+    } catch(err) { alert('Erreur: '+err.message); }
+  };
+
+  const sauverEval = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { titre: formEval.nom_vacance, nom_vacance: formEval.nom_vacance, date_debut: formEval.date_debut, date_fin: formEval.date_fin||formEval.date_debut, categorie: 'evaluation', couleur: '#7c3aed', type: 'Examen' };
+      if (evalEdit) await axios.put(API+'/calendrier/'+evalEdit.id, data, {headers});
+      setShowFormEval(false); setEvalEdit(null);
+      setFormEval({nom_vacance:'',date_debut:'',date_fin:''});
+      chargerTout();
+    } catch(err) { alert('Erreur: '+err.message); }
+  };
+
+  const sauverParticulier = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { titre: formParticulier.titre, date_debut: formParticulier.date_debut, date_fin: formParticulier.date_fin||formParticulier.date_debut, categorie: 'particulier', couleur: '#9333ea', type: 'Evenement' };
+      if (particulierEdit) await axios.put(API+'/calendrier/'+particulierEdit.id, data, {headers});
+      else await axios.post(API+'/calendrier', data, {headers});
+      setShowFormParticulier(false); setParticulierEdit(null);
+      setFormParticulier({titre:'',date_debut:'',date_fin:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
   };
@@ -115,6 +129,12 @@ export default function Calendrier() {
     setVacanceEdit(v);
     setFormVacance({ nom_vacance: v.nom_vacance||v.titre, date_debut: v.date_debut?v.date_debut.substring(0,10):'', date_fin: v.date_fin?v.date_fin.substring(0,10):'' });
     setShowFormVacance(true);
+  };
+
+  const editEval = (ev) => {
+    setEvalEdit(ev);
+    setFormEval({ nom_vacance: ev.nom_vacance||ev.titre, date_debut: ev.date_debut?ev.date_debut.substring(0,10):'', date_fin: ev.date_fin?ev.date_fin.substring(0,10):'' });
+    setShowFormEval(true);
   };
 
   const premierJour = new Date(anneeActuelle, moisActuel, 1);
@@ -138,31 +158,33 @@ export default function Calendrier() {
   const isToday = (j) => j === today.getDate() && moisActuel === today.getMonth() && anneeActuelle === today.getFullYear();
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
+  const ModalDates = ({ show, onClose, onSubmit, titre, form, setForm, couleur }) => !show ? null : (
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+      <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{titre}</h3>
+          <button style={s.btnX} onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={onSubmit}>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div><label style={s.lbl}>Désignation</label><input style={{...s.inp,background:'#f8fafc',color:'#64748b'}} readOnly value={form.nom_vacance} /></div>
+            <div><label style={s.lbl}>Date de début *</label><input style={s.inp} type="date" required value={form.date_debut} onChange={e => setForm({...form,date_debut:e.target.value})} /></div>
+            <div><label style={s.lbl}>Date de fin</label><input style={s.inp} type="date" value={form.date_fin} onChange={e => setForm({...form,date_fin:e.target.value})} /></div>
+          </div>
+          <div style={s.formActions}>
+            <button type="button" style={s.btnCancel} onClick={onClose}>Annuler</button>
+            <button type="submit" style={{...s.btnSave,background:couleur||'#f59e0b'}}>Sauvegarder</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
-      {/* Modal vacance */}
-      {showFormVacance && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-          <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une vacance</h3>
-              <button style={s.btnX} onClick={() => setShowFormVacance(false)}>✕</button>
-            </div>
-            <form onSubmit={sauverVacance}>
-              <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                <div><label style={s.lbl}>Désignation</label><input style={{...s.inp,background:'#f8fafc',color:'#64748b'}} readOnly value={formVacance.nom_vacance} /></div>
-                <div><label style={s.lbl}>Date de début *</label><input style={s.inp} type="date" required value={formVacance.date_debut} onChange={e => setFormVacance({...formVacance,date_debut:e.target.value})} /></div>
-                <div><label style={s.lbl}>Date de fin</label><input style={s.inp} type="date" value={formVacance.date_fin} onChange={e => setFormVacance({...formVacance,date_fin:e.target.value})} /></div>
-              </div>
-              <div style={s.formActions}>
-                <button type="button" style={s.btnCancel} onClick={() => setShowFormVacance(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>Sauvegarder</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ModalDates show={showFormVacance} onClose={() => setShowFormVacance(false)} onSubmit={sauverVacance} titre="Modifier une vacance" form={formVacance} setForm={setFormVacance} couleur="#f59e0b" />
+      <ModalDates show={showFormEval} onClose={() => setShowFormEval(false)} onSubmit={sauverEval} titre="Modifier une évaluation" form={formEval} setForm={setFormEval} couleur="#7c3aed" />
 
       {/* Modal séance */}
       {showFormSeance && (
@@ -177,8 +199,8 @@ export default function Calendrier() {
                 <div><label style={s.lbl}>Désignation *</label><input style={s.inp} required value={formSeance.titre} onChange={e => setFormSeance({...formSeance,titre:e.target.value})} placeholder="Ex: Séance de direction..." /></div>
                 <div><label style={s.lbl}>Date *</label><input style={s.inp} type="date" required value={formSeance.date_debut} onChange={e => setFormSeance({...formSeance,date_debut:e.target.value})} /></div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                  <div><label style={s.lbl}>Heure de début *</label><input style={s.inp} type="time" required value={formSeance.heure_debut} onChange={e => setFormSeance({...formSeance,heure_debut:e.target.value})} /></div>
-                  <div><label style={s.lbl}>Heure de fin</label><input style={s.inp} type="time" value={formSeance.heure_fin} onChange={e => setFormSeance({...formSeance,heure_fin:e.target.value})} /></div>
+                  <div><label style={s.lbl}>Heure début *</label><input style={s.inp} type="time" required value={formSeance.heure_debut} onChange={e => setFormSeance({...formSeance,heure_debut:e.target.value})} /></div>
+                  <div><label style={s.lbl}>Heure fin</label><input style={s.inp} type="time" value={formSeance.heure_fin} onChange={e => setFormSeance({...formSeance,heure_fin:e.target.value})} /></div>
                 </div>
               </div>
               <div style={s.formActions}>
@@ -216,13 +238,36 @@ export default function Calendrier() {
                 </div>
                 <div><label style={s.lbl}>Date *</label><input style={s.inp} type="date" required value={formRetenue.date_debut} onChange={e => setFormRetenue({...formRetenue,date_debut:e.target.value})} /></div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                  <div><label style={s.lbl}>Heure de début</label><input style={s.inp} type="time" value={formRetenue.heure_debut} onChange={e => setFormRetenue({...formRetenue,heure_debut:e.target.value})} /></div>
-                  <div><label style={s.lbl}>Heure de fin</label><input style={s.inp} type="time" value={formRetenue.heure_fin} onChange={e => setFormRetenue({...formRetenue,heure_fin:e.target.value})} /></div>
+                  <div><label style={s.lbl}>Heure début</label><input style={s.inp} type="time" value={formRetenue.heure_debut} onChange={e => setFormRetenue({...formRetenue,heure_debut:e.target.value})} /></div>
+                  <div><label style={s.lbl}>Heure fin</label><input style={s.inp} type="time" value={formRetenue.heure_fin} onChange={e => setFormRetenue({...formRetenue,heure_fin:e.target.value})} /></div>
                 </div>
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormRetenue(false)}>Annuler</button>
                 <button type="submit" style={{...s.btnSave,background:'#dc2626'}}>Sauvegarder</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal événement particulier */}
+      {showFormParticulier && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{particulierEdit?'Modifier':'Ajouter'} un événement</h3>
+              <button style={s.btnX} onClick={() => setShowFormParticulier(false)}>✕</button>
+            </div>
+            <form onSubmit={sauverParticulier}>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                <div><label style={s.lbl}>Désignation *</label><input style={s.inp} required value={formParticulier.titre} onChange={e => setFormParticulier({...formParticulier,titre:e.target.value})} placeholder="Ex: Journée portes ouvertes..." /></div>
+                <div><label style={s.lbl}>Date de début *</label><input style={s.inp} type="date" required value={formParticulier.date_debut} onChange={e => setFormParticulier({...formParticulier,date_debut:e.target.value})} /></div>
+                <div><label style={s.lbl}>Date de fin</label><input style={s.inp} type="date" value={formParticulier.date_fin} onChange={e => setFormParticulier({...formParticulier,date_fin:e.target.value})} /></div>
+              </div>
+              <div style={s.formActions}>
+                <button type="button" style={s.btnCancel} onClick={() => setShowFormParticulier(false)}>Annuler</button>
+                <button type="submit" style={{...s.btnSave,background:'#9333ea'}}>Sauvegarder</button>
               </div>
             </form>
           </div>
@@ -271,31 +316,28 @@ export default function Calendrier() {
             </div>
           </div>
 
-          {/* SÉANCES + RETENUES côte à côte */}
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:16}}>
+          {/* SÉANCES + RETENUES + PARTICULIERS en 1/3 chacun */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
 
             {/* SÉANCES */}
             <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
-                <div style={{fontSize:13,fontWeight:800,color:'#0369a1'}}>🤝 Séances & Réunions</div>
-                {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'4px 10px',fontSize:11}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+ Ajouter</button>}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'#0369a1'}}>🤝 Séances</div>
+                {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'3px 8px',fontSize:10}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+</button>}
               </div>
-              <div style={{maxHeight:200,overflowY:'auto'}}>
-                {seances.length === 0 ? (
-                  <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune séance</div>
-                ) : seances.map(s2 => (
-                  <div key={s2.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
-                    <div style={{width:7,height:7,borderRadius:'50%',background:'#0369a1',flexShrink:0}}></div>
+              <div style={{maxHeight:180,overflowY:'auto'}}>
+                {seances.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune séance</div>
+                : seances.map(s2 => (
+                  <div key={s2.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                    <div style={{width:6,height:6,borderRadius:'50%',background:'#0369a1',flexShrink:0}}></div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s2.titre}</div>
-                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(s2.date_debut)}{s2.heure_debut?' · '+s2.heure_debut.substring(0,5):''}{s2.heure_fin?' → '+s2.heure_fin.substring(0,5):''}</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s2.titre}</div>
+                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(s2.date_debut)}{s2.heure_debut?' '+s2.heure_debut.substring(0,5):''}</div>
                     </div>
-                    {isAdmin() && (
-                      <div style={{display:'flex',gap:3}}>
-                        <button style={s.btnIcon} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
-                        <button style={s.btnIcon} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
-                      </div>
-                    )}
+                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                      <button style={s.btnIcon} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
+                      <button style={s.btnIcon} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -303,24 +345,47 @@ export default function Calendrier() {
 
             {/* RETENUES */}
             <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 10px',borderBottom:'1px solid #f1f5f9',background:'#fff1f2'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fff1f2'}}>
                 <div style={{fontSize:12,fontWeight:800,color:'#be123c'}}>🚫 Retenues</div>
-                {isAdmin() && <button style={{...s.btnSave,background:'#dc2626',padding:'4px 8px',fontSize:10}} onClick={() => { setRetenueEdit(null); setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'}); setShowFormRetenue(true); }}>+ Ajouter</button>}
+                {isAdmin() && <button style={{...s.btnSave,background:'#dc2626',padding:'3px 8px',fontSize:10}} onClick={() => { setRetenueEdit(null); setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'}); setShowFormRetenue(true); }}>+</button>}
               </div>
-              <div style={{maxHeight:200,overflowY:'auto'}}>
-                {retenues.length === 0 ? (
-                  <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
-                ) : retenues.map(r => (
-                  <div key={r.id} style={{padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.titre}</div>
-                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}</div>
-                    {r.description && <div style={{fontSize:10,color:'#64748b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.description}</div>}
-                    {isAdmin() && (
-                      <div style={{display:'flex',gap:3,marginTop:3}}>
-                        <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
-                        <button style={s.btnIcon} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
-                      </div>
-                    )}
+              <div style={{maxHeight:180,overflowY:'auto'}}>
+                {retenues.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
+                : retenues.map(r => (
+                  <div key={r.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                    <div style={{width:6,height:6,borderRadius:'50%',background:'#dc2626',flexShrink:0}}></div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.titre}</div>
+                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}{r.heure_debut?' '+r.heure_debut.substring(0,5):''}</div>
+                    </div>
+                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                      <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
+                      <button style={s.btnIcon} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
+                    </div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ÉVÉNEMENTS PARTICULIERS */}
+            <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'#7e22ce'}}>✨ Particuliers</div>
+                {isAdmin() && <button style={{...s.btnSave,background:'#9333ea',padding:'3px 8px',fontSize:10}} onClick={() => { setParticulierEdit(null); setFormParticulier({titre:'',date_debut:'',date_fin:''}); setShowFormParticulier(true); }}>+</button>}
+              </div>
+              <div style={{maxHeight:180,overflowY:'auto'}}>
+                {particuliers.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucun événement</div>
+                : particuliers.map(p => (
+                  <div key={p.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
+                    <div style={{width:6,height:6,borderRadius:'50%',background:'#9333ea',flexShrink:0}}></div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.titre}</div>
+                      <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(p.date_debut)}{p.date_fin&&p.date_fin!==p.date_debut?' → '+formatDate(p.date_fin):''}</div>
+                    </div>
+                    {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
+                      <button style={s.btnIcon} onClick={() => { setParticulierEdit(p); setFormParticulier({titre:p.titre,date_debut:p.date_debut?.substring(0,10)||'',date_fin:p.date_fin?.substring(0,10)||''}); setShowFormParticulier(true); }}>✏️</button>
+                      <button style={s.btnIcon} onClick={() => supprimerEvenement(p.id)}>🗑️</button>
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -336,10 +401,9 @@ export default function Calendrier() {
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
-            <div style={{maxHeight:520,overflowY:'auto'}}>
-              {vacances.length === 0 ? (
-                <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance définie</div>
-              ) : vacances.map(v => (
+            <div style={{maxHeight:300,overflowY:'auto'}}>
+              {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
+              : vacances.map(v => (
                 <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
                   <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
                   <div style={{flex:1,minWidth:0}}>
@@ -352,13 +416,24 @@ export default function Calendrier() {
             </div>
           </div>
 
-          {/* ÉVÉNEMENTS PARTICULIERS */}
+          {/* ÉVALUATIONS */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
-              <div style={{fontSize:13,fontWeight:800,color:'#7e22ce'}}>✨ Événements particuliers</div>
-              <div style={{fontSize:11,color:'#9333ea'}}>À configurer prochainement</div>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f5f3ff'}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#5b21b6'}}>📝 Évaluations</div>
             </div>
-            <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucun événement particulier</div>
+            <div style={{maxHeight:200,overflowY:'auto'}}>
+              {evaluations.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune évaluation</div>
+              : evaluations.map(ev => (
+                <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:'#7c3aed',flexShrink:0}}></div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.nom_vacance||ev.titre}</div>
+                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(ev.date_debut)}{ev.date_fin&&ev.date_fin!==ev.date_debut?' → '+formatDate(ev.date_fin):''}</div>
+                  </div>
+                  {isAdmin() && <button style={s.btnIcon} onClick={() => editEval(ev)}>✏️</button>}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
