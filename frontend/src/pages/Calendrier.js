@@ -4,18 +4,28 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
-const TYPES = ['Evenement', 'Conge', 'Examen', 'Reunion', 'Sortie', 'Autre'];
-const COULEURS = ['#1a73e8', '#34a853', '#ea4335', '#fbbc04', '#9c27b0', '#ff9800'];
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const VACANCES_LISTE = [
+  'Vacances d\'automne','La Toussaint','Immaculée Conception',
+  'Vacances de Noël','Vacances d\'hiver','St-Joseph',
+  'Vacances de Pâques','Fête du travail','Ascension','Pentecôte','Fête-Dieu'
+];
+const COULEURS_VACANCES = {
+  'Vacances d\'automne':'#f59e0b','La Toussaint':'#f59e0b',
+  'Immaculée Conception':'#6366f1','Vacances de Noël':'#ef4444',
+  'Vacances d\'hiver':'#3b82f6','St-Joseph':'#6366f1',
+  'Vacances de Pâques':'#10b981','Fête du travail':'#6366f1',
+  'Ascension':'#6366f1','Pentecôte':'#6366f1','Fête-Dieu':'#6366f1'
+};
 
 export default function Calendrier() {
   const [evenements, setEvenements] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [eventEdit, setEventEdit] = useState(null);
   const [moisActuel, setMoisActuel] = useState(new Date().getMonth());
   const [anneeActuelle, setAnneeActuelle] = useState(new Date().getFullYear());
-  const [form, setForm] = useState({ titre: '', description: '', date_debut: '', date_fin: '', type: 'Evenement', couleur: '#1a73e8' });
+  const [showFormVacance, setShowFormVacance] = useState(false);
+  const [vacanceEdit, setVacanceEdit] = useState(null);
+  const [formVacance, setFormVacance] = useState({ nom_vacance:'', date_debut:'', date_fin:'' });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -24,235 +34,216 @@ export default function Calendrier() {
 
   const chargerEvenements = async () => {
     try {
-      const res = await axios.get(API + '/calendrier', { headers });
+      const res = await axios.get(API+'/calendrier', { headers });
       setEvenements(res.data);
-    } catch (err) { console.error(err); }
+    } catch(err) { console.error(err); }
   };
 
-  const handleSubmit = async (e) => {
+  const vacances = evenements.filter(e => e.categorie === 'vacance');
+
+  const sauverVacance = async (e) => {
     e.preventDefault();
     try {
-      if (eventEdit) {
-        await axios.put(API + '/calendrier/' + eventEdit.id, form, { headers });
-      } else {
-        await axios.post(API + '/calendrier', form, { headers });
-      }
-      setShowForm(false);
-      setEventEdit(null);
-      setForm({ titre: '', description: '', date_debut: '', date_fin: '', type: 'Evenement', couleur: '#1a73e8' });
+      const data = {
+        titre: formVacance.nom_vacance,
+        nom_vacance: formVacance.nom_vacance,
+        date_debut: formVacance.date_debut,
+        date_fin: formVacance.date_fin || formVacance.date_debut,
+        categorie: 'vacance',
+        couleur: COULEURS_VACANCES[formVacance.nom_vacance] || '#f59e0b',
+        type: 'Conge'
+      };
+      if (vacanceEdit) await axios.put(API+'/calendrier/'+vacanceEdit.id, data, {headers});
+      else await axios.post(API+'/calendrier', data, {headers});
+      setShowFormVacance(false); setVacanceEdit(null);
+      setFormVacance({nom_vacance:'',date_debut:'',date_fin:''});
       chargerEvenements();
-    } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    } catch(err) { alert('Erreur: '+err.message); }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Supprimer cet événement ?')) {
-      await axios.delete(API + '/calendrier/' + id, { headers });
+  const supprimerEvenement = async (id) => {
+    if (window.confirm('Supprimer ?')) {
+      await axios.delete(API+'/calendrier/'+id, {headers});
       chargerEvenements();
     }
   };
 
-  const handleEdit = (ev) => {
-    setEventEdit(ev);
-    setForm({
-      titre: ev.titre,
-      description: ev.description || '',
-      date_debut: ev.date_debut.split('T')[0],
-      date_fin: ev.date_fin ? ev.date_fin.split('T')[0] : '',
-      type: ev.type,
-      couleur: ev.couleur
+  const editVacance = (v) => {
+    setVacanceEdit(v);
+    setFormVacance({
+      nom_vacance: v.nom_vacance || v.titre,
+      date_debut: v.date_debut ? v.date_debut.substring(0,10) : '',
+      date_fin: v.date_fin ? v.date_fin.substring(0,10) : ''
     });
-    setShowForm(true);
+    setShowFormVacance(true);
   };
 
-  const handleJourClick = (date) => {
-    setEventEdit(null);
-    setForm({ titre: '', description: '', date_debut: date, date_fin: date, type: 'Evenement', couleur: '#1a73e8' });
-    setShowForm(true);
-  };
+  // Calendrier
+  const premierJour = new Date(anneeActuelle, moisActuel, 1);
+  const dernierJour = new Date(anneeActuelle, moisActuel+1, 0);
+  const debutSemaine = (premierJour.getDay()+6)%7;
+  const jours = [];
+  for (let i = 0; i < debutSemaine; i++) jours.push(null);
+  for (let i = 1; i <= dernierJour.getDate(); i++) jours.push(i);
 
-  const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (month, year) => {
-    const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1;
-  };
-
-  const getEvenementsJour = (jour) => {
-    const dateStr = anneeActuelle + '-' + String(moisActuel + 1).padStart(2, '0') + '-' + String(jour).padStart(2, '0');
+  const eventsJour = (jour) => {
+    if (!jour) return [];
+    const dateStr = anneeActuelle+'-'+String(moisActuel+1).padStart(2,'0')+'-'+String(jour).padStart(2,'0');
     return evenements.filter(ev => {
-      const debut = ev.date_debut.split('T')[0];
-      const fin = ev.date_fin ? ev.date_fin.split('T')[0] : debut;
-      return dateStr >= debut && dateStr <= fin;
+      const deb = ev.date_debut?.substring(0,10);
+      const fin = (ev.date_fin || ev.date_debut)?.substring(0,10);
+      return dateStr >= deb && dateStr <= fin;
     });
   };
 
-  const moisPrecedent = () => {
-    if (moisActuel === 0) { setMoisActuel(11); setAnneeActuelle(a => a - 1); }
-    else setMoisActuel(m => m - 1);
-  };
+  const today = new Date();
+  const isToday = (j) => j === today.getDate() && moisActuel === today.getMonth() && anneeActuelle === today.getFullYear();
 
-  const moisSuivant = () => {
-    if (moisActuel === 11) { setMoisActuel(0); setAnneeActuelle(a => a + 1); }
-    else setMoisActuel(m => m + 1);
-  };
-
-  const daysInMonth = getDaysInMonth(moisActuel, anneeActuelle);
-  const firstDay = getFirstDayOfMonth(moisActuel, anneeActuelle);
-  const today = new Date().toISOString().split('T')[0];
-  const evenementsMois = evenements.filter(ev => {
-    const debut = new Date(ev.date_debut);
-    return debut.getMonth() === moisActuel && debut.getFullYear() === anneeActuelle;
-  });
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={styles.titre}>📆 Calendrier</h2>
-        {isAdmin() && <button style={styles.btnAjouter} onClick={() => { setEventEdit(null); setForm({ titre: '', description: '', date_debut: '', date_fin: '', type: 'Evenement', couleur: '#1a73e8' }); setShowForm(true); }}>+ Ajouter</button>}
-      </div>
+    <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
-      {showForm && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <h3 style={styles.modalTitre}>{eventEdit ? 'Modifier' : 'Ajouter'} un événement</h3>
-            <form onSubmit={handleSubmit}>
-              <div style={styles.formGrid}>
-                <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
-                  <label style={styles.label}>Titre *</label>
-                  <input style={styles.input} type="text" required value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })} placeholder="Ex: Réunion parents, Examen final..." />
-                </div>
-                <div style={styles.formChamp}>
-                  <label style={styles.label}>Date début *</label>
-                  <input style={styles.input} type="date" required value={form.date_debut} onChange={e => setForm({ ...form, date_debut: e.target.value })} />
-                </div>
-                <div style={styles.formChamp}>
-                  <label style={styles.label}>Date fin</label>
-                  <input style={styles.input} type="date" value={form.date_fin} onChange={e => setForm({ ...form, date_fin: e.target.value })} />
-                </div>
-                <div style={styles.formChamp}>
-                  <label style={styles.label}>Type</label>
-                  <select style={styles.input} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                    {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+      {/* Modal vacance */}
+      {showFormVacance && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{vacanceEdit?'Modifier':'Ajouter'} une vacance</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'}} onClick={() => setShowFormVacance(false)}>✕</button>
+            </div>
+            <form onSubmit={sauverVacance}>
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                <div>
+                  <label style={s.lbl}>Désignation *</label>
+                  <select style={s.inp} required value={formVacance.nom_vacance} onChange={e => setFormVacance({...formVacance,nom_vacance:e.target.value})}>
+                    <option value="">-- Choisir --</option>
+                    {VACANCES_LISTE.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
-                <div style={styles.formChamp}>
-                  <label style={styles.label}>Couleur</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '5px' }}>
-                    {COULEURS.map(c => (
-                      <div key={c} onClick={() => setForm({ ...form, couleur: c })}
-                        style={{ width: '28px', height: '28px', borderRadius: '50%', background: c, cursor: 'pointer', border: form.couleur === c ? '3px solid #333' : '3px solid transparent' }} />
-                    ))}
-                  </div>
+                <div>
+                  <label style={s.lbl}>Date de début *</label>
+                  <input style={s.inp} type="date" required value={formVacance.date_debut} onChange={e => setFormVacance({...formVacance,date_debut:e.target.value})} />
                 </div>
-                <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
-                  <label style={styles.label}>Description</label>
-                  <textarea style={{ ...styles.input, height: '80px', resize: 'vertical' }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description optionnelle..." />
+                <div>
+                  <label style={s.lbl}>Date de fin</label>
+                  <input style={s.inp} type="date" value={formVacance.date_fin} onChange={e => setFormVacance({...formVacance,date_fin:e.target.value})} />
                 </div>
               </div>
-              <div style={styles.formActions}>
-                <button type="button" style={styles.btnAnnuler} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={styles.btnSauver}>Sauvegarder</button>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20}}>
+                <button type="button" style={s.btnCancel} onClick={() => setShowFormVacance(false)}>Annuler</button>
+                <button type="submit" style={s.btnSave}>Sauvegarder</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      <div style={styles.calendarContainer}>
-        <div style={styles.calendarNav}>
-          <button style={styles.navBtn} onClick={moisPrecedent}>◀</button>
-          <h3 style={styles.calendarTitre}>{MOIS[moisActuel]} {anneeActuelle}</h3>
-          <button style={styles.navBtn} onClick={moisSuivant}>▶</button>
-          <button style={styles.btnAujourdhui} onClick={() => { setMoisActuel(new Date().getMonth()); setAnneeActuelle(new Date().getFullYear()); }}>Aujourd'hui</button>
-        </div>
-
-        <div style={styles.calendarGrid}>
-          {JOURS.map(j => <div key={j} style={styles.jourHeader}>{j}</div>)}
-          {Array.from({ length: firstDay }).map((_, i) => <div key={'empty-' + i} style={styles.jourVide} />)}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const jour = i + 1;
-            const dateStr = anneeActuelle + '-' + String(moisActuel + 1).padStart(2, '0') + '-' + String(jour).padStart(2, '0');
-            const eventsJour = getEvenementsJour(jour);
-            const isToday = dateStr === today;
-            return (
-              <div key={jour} style={{ ...styles.jourCell, background: isToday ? '#e3f2fd' : 'white', border: isToday ? '2px solid #1a73e8' : '1px solid #e0e0e0' }}
-                onClick={() => handleJourClick(dateStr)}>
-                <div style={{ ...styles.jourNum, color: isToday ? '#1a73e8' : '#333', fontWeight: isToday ? '700' : '400' }}>{jour}</div>
-                {eventsJour.slice(0, 3).map(ev => (
-                  <div key={ev.id} style={{ ...styles.eventPill, background: ev.couleur }}
-                    onClick={e => { e.stopPropagation(); handleEdit(ev); }}>
-                    {ev.titre}
-                  </div>
-                ))}
-                {eventsJour.length > 3 && <div style={styles.plusEvents}>+{eventsJour.length - 3}</div>}
-              </div>
-            );
-          })}
-        </div>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
+        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
 
-      {evenementsMois.length > 0 && (
-        <div style={styles.listeEvenements}>
-          <h3 style={styles.listeTitre}>📋 Événements de {MOIS[moisActuel]}</h3>
-          {evenementsMois.map(ev => (
-            <div key={ev.id} style={{ ...styles.eventCard, borderLeft: '4px solid ' + ev.couleur }}>
-              <div style={styles.eventCardLeft}>
-                <div style={styles.eventCardTitre}>{ev.titre}</div>
-                <div style={styles.eventCardDate}>
-                  📅 {new Date(ev.date_debut).toLocaleDateString('fr-CH')}
-                  {ev.date_fin && ev.date_fin !== ev.date_debut ? ' → ' + new Date(ev.date_fin).toLocaleDateString('fr-CH') : ''}
-                  <span style={{ ...styles.typeBadge, background: ev.couleur + '22', color: ev.couleur, marginLeft: '10px' }}>{ev.type}</span>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 380px',gap:20,alignItems:'start'}}>
+
+        {/* CALENDRIER */}
+        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+          {/* Navigation mois */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9'}}>
+            <button style={s.navBtn} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
+            <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
+            <button style={s.navBtn} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
+          </div>
+          {/* Jours semaine */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
+            {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
+          </div>
+          {/* Grille jours */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
+            {jours.map((jour, idx) => {
+              const evts = eventsJour(jour);
+              const estAuj = isToday(jour);
+              return (
+                <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc',position:'relative'}}>
+                  {jour && (
+                    <>
+                      <div style={{fontSize:12,fontWeight:estAuj?800:500,color:estAuj?'#2563eb':'#374151',width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
+                      {evts.slice(0,2).map((ev,i) => (
+                        <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'1px 4px',marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
+                      ))}
+                      {evts.length>2 && <div style={{fontSize:9,color:'#94a3b8'}}>+{evts.length-2}</div>}
+                    </>
+                  )}
                 </div>
-                {ev.description && <div style={styles.eventCardDesc}>{ev.description}</div>}
-              </div>
-              <div style={styles.eventCardActions}>
-                {isAdmin() && <><button style={styles.btnEdit} onClick={() => handleEdit(ev)}>✏️</button><button style={styles.btnDelete} onClick={() => handleDelete(ev.id)}>🗑️</button></>}
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
-      )}
+
+        {/* TABLEAUX DROITE */}
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+
+          {/* TABLEAU 1 - Vacances */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
+                <div style={{fontSize:11,color:'#b45309'}}>{vacances.length} entrée(s)</div>
+              </div>
+              {isAdmin() && <button style={{...s.btnSave,padding:'5px 12px',fontSize:11}} onClick={() => { setVacanceEdit(null); setFormVacance({nom_vacance:'',date_debut:'',date_fin:''}); setShowFormVacance(true); }}>+ Ajouter</button>}
+            </div>
+            <div style={{maxHeight:280,overflowY:'auto'}}>
+              {vacances.length === 0 ? (
+                <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance définie</div>
+              ) : vacances.map(v => (
+                <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
+                    <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin && v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
+                  </div>
+                  {isAdmin() && (
+                    <div style={{display:'flex',gap:4,flexShrink:0}}>
+                      <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>
+                      <button style={s.btnIcon} onClick={() => supprimerEvenement(v.id)}>🗑️</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* TABLEAU 2 - Séances & Réunions (à venir) */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#0369a1'}}>🤝 Séances & Réunions</div>
+              <div style={{fontSize:11,color:'#0284c7'}}>À configurer prochainement</div>
+            </div>
+            <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune séance planifiée</div>
+          </div>
+
+          {/* TABLEAU 3 - Autres événements */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#7e22ce'}}>✨ Événements particuliers</div>
+              <div style={{fontSize:11,color:'#9333ea'}}>À configurer prochainement</div>
+            </div>
+            <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucun événement particulier</div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
 
-const styles = {
-  page: { padding: '20px', background: '#f0f2f5', minHeight: '100vh' },
-  header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
-  btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' },
-  titre: { fontSize: '24px', fontWeight: '700', flex: 1 },
-  btnAjouter: { padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-  calendarContainer: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '20px' },
-  calendarNav: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
-  navBtn: { padding: '8px 14px', background: '#f0f2f5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px' },
-  calendarTitre: { fontSize: '20px', fontWeight: '700', flex: 1, textAlign: 'center' },
-  btnAujourdhui: { padding: '8px 16px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' },
-  calendarGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' },
-  jourHeader: { padding: '8px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: '#888', background: '#f8f9fa', borderRadius: '6px' },
-  jourVide: { minHeight: '90px' },
-  jourCell: { minHeight: '90px', padding: '6px', borderRadius: '8px', cursor: 'pointer', overflow: 'hidden' },
-  jourNum: { fontSize: '14px', marginBottom: '4px' },
-  eventPill: { fontSize: '11px', color: 'white', padding: '2px 6px', borderRadius: '4px', marginBottom: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' },
-  plusEvents: { fontSize: '11px', color: '#888', padding: '2px 4px' },
-  listeEvenements: { background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  listeTitre: { fontSize: '16px', fontWeight: '700', marginBottom: '15px' },
-  eventCard: { padding: '12px 16px', borderRadius: '8px', background: '#f8f9fa', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  eventCardLeft: { flex: 1 },
-  eventCardTitre: { fontWeight: '700', fontSize: '15px', marginBottom: '4px' },
-  eventCardDate: { fontSize: '13px', color: '#666', marginBottom: '4px', display: 'flex', alignItems: 'center', flexWrap: 'wrap' },
-  eventCardDesc: { fontSize: '13px', color: '#888' },
-  eventCardActions: { display: 'flex', gap: '8px' },
-  typeBadge: { padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '600' },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'white', padding: '30px', borderRadius: '16px', width: '520px', maxHeight: '80vh', overflowY: 'auto' },
-  modalTitre: { fontSize: '20px', fontWeight: '700', marginBottom: '20px' },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  formChamp: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: '13px', fontWeight: '600', marginBottom: '5px', color: '#555' },
-  input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
-  formActions: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' },
-  btnAnnuler: { padding: '10px 20px', background: '#f5f5f5', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-  btnSauver: { padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+const s = {
+  lbl:{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569',display:'block'},
+  inp:{padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:13,outline:'none',width:'100%',boxSizing:'border-box'},
+  btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
+  navBtn:{width:32,height:32,border:'1px solid #e2e8f0',borderRadius:8,background:'white',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'},
+  btnCancel:{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
+  btnSave:{padding:'8px 18px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.7,padding:'2px'},
 };

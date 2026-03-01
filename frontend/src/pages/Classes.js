@@ -676,7 +676,7 @@ export default function Classes() {
             <form onSubmit={handleSubmit}>
               <div style={s.grid2}>
                 <div style={s.field}><label style={s.lbl}>Nom de la classe *</label><input style={s.inp} type="text" required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Ex: CSC 03, CFR 10, EPL 05..." /></div>
-                <div style={s.field}><label style={s.lbl}>Niveau</label><input style={s.inp} type="text" value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})} placeholder="Ex: CSC, CFR, EPL..." /></div>
+                <div style={s.field}><label style={s.lbl}>Niveau</label><input style={s.inp} type="text" required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})} placeholder="Ex: CSC, CFR, EPL..." /></div>
                 
                 <div style={s.field}>
                   <label style={s.lbl}>Titulaire</label>
