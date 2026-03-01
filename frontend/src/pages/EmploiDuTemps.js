@@ -113,16 +113,13 @@ export default function EmploiDuTemps() {
   const classeAHoraire = (classe_id, jour, periode) =>
     classeHoraires.some(h => h.classe_id==classe_id && h.jour===jour && h.periode===periode);
 
-  // Cycle exclusif par jour : rien → Matin → Après-midi → rien
+  // Bascule simple : Matin ↔ Après-midi (défaut Matin)
   const toggleClasseHoraire = async (classe_id, jour) => {
     if (!isAdmin()) return;
     const actuel = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
-    let nouvellePeriode = null;
-    if (!actuel) nouvellePeriode = 'Matin';
-    else if (actuel.periode === 'Matin') nouvellePeriode = 'Après-midi';
-    else nouvellePeriode = null;
+    const nouvellePeriode = actuel?.periode === 'Matin' ? 'Après-midi' : 'Matin';
     let nouveaux = classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour));
-    if (nouvellePeriode) nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
+    nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
     setClasseHoraires(nouveaux);
     const horairesClasse = nouveaux.filter(h => h.classe_id==classe_id).map(h => ({jour:h.jour, periode:h.periode}));
     await axios.post(API + '/planning/classe-horaires/' + classe_id, { horaires: horairesClasse }, { headers });
@@ -131,7 +128,7 @@ export default function EmploiDuTemps() {
 
   const getHoraireJourClasse = (classe_id, jour) => {
     const h = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
-    return h?.periode || null;
+    return h?.periode || 'Matin';
   };
 
   // Affectations
@@ -445,7 +442,7 @@ export default function EmploiDuTemps() {
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:12}}>
-              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour cycler : <b style={{color:'#475569'}}>Inactif → ☀️ Matin → 🌙 Après-midi → Inactif</b></div>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>☀️ Matin ↔ 🌙 Après-midi</b></div>
               <div style={{overflowX:'auto'}}>
                 <table style={styles.tbl}>
                   <thead>
