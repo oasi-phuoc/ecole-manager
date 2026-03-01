@@ -54,6 +54,13 @@ export default function Presences() {
   const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const STATUT_OASI = { 'P':'01 Présent', 'R':'02 Retard', 'A':'03 Absent', 'E':'04 Excusé', 'C':'05 Congé' };
 
+  const fmtDate = (raw) => {
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (isNaN(d)) return raw;
+    return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+  };
+
   const exporterOASI = async () => {
     if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
     setExportLoading(true);
@@ -61,8 +68,8 @@ export default function Presences() {
       const mois = date.substring(0, 7);
       const [annee, moisNum] = mois.split('-').map(Number);
       const nbJours = new Date(annee, moisNum, 0).getDate();
-      const controle_du = mois + '-01';
-      const controle_au = mois + '-' + String(nbJours).padStart(2,'0');
+      const controle_du = '01.' + String(moisNum).padStart(2,'0') + '.' + annee;
+      const controle_au = String(nbJours).padStart(2,'0') + '.' + String(moisNum).padStart(2,'0') + '.' + annee;
 
       const [elevesRes, presRes] = await Promise.all([
         axios.get(API + '/eleves/oasi?classe_id=' + classeSelectionnee, { headers }),
@@ -71,17 +78,16 @@ export default function Presences() {
 
       const eleves = elevesRes.data;
       const presences = presRes.data;
-
       const rows = [];
 
-      // En-têtes colonnes A à V
+      // En-têtes exactes pour import DB externe
       rows.push([
-        'Prog. Nom', 'Encadrant', 'N°', 'Réf.', 'Pos.',
-        'Nom Complet', 'Date Naiss.', 'Nationalité',
-        'Date Présence', 'Jour Semaine', 'Période', 'Type',
-        'Remarque', 'Contrôle Du', 'Contrôle Au',
-        'Prog. Présences', 'Prog. Admin', 'AS',
-        'Prg ID', 'Occupation ID', 'RA ID', 'Temps Réparti ID'
+        'PROG_NOM','PROG_ENCADRANT','N','REF','POS',
+        'NOM','NAIS','NATIONALITE',
+        'PRESENCE_DATE','JOUR_SEMAINE','PRESENCE_PERIODE','PRESENCE_TYPE',
+        'REMARQUE','CONTROLE_DU','CONTROLE_AU',
+        'PROG_PRESENCES','PROG_ADMIN','AS',
+        'PRG_ID','PRG_OCCUPATION_ID','RA_ID','TEMPS_REPARTI_ID'
       ]);
 
       eleves.forEach(eleve => {
@@ -89,10 +95,8 @@ export default function Presences() {
           const dateStr = annee + '-' + String(moisNum).padStart(2,'0') + '-' + String(j).padStart(2,'0');
           const jourIdx = new Date(dateStr + 'T12:00:00').getDay();
 
-          // Ignorer weekends
           if (jourIdx === 0 || jourIdx === 6) continue;
 
-          // Ignorer vacances
           const enVacance = evenementsCalendrier.some(ev => {
             const deb = ev.date_debut?.substring(0,10);
             const fin = (ev.date_fin||ev.date_debut)?.substring(0,10);
@@ -100,22 +104,29 @@ export default function Presences() {
           });
           if (enVacance) continue;
 
-          // Horaire du jour pour cette classe
           const nomJour = JOURS_FR[jourIdx];
           const horaireJour = classeHoraires.find(h => h.jour === nomJour);
           const periode = horaireJour?.periode || null;
-          if (!periode) continue; // Pas de cours ce jour
+          if (!periode) continue;
 
-          // Présence
           const pr = presences.find(p =>
             String(p.eleve_id) === String(eleve.id) && p.date?.substring(0,10) === dateStr
           );
 
-          // Première période non vide
+          // Première période active : P1-P4 = Matin, P5-P8 = Après-midi
           let statutBrut = '';
+          let presencePeriode = periode;
           if (pr) {
-            for (let i = 1; i <= 8; i++) { if (pr['p'+i]) { statutBrut = pr['p'+i]; break; } }
+            for (let i = 1; i <= 8; i++) {
+              if (pr['p'+i]) {
+                statutBrut = pr['p'+i];
+                presencePeriode = i <= 4 ? 'Matin' : 'Après-midi';
+                break;
+              }
+            }
           }
+
+          const presenceDate = String(j).padStart(2,'0') + '.' + String(moisNum).padStart(2,'0') + '.' + annee;
           const presenceType = STATUT_OASI[statutBrut] || '';
           const remarque = pr?.remarque || '';
 
@@ -126,11 +137,11 @@ export default function Presences() {
             eleve.oasi_ref || '',
             eleve.oasi_pos || '',
             eleve.oasi_nom_complet || (eleve.nom + ' ' + eleve.prenom),
-            eleve.oasi_nais || '',
+            fmtDate(eleve.oasi_nais),
             eleve.oasi_nationalite || '',
-            dateStr,
+            presenceDate,
             nomJour,
-            periode,
+            presencePeriode,
             presenceType,
             remarque,
             controle_du,
@@ -148,12 +159,10 @@ export default function Presences() {
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(rows);
-
-      // Largeur colonnes
       ws['!cols'] = [
         {wch:18},{wch:18},{wch:6},{wch:6},{wch:6},
         {wch:22},{wch:12},{wch:14},
-        {wch:14},{wch:12},{wch:12},{wch:14},
+        {wch:14},{wch:12},{wch:14},{wch:14},
         {wch:20},{wch:12},{wch:12},
         {wch:14},{wch:14},{wch:8},
         {wch:10},{wch:14},{wch:8},{wch:16}

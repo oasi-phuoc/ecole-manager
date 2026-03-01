@@ -4,27 +4,8 @@ const path = require('path');
 const filePath = path.join(__dirname, 'src', 'pages', 'Presences.js');
 let code = fs.readFileSync(filePath, 'utf8');
 
-// ── 1. Ajouter import xlsx en haut du fichier ──
 code = code.replace(
-  `import { peutModifierPresences } from '../utils/permissions';`,
-  `import { peutModifierPresences } from '../utils/permissions';
-import * as XLSX from 'xlsx';`
-);
-
-// ── 2. Ajouter state exportLoading ──
-code = code.replace(
-  `  const [loadingApercu, setLoadingApercu] = useState(false);`,
-  `  const [loadingApercu, setLoadingApercu] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);`
-);
-
-// ── 3. Ajouter la fonction exporterOASI ──
-code = code.replace(
-  `  const chargerApercuMois = async () => {`,
-  `  const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  const STATUT_OASI = { 'P':'01 Présent', 'R':'02 Retard', 'A':'03 Absent', 'E':'04 Excusé', 'C':'05 Congé' };
-
-  const exporterOASI = async () => {
+  `  const exporterOASI = async () => {
     if (!classeSelectionnee) { alert('Sélectionnez une classe d\\'abord'); return; }
     setExportLoading(true);
     try {
@@ -137,36 +118,136 @@ code = code.replace(
       alert('Erreur export: ' + (err.response?.data?.message || err.message));
     }
     setExportLoading(false);
+  };`,
+
+  `  const fmtDate = (raw) => {
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (isNaN(d)) return raw;
+    return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
   };
 
-  const chargerApercuMois = async () => {`
-);
+  const exporterOASI = async () => {
+    if (!classeSelectionnee) { alert('Sélectionnez une classe d\\'abord'); return; }
+    setExportLoading(true);
+    try {
+      const mois = date.substring(0, 7);
+      const [annee, moisNum] = mois.split('-').map(Number);
+      const nbJours = new Date(annee, moisNum, 0).getDate();
+      const controle_du = '01.' + String(moisNum).padStart(2,'0') + '.' + annee;
+      const controle_au = String(nbJours).padStart(2,'0') + '.' + String(moisNum).padStart(2,'0') + '.' + annee;
 
-// ── 4. Ajouter le bouton export à droite des onglets ──
-code = code.replace(
-  `      {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
-          <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
-        ))}`,
-  `      <div style={{display:'flex',gap:10,alignItems:'center',flex:1}}>
-        {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
-          <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
-        ))}
-        <button onClick={exporterOASI} disabled={exportLoading} style={{marginLeft:'auto',padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#10b981',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
-          {exportLoading ? '⏳ Export...' : '⬇️ Export OASI'}
-        </button>
-      </div>`
-);
+      const [elevesRes, presRes] = await Promise.all([
+        axios.get(API + '/eleves/oasi?classe_id=' + classeSelectionnee, { headers }),
+        axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
+      ]);
 
-// ── 5. Corriger le style du wrapper onglets ──
-code = code.replace(
-  `      <div style={{display:'flex',gap:10,marginBottom:20}}>`,
-  `      <div style={{display:'flex',gap:10,marginBottom:20,alignItems:'center'}}>`
+      const eleves = elevesRes.data;
+      const presences = presRes.data;
+      const rows = [];
+
+      // En-têtes exactes pour import DB externe
+      rows.push([
+        'PROG_NOM','PROG_ENCADRANT','N','REF','POS',
+        'NOM','NAIS','NATIONALITE',
+        'PRESENCE_DATE','JOUR_SEMAINE','PRESENCE_PERIODE','PRESENCE_TYPE',
+        'REMARQUE','CONTROLE_DU','CONTROLE_AU',
+        'PROG_PRESENCES','PROG_ADMIN','AS',
+        'PRG_ID','PRG_OCCUPATION_ID','RA_ID','TEMPS_REPARTI_ID'
+      ]);
+
+      eleves.forEach(eleve => {
+        for (let j = 1; j <= nbJours; j++) {
+          const dateStr = annee + '-' + String(moisNum).padStart(2,'0') + '-' + String(j).padStart(2,'0');
+          const jourIdx = new Date(dateStr + 'T12:00:00').getDay();
+
+          if (jourIdx === 0 || jourIdx === 6) continue;
+
+          const enVacance = evenementsCalendrier.some(ev => {
+            const deb = ev.date_debut?.substring(0,10);
+            const fin = (ev.date_fin||ev.date_debut)?.substring(0,10);
+            return dateStr >= deb && dateStr <= fin;
+          });
+          if (enVacance) continue;
+
+          const nomJour = JOURS_FR[jourIdx];
+          const horaireJour = classeHoraires.find(h => h.jour === nomJour);
+          const periode = horaireJour?.periode || null;
+          if (!periode) continue;
+
+          const pr = presences.find(p =>
+            String(p.eleve_id) === String(eleve.id) && p.date?.substring(0,10) === dateStr
+          );
+
+          // Première période active : P1-P4 = Matin, P5-P8 = Après-midi
+          let statutBrut = '';
+          let presencePeriode = periode;
+          if (pr) {
+            for (let i = 1; i <= 8; i++) {
+              if (pr['p'+i]) {
+                statutBrut = pr['p'+i];
+                presencePeriode = i <= 4 ? 'Matin' : 'Après-midi';
+                break;
+              }
+            }
+          }
+
+          const presenceDate = String(j).padStart(2,'0') + '.' + String(moisNum).padStart(2,'0') + '.' + annee;
+          const presenceType = STATUT_OASI[statutBrut] || '';
+          const remarque = pr?.remarque || '';
+
+          rows.push([
+            eleve.oasi_prog_nom || '',
+            eleve.oasi_encadrant || '',
+            eleve.oasi_n || '',
+            eleve.oasi_ref || '',
+            eleve.oasi_pos || '',
+            eleve.oasi_nom_complet || (eleve.nom + ' ' + eleve.prenom),
+            fmtDate(eleve.oasi_nais),
+            eleve.oasi_nationalite || '',
+            presenceDate,
+            nomJour,
+            presencePeriode,
+            presenceType,
+            remarque,
+            controle_du,
+            controle_au,
+            eleve.oasi_prog_presences || '',
+            eleve.oasi_prog_admin || '',
+            eleve.oasi_as || '',
+            eleve.oasi_prg_id || '',
+            eleve.oasi_prg_occupation_id || '',
+            eleve.oasi_ra_id || '',
+            eleve.oasi_temps_reparti_id || '',
+          ]);
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [
+        {wch:18},{wch:18},{wch:6},{wch:6},{wch:6},
+        {wch:22},{wch:12},{wch:14},
+        {wch:14},{wch:12},{wch:14},{wch:14},
+        {wch:20},{wch:12},{wch:12},
+        {wch:14},{wch:14},{wch:8},
+        {wch:10},{wch:14},{wch:8},{wch:16}
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Présences');
+      const nomClasse = classes.find(c => String(c.id) === String(classeSelectionnee))?.nom || 'classe';
+      XLSX.writeFile(wb, 'presences_' + nomClasse + '_' + mois + '.xlsx');
+    } catch (err) {
+      console.error(err);
+      alert('Erreur export: ' + (err.response?.data?.message || err.message));
+    }
+    setExportLoading(false);
+  };`
 );
 
 fs.writeFileSync(filePath, code, 'utf8');
-console.log('✅ Export OASI ajouté dans Presences.js');
-console.log('   ✔ Bouton ⬇️ Export OASI à droite des onglets');
-console.log('   ✔ Colonnes A à V format OASI');
-console.log('   ✔ 1 ligne par jour par élève (hors weekend/vacances)');
-console.log('');
-console.log('⚠️  Lancer: npm install xlsx');
+console.log('✅ Export OASI corrigé :');
+console.log('   ✔ En-têtes exactes PROG_NOM, PROG_ENCADRANT...');
+console.log('   ✔ Dates en DD.MM.YYYY');
+console.log('   ✔ PRESENCE_PERIODE depuis la période active réelle');
+console.log('   ✔ PROG_ENCADRANT correctement repris');
