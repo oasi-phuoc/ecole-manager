@@ -201,15 +201,35 @@ export default function Professeurs() {
                       </div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveau préféré</label>
-                      <div style={{display:'flex',gap:8}}>
-                        {['CSC','CFR','EPL'].map(n => (
-                          <button key={n} type="button"
-                            onClick={() => { setForm({...form,niveau_prefere:n,branches_specialites:[]}); chargerBranchesNiveau(n); }}
-                            style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(form.niveau_prefere===n?'#6366f1':'#e2e8f0'),background:form.niveau_prefere===n?'#e0e7ff':'white',color:form.niveau_prefere===n?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
-                            {n}
-                          </button>
-                        ))}
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveau(x) préféré(s)</label>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {['CSC','CFR','EPL'].map(n => {
+                          const niveaux = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
+                          const selected = niveaux.includes(n);
+                          return (
+                            <button key={n} type="button"
+                              onClick={() => {
+                                const curr = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
+                                const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
+                                setForm({...form, niveau_prefere: newNiv.join(','), branches_specialites:[]});
+                                if (newNiv.length === 1) chargerBranchesNiveau(newNiv[0]);
+                                else if (newNiv.length > 1) {
+                                  const token = localStorage.getItem('token');
+                                  axios.get(API+'/branches', {headers:{Authorization:'Bearer '+token}})
+                                    .then(r => setBranchesDisponibles(r.data.filter(b => newNiv.includes(b.niveau))))
+                                    .catch(() => {});
+                                } else setBranchesDisponibles([]);
+                              }}
+                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
+                              {n}
+                            </button>
+                          );
+                        })}
+                        <button type="button"
+                          onClick={() => { setForm({...form,niveau_prefere:'',branches_specialites:[]}); setBranchesDisponibles([]); }}
+                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!form.niveau_prefere||form.niveau_prefere==='')?'#94a3b8':'#e2e8f0'),background:(!form.niveau_prefere||form.niveau_prefere==='')?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
+                          Aucune préférence
+                        </button>
                       </div>
                     </div>
                     {branchesDisponibles.length > 0 && (
@@ -234,7 +254,9 @@ export default function Professeurs() {
                       </div>
                     )}
                     <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Spécialité (texte libre)</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>
+                      {form.niveau_prefere ? `Spécialité(s) — ${form.niveau_prefere}` : 'Spécialité(s) — Aucune préférence de niveau'}
+                    </label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
