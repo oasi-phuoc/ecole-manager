@@ -216,10 +216,12 @@ export default function Professeurs() {
                                 else if (newNiv.length > 1) {
                                   const token = localStorage.getItem('token');
                                   axios.get(API+'/branches', {headers:{Authorization:'Bearer '+token}})
-                                    .then(r => const raw = r.data.filter(b => newNiv.includes(b.niveau));
-                                  const unique = raw.filter((b,i,arr) => arr.findIndex(x=>x.nom===b.nom)===i);
-                                  setBranchesDisponibles(unique))
-                                    .catch(() => {});
+                                    .then(r => {
+                                    const raw = r.data.filter(b => newNiv.includes(b.niveau));
+                                    const unique = raw.filter((b,i,arr) => arr.findIndex(x=>x.nom===b.nom)===i);
+                                    setBranchesDisponibles(unique);
+                                  })
+                                  .catch(() => {});
                                 } else setBranchesDisponibles([]);
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
