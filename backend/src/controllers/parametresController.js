@@ -92,22 +92,26 @@ const resetTout = async (req, res) => {
     'eleves', 'classes', 'profs',
     'messages', 'notifications'
   ];
-  const erreurs = [];
+  const resultats = [];
   for (const table of tables) {
     try {
-      await pool.query('DELETE FROM ' + table);
+      const r = await pool.query('DELETE FROM ' + table);
+      resultats.push('OK:' + table + '(' + r.rowCount + ')');
     } catch (err) {
-      erreurs.push(table + ': ' + err.message);
+      resultats.push('ERR:' + table + ':' + err.message);
     }
   }
   try {
-    await pool.query("DELETE FROM utilisateurs WHERE role != 'admin'");
-  } catch (err) { erreurs.push('utilisateurs: ' + err.message); }
+    const r = await pool.query("DELETE FROM utilisateurs WHERE role != 'admin'");
+    resultats.push('OK:utilisateurs(' + r.rowCount + ')');
+  } catch (err) { resultats.push('ERR:utilisateurs:' + err.message); }
 
-  if (erreurs.length > 0) {
-    return res.status(500).json({ message: 'Erreur lors du reset', erreur: erreurs.join(' | ') });
-  }
-  res.json({ message: 'Reset complet effectue' });
+  const erreurs = resultats.filter(r => r.startsWith('ERR'));
+  res.json({
+    message: erreurs.length === 0 ? 'Reset complet effectue' : 'Reset partiel - ' + erreurs.length + ' erreur(s)',
+    details: resultats,
+    erreurs: erreurs
+  });
 };
 
 module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout };
