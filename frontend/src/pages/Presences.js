@@ -9,18 +9,7 @@ const OPTS = ['', 'P', 'A', 'R', 'E', 'C'];
 const OPTS_LABEL = { '': '—', 'P': 'P', 'A': 'A', 'R': 'R', 'E': 'E', 'C': 'C' };
 const OPTS_COLOR = { '': '#94a3b8', 'P': '#10b981', 'A': '#ef4444', 'R': '#f59e0b', 'E': '#3b82f6', 'C': '#8b5cf6' };
 const PERIODES = [1,2,3,4,5,6,7,8];
-
-// 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
-// Valeurs : 'matin' | 'apresmidi' | 'complet' | 'ferme'
-const HORAIRE_PAR_JOUR = {
-  0: 'ferme',       // Dimanche
-  1: 'matin',       // Lundi
-  2: 'apresmidi',   // Mardi
-  3: 'matin',       // Mercredi  ← adapter si besoin
-  4: 'complet',     // Jeudi     ← adapter si besoin
-  5: 'apresmidi',   // Vendredi  ← adapter si besoin
-  6: 'ferme',       // Samedi
-};
+const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 
 function initPresences(eleves) {
   const p = {};
@@ -41,6 +30,7 @@ export default function Presences() {
   const [statistiques, setStatistiques] = useState([]);
   const [valide, setValide] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [classeHoraires, setClasseHoraires] = useState([]);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -52,8 +42,16 @@ export default function Presences() {
       setClasseInfo(cl || null);
       chargerEleves();
       chargerStats();
+      chargerClasseHoraires(classeSelectionnee);
     }
   }, [classeSelectionnee, date]);
+
+  const chargerClasseHoraires = async (classe_id) => {
+    try {
+      const res = await axios.get(API + '/planning/classe-horaires', { headers });
+      setClasseHoraires(res.data.filter(h => h.classe_id == classe_id));
+    } catch (err) { console.error(err); }
+  };
 
   const chargerClasses = async () => {
     try {
@@ -145,24 +143,25 @@ export default function Presences() {
     }));
   };
 
-  // Jour de la semaine basé sur la date sélectionnée
-  const getJourSemaine = () => {
-    const d = new Date(date + 'T12:00:00');
-    return d.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
-  };
+  const getJourSemaine = () => new Date(date + 'T12:00:00').getDay();
 
-  const getHoraireJour = () => HORAIRE_PAR_JOUR[getJourSemaine()] || 'ferme';
+  const getNomJour = () => JOURS_NOMS[getJourSemaine()];
 
-  const isWeekend = () => {
-    const j = getJourSemaine();
-    return j === 0 || j === 6;
+  const isWeekend = () => { const j = getJourSemaine(); return j === 0 || j === 6; };
+
+  // Récupère la période (Matin / Après-midi) définie pour la classe ce jour
+  const getHoraireJour = () => {
+    if (isWeekend()) return null;
+    const nomJour = getNomJour();
+    const h = classeHoraires.find(h => h.jour === nomJour);
+    return h?.periode || null; // null = pas de cours ce jour
   };
 
   const isBloque = (periode) => {
     const horaire = getHoraireJour();
-    if (horaire === 'ferme') return true;
-    if (horaire === 'matin' && periode > 4) return true;
-    if (horaire === 'apresmidi' && periode <= 4) return true;
+    if (!horaire) return true; // pas de cours ce jour → tout grisé
+    if (horaire === 'Matin' && periode > 4) return true;
+    if (horaire === 'Après-midi' && periode <= 4) return true;
     return false;
   };
 
@@ -206,6 +205,16 @@ export default function Presences() {
           {isWeekend() && (
             <div style={{padding:'12px 20px',background:'#fef2f2',borderBottom:'1px solid #fecaca',color:'#dc2626',fontWeight:700,fontSize:13}}>
               🚫 Samedi et dimanche — aucune saisie possible
+            </div>
+          )}
+          {!isWeekend() && !getHoraireJour() && (
+            <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
+              ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
+            </div>
+          )}
+          {!isWeekend() && getHoraireJour() && (
+            <div style={{padding:'8px 20px',background:'#f0fdf4',borderBottom:'1px solid #bbf7d0',color:'#15803d',fontWeight:600,fontSize:12}}>
+              📅 {getNomJour()} — {getHoraireJour() === 'Matin' ? '☀️ Matin (P1–P4)' : '🌙 Après-midi (P5–P8)'}
             </div>
           )}
 
