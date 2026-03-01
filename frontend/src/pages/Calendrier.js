@@ -280,17 +280,17 @@ export default function Calendrier() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'start'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'start',isolation:'isolate'}}>
 
         {/* COLONNE GAUCHE */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
           {/* CALENDRIER */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9'}}>
-              <button style={s.navBtn} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9',position:'relative',zIndex:10}}>
+              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
               <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
-              <button style={s.navBtn} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
+              <button style={{...s.navBtn,position:'relative',zIndex:11}} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
               {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
@@ -400,7 +400,7 @@ export default function Calendrier() {
         </div>
 
         {/* COLONNE DROITE */}
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{display:'flex',flexDirection:'column',gap:16,position:'relative',zIndex:1}}>
 
           {/* VACANCES */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
