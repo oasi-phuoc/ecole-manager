@@ -1,46 +1,36 @@
 const fs = require('fs');
-let ctrl = fs.readFileSync('./src/controllers/elevesController.js', 'utf8');
+let ctrl = fs.readFileSync('./src/controllers/profsController.js', 'utf8');
 
-const start = ctrl.indexOf('const supprimerEleve');
-const end = ctrl.indexOf('const updatePhoto');
+// Fix modifierProf - avec mot de passe
+ctrl = ctrl.replace(
+  `const { nom, prenom, email, actif, mot_de_passe, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis } = req.body;`,
+  `const { nom, prenom, email, actif, mot_de_passe, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis, niveau_prefere, branches_specialites } = req.body;`
+);
 
-const newDelete = `const supprimerEleve = async (req, res) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id=$1', [req.params.id]);
-    if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
-    const userId = eleveResult.rows[0].utilisateur_id;
+ctrl = ctrl.replace(
+  `UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, actif=$4, mot_de_passe=$5, telephone=$6, specialite=$7, adresse=$8, npa=$9, lieu=$10, sexe=$11, taux_activite=$12, periodes_semaine=$13, date_naissance=$14, avs=$15, type_contrat=$16, type_permis=$17 \nWHERE id=$18 AND role='prof' RETURNING id`,
+  `UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, actif=$4, mot_de_passe=$5, telephone=$6, specialite=$7, adresse=$8, npa=$9, lieu=$10, sexe=$11, taux_activite=$12, periodes_semaine=$13, date_naissance=$14, avs=$15, type_contrat=$16, type_permis=$17, niveau_prefere=$18, branches_specialites=$19 WHERE id=$20 AND role='prof' RETURNING id`
+);
 
-    // Vider photo
-    await client.query('UPDATE eleves SET photo=null WHERE id=$1', [req.params.id]);
+ctrl = ctrl.replace(
+  `params = [nom, prenom, email, actif!==undefined?actif:true, hash, telephone||null, specialite||null, adresse||null, npa||null, lieu||null, sexe||null, (taux_activite ? parseInt(taux_activite) : null), (periodes_semaine ? parseInt(periodes_semaine) : null), (date_naissance && date_naissance !== '' ? date_naissance : null), avs||null, type_contrat||null, type_permis||null, req.params.id];`,
+  `params = [nom, prenom, email, actif!==undefined?actif:true, hash, telephone||null, specialite||null, adresse||null, npa||null, lieu||null, sexe||null, (taux_activite ? parseInt(taux_activite) : null), (periodes_semaine ? parseInt(periodes_semaine) : null), (date_naissance && date_naissance !== '' ? date_naissance : null), avs||null, type_contrat||null, type_permis||null, niveau_prefere||null, branches_specialites||null, req.params.id];`
+);
 
-    // Supprimer TOUTES les dépendances élève
-    await client.query('DELETE FROM presences WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM notes WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM paiements WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM observations WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM absences WHERE eleve_id=$1', [req.params.id]);
-    await client.query('DELETE FROM eleves WHERE id=$1', [req.params.id]);
+ctrl = ctrl.replace(
+  `UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, actif=$4, telephone=$5, specialite=$6, adresse=$7, npa=$8, lieu=$9, sexe=$10, taux_activite=$11, periodes_semaine=$12, date_naissance=$13, avs=$14, type_contrat=$15, type_permis=$16 WHERE id=$17 AND role='prof' RETURNING id`,
+  `UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, actif=$4, telephone=$5, specialite=$6, adresse=$7, npa=$8, lieu=$9, sexe=$10, taux_activite=$11, periodes_semaine=$12, date_naissance=$13, avs=$14, type_contrat=$15, type_permis=$16, niveau_prefere=$17, branches_specialites=$18 WHERE id=$19 AND role='prof' RETURNING id`
+);
 
-    // Supprimer utilisateur et ses dépendances
-    if (userId) {
-      await client.query('DELETE FROM messages WHERE expediteur_id=$1 OR destinataire_id=$1', [userId]);
-      await client.query('DELETE FROM notifications WHERE utilisateur_id=$1', [userId]);
-      await client.query('DELETE FROM observations WHERE auteur_id=$1', [userId]);
-      await client.query('DELETE FROM utilisateurs WHERE id=$1', [userId]);
-    }
+// Fix params sans mot de passe - trouver la fin
+const idx = ctrl.indexOf("adress\ncreerProf OK !");
+const paramsNoPass = ctrl.indexOf("params = [nom, prenom, email, actif!==undefined?actif:true, telephone||null, specialite||null, adress");
+if (paramsNoPass > 0) {
+  const endParams = ctrl.indexOf(', req.params.id]', paramsNoPass) + ', req.params.id]'.length;
+  const oldParams = ctrl.substring(paramsNoPass, endParams);
+  const newParams = oldParams.replace(', req.params.id]', ', niveau_prefere||null, branches_specialites||null, req.params.id]');
+  ctrl = ctrl.substring(0, paramsNoPass) + newParams + ctrl.substring(endParams);
+}
 
-    await client.query('COMMIT');
-    res.json({ message: 'Eleve supprime' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ message: err.message });
-  } finally { client.release(); }
-};
-
-`;
-
-ctrl = ctrl.substring(0, start) + newDelete + ctrl.substring(end);
-fs.writeFileSync('./src/controllers/elevesController.js', ctrl);
-console.log('OK !');
+fs.writeFileSync('./src/controllers/profsController.js', ctrl);
+console.log('modifierProf OK !');
