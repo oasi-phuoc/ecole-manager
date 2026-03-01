@@ -579,7 +579,7 @@ export default function Presences() {
                 <table style={{borderCollapse:'collapse',fontSize:11,minWidth:'100%'}}>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'8px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:2,minWidth:150,whiteSpace:'nowrap'}}>Élève</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:2,minWidth:150,whiteSpace:'nowrap'}}>Élève</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
@@ -598,7 +598,7 @@ export default function Presences() {
                   <tbody>
                     {apercuMois.eleves.map((e, ri) => (
                       <tr key={e.id} style={{background:ri%2===0?'white':'#fafafa'}}>
-                        <td style={{padding:'5px 14px',fontWeight:700,fontSize:12,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:1,whiteSpace:'nowrap'}}>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:1,whiteSpace:'nowrap'}}>
                           {e.nom} {e.prenom}
                         </td>
                         {jours.map(j => {
@@ -606,7 +606,7 @@ export default function Presences() {
                           const vac = isVac(j);
                           const statut = (!wkd && !vac) ? getStatut(e.id, j) : '';
                           return (
-                            <td key={j} style={{padding:'3px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
+                            <td key={j} style={{padding:'8px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
                               background:wkd?'#e2e8f0':vac?'#fef9c3':'transparent'}}>
                               {!wkd && !vac && (
                                 <span style={{

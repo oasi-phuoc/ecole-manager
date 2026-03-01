@@ -4,32 +4,30 @@ const path = require('path');
 const filePath = path.join(__dirname, 'src', 'pages', 'Presences.js');
 let code = fs.readFileSync(filePath, 'utf8');
 
-// Remplacer la logique période dans l'export
+// ── Aperçu : aligner padding sur saisie (8px) ──
+
+// Nom élève sticky
 code = code.replace(
-  `          // Première période saisie
-          let statutBrut = '';
-          let presencePeriode = periodeDef; // horaire classe par défaut
-          if (pr) {
-            for (let i = 1; i <= 8; i++) {
-              if (pr['p' + i]) {
-                statutBrut = pr['p' + i];
-                presencePeriode = i <= 4 ? 'Matin' : 'Après-midi';
-                break;
-              }
-            }
-          }
-          // Si toujours pas de période, déduire depuis l'horaire classe
-          if (!presencePeriode && horaireJour) presencePeriode = horaireJour.periode;`,
-  `          // Statut : première période non vide
-          let statutBrut = '';
-          if (pr) {
-            for (let i = 1; i <= 8; i++) {
-              if (pr['p' + i]) { statutBrut = pr['p' + i]; break; }
-            }
-          }
-          // PRESENCE_PERIODE : toujours depuis l'affectation EmploiDuTemps
-          const presencePeriode = horaireJour?.periode || '';`
+  `                        <td style={{padding:'5px 14px',fontWeight:700,fontSize:12,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:1,whiteSpace:'nowrap'}}>`,
+  `                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:1,whiteSpace:'nowrap'}}>`
 );
 
+// Cellules statut
+code = code.replace(
+  `                            <td key={j} style={{padding:'3px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
+                              background:wkd?'#e2e8f0':vac?'#fef9c3':'transparent'}}>`,
+  `                            <td key={j} style={{padding:'8px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
+                              background:wkd?'#e2e8f0':vac?'#fef9c3':'transparent'}}>`
+);
+
+// En-tête Élève aperçu
+code = code.replace(
+  `                      <th style={{padding:'8px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:2,minWidth:150,whiteSpace:'nowrap'}}>Élève</th>`,
+  `                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:2,minWidth:150,whiteSpace:'nowrap'}}>Élève</th>`
+);
+
+// ── Stats : s.td est déjà padding 8px, juste aligner fontSize ──
+// Rien à changer, stats utilise déjà s.td
+
 fs.writeFileSync(filePath, code, 'utf8');
-console.log('✅ PRESENCE_PERIODE : toujours depuis affectation EmploiDuTemps');
+console.log('✅ Hauteur lignes uniformisée : saisie = aperçu = stats');
