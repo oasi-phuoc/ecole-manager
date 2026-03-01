@@ -1,20 +1,14 @@
-const fs = require('fs');
-let ctrl = fs.readFileSync('./src/controllers/calendrierController.js', 'utf8');
-
-ctrl = ctrl.replace(
-  `const { titre, description, date_debut, date_fin, type, couleur } = req.body;
+require('dotenv').config();
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+async function fix() {
   try {
-    const result = await pool.query(
-      'UPDATE calendrier SET titre=$1, description=$2, date_debut=$3, date_fin=$4, type=$5, couleur=$6 WHERE id=$7 RETURNING *',
-      [titre, description || null, date_debut, date_fin || date_debut, type || 'Evenement', couleur || '#1a73e8', req.params.id]
-    );`,
-  `const { titre, description, date_debut, date_fin, type, couleur, categorie, nom_vacance, heure_debut, heure_fin } = req.body;
-  try {
-    const result = await pool.query(
-      'UPDATE calendrier SET titre=$1, description=$2, date_debut=$3, date_fin=$4, type=$5, couleur=$6, categorie=$7, nom_vacance=$8, heure_debut=$9, heure_fin=$10 WHERE id=$11 RETURNING *',
-      [titre, description||null, date_debut, date_fin||date_debut, type||'Evenement', couleur||'#1a73e8', categorie||'evenement', nom_vacance||null, heure_debut||null, heure_fin||null, req.params.id]
-    );`
-);
-
-fs.writeFileSync('./src/controllers/calendrierController.js', ctrl);
-console.log('modifierEvenement OK !');
+    await pool.query(`ALTER TABLE calendrier ADD COLUMN heure_debut VARCHAR(10)`);
+    await pool.query(`ALTER TABLE calendrier ADD COLUMN heure_fin VARCHAR(10)`);
+    console.log('✅ Colonnes heure ajoutées !');
+    const r = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='calendrier'`);
+    console.log('Colonnes:', r.rows.map(c=>c.column_name).join(', '));
+    process.exit();
+  } catch(err) { console.error('❌', err.message); process.exit(); }
+}
+fix();
