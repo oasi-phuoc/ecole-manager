@@ -10,6 +10,18 @@ const OPTS_LABEL = { '': '—', 'P': 'P', 'A': 'A', 'R': 'R', 'E': 'E', 'C': 'C'
 const OPTS_COLOR = { '': '#94a3b8', 'P': '#10b981', 'A': '#ef4444', 'R': '#f59e0b', 'E': '#3b82f6', 'C': '#8b5cf6' };
 const PERIODES = [1,2,3,4,5,6,7,8];
 
+// 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
+// Valeurs : 'matin' | 'apresmidi' | 'complet' | 'ferme'
+const HORAIRE_PAR_JOUR = {
+  0: 'ferme',       // Dimanche
+  1: 'matin',       // Lundi
+  2: 'apresmidi',   // Mardi
+  3: 'matin',       // Mercredi  ← adapter si besoin
+  4: 'complet',     // Jeudi     ← adapter si besoin
+  5: 'apresmidi',   // Vendredi  ← adapter si besoin
+  6: 'ferme',       // Samedi
+};
+
 function initPresences(eleves) {
   const p = {};
   eleves.forEach(e => {
@@ -93,10 +105,7 @@ export default function Presences() {
           const row = { ...next[e.id] };
           const horaire = classeInfo?.horaire || 'complet';
           PERIODES.forEach(i => {
-            const key = 'p' + i;
-            const isMatin = i <= 4;
-            const isBloque = (horaire === 'matin' && !isMatin) || (horaire === 'apresmidi' && isMatin);
-            if (!isBloque && !row[key]) row[key] = 'P';
+            if (!isBloque(i) && !row['p' + i]) row['p' + i] = 'P';
           });
           next[e.id] = row;
         });
@@ -136,11 +145,36 @@ export default function Presences() {
     }));
   };
 
+  // Jour de la semaine basé sur la date sélectionnée
+  const getJourSemaine = () => {
+    const d = new Date(date + 'T12:00:00');
+    return d.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
+  };
+
+  const getHoraireJour = () => HORAIRE_PAR_JOUR[getJourSemaine()] || 'ferme';
+
+  const isWeekend = () => {
+    const j = getJourSemaine();
+    return j === 0 || j === 6;
+  };
+
   const isBloque = (periode) => {
-    const horaire = classeInfo?.horaire || 'complet';
+    const horaire = getHoraireJour();
+    if (horaire === 'ferme') return true;
     if (horaire === 'matin' && periode > 4) return true;
     if (horaire === 'apresmidi' && periode <= 4) return true;
     return false;
+  };
+
+  // Applique un statut à toutes les périodes non-bloquées d'un élève
+  const setToutEleve = (eleveId, val) => {
+    setPresences(prev => {
+      const row = { ...prev[eleveId] };
+      PERIODES.forEach(i => {
+        if (!isBloque(i)) row['p' + i] = val;
+      });
+      return { ...prev, [eleveId]: row };
+    });
   };
 
   return (
@@ -168,6 +202,13 @@ export default function Presences() {
       {onglet === 'saisie' && (
         <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
 
+          {/* Alerte weekend */}
+          {isWeekend() && (
+            <div style={{padding:'12px 20px',background:'#fef2f2',borderBottom:'1px solid #fecaca',color:'#dc2626',fontWeight:700,fontSize:13}}>
+              🚫 Samedi et dimanche — aucune saisie possible
+            </div>
+          )}
+
           {/* Barre validation + sauvegarde */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -181,7 +222,7 @@ export default function Presences() {
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               <span style={{fontSize:13,color:'#64748b'}}>{eleves.length} élève(s)</span>
               {/* Bouton bascule validation */}
-              <button onClick={handleToggleValide} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+(valide?'#10b981':'#e2e8f0'),background:valide?'#ecfdf5':'white',color:valide?'#059669':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
+              <button onClick={handleToggleValide} disabled={isWeekend()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+(valide?'#10b981':'#e2e8f0'),background:isWeekend()?'#f1f5f9':valide?'#ecfdf5':'white',color:isWeekend()?'#cbd5e1':valide?'#059669':'#64748b',cursor:isWeekend()?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
                 <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
                   <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
                 </div>
@@ -204,6 +245,7 @@ export default function Presences() {
                   <tr style={{background:'#f8fafc'}}>
                     <th style={s.th} rowSpan={2}>NOM</th>
                     <th style={s.th} rowSpan={2}>Prénom</th>
+                    <th style={{...s.th,background:'#f0fdf4',color:'#166534',fontSize:10}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
                     <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>☀️ Matin</th>
                     <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>🌙 Après-midi</th>
                     <th style={s.th} rowSpan={2}>Remarques</th>
@@ -224,6 +266,20 @@ export default function Presences() {
                     <tr key={e.id} style={{borderBottom:'1px solid #f1f5f9',background:idx%2===0?'white':'#fafafa'}}>
                       <td style={{...s.td,fontWeight:800,color:'#0f172a'}}>{e.nom}</td>
                       <td style={{...s.td,color:'#374151'}}>{e.prenom}</td>
+                      <td style={{...s.td,padding:'6px 4px',background:isWeekend()?'#f1f5f9':'#f0fdf4'}}>
+                        {isWeekend() ? (
+                          <div style={{width:44,height:28,borderRadius:6,background:'#e2e8f0',margin:'0 auto'}}></div>
+                        ) : (
+                          <select
+                            value=""
+                            onChange={ev => { if(ev.target.value) setToutEleve(e.id, ev.target.value); ev.target.value=''; }}
+                            style={{width:50,padding:'4px 2px',borderRadius:6,border:'1px solid #86efac',background:'#f0fdf4',color:'#16a34a',fontWeight:800,fontSize:12,textAlign:'center',cursor:'pointer',outline:'none'}}
+                          >
+                            <option value="">—</option>
+                            {OPTS.filter(o=>o!=='').map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        )}
+                      </td>
                       {PERIODES.map(i => {
                         const bloque = isBloque(i);
                         const val = presences[e.id]?.['p'+i] || '';
