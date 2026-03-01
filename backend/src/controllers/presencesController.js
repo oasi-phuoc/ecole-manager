@@ -92,4 +92,19 @@ const getStatistiques = async (req, res) => {
   }
 };
 
-module.exports = { getPresences, getElevesClasse, enregistrerPresences, getStatistiques };
+const getPresencesMois = async (req, res) => {
+  try {
+    const { classe_id, mois } = req.query;
+    const result = await pool.query(`
+      SELECT pv.*, e.id as eleve_id
+      FROM presences_v2 pv
+      JOIN eleves e ON pv.eleve_id = e.id
+      WHERE pv.classe_id = $1 AND TO_CHAR(pv.date, 'YYYY-MM') = $2
+    `, [classe_id, mois]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getPresences, getElevesClasse, enregistrerPresences, getStatistiques, getPresencesMois };
