@@ -1,47 +1,65 @@
 const fs = require('fs');
 const path = require('path');
 
-// ── 1. Ajouter getPresencesMois dans le controller ──
-const controllerPath = path.join(__dirname, 'src', 'controllers', 'presencesController.js');
-let ctrl = fs.readFileSync(controllerPath, 'utf8');
+const filePath = path.join(__dirname, 'src', 'pages', 'Presences.js');
+let code = fs.readFileSync(filePath, 'utf8');
 
-ctrl = ctrl.replace(
-  `module.exports = { getPresences, getElevesClasse, enregistrerPresences, getStatistiques };`,
-  `const getPresencesMois = async (req, res) => {
-  try {
-    const { classe_id, mois } = req.query;
-    const result = await pool.query(\`
-      SELECT pv.*, e.id as eleve_id
-      FROM presences_v2 pv
-      JOIN eleves e ON pv.eleve_id = e.id
-      WHERE pv.classe_id = $1 AND TO_CHAR(pv.date, 'YYYY-MM') = $2
-    \`, [classe_id, mois]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
-};
-
-module.exports = { getPresences, getElevesClasse, enregistrerPresences, getStatistiques, getPresencesMois };`
+// ── Remplacer le titre + ajouter erreur visible ──
+code = code.replace(
+  `            <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
+              Aperçu — {apercuMois.mois ? new Date(apercuMois.mois+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'}) : ''}
+            </span>`,
+  `            <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
+              Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
+            </span>`
 );
 
-fs.writeFileSync(controllerPath, ctrl, 'utf8');
-console.log('✅ getPresencesMois ajouté dans le controller');
-
-// ── 2. Ajouter la route ──
-const routesPath = path.join(__dirname, 'src', 'routes', 'presencesRoutes.js');
-let routes = fs.readFileSync(routesPath, 'utf8');
-
-routes = routes.replace(
-  /const \{([^}]+)\} = require\(['"]\.\.\/controllers\/presencesController['"]\)/,
-  (match, imports) => `const { ${imports.trim()}, getPresencesMois } = require('../controllers/presencesController')`
+// ── Remplacer la condition d'affichage vide pour montrer l'erreur API ──
+code = code.replace(
+  `          ) : !apercuMois.eleves ? (
+            <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Sélectionnez une classe puis cliquez sur Aperçu du mois</div>
+          ) : (() => {`,
+  `          ) : !apercuMois.eleves ? (
+            <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>
+              {apercuMois.erreur
+                ? <span style={{color:'#ef4444'}}>❌ Erreur : {apercuMois.erreur}</span>
+                : 'Cliquez sur 🔄 Actualiser pour charger les données'}
+            </div>
+          ) : (() => {`
 );
 
-if (routes.includes('module.exports')) {
-  routes = routes.replace('module.exports', `router.get('/mois', getPresencesMois);\n\nmodule.exports`);
-} else {
-  routes += `\nrouter.get('/mois', getPresencesMois);\n`;
-}
+// ── Améliorer chargerApercuMois avec catch visible ──
+code = code.replace(
+  `  const chargerApercuMois = async () => {
+    if (!classeSelectionnee) return;
+    setLoadingApercu(true);
+    try {
+      const mois = date.substring(0, 7);
+      const [elevesRes, presRes] = await Promise.all([
+        axios.get(API + '/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
+        axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
+      ]);
+      setApercuMois({ eleves: elevesRes.data, presences: presRes.data, mois });
+    } catch (err) { console.error(err); }
+    setLoadingApercu(false);
+  };`,
+  `  const chargerApercuMois = async () => {
+    if (!classeSelectionnee) { alert('Sélectionnez une classe d\\'abord'); return; }
+    setLoadingApercu(true);
+    try {
+      const mois = date.substring(0, 7);
+      const [elevesRes, presRes] = await Promise.all([
+        axios.get(API + '/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
+        axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
+      ]);
+      setApercuMois({ eleves: elevesRes.data, presences: presRes.data, mois });
+    } catch (err) {
+      console.error(err);
+      setApercuMois({ erreur: err.response?.data?.message || err.message });
+    }
+    setLoadingApercu(false);
+  };`
+);
 
-fs.writeFileSync(routesPath, routes, 'utf8');
-console.log('✅ Route GET /presences/mois ajoutée');
+fs.writeFileSync(filePath, code, 'utf8');
+console.log('✅ Fix aperçu : titre date + erreur visible');
