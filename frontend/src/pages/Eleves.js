@@ -174,7 +174,7 @@ export default function Eleves() {
 
   const elevesFiltres = eleves.filter(el => {
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchC = filtreClasse==='tous' || String(el.classe_id)===String(filtreClasse);
+    const matchC = filtreClasse==='tous' || filtreClasse==='sans_classe' ? (filtreClasse==='sans_classe' ? !el.classe_id : true) : String(el.classe_id)===String(filtreClasse);
     return matchR && matchC;
   });
 
@@ -213,13 +213,45 @@ export default function Eleves() {
       </div>
 
       {/* Stats */}
-      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'}}>
-        <span style={{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500}}>Total <b>{eleves.length}</b> élèves</span>
-        {classes.map(c => (
-          <span key={c.id} style={{padding:'5px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:500}}>
-            {c.nom} <b>{eleves.filter(e=>e.classe_id==c.id).length}</b>
-          </span>
-        ))}
+      <div style={{marginBottom:20}}>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginBottom:10}}>
+          <span style={{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500}}>Total <b>{eleves.length}</b> élèves</span>
+          <button onClick={() => setFiltreClasse('sans_classe')} style={{padding:'5px 14px',background: filtreClasse==='sans_classe'?'#ef4444':'white',color:filtreClasse==='sans_classe'?'white':'#ef4444',border:'1px solid #ef4444',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            ⚠️ Sans classe <b>{eleves.filter(e=>!e.classe_id).length}</b>
+          </button>
+          {filtreClasse==='sans_classe' && <button onClick={() => setFiltreClasse('tous')} style={{padding:'5px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:99,fontSize:12,cursor:'pointer',color:'#64748b'}}>✕ Effacer filtre</button>}
+          {isAdmin() && (
+            <button onClick={async () => {
+              if (window.confirm('⚠️ ATTENTION ! Supprimer TOUS les élèves ? Cette action est irréversible !')) {
+                if (window.confirm('Dernière confirmation : supprimer tous les élèves ?')) {
+                  try {
+                    for (const el of eleves) await axios.delete(API+'/eleves/'+el.id, {headers});
+                    chargerTout();
+                    alert('Tous les élèves ont été supprimés.');
+                  } catch(err) { alert('Erreur: '+err.message); }
+                }
+              }
+            }} style={{padding:'5px 14px',background:'white',color:'#dc2626',border:'1px solid #dc2626',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer',marginLeft:'auto'}}>
+              🗑️ Supprimer tous les élèves
+            </button>
+          )}
+        </div>
+        {/* Groupes par niveau */}
+        {['CFR','CSC','EPL','Autre'].map(niveau => {
+          const classesNiveau = classes.filter(c => (c.niveau||'Autre')===niveau);
+          if (classesNiveau.length === 0) return null;
+          return (
+            <div key={niveau} style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:6}}>
+              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',minWidth:36,textTransform:'uppercase'}}>{niveau}</span>
+              {classesNiveau.map(c => (
+                <button key={c.id} onClick={() => setFiltreClasse(String(c.id)===filtreClasse?'tous':String(c.id))}
+                  style={{padding:'4px 12px',background:String(c.id)===filtreClasse?'#10b981':'#d1fae5',color:String(c.id)===filtreClasse?'white':'#065f46',border:'none',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                  {c.nom} <b>{eleves.filter(e=>e.classe_id==c.id).length}</b>
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Modal Import */}
@@ -269,7 +301,7 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#92400e','#fef3c7')}>🎓 Informations élève</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value)} placeholder="DUPONT" /></Champ>
+                    <Champ lbl="NOM (majuscules) *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} placeholder="DUPONT" /></Champ>
                     <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" /></Champ>
                     <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="marie@ecole.ch" /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
@@ -284,7 +316,7 @@ export default function Eleves() {
                   </div>
                   <div style={{...secTitle('#92400e','#fef3c7'),marginTop:16}}>👨‍👩‍👦 Contact / Parent</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="Nom parent"><input style={inp} value={nomParent} onChange={e => setNomParent(e.target.value)} placeholder="Dupont Jean" /></Champ>
+                    <Champ lbl="NOM et prénom"><input style={inp} value={nomParent} onChange={e => setNomParent(e.target.value)} placeholder="DUPONT Jean" /></Champ>
                     <Champ lbl="Téléphone parent"><input style={inp} value={telephoneParent} onChange={e => setTelephoneParent(e.target.value)} placeholder="079 987 65 43" /></Champ>
                   </div>
                 </div>
