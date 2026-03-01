@@ -5,9 +5,7 @@ const getProfil = async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nom, prenom, email, role, permissions FROM utilisateurs WHERE id=$1', [req.user.id]);
     res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const modifierProfil = async (req, res) => {
@@ -15,9 +13,7 @@ const modifierProfil = async (req, res) => {
   try {
     await pool.query('UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3 WHERE id=$4', [nom, prenom, email, req.user.id]);
     res.json({ message: 'Profil mis a jour' });
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const modifierMotDePasse = async (req, res) => {
@@ -29,18 +25,14 @@ const modifierMotDePasse = async (req, res) => {
     const hash = await bcrypt.hash(nouveau, 10);
     await pool.query('UPDATE utilisateurs SET mot_de_passe=$1 WHERE id=$2', [hash, req.user.id]);
     res.json({ message: 'Mot de passe modifie' });
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const getParametresEcole = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM parametres_ecole LIMIT 1');
     res.json(result.rows[0] || {});
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const modifierParametresEcole = async (req, res) => {
@@ -59,21 +51,14 @@ const modifierParametresEcole = async (req, res) => {
       );
     }
     res.json({ message: 'Parametres mis a jour' });
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const getProfs = async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT id, nom, prenom, email, permissions
-      FROM utilisateurs WHERE role='prof' ORDER BY nom, prenom
-    `);
+    const result = await pool.query("SELECT id, nom, prenom, email, permissions FROM utilisateurs WHERE role='prof' ORDER BY nom, prenom");
     res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const modifierPermissions = async (req, res) => {
@@ -81,9 +66,7 @@ const modifierPermissions = async (req, res) => {
   try {
     await pool.query('UPDATE utilisateurs SET permissions=$1 WHERE id=$2', [JSON.stringify(permissions), req.params.id]);
     res.json({ message: 'Permissions mises a jour' });
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const getClassesProf = async (req, res) => {
@@ -97,63 +80,39 @@ const getClassesProf = async (req, res) => {
       ORDER BY c.nom
     `, [req.user.id]);
     res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout };
 const resetTout = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    // Présences
     await client.query('DELETE FROM presences_v2');
     await client.query('DELETE FROM presences');
     await client.query('DELETE FROM absences');
-
-    // Notes & branches
     await client.query('DELETE FROM notes');
     await client.query('DELETE FROM planning_branches');
     await client.query('DELETE FROM branches');
-
-    // Planning / Emploi du temps
     await client.query('DELETE FROM classe_horaires');
     await client.query('DELETE FROM planning_affectations');
     await client.query('DELETE FROM planning_pools');
     await client.query('DELETE FROM disponibilites');
-
-    // Comptabilité
     await client.query('DELETE FROM paiements');
     await client.query('DELETE FROM comptabilite');
-
-    // Calendrier
     await client.query('DELETE FROM calendrier');
-
-    // Observations
     await client.query('DELETE FROM observations');
-
-    // Élèves
     await client.query('DELETE FROM eleves');
-
-    // Classes
     await client.query('DELETE FROM classes');
-
-    // Professeurs
     await client.query('DELETE FROM profs');
-
-    // Utilisateurs non-admin
     await client.query("DELETE FROM utilisateurs WHERE role != 'admin'");
-
-    // Messages / notifications
     await client.query('DELETE FROM messages');
     await client.query('DELETE FROM notifications');
-
     await client.query('COMMIT');
-    res.json({ message: 'Reset complet effectué' });
+    res.json({ message: 'Reset complet effectue' });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ message: 'Erreur lors du reset', erreur: err.message });
   } finally { client.release(); }
 };
+
+module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout };
