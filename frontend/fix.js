@@ -4,139 +4,125 @@ const path = require('path');
 const filePath = path.join(__dirname, 'src', 'pages', 'Presences.js');
 let code = fs.readFileSync(filePath, 'utf8');
 
-// ── 1. Supprimer HORAIRE_PAR_JOUR hardcodé ──
+// ── 1. Ajouter state evenementsCalendrier ──
 code = code.replace(
-  `const PERIODES = [1,2,3,4,5,6,7,8];
-
-// 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
-// Valeurs : 'matin' | 'apresmidi' | 'complet' | 'ferme'
-const HORAIRE_PAR_JOUR = {
-  0: 'ferme',       // Dimanche
-  1: 'matin',       // Lundi
-  2: 'apresmidi',   // Mardi
-  3: 'matin',       // Mercredi  ← adapter si besoin
-  4: 'complet',     // Jeudi     ← adapter si besoin
-  5: 'apresmidi',   // Vendredi  ← adapter si besoin
-  6: 'ferme',       // Samedi
-};`,
-  `const PERIODES = [1,2,3,4,5,6,7,8];
-const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];`
+  `  const [classeHoraires, setClasseHoraires] = useState([]);`,
+  `  const [classeHoraires, setClasseHoraires] = useState([]);
+  const [evenementsCalendrier, setEvenementsCalendrier] = useState([]);`
 );
 
-// ── 2. Ajouter state classeHoraires ──
+// ── 2. Charger les événements du calendrier au démarrage ──
 code = code.replace(
-  `  const [valide, setValide] = useState(false);
-  const [sauvegarde, setSauvegarde] = useState(false);`,
-  `  const [valide, setValide] = useState(false);
-  const [sauvegarde, setSauvegarde] = useState(false);
-  const [classeHoraires, setClasseHoraires] = useState([]);`
+  `  useEffect(() => { chargerClasses(); }, []);`,
+  `  useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);`
 );
 
-// ── 3. Charger classeHoraires quand la classe change ──
+// ── 3. Ajouter fonction chargerCalendrier ──
 code = code.replace(
-  `  useEffect(() => {
-    if (classeSelectionnee) {
-      const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
-      setClasseInfo(cl || null);
-      chargerEleves();
-      chargerStats();
-    }
-  }, [classeSelectionnee, date]);`,
-  `  useEffect(() => {
-    if (classeSelectionnee) {
-      const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
-      setClasseInfo(cl || null);
-      chargerEleves();
-      chargerStats();
-      chargerClasseHoraires(classeSelectionnee);
-    }
-  }, [classeSelectionnee, date]);`
-);
-
-// ── 4. Ajouter fonction chargerClasseHoraires ──
-code = code.replace(
-  `  const chargerClasses = async () => {`,
-  `  const chargerClasseHoraires = async (classe_id) => {
+  `  const chargerClasseHoraires = async (classe_id) => {`,
+  `  const chargerCalendrier = async () => {
     try {
-      const res = await axios.get(API + '/planning/classe-horaires', { headers });
-      setClasseHoraires(res.data.filter(h => h.classe_id == classe_id));
+      const res = await axios.get(API + '/calendrier', { headers });
+      setEvenementsCalendrier(res.data.filter(e => e.categorie === 'vacance'));
     } catch (err) { console.error(err); }
   };
 
-  const chargerClasses = async () => {`
+  const chargerClasseHoraires = async (classe_id) => {`
 );
 
-// ── 5. Remplacer les fonctions getJourSemaine / getHoraireJour / isWeekend / isBloque ──
+// ── 4. Ajouter helpers navigation date + détection vacance ──
 code = code.replace(
-  `  // Jour de la semaine basé sur la date sélectionnée
-  const getJourSemaine = () => {
-    const d = new Date(date + 'T12:00:00');
-    return d.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
-  };
-
-  const getHoraireJour = () => HORAIRE_PAR_JOUR[getJourSemaine()] || 'ferme';
-
-  const isWeekend = () => {
-    const j = getJourSemaine();
-    return j === 0 || j === 6;
-  };
-
-  const isBloque = (periode) => {
-    const horaire = getHoraireJour();
-    if (horaire === 'ferme') return true;
-    if (horaire === 'matin' && periode > 4) return true;
-    if (horaire === 'apresmidi' && periode <= 4) return true;
-    return false;
-  };`,
+  `  const getJourSemaine = () => new Date(date + 'T12:00:00').getDay();`,
   `  const getJourSemaine = () => new Date(date + 'T12:00:00').getDay();
 
-  const getNomJour = () => JOURS_NOMS[getJourSemaine()];
-
-  const isWeekend = () => { const j = getJourSemaine(); return j === 0 || j === 6; };
-
-  // Récupère la période (Matin / Après-midi) définie pour la classe ce jour
-  const getHoraireJour = () => {
-    if (isWeekend()) return null;
-    const nomJour = getNomJour();
-    const h = classeHoraires.find(h => h.jour === nomJour);
-    return h?.periode || null; // null = pas de cours ce jour
+  const allerJourPrecedent = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    setDate(d.toISOString().split('T')[0]);
   };
 
-  const isBloque = (periode) => {
+  const allerJourSuivant = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    setDate(d.toISOString().split('T')[0]);
+  };
+
+  const isVacance = () => {
+    return evenementsCalendrier.some(ev => {
+      const deb = ev.date_debut?.substring(0, 10);
+      const fin = (ev.date_fin || ev.date_debut)?.substring(0, 10);
+      return date >= deb && date <= fin;
+    });
+  };
+
+  const getNomVacance = () => {
+    const ev = evenementsCalendrier.find(ev => {
+      const deb = ev.date_debut?.substring(0, 10);
+      const fin = (ev.date_fin || ev.date_debut)?.substring(0, 10);
+      return date >= deb && date <= fin;
+    });
+    return ev?.nom_vacance || ev?.titre || 'Vacances';
+  };`
+);
+
+// ── 5. Remplacer le sélecteur de date par date + boutons navigation ──
+code = code.replace(
+  `          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />`,
+  `          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+            <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          </div>`
+);
+
+// ── 6. Ajouter bandeau vacance (après le bandeau weekend existant) ──
+code = code.replace(
+  `          {!isWeekend() && !getHoraireJour() && (
+            <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
+              ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
+            </div>
+          )}`,
+  `          {!isWeekend() && isVacance() && (
+            <div style={{padding:'12px 20px',background:'#fef3c7',borderBottom:'1px solid #fde68a',color:'#92400e',fontWeight:700,fontSize:13}}>
+              🏖️ {getNomVacance()} — pas de saisie de présences pendant les vacances
+            </div>
+          )}
+          {!isWeekend() && !isVacance() && !getHoraireJour() && (
+            <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
+              ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
+            </div>
+          )}`
+);
+
+// ── 7. Mettre à jour isBloque pour inclure les vacances ──
+code = code.replace(
+  `  const isBloque = (periode) => {
     const horaire = getHoraireJour();
     if (!horaire) return true; // pas de cours ce jour → tout grisé
+    if (horaire === 'Matin' && periode > 4) return true;
+    if (horaire === 'Après-midi' && periode <= 4) return true;
+    return false;
+  };`,
+  `  const isBloque = (periode) => {
+    if (isWeekend()) return true;
+    if (isVacance()) return true;
+    const horaire = getHoraireJour();
+    if (!horaire) return true;
     if (horaire === 'Matin' && periode > 4) return true;
     if (horaire === 'Après-midi' && periode <= 4) return true;
     return false;
   };`
 );
 
-// ── 6. Améliorer le message weekend pour inclure "pas de cours" ──
+// ── 8. Désactiver bouton valider aussi pendant les vacances ──
 code = code.replace(
-  `          {isWeekend() && (
-            <div style={{padding:'12px 20px',background:'#fef2f2',borderBottom:'1px solid #fecaca',color:'#dc2626',fontWeight:700,fontSize:13}}>
-              🚫 Samedi et dimanche — aucune saisie possible
-            </div>
-          )}`,
-  `          {isWeekend() && (
-            <div style={{padding:'12px 20px',background:'#fef2f2',borderBottom:'1px solid #fecaca',color:'#dc2626',fontWeight:700,fontSize:13}}>
-              🚫 Samedi et dimanche — aucune saisie possible
-            </div>
-          )}
-          {!isWeekend() && !getHoraireJour() && (
-            <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
-              ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
-            </div>
-          )}
-          {!isWeekend() && getHoraireJour() && (
-            <div style={{padding:'8px 20px',background:'#f0fdf4',borderBottom:'1px solid #bbf7d0',color:'#15803d',fontWeight:600,fontSize:12}}>
-              📅 {getNomJour()} — {getHoraireJour() === 'Matin' ? '☀️ Matin (P1–P4)' : '🌙 Après-midi (P5–P8)'}
-            </div>
-          )}`
+  `              <button onClick={handleToggleValide} disabled={isWeekend()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+(valide?'#10b981':'#e2e8f0'),background:isWeekend()?'#f1f5f9':valide?'#ecfdf5':'white',color:isWeekend()?'#cbd5e1':valide?'#059669':'#64748b',cursor:isWeekend()?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>`,
+  `              <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>`
 );
 
 fs.writeFileSync(filePath, code, 'utf8');
-console.log('✅ Presences : horaires réels depuis la DB appliqués !');
-console.log('   ✔ Grisage basé sur affectation classes EmploiDuTemps');
-console.log('   ✔ Message si aucun horaire défini ce jour');
-console.log('   ✔ Bandeau indicateur Matin/Après-midi');
+console.log('✅ Presences : navigation date + grisage vacances appliqués !');
+console.log('   ✔ Boutons ‹ › pour aller au jour précédent/suivant');
+console.log('   ✔ Grisage automatique si jour en vacances/férié');
+console.log('   ✔ Bandeau orange vacances avec nom affiché');
+console.log('   ✔ Bouton valider désactivé pendant les vacances');

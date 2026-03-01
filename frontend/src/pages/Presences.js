@@ -31,11 +31,12 @@ export default function Presences() {
   const [valide, setValide] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [classeHoraires, setClasseHoraires] = useState([]);
+  const [evenementsCalendrier, setEvenementsCalendrier] = useState([]);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
-  useEffect(() => { chargerClasses(); }, []);
+  useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);
   useEffect(() => {
     if (classeSelectionnee) {
       const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
@@ -45,6 +46,13 @@ export default function Presences() {
       chargerClasseHoraires(classeSelectionnee);
     }
   }, [classeSelectionnee, date]);
+
+  const chargerCalendrier = async () => {
+    try {
+      const res = await axios.get(API + '/calendrier', { headers });
+      setEvenementsCalendrier(res.data.filter(e => e.categorie === 'vacance'));
+    } catch (err) { console.error(err); }
+  };
 
   const chargerClasseHoraires = async (classe_id) => {
     try {
@@ -145,6 +153,35 @@ export default function Presences() {
 
   const getJourSemaine = () => new Date(date + 'T12:00:00').getDay();
 
+  const allerJourPrecedent = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    setDate(d.toISOString().split('T')[0]);
+  };
+
+  const allerJourSuivant = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    setDate(d.toISOString().split('T')[0]);
+  };
+
+  const isVacance = () => {
+    return evenementsCalendrier.some(ev => {
+      const deb = ev.date_debut?.substring(0, 10);
+      const fin = (ev.date_fin || ev.date_debut)?.substring(0, 10);
+      return date >= deb && date <= fin;
+    });
+  };
+
+  const getNomVacance = () => {
+    const ev = evenementsCalendrier.find(ev => {
+      const deb = ev.date_debut?.substring(0, 10);
+      const fin = (ev.date_fin || ev.date_debut)?.substring(0, 10);
+      return date >= deb && date <= fin;
+    });
+    return ev?.nom_vacance || ev?.titre || 'Vacances';
+  };
+
   const getNomJour = () => JOURS_NOMS[getJourSemaine()];
 
   const isWeekend = () => { const j = getJourSemaine(); return j === 0 || j === 6; };
@@ -158,8 +195,10 @@ export default function Presences() {
   };
 
   const isBloque = (periode) => {
+    if (isWeekend()) return true;
+    if (isVacance()) return true;
     const horaire = getHoraireJour();
-    if (!horaire) return true; // pas de cours ce jour → tout grisé
+    if (!horaire) return true;
     if (horaire === 'Matin' && periode > 4) return true;
     if (horaire === 'Après-midi' && periode <= 4) return true;
     return false;
@@ -187,7 +226,11 @@ export default function Presences() {
           <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
             {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
           </select>
-          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+            <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          </div>
         </div>
       </div>
 
@@ -207,7 +250,12 @@ export default function Presences() {
               🚫 Samedi et dimanche — aucune saisie possible
             </div>
           )}
-          {!isWeekend() && !getHoraireJour() && (
+          {!isWeekend() && isVacance() && (
+            <div style={{padding:'12px 20px',background:'#fef3c7',borderBottom:'1px solid #fde68a',color:'#92400e',fontWeight:700,fontSize:13}}>
+              🏖️ {getNomVacance()} — pas de saisie de présences pendant les vacances
+            </div>
+          )}
+          {!isWeekend() && !isVacance() && !getHoraireJour() && (
             <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
               ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
             </div>
@@ -231,7 +279,7 @@ export default function Presences() {
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               <span style={{fontSize:13,color:'#64748b'}}>{eleves.length} élève(s)</span>
               {/* Bouton bascule validation */}
-              <button onClick={handleToggleValide} disabled={isWeekend()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+(valide?'#10b981':'#e2e8f0'),background:isWeekend()?'#f1f5f9':valide?'#ecfdf5':'white',color:isWeekend()?'#cbd5e1':valide?'#059669':'#64748b',cursor:isWeekend()?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
+              <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
                 <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
                   <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
                 </div>
