@@ -216,7 +216,9 @@ export default function Professeurs() {
                                 else if (newNiv.length > 1) {
                                   const token = localStorage.getItem('token');
                                   axios.get(API+'/branches', {headers:{Authorization:'Bearer '+token}})
-                                    .then(r => setBranchesDisponibles(r.data.filter(b => newNiv.includes(b.niveau))))
+                                    .then(r => const raw = r.data.filter(b => newNiv.includes(b.niveau));
+                                  const unique = raw.filter((b,i,arr) => arr.findIndex(x=>x.nom===b.nom)===i);
+                                  setBranchesDisponibles(unique))
                                     .catch(() => {});
                                 } else setBranchesDisponibles([]);
                               }}
@@ -254,9 +256,7 @@ export default function Professeurs() {
                       </div>
                     )}
                     <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>
-                      {form.niveau_prefere ? `Spécialité(s) — ${form.niveau_prefere}` : 'Spécialité(s) — Aucune préférence de niveau'}
-                    </label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques</label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
