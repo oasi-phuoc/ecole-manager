@@ -187,6 +187,30 @@ export default function Calendrier() {
         </div>
       )}
 
+      {/* Popup jour */}
+      {jourPopup && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setJourPopup(null)}>
+          <div style={{background:'white',borderRadius:14,width:320,boxShadow:'0 20px 40px rgba(0,0,0,0.15)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
+              <span style={{fontWeight:800,fontSize:14}}>{jourPopup} {MOIS[moisActuel]} {anneeActuelle}</span>
+              <button style={s.btnX} onClick={() => setJourPopup(null)}>✕</button>
+            </div>
+            <div style={{maxHeight:300,overflowY:'auto'}}>
+              {evtsPopup.map((ev,i) => (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{width:10,height:10,borderRadius:'50%',background:ev.couleur||'#6366f1',flexShrink:0}}></div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:'#1e293b'}}>{ev.titre}</div>
+                    {ev.heure_debut && <div style={{fontSize:11,color:'#94a3b8'}}>{ev.heure_debut.substring(0,5)}{ev.heure_fin?' → '+ev.heure_fin.substring(0,5):''}</div>}
+                    {ev.description && <div style={{fontSize:11,color:'#64748b'}}>{ev.description}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal vacance */}
       {showFormVacance && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
