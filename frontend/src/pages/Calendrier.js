@@ -4,17 +4,18 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
+const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const VACANCES_LISTE = [
-  'Vacances d\'automne','La Toussaint','Immaculée Conception',
-  'Vacances de Noël','Vacances d\'hiver','St-Joseph',
+  "Vacances d'automne",'La Toussaint','Immaculée Conception',
+  'Vacances de Noël',"Vacances d'hiver",'St-Joseph',
   'Vacances de Pâques','Fête du travail','Ascension','Pentecôte','Fête-Dieu'
 ];
 const COULEURS_VACANCES = {
-  'Vacances d\'automne':'#f59e0b','La Toussaint':'#f59e0b',
+  "Vacances d'automne":'#f59e0b','La Toussaint':'#f59e0b',
   'Immaculée Conception':'#6366f1','Vacances de Noël':'#ef4444',
-  'Vacances d\'hiver':'#3b82f6','St-Joseph':'#6366f1',
+  "Vacances d'hiver":'#3b82f6','St-Joseph':'#6366f1',
   'Vacances de Pâques':'#10b981','Fête du travail':'#6366f1',
   'Ascension':'#6366f1','Pentecôte':'#6366f1','Fête-Dieu':'#6366f1'
 };
