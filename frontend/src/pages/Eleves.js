@@ -325,22 +325,22 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#3730a3','#e0e7ff')}>🗂️ Données OASI</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="A — PROG_NOM *"><input style={inp} required value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
-                    <Champ lbl="B — PROG_ENCADRANT *"><input style={inp} required value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
-                    <Champ lbl="C — N *"><input style={inp} required type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
-                    <Champ lbl="D — REF *"><input style={inp} required type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
-                    <Champ lbl="E — POS *"><input style={inp} required type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
-                    <Champ lbl="F — NOM complet *"><input style={inp} required value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
-                    <Champ lbl="G — NAIS *"><input style={inp} required type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
-                    <Champ lbl="H — NATIONALITE *"><input style={inp} required value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
+                    <Champ lbl="PROG_NOM *"><input style={inp} required value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
+                    <Champ lbl="PROG_ENCADRANT *"><input style={inp} required value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
+                    <Champ lbl="N *"><input style={inp} required type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
+                    <Champ lbl="REF *"><input style={inp} required type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
+                    <Champ lbl="POS *"><input style={inp} required type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
+                    <Champ lbl="NOM *"><input style={inp} required value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
+                    <Champ lbl="NAIS *"><input style={inp} required type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
+                    <Champ lbl="NATIONALITE *"><input style={inp} required value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
 
-                    <Champ lbl="P — PROG_PRESENCES *"><input style={inp} required value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
-                    <Champ lbl="Q — PROG_ADMIN *"><input style={inp} required value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
-                    <Champ lbl="R — AS *"><input style={inp} required value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
-                    <Champ lbl="S — PRG_ID *"><input style={inp} required type="number" value={oasiPrgId} onChange={e => setOasiPrgId(e.target.value)} /></Champ>
-                    <Champ lbl="T — PRG_OCCUPATION_ID *"><input style={inp} required type="number" value={oasiPrgOccupationId} onChange={e => setOasiPrgOccupationId(e.target.value)} /></Champ>
-                    <Champ lbl="U — RA_ID *"><input style={inp} required type="number" value={oasiRaId} onChange={e => setOasiRaId(e.target.value)} /></Champ>
-                    <Champ lbl="V — TEMPS_REPARTI_ID *"><input style={inp} required type="number" value={oasiTempsRepartiId} onChange={e => setOasiTempsRepartiId(e.target.value)} /></Champ>
+                    <Champ lbl="PROG_PRESENCES *"><input style={inp} required value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
+                    <Champ lbl="PROG_ADMIN *"><input style={inp} required value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
+                    <Champ lbl="AS *"><input style={inp} required value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
+                    <Champ lbl="PRG_ID *"><input style={inp} required type="number" value={oasiPrgId} onChange={e => setOasiPrgId(e.target.value)} /></Champ>
+                    <Champ lbl="PRG_OCCUPATION_ID *"><input style={inp} required type="number" value={oasiPrgOccupationId} onChange={e => setOasiPrgOccupationId(e.target.value)} /></Champ>
+                    <Champ lbl="RA_ID *"><input style={inp} required type="number" value={oasiRaId} onChange={e => setOasiRaId(e.target.value)} /></Champ>
+                    <Champ lbl="TEMPS_REPARTI_ID *"><input style={inp} required type="number" value={oasiTempsRepartiId} onChange={e => setOasiTempsRepartiId(e.target.value)} /></Champ>
                   </div>
                 </div>
 
@@ -348,13 +348,13 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#475569','#f1f5f9')}>📋 OASI optionnels (I–O)</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="I — PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
-                    <Champ lbl="J — JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} placeholder="lundi" /></Champ>
-                    <Champ lbl="K — PRESENCE_PERIODE"><input style={inp} value={oasiPresencePeriode} onChange={e => setOasiPresencePeriode(e.target.value)} placeholder="Matin" /></Champ>
-                    <Champ lbl="L — PRESENCE_TYPE"><input style={inp} value={oasiPresenceType} onChange={e => setOasiPresenceType(e.target.value)} placeholder="01 Présent" /></Champ>
-                    <Champ lbl="M — REMARQUE"><textarea style={{...inp,minHeight:80,resize:'vertical'}} value={oasiRemarque} onChange={e => setOasiRemarque(e.target.value)} /></Champ>
-                    <Champ lbl="N — CONTROLE_DU"><input style={inp} type="date" value={oasiControleDu} onChange={e => setOasiControleDu(e.target.value)} /></Champ>
-                    <Champ lbl="O — CONTROLE_AU"><input style={inp} type="date" value={oasiControleAu} onChange={e => setOasiControleAu(e.target.value)} /></Champ>
+                    <Champ lbl="PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
+                    <Champ lbl="JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} placeholder="lundi" /></Champ>
+                    <Champ lbl="PRESENCE_PERIODE"><input style={inp} value={oasiPresencePeriode} onChange={e => setOasiPresencePeriode(e.target.value)} placeholder="Matin" /></Champ>
+                    <Champ lbl="PRESENCE_TYPE"><input style={inp} value={oasiPresenceType} onChange={e => setOasiPresenceType(e.target.value)} placeholder="01 Présent" /></Champ>
+                    <Champ lbl="REMARQUE"><textarea style={{...inp,minHeight:80,resize:'vertical'}} value={oasiRemarque} onChange={e => setOasiRemarque(e.target.value)} /></Champ>
+                    <Champ lbl="CONTROLE_DU"><input style={inp} type="date" value={oasiControleDu} onChange={e => setOasiControleDu(e.target.value)} /></Champ>
+                    <Champ lbl="CONTROLE_AU"><input style={inp} type="date" value={oasiControleAu} onChange={e => setOasiControleAu(e.target.value)} /></Champ>
                   </div>
                 </div>
               </div>
