@@ -1,47 +1,29 @@
 const fs = require('fs');
 const path = require('path');
 
-const controllerPath = path.join(__dirname, 'src', 'controllers', 'elevesController.js');
-let ctrl = fs.readFileSync(controllerPath, 'utf8');
+const routesPath = path.join(__dirname, 'src', 'routes', 'eleves.js');
 
-ctrl = ctrl.replace(
-  `const getElevesOASI = async (req, res) => {
+// Réécrire le fichier entier avec le bon ordre et le bon import
+fs.writeFileSync(routesPath, `const express = require('express');
+const router = express.Router();
+const c = require('../controllers/elevesController');
+const { verifierToken, autoriser } = require('../middleware/auth');
+router.use(verifierToken);
+router.get('/', c.getEleves);
+router.get('/oasi', c.getElevesOASI);
+router.get('/:id', c.getEleve);
+router.post('/', autoriser('admin'), c.creerEleve);
+router.put('/:id', autoriser('admin'), c.modifierEleve);
+router.delete('/:id', autoriser('admin'), c.supprimerEleve);
+router.put('/:id/photo', c.updatePhoto);
+router.put('/:id/classe', async (req, res) => {
+  const pool = require('../config/database');
+  const { classe_id } = req.body;
   try {
-    const { classe_id } = req.query;
-    const result = await pool.query(\`
-      SELECT e.id, e.nom, e.prenom,
-        e.oasi_prog_nom, e.oasi_encadrant, e.oasi_n, e.oasi_ref, e.oasi_pos,
-        e.oasi_nom_complet, e.oasi_nais, e.oasi_nationalite,
-        e.oasi_prog_presences, e.oasi_prog_admin, e.oasi_as,
-        e.oasi_prg_id, e.oasi_prg_occupation_id, e.oasi_ra_id, e.oasi_temps_reparti_id
-      FROM eleves e
-      WHERE e.classe_id = $1 AND (e.statut = 'actif' OR e.statut = 'Actif')
-      ORDER BY e.nom, e.prenom
-    \`, [classe_id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
-};`,
-  `const getElevesOASI = async (req, res) => {
-  try {
-    const { classe_id } = req.query;
-    const result = await pool.query(\`
-      SELECT e.id, e.nom, e.prenom,
-        e.oasi_prog_nom, e.oasi_encadrant, e.oasi_n, e.oasi_ref, e.oasi_pos,
-        e.oasi_nom as oasi_nom_complet, e.oasi_nais, e.oasi_nationalite,
-        e.oasi_prog_presences, e.oasi_prog_admin, e.oasi_as,
-        e.oasi_prg_id, e.oasi_prg_occupation_id, e.oasi_ra_id, e.oasi_temps_reparti_id
-      FROM eleves e
-      WHERE e.classe_id = $1 AND (e.statut = 'actif' OR e.statut = 'Actif')
-      ORDER BY e.nom, e.prenom
-    \`, [classe_id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
-};`
-);
-
-fs.writeFileSync(controllerPath, ctrl, 'utf8');
-console.log('✅ getElevesOASI corrigé : oasi_nom → oasi_nom_complet');
+    await pool.query('UPDATE eleves SET classe_id=$1 WHERE id=$2', [classe_id||null, req.params.id]);
+    res.json({ message: 'Classe mise à jour' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
+});
+module.exports = router;
+`);
+console.log('✅ eleves.js corrigé : /oasi avant /:id + import correct');

@@ -1,16 +1,15 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const c = require('../controllers/elevesController');
 const { verifierToken, autoriser } = require('../middleware/auth');
-
 router.use(verifierToken);
 router.get('/', c.getEleves);
+router.get('/oasi', c.getElevesOASI);
 router.get('/:id', c.getEleve);
 router.post('/', autoriser('admin'), c.creerEleve);
 router.put('/:id', autoriser('admin'), c.modifierEleve);
 router.delete('/:id', autoriser('admin'), c.supprimerEleve);
-
-router.put('/:id/photo', require('../controllers/elevesController').updatePhoto);
+router.put('/:id/photo', c.updatePhoto);
 router.put('/:id/classe', async (req, res) => {
   const pool = require('../config/database');
   const { classe_id } = req.body;
@@ -19,6 +18,4 @@ router.put('/:id/classe', async (req, res) => {
     res.json({ message: 'Classe mise à jour' });
   } catch(err) { res.status(500).json({ message: err.message }); }
 });
-router.get('/oasi', getElevesOASI);
-
 module.exports = router;
