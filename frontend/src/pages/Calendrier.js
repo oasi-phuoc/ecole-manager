@@ -8,16 +8,16 @@ const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuche
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const VACANCES_LISTE = [
-  "Vacances d'automne",'La Toussaint','Immaculée Conception',
-  'Vacances de Noël',"Vacances d'hiver",'St-Joseph',
-  'Vacances de Pâques','Fête du travail','Ascension','Pentecôte','Fête-Dieu'
+  "Vacances d'automne","La Toussaint","Immaculée Conception",
+  "Vacances de Noël","Vacances d'hiver","St-Joseph",
+  "Vacances de Pâques","Fête du travail","Ascension","Pentecôte","Fête-Dieu"
 ];
 const COULEURS_VACANCES = {
-  "Vacances d'automne":'#f59e0b','La Toussaint':'#f59e0b',
-  'Immaculée Conception':'#6366f1','Vacances de Noël':'#ef4444',
-  "Vacances d'hiver":'#3b82f6','St-Joseph':'#6366f1',
-  'Vacances de Pâques':'#10b981','Fête du travail':'#6366f1',
-  'Ascension':'#6366f1','Pentecôte':'#6366f1','Fête-Dieu':'#6366f1'
+  "Vacances d'automne":'#f59e0b',"La Toussaint":'#f59e0b',
+  "Immaculée Conception":'#6366f1',"Vacances de Noël":'#ef4444',
+  "Vacances d'hiver":'#3b82f6',"St-Joseph":'#6366f1',
+  "Vacances de Pâques":'#10b981',"Fête du travail":'#6366f1',
+  "Ascension":'#6366f1',"Pentecôte":'#6366f1',"Fête-Dieu":'#6366f1'
 };
 
 export default function Calendrier() {
@@ -104,7 +104,6 @@ export default function Calendrier() {
     setShowFormVacance(true);
   };
 
-  // Calendrier
   const premierJour = new Date(anneeActuelle, moisActuel, 1);
   const dernierJour = new Date(anneeActuelle, moisActuel+1, 0);
   const debutSemaine = (premierJour.getDay()+6)%7;
@@ -124,7 +123,6 @@ export default function Calendrier() {
 
   const today = new Date();
   const isToday = (j) => j === today.getDate() && moisActuel === today.getMonth() && anneeActuelle === today.getFullYear();
-
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
   return (
@@ -135,13 +133,13 @@ export default function Calendrier() {
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{vacanceEdit?'Modifier':'Ajouter'} une vacance</h3>
+              <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une vacance</h3>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'}} onClick={() => setShowFormVacance(false)}>✕</button>
             </div>
             <form onSubmit={sauverVacance}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 <div>
-                  <label style={s.lbl}>Désignation *</label>
+                  <label style={s.lbl}>Désignation</label>
                   <input style={{...s.inp,background:'#f8fafc',color:'#64748b'}} readOnly value={formVacance.nom_vacance} />
                 </div>
                 <div>
@@ -206,44 +204,45 @@ export default function Calendrier() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
 
+      {/* GRILLE PRINCIPALE : gauche=calendrier+séances, droite=vacances+événements */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,alignItems:'start'}}>
 
-        {/* CALENDRIER */}
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-          {/* Navigation mois */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9'}}>
-            <button style={s.navBtn} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
-            <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
-            <button style={s.navBtn} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
-          </div>
-          {/* Jours semaine */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
-            {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
-          </div>
-          {/* Grille jours */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
-            {jours.map((jour, idx) => {
-              const evts = eventsJour(jour);
-              const estAuj = isToday(jour);
-              return (
-                <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc',position:'relative'}}>
-                  {jour && (
-                    <>
-                      <div style={{fontSize:12,fontWeight:estAuj?800:500,color:estAuj?'#2563eb':'#374151',width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
-                      {evts.slice(0,2).map((ev,i) => (
-                        <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'1px 4px',marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
-                      ))}
-                      {evts.length>2 && <div style={{fontSize:9,color:'#94a3b8'}}>+{evts.length-2}</div>}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* COLONNE GAUCHE */}
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-          {/* SÉANCES sous le calendrier */}
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden',marginTop:16}}>
+          {/* CALENDRIER */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid #f1f5f9'}}>
+              <button style={s.navBtn} onClick={() => { if(moisActuel===0){setMoisActuel(11);setAnneeActuelle(a=>a-1);}else setMoisActuel(m=>m-1); }}>‹</button>
+              <span style={{fontSize:17,fontWeight:800,color:'#0f172a'}}>{MOIS[moisActuel]} {anneeActuelle}</span>
+              <button style={s.navBtn} onClick={() => { if(moisActuel===11){setMoisActuel(0);setAnneeActuelle(a=>a+1);}else setMoisActuel(m=>m+1); }}>›</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f8fafc'}}>
+              {JOURS.map(j => <div key={j} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8'}}>{j}</div>)}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
+              {jours.map((jour, idx) => {
+                const evts = eventsJour(jour);
+                const estAuj = isToday(jour);
+                return (
+                  <div key={idx} style={{minHeight:72,padding:'6px 4px',borderRight:'1px solid #f8fafc',borderBottom:'1px solid #f8fafc',background:estAuj?'#eff6ff':jour?'white':'#f8fafc'}}>
+                    {jour && (
+                      <>
+                        <div style={{fontSize:12,fontWeight:estAuj?800:500,width:22,height:22,borderRadius:'50%',background:estAuj?'#2563eb':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:estAuj?'white':'#374151',marginBottom:2}}>{jour}</div>
+                        {evts.slice(0,2).map((ev,i) => (
+                          <div key={i} title={ev.titre} style={{fontSize:9,fontWeight:600,color:'white',background:ev.couleur||'#6366f1',borderRadius:3,padding:'1px 4px',marginBottom:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.titre}</div>
+                        ))}
+                        {evts.length>2 && <div style={{fontSize:9,color:'#94a3b8'}}>+{evts.length-2}</div>}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SÉANCES */}
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f0f9ff'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#0369a1'}}>🤝 Séances & Réunions</div>
               {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'5px 12px',fontSize:11}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+ Ajouter</button>}
@@ -274,13 +273,13 @@ export default function Calendrier() {
           </div>
         </div>
 
-        {/* TABLEAUX DROITE */}
+        {/* COLONNE DROITE */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-          {/* TABLEAU 1 - Vacances */}
+          {/* VACANCES */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
-<div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
             <div style={{maxHeight:520,overflowY:'auto'}}>
               {vacances.length === 0 ? (
@@ -292,17 +291,13 @@ export default function Calendrier() {
                     <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
                     <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin && v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
                   </div>
-                  {isAdmin() && (
-                    <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>
-                  )}
+                  {isAdmin() && <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>}
                 </div>
               ))}
             </div>
           </div>
 
-
-
-          {/* TABLEAU 3 - Autres événements */}
+          {/* ÉVÉNEMENTS PARTICULIERS */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
             <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fdf4ff'}}>
               <div style={{fontSize:13,fontWeight:800,color:'#7e22ce'}}>✨ Événements particuliers</div>
