@@ -117,10 +117,7 @@ export default function Calendrier() {
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 <div>
                   <label style={s.lbl}>Désignation *</label>
-                  <select style={s.inp} required value={formVacance.nom_vacance} onChange={e => setFormVacance({...formVacance,nom_vacance:e.target.value})}>
-                    <option value="">-- Choisir --</option>
-                    {VACANCES_LISTE.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
+                  <input style={{...s.inp,background:'#f8fafc',color:'#64748b'}} readOnly value={formVacance.nom_vacance} />
                 </div>
                 <div>
                   <label style={s.lbl}>Date de début *</label>
@@ -188,11 +185,7 @@ export default function Calendrier() {
           {/* TABLEAU 1 - Vacances */}
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#fffbeb'}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
-                <div style={{fontSize:11,color:'#b45309'}}>{vacances.length} entrée(s)</div>
-              </div>
-              {isAdmin() && <button style={{...s.btnSave,padding:'5px 12px',fontSize:11}} onClick={() => { setVacanceEdit(null); setFormVacance({nom_vacance:'',date_debut:'',date_fin:''}); setShowFormVacance(true); }}>+ Ajouter</button>}
+<div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
             </div>
             <div style={{maxHeight:280,overflowY:'auto'}}>
               {vacances.length === 0 ? (
@@ -205,10 +198,7 @@ export default function Calendrier() {
                     <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin && v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
                   </div>
                   {isAdmin() && (
-                    <div style={{display:'flex',gap:4,flexShrink:0}}>
-                      <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>
-                      <button style={s.btnIcon} onClick={() => supprimerEvenement(v.id)}>🗑️</button>
-                    </div>
+                    <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>
                   )}
                 </div>
               ))}
