@@ -49,7 +49,7 @@ const getElevesClasse = async (req, res) => {
 const creerClasse = async (req, res) => {
   const { nom, niveau, annee_scolaire, prof_principal_id } = req.body;
   if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
-  if (!annee_scolaire) return res.status(400).json({ message: "L'année scolaire est requise" });
+  if (!niveau) return res.status(400).json({ message: 'Le niveau est requis' });
   try {
     const r = await pool.query(
       'INSERT INTO classes (nom, niveau, annee_scolaire, prof_principal_id) VALUES ($1,$2,$3,$4) RETURNING *',
