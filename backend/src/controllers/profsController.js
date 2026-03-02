@@ -63,4 +63,58 @@ const supprimerProf = async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-module.exports = { getProfs, getProf, creerProf, modifierProf, supprimerProf };
+const envoyerAcces = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT nom, prenom, email FROM utilisateurs WHERE id=$1 AND role=$2', [id, 'prof']);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouvé' });
+    const prof = result.rows[0];
+
+    // Générer mdp aléatoire
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+    let mdp = '';
+    for (let i = 0; i < 10; i++) mdp += chars[Math.floor(Math.random() * chars.length)];
+
+    // Hasher et sauver
+    const hash = await bcrypt.hash(mdp, 10);
+    await pool.query('UPDATE utilisateurs SET mot_de_passe=$1, doit_changer_mdp=true WHERE id=$2', [hash, id]);
+
+    // Envoyer email
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransporter({
+      host: 'smtp-mail.outlook.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: { ciphers: 'SSLv3' }
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: prof.email,
+      subject: 'Vos accès École Manager',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#f8fafc;border-radius:12px">
+          <h2 style="color:#6366f1">🎓 École Manager</h2>
+          <p>Bonjour <b>${prof.prenom} ${prof.nom}</b>,</p>
+          <p>Voici vos accès pour vous connecter à l'application :</p>
+          <div style="background:white;padding:20px;border-radius:8px;border-left:4px solid #6366f1;margin:20px 0">
+            <p style="margin:0"><b>Email :</b> ${prof.email}</p>
+            <p style="margin:8px 0 0"><b>Mot de passe temporaire :</b> <code style="background:#e0e7ff;padding:4px 8px;border-radius:4px;font-size:16px">${mdp}</code></p>
+          </div>
+          <p style="color:#ef4444;font-weight:bold">⚠️ Vous devrez changer ce mot de passe lors de votre première connexion.</p>
+          <p style="color:#94a3b8;font-size:12px">Ce message a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Email envoyé à ' + prof.email });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur envoi email', erreur: err.message });
+  }
+};
+
+module.exports = { getProfs, getProf, creerProf, modifierProf, supprimerProf, envoyerAcces };

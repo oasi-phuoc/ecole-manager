@@ -4,17 +4,45 @@ const path = require('path');
 const filePath = path.join(__dirname, 'src', 'pages', 'Professeurs.js');
 let code = fs.readFileSync(filePath, 'utf8');
 
-// 1. Mot de passe non obligatoire à la création
+// Ajouter state emailEnvoi
 code = code.replace(
-  `<input style={s.inp} type="password" required={!profEdit} value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder={profEdit?'Laisser vide pour ne pas changer':'••••••••'} />`,
-  `<input style={s.inp} type="password" autoComplete="new-password" value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder="Laisser vide pour générer automatiquement" />`
+  `  const [branchesDisponibles, setBranchesDisponibles] = useState([]);`,
+  `  const [branchesDisponibles, setBranchesDisponibles] = useState([]);
+  const [emailEnvoi, setEmailEnvoi] = useState({});`
 );
 
-// 2. autocomplete off sur email
+// Ajouter fonction envoyerAcces
 code = code.replace(
-  `<input style={s.inp} type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="prof@ecole.ch" />`,
-  `<input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="prof@ecole.ch" />`
+  `  const chargerBranchesNiveau = async (niveau) => {`,
+  `  const envoyerAccesEmail = async (profId) => {
+    setEmailEnvoi(prev => ({...prev, [profId]: 'loading'}));
+    try {
+      await axios.post(API+'/profs/'+profId+'/envoyer-acces', {}, {headers});
+      setEmailEnvoi(prev => ({...prev, [profId]: 'ok'}));
+      setTimeout(() => setEmailEnvoi(prev => ({...prev, [profId]: null})), 4000);
+    } catch(err) {
+      setEmailEnvoi(prev => ({...prev, [profId]: 'error'}));
+      alert('Erreur: '+(err.response?.data?.erreur||err.message));
+    }
+  };
+
+  const chargerBranchesNiveau = async (niveau) => {`
+);
+
+// Ajouter bouton dans le tableau après le bouton modifier
+code = code.replace(
+  `                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
+                    <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>`,
+  `                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
+                    <button
+                      onClick={() => envoyerAccesEmail(p.id)}
+                      disabled={emailEnvoi[p.id]==='loading'}
+                      title="Envoyer accès par email"
+                      style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:emailEnvoi[p.id]==='loading'?0.4:0.7}}>
+                      {emailEnvoi[p.id]==='loading'?'⏳':emailEnvoi[p.id]==='ok'?'✅':'📧'}
+                    </button>
+                    <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>`
 );
 
 fs.writeFileSync(filePath, code, 'utf8');
-console.log('✅ Mdp non obligatoire + autocomplete désactivé');
+console.log('✅ Bouton 📧 envoyer accès ajouté dans le tableau profs');

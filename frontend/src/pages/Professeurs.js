@@ -18,7 +18,20 @@ export default function Professeurs() {
   const [filtreStatut, setFiltreStatut] = useState('tous');
   const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'' });
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
+  const [emailEnvoi, setEmailEnvoi] = useState({});
   const navigate = useNavigate();
+
+  const envoyerAccesEmail = async (profId) => {
+    setEmailEnvoi(prev => ({...prev, [profId]: 'loading'}));
+    try {
+      await axios.post(API+'/profs/'+profId+'/envoyer-acces', {}, {headers});
+      setEmailEnvoi(prev => ({...prev, [profId]: 'ok'}));
+      setTimeout(() => setEmailEnvoi(prev => ({...prev, [profId]: null})), 4000);
+    } catch(err) {
+      setEmailEnvoi(prev => ({...prev, [profId]: 'error'}));
+      alert('Erreur: '+(err.response?.data?.erreur||err.message));
+    }
+  };
 
   const chargerBranchesNiveau = async (niveau) => {
     if (!niveau) { setBranchesDisponibles([]); return; }
@@ -338,6 +351,13 @@ export default function Professeurs() {
                 {isAdmin() && (
                   <td style={s.td}>
                     <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
+                    <button
+                      onClick={() => envoyerAccesEmail(p.id)}
+                      disabled={emailEnvoi[p.id]==='loading'}
+                      title="Envoyer accès par email"
+                      style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:emailEnvoi[p.id]==='loading'?0.4:0.7}}>
+                      {emailEnvoi[p.id]==='loading'?'⏳':emailEnvoi[p.id]==='ok'?'✅':'📧'}
+                    </button>
                     <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>
                   </td>
                 )}

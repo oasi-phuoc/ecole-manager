@@ -10,4 +10,5 @@ router.post('/', autoriser('admin'), c.creerProf);
 router.put('/:id', autoriser('admin'), c.modifierProf);
 router.delete('/:id', autoriser('admin'), c.supprimerProf);
 
+router.post('/:id/envoyer-acces', autoriser('admin'), c.envoyerAcces);
 module.exports = router;
