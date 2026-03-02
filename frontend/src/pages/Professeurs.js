@@ -117,11 +117,11 @@ export default function Professeurs() {
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Email *</label>
-                      <input style={s.inp} type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="prof@ecole.ch" />
+                      <input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="prof@ecole.ch" />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{profEdit?'Nouveau mot de passe':'Mot de passe *'}</label>
-                      <input style={s.inp} type="password" required={!profEdit} value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder={profEdit?'Laisser vide pour ne pas changer':'••••••••'} />
+                      <input style={s.inp} type="password" autoComplete="new-password" value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder="Laisser vide pour générer automatiquement" />
                     </div>
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
