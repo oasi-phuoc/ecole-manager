@@ -44,7 +44,7 @@ export default function Notes() {
   const [matiereObj, setMatiereObj] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
-  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false });
+  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null });
   const printRef = useRef();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -99,7 +99,7 @@ export default function Notes() {
     setMatiereSelectionnee(m.id);
     await chargerEvaluationsId(classeSelectionnee, m.id);
     setShowForm(false);
-    setForm({ nom: '', matiere_id: m.id, date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30' });
+    setForm({ nom: '', matiere_id: m.id, date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null });
     setVue('evaluations');
   };
 
@@ -119,17 +119,40 @@ export default function Notes() {
     } catch (err) { console.error(err); }
   };
 
+  const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null };
+
+  const ouvrirEditionEvaluation = (ev) => {
+    const avecPoints = ev.points_max && parseFloat(ev.points_max) > 0;
+    setForm({
+      nom: ev.nom || '',
+      matiere_id: ev.matiere_id || matiereObj?.id || '',
+      date: ev.date ? new Date(ev.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      type: ev.type || 'Ecrit',
+      coefficient: String(ev.coefficient || 1),
+      sur: String(ev.sur || 6),
+      points_max: avecPoints ? String(parseFloat(ev.points_max)) : '',
+      sans_points: !avecPoints,
+      editId: ev.id
+    });
+    setShowForm(true);
+  };
+
   const handleCreerEvaluation = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(API + '/notes', {
+      const payload = {
         ...form,
         points_max: form.sans_points ? null : (form.points_max || 30),
         classe_id: classeSelectionnee,
         prof_id: currentUser.id || null
-      }, { headers });
+      };
+      if (form.editId) {
+        await axios.put(API + '/notes/' + form.editId, payload, { headers });
+      } else {
+        await axios.post(API + '/notes', payload, { headers });
+      }
       setShowForm(false);
-      setForm({ nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false });
+      setForm(formVide);
       await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
@@ -468,7 +491,7 @@ export default function Notes() {
         {showForm && (
           <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
             <div style={s.modal}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Nouvelle évaluation</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{form.editId ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}</h3>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={s.infoBox}>
                   <div style={s.infoLabel}>Professeur</div>
@@ -516,8 +539,8 @@ export default function Notes() {
                   </div>
                 </div>
                 <div style={s.formActions}>
-                  <button type="button" style={s.btnAnnuler} onClick={() => setShowForm(false)}>Annuler</button>
-                  <button type="submit" style={s.btnSauver}>Créer</button>
+                  <button type="button" style={s.btnAnnuler} onClick={() => { setShowForm(false); setForm(formVide); }}>Annuler</button>
+                  <button type="submit" style={s.btnSauver}>{form.editId ? 'Enregistrer' : 'Créer'}</button>
                 </div>
               </form>
             </div>
@@ -540,7 +563,8 @@ export default function Notes() {
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                 <td style={s.td}>
-                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>✏️</button>
+                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>📋</button>
+                  {peutModifierNotes() && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>✏️</button>}
                   {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>

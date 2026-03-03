@@ -43,6 +43,19 @@ const creerEvaluation = async (req, res) => {
   }
 };
 
+const modifierEvaluation = async (req, res) => {
+  const { nom, date, type, coefficient, points_max } = req.body;
+  try {
+    await pool.query(
+      'UPDATE evaluations SET nom=$1, date=$2, type=$3, coefficient=$4, points_max=$5 WHERE id=$6',
+      [nom, date || null, type || 'Ecrit', coefficient || 1, points_max != null && points_max !== '' ? points_max : null, req.params.id]
+    );
+    res.json({ message: 'Evaluation modifiee' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
 const supprimerEvaluation = async (req, res) => {
   try {
     await pool.query('DELETE FROM evaluations WHERE id=$1', [req.params.id]);
@@ -180,4 +193,4 @@ const getBulletin = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin };
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin };

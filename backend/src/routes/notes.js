@@ -7,6 +7,7 @@ router.use(verifierToken);
 router.get('/bulletin', c.getBulletin);
 router.get('/', c.getEvaluations);
 router.post('/', c.creerEvaluation);
+router.put('/:id', c.modifierEvaluation);
 router.delete('/:id', c.supprimerEvaluation);
 router.get('/:id/notes', c.getNotesEvaluation);
 router.post('/:id/notes', c.sauvegarderNotes);
