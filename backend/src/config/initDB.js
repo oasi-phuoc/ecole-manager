@@ -73,6 +73,9 @@ const initDB = async () => {
     // Colonnes additionnelles evaluations
     await pool.query(`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS points_max DECIMAL(4,2) DEFAULT 30`);
 
+    // Colonne points dans notes (points bruts de l'élève)
+    await pool.query(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS points DECIMAL(5,2)`);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

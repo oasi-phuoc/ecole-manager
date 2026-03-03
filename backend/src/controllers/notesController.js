@@ -100,15 +100,20 @@ const sauvegarderNotes = async (req, res) => {
     await client.query('BEGIN');
     for (const n of notes) {
       const existe = await client.query('SELECT id FROM notes WHERE evaluation_id=$1 AND eleve_id=$2', [eval_id, n.eleve_id]);
+      const pts = n.points != null ? n.points : null;
+      const val = n.valeur != null ? n.valeur : null;
+      const abs = n.absent === true;
+      const disp = n.dispense === true;
+      const com = n.commentaire || null;
       if (existe.rows.length > 0) {
         await client.query(
           'UPDATE notes SET points=$1, valeur=$2, absent=$3, dispense=$4, commentaire=$5 WHERE evaluation_id=$6 AND eleve_id=$7',
-          [n.points || null, n.valeur || null, n.absent || false, n.dispense || false, n.commentaire || null, eval_id, n.eleve_id]
+          [pts, val, abs, disp, com, eval_id, n.eleve_id]
         );
       } else {
         await client.query(
           'INSERT INTO notes (evaluation_id, eleve_id, points, valeur, absent, dispense, commentaire) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [eval_id, n.eleve_id, n.points || null, n.valeur || null, n.absent || false, n.dispense || false, n.commentaire || null]
+          [eval_id, n.eleve_id, pts, val, abs, disp, com]
         );
       }
     }

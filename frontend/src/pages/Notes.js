@@ -549,7 +549,7 @@ export default function Notes() {
                 <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
                 <td style={s.td}>{ev.coefficient}</td>
                 <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                  {ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? parseFloat(ev.moyenne_classe).toFixed(1) + '/6' : '—'}
+                  {ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? fmtNote(parseFloat(ev.moyenne_classe)) : '—'}
                 </td>
               </tr>
             ))}
