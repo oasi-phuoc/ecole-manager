@@ -5,7 +5,10 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-const COULEURS = ['#1a73e8','#34a853','#ea4335','#9c27b0','#ff9800','#00bcd4','#795548'];
+const COULEURS = [
+  '#6366f1','#3b82f6','#10b981','#ef4444','#f59e0b',
+  '#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316'
+];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
   {periode:'Matin',num:2,debut:'09:05',fin:'09:45'},
@@ -18,7 +21,7 @@ const HORAIRES_DEFAUT = [
 ];
 
 export default function EmploiDuTemps() {
-  const [onglet, setOnglet] = useState('disponibilites');
+  const [onglet, setOnglet] = useState('pools');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [profs, setProfs] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -39,7 +42,7 @@ export default function EmploiDuTemps() {
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
   const [poolEdit, setPoolEdit] = useState(null);
-  const [poolForm, setPoolForm] = useState({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
+  const [poolForm, setPoolForm] = useState({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
   const [poolAffId, setPoolAffId] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -211,8 +214,8 @@ export default function EmploiDuTemps() {
 
       <div style={styles.onglets}>
         {[
-          {id:'disponibilites', label:'✅ Disponibilités'},
           {id:'pools', label:'👥 Pools'},
+          {id:'disponibilites', label:'✅ Disponibilités'},
           {id:'affectations', label:'📌 Affectations'},
           {id:'classe', label:'🏫 Planning Classes'},
           {id:'prof', label:'👨‍🏫 Planning Profs'},
@@ -292,7 +295,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={styles.rowBetween}>
             <h3 style={styles.cardTitre}>Pools</h3>
-            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); }}>+ Nouveau pool</button>}
+            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); }}>+ Nouveau pool</button>}
           </div>
 
           {showPoolForm && (
@@ -301,11 +304,15 @@ export default function EmploiDuTemps() {
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
                 <div style={styles.formGrid}>
                   <div style={styles.fc}>
-                    <label style={styles.lbl}>Nom *</label>
+                    <label style={styles.lbl}>Nom <span style={{color:'#ef4444'}}>*</span></label>
                     <input style={styles.inp} value={poolForm.nom} onChange={e => setPoolForm({...poolForm,nom:e.target.value})} />
                   </div>
                   <div style={styles.fc}>
-                    <label style={styles.lbl}>Site</label>
+                    <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
+                    <input style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})} placeholder="ex: 4ème, CYT1..." />
+                  </div>
+                  <div style={styles.fc}>
+                    <label style={styles.lbl}>Lieu de travail</label>
                     <input style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})} />
                   </div>
                   <div style={{...styles.fc, gridColumn:'1/-1'}}>
@@ -337,35 +344,49 @@ export default function EmploiDuTemps() {
                     </div>
                   </div>
 
+                  {(() => {
+                    const selProfs = profs.filter(p => poolForm.prof_ids.includes(p.id));
+                    const cumTaux = selProfs.reduce((s,p) => s + (parseInt(p.taux_activite)||0), 0);
+                    const cumPer = selProfs.reduce((s,p) => s + (parseInt(p.periodes_semaine)||0), 0);
+                    const blocsProfs = [
+                      { label:`🎯 Niveau correspondant (${poolForm.niveau||'?'})`, items:profs.filter(p => p.niveau_prefere && p.niveau_prefere === poolForm.niveau) },
+                      { label:`📍 Lieu correspondant (${poolForm.site||'?'})`, items:profs.filter(p => p.lieu_travail_prefere && p.lieu_travail_prefere === poolForm.site && !(p.niveau_prefere && p.niveau_prefere === poolForm.niveau)) },
+                      { label:'👤 Autres professeurs', items:profs.filter(p => !(p.niveau_prefere && p.niveau_prefere === poolForm.niveau) && !(p.lieu_travail_prefere && p.lieu_travail_prefere === poolForm.site)) },
+                    ];
+                    return (
+                      <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                          <label style={styles.lbl}>Professeurs</label>
+                          {poolForm.prof_ids.length > 0 && (
+                            <span style={{fontSize:12,background:'#e0e7ff',color:'#4338ca',borderRadius:8,padding:'3px 10px',fontWeight:700}}>
+                              Cumul : {cumTaux}% · {cumPer} périodes/sem.
+                            </span>
+                          )}
+                        </div>
+                        {blocsProfs.map(bloc => bloc.items.length > 0 && (
+                          <div key={bloc.label} style={{marginBottom:10}}>
+                            <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
+                            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                              {bloc.items.map(p => (
+                                <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
+                                  <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
+                                  {p.nom} {p.prenom}
+                                  {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Professeurs</label>
+                    <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
                     <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                      {profs.map(p => (
-                        <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
-                          <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
-                          {p.nom} {p.prenom}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Classes</label>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                      {classes.map(c => (
+                      {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
                         <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
                           <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
-                          {c.nom}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Branches</label>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                      {matieres.map(m => (
-                        <label key={m.id} style={{...styles.checkBadge,background:poolForm.branche_ids.includes(m.id)?poolForm.couleur:'#f0f0f0',color:poolForm.branche_ids.includes(m.id)?'white':'#333'}}>
-                          <input type="checkbox" checked={poolForm.branche_ids.includes(m.id)} onChange={() => setPoolForm({...poolForm,branche_ids:toggleArr(poolForm.branche_ids,m.id)})} style={{marginRight:4}} />
-                          {m.nom} {m.periodes_semaine?<span style={{opacity:.6,fontSize:11}}>({m.periodes_semaine}p/sem)</span>:''}
+                          {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
                         </label>
                       ))}
                     </div>
@@ -385,12 +406,14 @@ export default function EmploiDuTemps() {
                 <div style={styles.rowBetween}>
                   <div>
                     <div style={{fontWeight:700,fontSize:16}}>{pool.nom}</div>
+                    {pool.niveau && <div style={{color:'#6366f1',fontSize:13,fontWeight:600}}>📚 {pool.niveau}</div>}
                     {pool.site && <div style={{color:'#888',fontSize:13}}>📍 {pool.site}</div>}
                   </div>
                   {isAdmin() && <div>
                     <button style={styles.btnIcon} onClick={() => {
                       setPoolEdit(pool); setShowPoolForm(true);
                       setPoolForm({nom:pool.nom,site:pool.site||'',couleur:pool.couleur,
+                        niveau:pool.niveau||'',
                         prof_ids:pool.profs.map(p=>p.id),classe_ids:pool.classes.map(c=>c.id),
                         branche_ids:pool.branches.map(b=>b.id),
                         horaires:pool.horaires&&pool.horaires.length===8?pool.horaires:[...HORAIRES_DEFAUT]});
@@ -407,11 +430,6 @@ export default function EmploiDuTemps() {
                   <div style={styles.poolLabel}>CLASSES</div>
                   {pool.classes.map(c => <span key={c.id} style={{...styles.badge,background:'#e8f0fe',color:'#1a73e8'}}>{c.nom}</span>)}
                   {pool.classes.length===0&&<span style={styles.aucun}>Aucune</span>}
-                </div>
-                <div style={{marginTop:8}}>
-                  <div style={styles.poolLabel}>BRANCHES</div>
-                  {pool.branches.map(b => <span key={b.id} style={{...styles.badge,background:'#f3e5f5',color:'#7b1fa2'}}>{b.nom}</span>)}
-                  {pool.branches.length===0&&<span style={styles.aucun}>Aucune</span>}
                 </div>
               </div>
             ))}
@@ -589,52 +607,6 @@ export default function EmploiDuTemps() {
             <div>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
-              {/* Tableau branches - periodes attribuées */}
-              {classePlanningPoolId && branchesPoolP.length > 0 && (
-                <div style={{...styles.card,marginBottom:16}}>
-                  <h4 style={{margin:'0 0 12px',fontSize:14,fontWeight:700,color:'#555'}}>Branches — suivi des périodes</h4>
-                  <table style={styles.tbl}>
-                    <thead>
-                      <tr style={styles.theadRow}>
-                        <th style={styles.th}>Branche</th>
-                        <th style={{...styles.th,textAlign:'center'}}>Périodes/sem.</th>
-                        <th style={{...styles.th,textAlign:'center'}}>Attribuées</th>
-                        <th style={{...styles.th,textAlign:'center'}}>Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {branchesPoolP.map(br => {
-                        const max = parseInt(br.periodes_semaine) || 0;
-                        const attribuees = (planningClasse.affectations||[]).filter(a => a.matiere_id==br.id).length;
-                        const complet = max > 0 && attribuees >= max;
-                        const depasse = max > 0 && attribuees > max;
-                        const manquant = max > 0 && attribuees < max;
-                        return (
-                          <tr key={br.id} style={{...styles.tr, background:depasse?'#fff8e1':complet?'#e8f5e9':''}}>
-                            <td style={styles.td}><b>{br.nom}</b></td>
-                            <td style={{...styles.td,textAlign:'center'}}>
-                              <span style={{...styles.badge,background:'#f3e5f5',color:'#7b1fa2'}}>{max||'—'}</span>
-                            </td>
-                            <td style={{...styles.td,textAlign:'center'}}>
-                              <span style={{...styles.badge,
-                                background:depasse?'#fff3e0':complet?'#e8f5e9':'#e3f2fd',
-                                color:depasse?'#e65100':complet?'#2e7d32':'#1565c0'}}>
-                                {attribuees}
-                              </span>
-                            </td>
-                            <td style={{...styles.td,textAlign:'center'}}>
-                              {depasse && <span style={{color:'#e53935',fontSize:12,fontWeight:700}}>⚠️ Dépassé</span>}
-                              {complet && !depasse && <span style={{color:'#2e7d32',fontSize:12,fontWeight:700}}>✅ Complet</span>}
-                              {manquant && <span style={{color:'#e53935',fontSize:12,fontWeight:600}}>❌ Manquant ({max-attribuees})</span>}
-                              {max===0 && <span style={{color:'#bbb',fontSize:12}}>—</span>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
 
               {/* Planning semaine */}
               <div style={{overflowX:'auto'}}>
@@ -851,33 +823,33 @@ export default function EmploiDuTemps() {
 }
 
 const styles = {
-  page:{padding:20,background:'#f0f2f5',minHeight:'100vh'},
+  page:{padding:20,background:'#f8fafc',minHeight:'100vh'},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:20},
   btnRetour:{padding:'8px 16px',background:'white',border:'2px solid #e0e0e0',borderRadius:8,cursor:'pointer'},
   titre:{fontSize:24,fontWeight:700},
   onglets:{display:'flex',gap:8,marginBottom:24,flexWrap:'wrap'},
   onglet:{padding:'10px 16px',background:'white',border:'2px solid #e0e0e0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  ongletActif:{background:'#1a73e8',color:'white',border:'2px solid #1a73e8'},
+  ongletActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
   flexWrap:{display:'flex',flexWrap:'wrap',gap:8},
   chip:{padding:'7px 14px',background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13},
-  chipActif:{background:'#1a73e8',color:'white',border:'2px solid #1a73e8'},
+  chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'},
-  theadRow:{background:'#1a73e8',color:'white'},
+  theadRow:{background:'#6366f1',color:'white'},
   th:{padding:'11px 12px',textAlign:'left',fontSize:12,fontWeight:600},
-  thA:{padding:'11px 14px',background:'#1a73e8',color:'white',fontWeight:600,fontSize:13,textAlign:'center',border:'1px solid #1565c0'},
+  thA:{padding:'11px 14px',background:'#6366f1',color:'white',fontWeight:600,fontSize:13,textAlign:'center',border:'1px solid #4f46e5'},
   tr:{borderBottom:'1px solid #f0f0f0'},
   td:{padding:'8px 12px',fontSize:13},
   tdPer:{padding:'10px 14px',background:'#f8f9fa',border:'1px solid #e0e0e0',whiteSpace:'nowrap'},
-  periodeTag:{display:'block',fontSize:11,fontWeight:700,color:'#1a73e8',textTransform:'uppercase'},
+  periodeTag:{display:'block',fontSize:11,fontWeight:700,color:'#6366f1',textTransform:'uppercase'},
   periodeNum:{display:'block',fontSize:13,fontWeight:600,color:'#333',marginTop:2},
   tdDispo:{padding:8,textAlign:'center',border:'1px solid #e0e0e0'},
-  jourBande:{background:'#e8eaf6',padding:'7px 14px',fontWeight:700,fontSize:13,color:'#3949ab'},
+  jourBande:{background:'#e0e7ff',padding:'7px 14px',fontWeight:700,fontSize:13,color:'#4338ca'},
   periodeBande:{background:'#f3f4f6',padding:'5px 14px',fontWeight:600,fontSize:12,color:'#666'},
-  btnBleu:{padding:'8px 16px',background:'#1a73e8',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
-  btnVert:{padding:'10px 18px',background:'#34a853',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
+  btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
+  btnVert:{padding:'10px 18px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
   btnAnnuler:{padding:'10px 18px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer'},
   btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
   sel:{padding:'8px 12px',border:'2px solid #e0e0e0',borderRadius:8,fontSize:14},

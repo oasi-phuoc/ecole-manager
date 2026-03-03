@@ -45,6 +45,9 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS actif BOOLEAN DEFAULT true`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS annee_scolaire VARCHAR(20)`);
 
+    // Colonnes additionnelles pools
+    await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS niveau VARCHAR(100)`);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

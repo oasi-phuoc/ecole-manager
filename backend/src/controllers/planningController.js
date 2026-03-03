@@ -25,11 +25,11 @@ const saveDisponibilites = async (req, res) => {
 };
 
 const getPools = async (req, res) => {
-  const pools = await pool.query('SELECT * FROM pools ORDER BY nom');
+  const pools = await pool.query('SELECT id, nom, site, couleur, horaires, niveau FROM pools ORDER BY nom');
   const result = [];
   for (const p of pools.rows) {
-    const profs = await pool.query('SELECT u.id, u.nom, u.prenom FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1', [p.id]);
-    const classes = await pool.query('SELECT c.id, c.nom FROM classes c JOIN pool_classes pc ON pc.classe_id=c.id WHERE pc.pool_id=$1', [p.id]);
+    const profs = await pool.query('SELECT u.id, u.nom, u.prenom, u.taux_activite, u.periodes_semaine, u.niveau_prefere, u.lieu_travail_prefere FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1', [p.id]);
+    const classes = await pool.query('SELECT c.id, c.nom, c.niveau FROM classes c JOIN pool_classes pc ON pc.classe_id=c.id WHERE pc.pool_id=$1', [p.id]);
     const branches = await pool.query('SELECT m.id, m.nom, m.periodes_semaine FROM matieres m JOIN pool_branches pb ON pb.matiere_id=m.id WHERE pb.pool_id=$1', [p.id]);
     result.push({ ...p, profs: profs.rows, classes: classes.rows, branches: branches.rows });
   }
@@ -37,9 +37,9 @@ const getPools = async (req, res) => {
 };
 
 const createPool = async (req, res) => {
-  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires } = req.body;
+  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau } = req.body;
   try {
-    const r = await pool.query('INSERT INTO pools (nom, site, couleur, horaires) VALUES ($1,$2,$3,$4) RETURNING *', [nom, site, couleur||'#1a73e8', JSON.stringify(horaires||[])]);
+    const r = await pool.query('INSERT INTO pools (nom, site, couleur, horaires, niveau) VALUES ($1,$2,$3,$4,$5) RETURNING *', [nom, site||'', couleur||'#6366f1', JSON.stringify(horaires||[]), niveau||null]);
     const newPool = r.rows[0];
     for (const pid of (prof_ids||[])) await pool.query('INSERT INTO pool_profs (pool_id, prof_id) VALUES ($1,$2)', [newPool.id, pid]);
     for (const cid of (classe_ids||[])) await pool.query('INSERT INTO pool_classes (pool_id, classe_id) VALUES ($1,$2)', [newPool.id, cid]);
@@ -50,9 +50,9 @@ const createPool = async (req, res) => {
 
 const updatePool = async (req, res) => {
   const { id } = req.params;
-  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires } = req.body;
+  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau } = req.body;
   try {
-    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4 WHERE id=$5', [nom, site, couleur, JSON.stringify(horaires||[]), id]);
+    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5 WHERE id=$6', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveau||null, id]);
     await pool.query('DELETE FROM pool_profs WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_classes WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_branches WHERE pool_id=$1', [id]);
