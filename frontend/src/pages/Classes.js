@@ -629,9 +629,9 @@ export default function Classes() {
   }
 
   const ECHELLES = [
-    { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'] },
+    { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'], note:"* L'utilisation des autres langues que le français est sanctionnée par une retenue de 5 minutes par remontrance le jour-même." },
     { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'] },
-    { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:['Mise à pied'] },
+    { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:['Mise à pied'], note:'* En cas de récidive, sur proposition des responsables et décision du chef de section.' },
   ];
 
   // Vue détail classe - liste élèves
@@ -699,7 +699,14 @@ export default function Classes() {
             </div>
             {sanctionsLoading ? (
               <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
-            ) : ECHELLES.map(echelle => (
+            ) : <>
+              <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:12,color:'#78350f',lineHeight:1.7}}>
+                <div>Toutes les cases (chances, retenues et avertissements) doivent être visées et datées par le FL ou les responsables.</div>
+                <div>Pour valider une retenue ou un avertissement, il est impératif qu'une fiche d'observation soit préalablement rédigée.</div>
+                <div>— Envoyer une copie au titulaire et aux responsables.</div>
+                <div>— Classer le document dans le dossier de l'élève.</div>
+              </div>
+              {ECHELLES.map(echelle => (
               <div key={echelle.id} style={{marginBottom:28}}>
                 <div style={{fontSize:13,fontWeight:700,color:'#3730a3',background:'#e0e7ff',padding:'6px 14px',borderRadius:6,marginBottom:10}}>{echelle.titre}</div>
                 <div style={{overflowX:'auto'}}>
@@ -722,9 +729,13 @@ export default function Classes() {
                             return (
                               <td key={infraction} style={{padding:'6px 8px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'top'}}>
                                 {isPending ? (
-                                  <div style={{display:'flex',flexDirection:'column',gap:4,minWidth:130,textAlign:'left'}}>
-                                    <input type="date" style={{...s.inp,padding:'4px 6px',fontSize:11}} value={pendingCell.date_sanction} onChange={e => setPendingCell({...pendingCell,date_sanction:e.target.value})} />
-                                    <input placeholder="Nom du prof" style={{...s.inp,padding:'4px 6px',fontSize:11}} value={pendingCell.prof_nom} onChange={e => setPendingCell({...pendingCell,prof_nom:e.target.value})} />
+                                  <div style={{display:'flex',flexDirection:'column',gap:4,minWidth:120,textAlign:'left'}}>
+                                    <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
+                                      📅 {pendingCell.date_sanction ? new Date(pendingCell.date_sanction+'T00:00:00').toLocaleDateString('fr-CH') : ''}
+                                    </div>
+                                    <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
+                                      👤 {pendingCell.prof_nom}
+                                    </div>
                                     <div style={{display:'flex',gap:4}}>
                                       <button onClick={confirmerSanction} style={{flex:1,padding:'3px 0',background:'#10b981',color:'white',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:600}}>✓ OK</button>
                                       <button onClick={() => setPendingCell(null)} style={{flex:1,padding:'3px 0',background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:4,cursor:'pointer',fontSize:11}}>✕</button>
@@ -739,7 +750,11 @@ export default function Classes() {
                                   </div>
                                 ) : (
                                   isAdmin() ? (
-                                    <button onClick={() => setPendingCell({echelle:echelle.id,infraction,niveau,date_sanction:'',prof_nom:''})}
+                                    <button onClick={() => {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
+                                        setPendingCell({echelle:echelle.id,infraction,niveau,date_sanction:today,prof_nom:profNom});
+                                      }}
                                       style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
                                   ) : (
                                     <span style={{width:20,height:20,borderRadius:4,border:'2px solid #e2e8f0',background:'#f9fafb',display:'inline-block'}} />
@@ -753,8 +768,12 @@ export default function Classes() {
                     </tbody>
                   </table>
                 </div>
+                {echelle.note && (
+                  <div style={{fontSize:11,color:'#64748b',fontStyle:'italic',marginTop:8,paddingLeft:4}}>{echelle.note}</div>
+                )}
               </div>
             ))}
+            </>}
           </div>
         </div>
       )}
