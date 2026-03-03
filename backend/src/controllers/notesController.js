@@ -32,7 +32,7 @@ const creerEvaluation = async (req, res) => {
   try {
     const result = await pool.query(
       'INSERT INTO evaluations (nom, classe_id, matiere_id, prof_id, date, type, coefficient, sur, points_max) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
-      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max || 30]
+      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max != null && points_max !== '' ? points_max : null]
     );
     res.status(201).json({ message: 'Evaluation creee', evaluation: result.rows[0] });
   } catch (err) {

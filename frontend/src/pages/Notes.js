@@ -13,6 +13,13 @@ const calculerNote = (points, pointsMax) => {
   return Math.round(Math.min(note, 6) * 10) / 10;
 };
 
+const fmtNote = (n) => {
+  if (n === null || n === undefined) return '—';
+  const num = parseFloat(n);
+  if (isNaN(num)) return '—';
+  return num % 1 === 0 ? String(Math.round(num)) : String(parseFloat(num.toFixed(1)));
+};
+
 const getMention = (moyenne) => {
   if (moyenne >= 5.5) return { label: 'Excellent', color: '#2e7d32' };
   if (moyenne >= 5) return { label: 'Très Bien', color: '#388e3c' };
@@ -37,7 +44,7 @@ export default function Notes() {
   const [matiereObj, setMatiereObj] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
-  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30' });
+  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false });
   const printRef = useRef();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -117,11 +124,12 @@ export default function Notes() {
     try {
       await axios.post(API + '/notes', {
         ...form,
+        points_max: form.sans_points ? null : (form.points_max || 30),
         classe_id: classeSelectionnee,
         prof_id: currentUser.id || null
       }, { headers });
       setShowForm(false);
-      setForm({ nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30' });
+      setForm({ nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false });
       await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
@@ -182,11 +190,11 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => { setVue('evaluations'); chargerEvaluationsId(classeSelectionnee, matiereSelectionnee); }}>← Retour</button>
           <div style={{ flex: 1 }}>
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
-            <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${evaluationOuverte.points_max}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
+            <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${parseFloat(evaluationOuverte.points_max)}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
           <div style={s.moyenneBox}>
             <div style={s.moyenneLabel}>Moyenne classe</div>
-            <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : m + '/6'; })()}</div>
+            <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</div>
           </div>
           <button style={{ ...s.btnSauver, opacity: peutModifierNotes() ? 1 : 0.4, cursor: peutModifierNotes() ? 'pointer' : 'not-allowed' }}
             disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>💾 Enregistrer</button>
@@ -227,7 +235,7 @@ export default function Notes() {
                     <td style={{ ...s.td, textAlign: 'center' }}>
                       {avecPoints ? (
                         <span style={{ fontWeight: 700, fontSize: 16, color: eleve.absent || eleve.dispense ? '#888' : note !== null ? (note >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
-                          {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : note !== null ? parseFloat(note).toFixed(1) + '/6' : '—'}
+                          {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : fmtNote(note)}
                         </span>
                       ) : eleve.absent || eleve.dispense ? (
                         <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
@@ -490,8 +498,16 @@ export default function Notes() {
                   </div>
                   <div style={s.formChamp}>
                     <label style={s.label}>Points maximum</label>
-                    <input style={s.input} type="number" step="0.5" value={form.points_max}
-                      onChange={e => setForm({ ...form, points_max: e.target.value })} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input style={{ ...s.input, flex: 1, opacity: form.sans_points ? 0.4 : 1 }} type="number" step="0.5"
+                        value={form.points_max} disabled={form.sans_points}
+                        onChange={e => setForm({ ...form, points_max: e.target.value })} />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" checked={form.sans_points}
+                          onChange={e => setForm({ ...form, sans_points: e.target.checked, points_max: e.target.checked ? '' : '30' })} />
+                        Pas de points
+                      </label>
+                    </div>
                   </div>
                   <div style={s.formChamp}>
                     <label style={s.label}>Coefficient</label>
