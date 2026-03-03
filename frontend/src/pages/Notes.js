@@ -428,51 +428,53 @@ export default function Notes() {
         </div>
 
         {showForm && (
-          <div style={{ ...s.card, marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Nouvelle évaluation</h3>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-              <div style={s.infoBox}>
-                <div style={s.infoLabel}>Professeur</div>
-                <div style={s.infoValue}>{profNomSession}</div>
+          <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
+            <div style={s.modal}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Nouvelle évaluation</h3>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={s.infoBox}>
+                  <div style={s.infoLabel}>Professeur</div>
+                  <div style={s.infoValue}>{profNomSession}</div>
+                </div>
+                <div style={s.infoBox}>
+                  <div style={s.infoLabel}>Date</div>
+                  <div style={s.infoValue}>{todayFormatted}</div>
+                </div>
+                <div style={s.infoBox}>
+                  <div style={s.infoLabel}>Matière</div>
+                  <div style={s.infoValue}>{matiereObj?.nom}</div>
+                </div>
               </div>
-              <div style={s.infoBox}>
-                <div style={s.infoLabel}>Date</div>
-                <div style={s.infoValue}>{todayFormatted}</div>
-              </div>
-              <div style={s.infoBox}>
-                <div style={s.infoLabel}>Matière</div>
-                <div style={s.infoValue}>{matiereObj?.nom}</div>
-              </div>
+              <form onSubmit={handleCreerEvaluation}>
+                <div style={s.formGrid}>
+                  <div style={{ ...s.formChamp, gridColumn: '1/-1' }}>
+                    <label style={s.label}>Désignation <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input style={s.input} type="text" required value={form.nom}
+                      onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Ex: Contrôle chapitre 3..." />
+                  </div>
+                  <div style={s.formChamp}>
+                    <label style={s.label}>Type</label>
+                    <select style={s.input} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div style={s.formChamp}>
+                    <label style={s.label}>Points maximum</label>
+                    <input style={s.input} type="number" step="0.5" value={form.points_max}
+                      onChange={e => setForm({ ...form, points_max: e.target.value })} />
+                  </div>
+                  <div style={s.formChamp}>
+                    <label style={s.label}>Coefficient</label>
+                    <input style={s.input} type="number" step="0.1" value={form.coefficient}
+                      onChange={e => setForm({ ...form, coefficient: e.target.value })} />
+                  </div>
+                </div>
+                <div style={s.formActions}>
+                  <button type="button" style={s.btnAnnuler} onClick={() => setShowForm(false)}>Annuler</button>
+                  <button type="submit" style={s.btnSauver}>Créer</button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleCreerEvaluation}>
-              <div style={s.formGrid}>
-                <div style={{ ...s.formChamp, gridColumn: '1/-1' }}>
-                  <label style={s.label}>Désignation <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input style={s.input} type="text" required value={form.nom}
-                    onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Ex: Contrôle chapitre 3..." />
-                </div>
-                <div style={s.formChamp}>
-                  <label style={s.label}>Type</label>
-                  <select style={s.input} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                    {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div style={s.formChamp}>
-                  <label style={s.label}>Points maximum</label>
-                  <input style={s.input} type="number" step="0.5" value={form.points_max}
-                    onChange={e => setForm({ ...form, points_max: e.target.value })} />
-                </div>
-                <div style={s.formChamp}>
-                  <label style={s.label}>Coefficient</label>
-                  <input style={s.input} type="number" step="0.1" value={form.coefficient}
-                    onChange={e => setForm({ ...form, coefficient: e.target.value })} />
-                </div>
-              </div>
-              <div style={s.formActions}>
-                <button type="button" style={s.btnAnnuler} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSauver}>Créer</button>
-              </div>
-            </form>
           </div>
         )}
 
@@ -522,26 +524,26 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
+              <th style={s.th}>Actions</th>
               <th style={s.th}>Matière</th>
               <th style={{ ...s.th, textAlign: 'center' }}>Évaluations</th>
-              <th style={s.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {matieres.length === 0 ? (
-              <tr><td colSpan="3" style={s.vide}>Aucune matière disponible</td></tr>
-            ) : matieres.map((m, i) => {
+            {matieres.filter(m => !classeObj?.niveau || m.niveau === classeObj.niveau).length === 0 ? (
+              <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
+            ) : matieres.filter(m => !classeObj?.niveau || m.niveau === classeObj.niveau).map((m, i) => {
               const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                  <td style={s.td}>
+                    <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>📋 Ouvrir</button>
+                  </td>
                   <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{m.nom}</td>
                   <td style={{ ...s.td, textAlign: 'center' }}>
                     <span style={{ ...s.badge, background: nbEvals > 0 ? '#e0e7ff' : '#f1f5f9', color: nbEvals > 0 ? '#4338ca' : '#94a3b8' }}>
                       {nbEvals} éval{nbEvals !== 1 ? 's' : ''}
                     </span>
-                  </td>
-                  <td style={s.td}>
-                    <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>📋 Ouvrir</button>
                   </td>
                 </tr>
               );
@@ -628,6 +630,8 @@ const s = {
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
   btnAnnuler: { padding: '10px 20px', background: '#f5f5f5', border: 'none', borderRadius: 8, cursor: 'pointer' },
   card: { background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'white', borderRadius: 16, padding: 30, maxWidth: 560, width: '95%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' },
   infoBox: { background: '#f1f5f9', borderRadius: 8, padding: '10px 16px', minWidth: 160 },
   infoLabel: { fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
   infoValue: { fontSize: 14, fontWeight: 700, color: '#0f172a' },
