@@ -377,20 +377,22 @@ export default function Professeurs() {
               <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {docsProf.nom}</h3>
               <button style={s.btnClose} onClick={() => setShowDocs(false)}>✕</button>
             </div>
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
-              <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                <select style={{...s.inp, width:'auto', padding:'7px 10px'}} value={uploadForm.type} onChange={e => setUploadForm({type:e.target.value})}>
-                  {['CV','Diplôme','Contrat','Certificat','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
-                  📎 Choisir un fichier
-                  <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={e => { if(e.target.files[0]) uploadDocument(e.target.files[0], uploadForm.type); e.target.value=''; }} />
-                </label>
-                <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
+            {isAdmin() && (
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
+                <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                  <select style={{...s.inp, width:'auto', padding:'7px 10px'}} value={uploadForm.type} onChange={e => setUploadForm({type:e.target.value})}>
+                    {['CV','Diplôme','Contrat','Certificat','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
+                    📎 Choisir un fichier
+                    <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      onChange={e => { if(e.target.files[0]) uploadDocument(e.target.files[0], uploadForm.type); e.target.value=''; }} />
+                  </label>
+                  <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
+                </div>
               </div>
-            </div>
+            )}
             <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
               {docsLoading ? (
                 <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
@@ -426,7 +428,7 @@ export default function Professeurs() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Email','Téléphone','Naissance','Statut','Créé le'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Nom','Prénom','Email','Téléphone','Naissance','Statut','Créé le','Documents'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
@@ -448,9 +450,9 @@ export default function Professeurs() {
                   </button>
                 </td>
                 <td style={s.td}>{p.created_at?new Date(p.created_at).toLocaleDateString('fr-CH'):'—'}</td>
+                <td style={s.td}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
                 {isAdmin() && (
                   <td style={s.td}>
-                    <button style={s.btnEdit} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button>
                     <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
                     <button
                       onClick={() => envoyerAccesEmail(p.id)}
