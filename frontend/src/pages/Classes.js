@@ -628,10 +628,21 @@ export default function Classes() {
     );
   }
 
+  const NIVEAUX_STD = [
+    {id:'Chance 1',label:'Chance 1',type:'row'},
+    {id:'Chance 2',label:'Chance 2',type:'row'},
+    {id:'Chance 3',label:'Chance 3',type:'row'},
+    {id:null,label:'Punition',type:'section'},
+    {id:'Punition Chance 1',label:'Chance 1',type:'row'},
+    {id:'Punition Chance 2',label:'Chance 2',type:'row'},
+    {id:null,label:'Retenue samedi',type:'section'},
+    {id:'Retenue samedi Chance 1',label:'Chance 1',type:'row'},
+    {id:'Avertissement et entretien',label:'Avertissement et entretien',type:'row'},
+  ];
   const ECHELLES = [
-    { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'], note:"* L'utilisation des autres langues que le français est sanctionnée par une retenue de 5 minutes par remontrance le jour-même." },
-    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'] },
-    { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:['Mise à pied'], note:'* En cas de récidive, sur proposition des responsables et décision du chef de section.' },
+    { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:NIVEAUX_STD, note:"* L'utilisation des autres langues que le français est sanctionnée par une retenue de 5 minutes par remontrance le jour-même." },
+    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:NIVEAUX_STD },
+    { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:[{id:'Mise à pied',label:'Mise à pied',type:'row'}], note:'* En cas de récidive, sur proposition des responsables et décision du chef de section.' },
   ];
 
   // Vue détail classe - liste élèves
@@ -712,19 +723,25 @@ export default function Classes() {
                 <table style={{borderCollapse:'collapse',width:'100%',fontSize:11,tableLayout:'fixed'}}>
                     <thead>
                       <tr>
-                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'left',fontWeight:700,color:'#64748b',width:'13%',whiteSpace:'nowrap'}}>Niveau</th>
+                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',width:'13%'}}></th>
                         {echelle.infractions.map(inf => (
                           <th key={inf} style={{padding:'5px 6px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',wordBreak:'break-word',lineHeight:1.3}}>{inf}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {echelle.niveaux.map(niveau => (
-                        <tr key={niveau}>
-                          <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'nowrap',fontSize:10}}>{niveau}</td>
+                      {echelle.niveaux.map((niveau, idx) => {
+                        if (niveau.type === 'section') return (
+                          <tr key={'s-'+idx}>
+                            <td colSpan={echelle.infractions.length+1} style={{padding:'4px 10px',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:10,borderTop:'2px solid #c7d2fe',borderBottom:'1px solid #c7d2fe'}}>{niveau.label}</td>
+                          </tr>
+                        );
+                        return (
+                        <tr key={niveau.id}>
+                          <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'nowrap',fontSize:10}}>{niveau.label}</td>
                           {echelle.infractions.map(infraction => {
-                            const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau);
-                            const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau;
+                            const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau.id);
+                            const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau.id;
                             return (
                               <td key={infraction} style={{padding:'4px 4px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'middle'}}>
                                 {isPending ? (
@@ -752,7 +769,7 @@ export default function Classes() {
                                     <button onClick={() => {
                                         const today = new Date().toISOString().split('T')[0];
                                         const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                        setPendingCell({echelle:echelle.id,infraction,niveau,date_sanction:today,prof_nom:profNom});
+                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom});
                                       }}
                                       style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
                                   ) : (
@@ -763,7 +780,8 @@ export default function Classes() {
                             );
                           })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 {echelle.note && (
