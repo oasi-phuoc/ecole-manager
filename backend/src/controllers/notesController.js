@@ -206,4 +206,53 @@ const getBulletin = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin };
+const getRapportClasse = async (req, res) => {
+  const { classe_id } = req.query;
+  try {
+    const elevesRes = await pool.query(`
+      SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom
+      FROM eleves e
+      LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
+      WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
+      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+    `, [classe_id]);
+
+    const evalsRes = await pool.query(`
+      SELECT ev.id, ev.nom, ev.date, ev.type, ev.coefficient, ev.points_max,
+        m.id as matiere_id, m.nom as matiere_nom
+      FROM evaluations ev
+      JOIN matieres m ON ev.matiere_id = m.id
+      WHERE ev.classe_id = $1
+      ORDER BY m.nom, ev.date
+    `, [classe_id]);
+
+    const notesRes = await pool.query(`
+      SELECT n.eleve_id, n.evaluation_id, n.valeur, n.absent, n.dispense
+      FROM notes n
+      JOIN evaluations ev ON n.evaluation_id = ev.id
+      WHERE ev.classe_id = $1
+    `, [classe_id]);
+
+    const matiereMap = {};
+    for (const ev of evalsRes.rows) {
+      if (!matiereMap[ev.matiere_id]) {
+        matiereMap[ev.matiere_id] = { matiere_id: ev.matiere_id, matiere_nom: ev.matiere_nom, evaluations: [] };
+      }
+      const evalNotes = notesRes.rows.filter(n => n.evaluation_id === ev.id);
+      matiereMap[ev.matiere_id].evaluations.push({
+        id: ev.id, nom: ev.nom, date: ev.date, type: ev.type,
+        coefficient: parseFloat(ev.coefficient),
+        notes: elevesRes.rows.map(e => {
+          const n = evalNotes.find(n => n.eleve_id === e.id);
+          return { eleve_id: e.id, valeur: n ? n.valeur : null, absent: n ? n.absent : null, dispense: n ? n.dispense : null };
+        })
+      });
+    }
+
+    res.json({ eleves: elevesRes.rows, matieres: Object.values(matiereMap) });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse };

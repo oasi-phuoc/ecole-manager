@@ -20,6 +20,22 @@ const fmtNote = (n) => {
   return num % 1 === 0 ? String(Math.round(num)) : String(parseFloat(num.toFixed(1)));
 };
 
+const sortMatieres = (matieres) => [...matieres].sort((a, b) => {
+  const pri = (n) => n === 'Français' ? 0 : n === 'Mathématiques' ? 1 : 2;
+  const pa = pri(a.matiere_nom), pb = pri(b.matiere_nom);
+  if (pa !== pb) return pa - pb;
+  return a.matiere_nom.localeCompare(b.matiere_nom, 'fr');
+});
+
+const moyenneEleveMatiere = (matiere, eleveId) => {
+  const vals = matiere.evaluations.flatMap(ev => {
+    const n = ev.notes.find(n => n.eleve_id === eleveId);
+    return n && !n.absent && !n.dispense && n.valeur !== null ? [parseFloat(n.valeur)] : [];
+  });
+  if (vals.length === 0) return null;
+  return Math.round(vals.reduce((a, v) => a + v, 0) / vals.length * 10) / 10;
+};
+
 const getMention = (moyenne) => {
   if (moyenne >= 5.5) return { label: 'Excellent', color: '#2e7d32' };
   if (moyenne >= 5) return { label: 'Très Bien', color: '#388e3c' };
@@ -42,6 +58,10 @@ export default function Notes() {
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [classeObj, setClasseObj] = useState(null);
   const [matiereObj, setMatiereObj] = useState(null);
+  const [rapport, setRapport] = useState(null);
+  const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
+  const [rapportMatiereId, setRapportMatiereId] = useState('');
+  const [rapportEleveId, setRapportEleveId] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null });
@@ -77,6 +97,13 @@ export default function Notes() {
       setEvaluations(res.data);
       return res.data;
     } catch (err) { console.error(err); return []; }
+  };
+
+  const chargerRapport = async (classeId) => {
+    try {
+      const res = await axios.get(API + '/notes/rapport?classe_id=' + classeId, { headers });
+      setRapport(res.data);
+    } catch (err) { console.error(err); }
   };
 
   const chargerBulletinId = async (classeId) => {
@@ -293,6 +320,10 @@ export default function Notes() {
 
   // ===================== VUE GENERALE =====================
   if (vue === 'generale') {
+    const modeMatieres = rapport ? sortMatieres(rapport.matieres) : [];
+    const matiereRapport = modeMatieres.find(m => m.matiere_id === parseInt(rapportMatiereId));
+    const eleveRapport = rapport?.eleves.find(e => e.id === parseInt(rapportEleveId));
+
     return (
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } }`}</style>
@@ -301,47 +332,175 @@ export default function Notes() {
           <h2 style={s.titre}>📊 Vue générale — {classeNom}</h2>
           <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
         </div>
-        <div ref={printRef}>
-          <h3 style={{ textAlign: 'center', marginBottom: 15, fontSize: 16 }}>Liste de contrôle des notes — {classeNom}</h3>
-          <table style={{ ...s.tbl, fontSize: 12 }}>
-            <thead>
-              <tr style={s.theadRow}>
-                <th style={{ ...s.th, minWidth: 140 }}>Élève</th>
-                {matieres.filter(m => bulletins.some(b => b.parMatiere[m.nom])).map(m => (
-                  <th key={m.id} style={{ ...s.th, textAlign: 'center', minWidth: 70 }}>{m.nom}</th>
-                ))}
-                <th style={{ ...s.th, textAlign: 'center' }}>Moy. gén.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bulletins.map((b, i) => (
-                <tr key={i} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                  <td style={s.td}><b>{b.eleve.nom} {b.eleve.prenom}</b></td>
-                  {matieres.filter(m => bulletins.some(b2 => b2.parMatiere[m.nom])).map(m => {
-                    const data = b.parMatiere[m.nom];
-                    return (
-                      <td key={m.id} style={{ ...s.td, textAlign: 'center', color: data ? (data.moyenne >= 4 ? '#2e7d32' : '#ef4444') : '#ccc', fontWeight: data ? 700 : 400 }}>
-                        {data ? parseFloat(data.moyenne).toFixed(1) : '—'}
-                      </td>
-                    );
-                  })}
-                  <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: b.moyenneGenerale >= 4 ? '#2e7d32' : '#ef4444', fontSize: 14 }}>
-                    {b.moyenneGenerale > 0 ? parseFloat(b.moyenneGenerale).toFixed(1) : '—'}
-                  </td>
-                </tr>
-              ))}
-              <tr style={{ ...s.tr, background: '#e0e7ff', fontWeight: 700 }}>
-                <td style={s.td}>Moyenne de la matière</td>
-                {matieres.filter(m => bulletins.some(b => b.parMatiere[m.nom])).map(m => {
-                  const vals = bulletins.map(b => b.parMatiere[m.nom]?.moyenne).filter(v => v !== undefined);
-                  const moy = vals.length > 0 ? Math.round(vals.reduce((a, v) => a + parseFloat(v), 0) / vals.length * 10) / 10 : null;
-                  return <td key={m.id} style={{ ...s.td, textAlign: 'center' }}>{moy ? parseFloat(moy).toFixed(1) : '—'}</td>;
-                })}
-                <td style={s.td}></td>
-              </tr>
-            </tbody>
-          </table>
+
+        {/* Sélecteur de mode */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }} className="no-print">
+          {[['tous', 'Tous'], ['branche', 'Par branche'], ['eleve', 'Par élève']].map(([val, label]) => (
+            <button key={val} onClick={() => setVueGeneraleMode(val)}
+              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: vueGeneraleMode === val ? '#6366f1' : '#f1f5f9', color: vueGeneraleMode === val ? 'white' : '#555' }}>
+              {label}
+            </button>
+          ))}
+          {vueGeneraleMode === 'branche' && (
+            <select style={{ ...s.select, marginLeft: 8 }} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
+              <option value="">— Choisir une branche —</option>
+              {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
+            </select>
+          )}
+          {vueGeneraleMode === 'eleve' && (
+            <select style={{ ...s.select, marginLeft: 8 }} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
+              <option value="">— Choisir un élève —</option>
+              {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{e.nom} {e.prenom}</option>)}
+            </select>
+          )}
         </div>
+
+        {/* ---- VUE TOUS ---- */}
+        {vueGeneraleMode === 'tous' && rapport && (
+          <div ref={printRef} style={{ overflowX: 'auto' }}>
+            <table style={{ ...s.tbl, fontSize: 12 }}>
+              <thead>
+                <tr style={s.theadRow}>
+                  <th style={{ ...s.th, minWidth: 100 }}>Nom</th>
+                  <th style={{ ...s.th, minWidth: 80 }}>Prénom</th>
+                  {modeMatieres.map(m => (
+                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', minWidth: 80 }}>{m.matiere_nom}</th>
+                  ))}
+                  <th style={{ ...s.th, textAlign: 'center' }}>Moy. gén.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rapport.eleves.map((eleve, i) => {
+                  const moys = modeMatieres.map(m => moyenneEleveMatiere(m, eleve.id));
+                  const valides = moys.filter(v => v !== null);
+                  const moyGen = valides.length > 0 ? Math.round(valides.reduce((a, v) => a + v, 0) / valides.length * 10) / 10 : null;
+                  return (
+                    <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                      <td style={{ ...s.td, fontWeight: 700 }}>{eleve.nom}</td>
+                      <td style={s.td}>{eleve.prenom}</td>
+                      {moys.map((moy, j) => (
+                        <td key={j} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>
+                          {moy !== null ? fmtNote(moy) : '—'}
+                        </td>
+                      ))}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moyGen !== null ? (moyGen >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                        {moyGen !== null ? fmtNote(moyGen) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* Ligne moyenne de classe par branche */}
+                <tr style={{ ...s.tr, background: '#e0e7ff', fontWeight: 700 }}>
+                  <td style={{ ...s.td, fontWeight: 700 }} colSpan={2}>Moyenne de la branche</td>
+                  {modeMatieres.map(m => {
+                    const vals = rapport.eleves.map(e => moyenneEleveMatiere(m, e.id)).filter(v => v !== null);
+                    const moy = vals.length > 0 ? Math.round(vals.reduce((a, v) => a + v, 0) / vals.length * 10) / 10 : null;
+                    return <td key={m.matiere_id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>;
+                  })}
+                  <td style={s.td}></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ---- VUE PAR BRANCHE ---- */}
+        {vueGeneraleMode === 'branche' && rapport && matiereRapport && (
+          <div ref={printRef} style={{ overflowX: 'auto' }}>
+            <h3 style={{ marginBottom: 12, fontSize: 15 }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
+            <table style={{ ...s.tbl, fontSize: 12 }}>
+              <thead>
+                <tr style={s.theadRow}>
+                  <th style={{ ...s.th, minWidth: 100 }}>Nom</th>
+                  <th style={{ ...s.th, minWidth: 80 }}>Prénom</th>
+                  {matiereRapport.evaluations.map(ev => (
+                    <th key={ev.id} style={{ ...s.th, textAlign: 'center', minWidth: 90 }}>
+                      <div>{ev.nom}</div>
+                      <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{ev.type} • Coef.{ev.coefficient}</div>
+                    </th>
+                  ))}
+                  <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rapport.eleves.map((eleve, i) => {
+                  const moy = moyenneEleveMatiere(matiereRapport, eleve.id);
+                  return (
+                    <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                      <td style={{ ...s.td, fontWeight: 700 }}>{eleve.nom}</td>
+                      <td style={s.td}>{eleve.prenom}</td>
+                      {matiereRapport.evaluations.map(ev => {
+                        const n = ev.notes.find(n => n.eleve_id === eleve.id);
+                        const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa';
+                        return (
+                          <td key={ev.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color }}>
+                            {n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : (n && n.valeur !== null ? fmtNote(n.valeur) : '—')}
+                          </td>
+                        );
+                      })}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                        {moy !== null ? fmtNote(moy) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {vueGeneraleMode === 'branche' && !rapportMatiereId && <div style={s.vide}>Sélectionnez une branche</div>}
+
+        {/* ---- VUE PAR ELEVE ---- */}
+        {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (
+          <div ref={printRef}>
+            <h3 style={{ marginBottom: 16, fontSize: 15 }}>{eleveRapport.prenom} {eleveRapport.nom} — {classeNom}</h3>
+            {modeMatieres.map(matiere => {
+              const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
+              return (
+                <div key={matiere.matiere_id} style={{ marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#e0e7ff', padding: '10px 16px', borderRadius: 8, marginBottom: 6 }}>
+                    <b style={{ fontSize: 15 }}>{matiere.matiere_nom}</b>
+                    {moy !== null
+                      ? <span style={{ fontWeight: 700, color: moy >= 4 ? '#2e7d32' : '#ef4444', fontSize: 15 }}>Moyenne : {fmtNote(moy)}</span>
+                      : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
+                  </div>
+                  {matiere.evaluations.length > 0 ? (
+                    <table style={{ ...s.tbl, fontSize: 13 }}>
+                      <thead>
+                        <tr style={s.theadRow}>
+                          <th style={s.th}>Évaluation</th>
+                          <th style={s.th}>Date</th>
+                          <th style={s.th}>Type</th>
+                          <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
+                          <th style={{ ...s.th, textAlign: 'center' }}>Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matiere.evaluations.map((ev, j) => {
+                          const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
+                          const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
+                          const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
+                          return (
+                            <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
+                              <td style={s.td}>{ev.nom}</td>
+                              <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                              <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
+                              <td style={{ ...s.td, textAlign: 'center' }}>{ev.coefficient}</td>
+                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: valeur !== null ? (parseFloat(valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
+                                {statut || (valeur !== null ? fmtNote(valeur) : '—')}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : <div style={{ color: '#aaa', fontSize: 13, padding: '6px 0' }}>Aucune évaluation</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {vueGeneraleMode === 'eleve' && !rapportEleveId && <div style={s.vide}>Sélectionnez un élève</div>}
       </div>
     );
   }
@@ -661,7 +820,7 @@ export default function Notes() {
               <td style={s.td}>
                 <button style={s.btnEdit} onClick={() => ouvrirClasse(cl)}>📝 Évaluations</button>
                 <button style={{ ...s.btnEdit, background: '#f3e5f5', color: '#7b1fa2' }}
-                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); await chargerEvaluationsId(cl.id, null); await chargerBulletinId(cl.id); setVue('generale'); }}>
+                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); setVueGeneraleMode('tous'); setRapportMatiereId(''); setRapportEleveId(''); await chargerRapport(cl.id); setVue('generale'); }}>
                   📊 Vue générale
                 </button>
                 <button style={{ ...s.btnEdit, background: '#fce4ec', color: '#c62828' }}
