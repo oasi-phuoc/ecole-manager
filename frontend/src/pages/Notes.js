@@ -527,7 +527,7 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Actions', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
+              {['Actions', 'Statut', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
               <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
@@ -535,12 +535,22 @@ export default function Notes() {
           </thead>
           <tbody>
             {evaluations.length === 0 ? (
-              <tr><td colSpan="8" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
+              <tr><td colSpan="9" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                 <td style={s.td}>
                   <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>✏️</button>
                   {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
+                </td>
+                <td style={{ ...s.td, textAlign: 'center' }}>
+                  {(() => {
+                    const total = parseInt(ev.nb_eleves_classe) || 0;
+                    const dispenses = parseInt(ev.nb_dispenses) || 0;
+                    const saisies = parseInt(ev.nb_notes_saisies) || 0;
+                    const manquants = total - dispenses - saisies;
+                    if (manquants <= 0) return <span style={{ color: '#2e7d32', fontWeight: 700, fontSize: 16 }}>✓</span>;
+                    return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>{manquants} manq.</span>;
+                  })()}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>

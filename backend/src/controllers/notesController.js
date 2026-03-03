@@ -9,7 +9,10 @@ const getEvaluations = async (req, res) => {
         c.nom as classe,
         u.nom as prof_nom, u.prenom as prof_prenom,
         COUNT(n.id) as nb_notes,
-        ROUND(AVG(CASE WHEN n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL THEN n.valeur END)::numeric, 1) as moyenne_classe
+        ROUND(AVG(CASE WHEN n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL THEN n.valeur END)::numeric, 1) as moyenne_classe,
+        (SELECT COUNT(*) FROM eleves e2 WHERE e2.classe_id = ev.classe_id AND LOWER(e2.statut) = 'actif') as nb_eleves_classe,
+        COUNT(CASE WHEN n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL THEN 1 END) as nb_notes_saisies,
+        COUNT(CASE WHEN n.dispense = true THEN 1 END) as nb_dispenses
       FROM evaluations ev
       JOIN matieres m ON ev.matiere_id = m.id
       JOIN classes c ON ev.classe_id = c.id
