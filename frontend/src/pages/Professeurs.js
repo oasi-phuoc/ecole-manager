@@ -339,8 +339,9 @@ export default function Professeurs() {
                 <td style={s.td}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
                 <td style={s.td}>{p.prenom}</td>
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
-                <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
+                <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
+                
                 
                 <td style={s.td}>
                   <button style={p.actif!==false?s.badgeActive:s.badgeInactive} onClick={() => toggleStatut(p)}>

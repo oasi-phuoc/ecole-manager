@@ -31,14 +31,14 @@ export default function Classes() {
   useEffect(() => { chargerTout(); }, []);
 
   const chargerTout = async () => {
-    try {
-      const [cl, pr] = await Promise.all([
-        axios.get(API+'/classes', {headers}),
-        axios.get(API+'/profs', {headers}),
-      ]);
-      setClasses(cl.data);
-      setProfs(pr.data.filter(p => p.actif !== false));
-    } catch(err) { console.error(err); }
+    const [cl, pr] = await Promise.allSettled([
+      axios.get(API+'/classes', {headers}),
+      axios.get(API+'/profs', {headers}),
+    ]);
+    if (cl.status === 'fulfilled') setClasses(cl.value.data);
+    else console.error('Erreur classes:', cl.reason);
+    if (pr.status === 'fulfilled') setProfs(pr.value.data.filter(p => p.actif !== false));
+    else console.error('Erreur profs:', pr.reason);
   };
 
   const handleSubmit = async (e) => {
