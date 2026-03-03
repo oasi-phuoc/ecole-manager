@@ -59,6 +59,8 @@ export default function Notes() {
   const [classeObj, setClasseObj] = useState(null);
   const [matiereObj, setMatiereObj] = useState(null);
   const [rapport, setRapport] = useState(null);
+  const [rapportChargement, setRapportChargement] = useState(false);
+  const [rapportErreur, setRapportErreur] = useState('');
   const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
   const [rapportMatiereId, setRapportMatiereId] = useState('');
   const [rapportEleveId, setRapportEleveId] = useState('');
@@ -100,10 +102,18 @@ export default function Notes() {
   };
 
   const chargerRapport = async (classeId) => {
+    setRapport(null);
+    setRapportErreur('');
+    setRapportChargement(true);
     try {
       const res = await axios.get(API + '/notes/rapport?classe_id=' + classeId, { headers });
       setRapport(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setRapportErreur(err.response?.data?.message || err.message || 'Erreur inconnue');
+    } finally {
+      setRapportChargement(false);
+    }
   };
 
   const chargerBulletinId = async (classeId) => {
@@ -354,6 +364,10 @@ export default function Notes() {
             </select>
           )}
         </div>
+
+        {/* Chargement / erreur */}
+        {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>⏳ Chargement des données…</div>}
+        {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>❌ Erreur : {rapportErreur}</div>}
 
         {/* ---- VUE TOUS ---- */}
         {vueGeneraleMode === 'tous' && rapport && (
