@@ -182,4 +182,76 @@ const getElevesOASI = async (req, res) => {
   }
 };
 
-module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve, updatePhoto, getElevesOASI };
+const getDocumentsEleve = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, nom, type, taille, created_at FROM documents_eleves WHERE eleve_id=$1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const uploadDocumentEleve = async (req, res) => {
+  const { nom, type, contenu, taille } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO documents_eleves (eleve_id, nom, type, contenu, taille) VALUES ($1,$2,$3,$4,$5) RETURNING id, nom, type, taille, created_at',
+      [req.params.id, nom, type || 'Autre', contenu, taille || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const telechargerDocumentEleve = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT nom, contenu FROM documents_eleves WHERE id=$1 AND eleve_id=$2',
+      [req.params.docId, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Document non trouvé' });
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const supprimerDocumentEleve = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM documents_eleves WHERE id=$1 AND eleve_id=$2', [req.params.docId, req.params.id]);
+    res.json({ message: 'Document supprimé' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const getSanctionsEleve = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, echelle, infraction, niveau, date_sanction, prof_nom, created_at FROM sanctions_eleves WHERE eleve_id=$1 ORDER BY echelle, infraction, niveau',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const ajouterSanction = async (req, res) => {
+  const { echelle, infraction, niveau, date_sanction, prof_nom } = req.body;
+  try {
+    const exists = await pool.query(
+      'SELECT id FROM sanctions_eleves WHERE eleve_id=$1 AND echelle=$2 AND infraction=$3 AND niveau=$4',
+      [req.params.id, echelle, infraction, niveau]
+    );
+    if (exists.rows.length > 0) return res.status(409).json({ message: 'Sanction déjà enregistrée' });
+    const result = await pool.query(
+      'INSERT INTO sanctions_eleves (eleve_id, echelle, infraction, niveau, date_sanction, prof_nom) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [req.params.id, echelle, infraction, niveau, date_sanction || null, prof_nom || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const supprimerSanction = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM sanctions_eleves WHERE id=$1 AND eleve_id=$2', [req.params.sanctionId, req.params.id]);
+    res.json({ message: 'Sanction supprimée' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve, updatePhoto, getElevesOASI, getDocumentsEleve, uploadDocumentEleve, telechargerDocumentEleve, supprimerDocumentEleve, getSanctionsEleve, ajouterSanction, supprimerSanction };

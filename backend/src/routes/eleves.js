@@ -18,4 +18,14 @@ router.put('/:id/classe', async (req, res) => {
     res.json({ message: 'Classe mise à jour' });
   } catch(err) { res.status(500).json({ message: err.message }); }
 });
+
+router.get('/:id/documents', c.getDocumentsEleve);
+router.post('/:id/documents', autoriser('admin'), c.uploadDocumentEleve);
+router.get('/:id/documents/:docId/telecharger', c.telechargerDocumentEleve);
+router.delete('/:id/documents/:docId', autoriser('admin'), c.supprimerDocumentEleve);
+
+router.get('/:id/sanctions', c.getSanctionsEleve);
+router.post('/:id/sanctions', autoriser('admin'), c.ajouterSanction);
+router.delete('/:id/sanctions/:sanctionId', autoriser('admin'), c.supprimerSanction);
+
 module.exports = router;

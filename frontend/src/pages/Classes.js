@@ -105,6 +105,18 @@ export default function Classes() {
   const [planPositions, setPlanPositions] = useState({});
   const [dragEleve, setDragEleve] = useState(null);
 
+  const [showDocsEleve, setShowDocsEleve] = useState(false);
+  const [docsEleve, setDocsEleve] = useState(null);
+  const [eleveDocs, setEleveDocs] = useState([]);
+  const [docsEleveLoading, setDocsEleveLoading] = useState(false);
+  const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'Certificat' });
+
+  const [showSanctions, setShowSanctions] = useState(false);
+  const [sanctionsEleve, setSanctionsEleve] = useState(null);
+  const [eleveSanctions, setEleveSanctions] = useState([]);
+  const [sanctionsLoading, setSanctionsLoading] = useState(false);
+  const [pendingCell, setPendingCell] = useState(null);
+
   const imprimerObservations = () => {
     const rows = observations.map(obs => `
       <tr>
@@ -294,6 +306,64 @@ export default function Classes() {
     const total = parseInt(eleve.nb_absences||0) + parseInt(eleve.nb_retards||0);
     if (total === 0) return 100;
     return Math.max(0, Math.round((1 - total/20) * 100));
+  };
+
+  const ouvrirDocumentsEleve = async (el) => {
+    setDocsEleve(el); setShowDocsEleve(true); setDocsEleveLoading(true);
+    try { const r = await axios.get(API+'/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
+    catch(err) { setEleveDocs([]); }
+    setDocsEleveLoading(false);
+  };
+
+  const uploadDocumentEleve = async (file, type) => {
+    if (file.size > 5*1024*1024) { alert('Fichier trop grand (max 5MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        await axios.post(API+'/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
+        const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents', {headers});
+        setEleveDocs(r.data);
+      } catch(err) { alert('Erreur upload: '+err.message); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const telechargerDocumentEleve = async (doc) => {
+    try {
+      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
+    } catch(err) { alert('Erreur téléchargement'); }
+  };
+
+  const supprimerDocumentEleve = async (docId) => {
+    if (!window.confirm('Supprimer ce document ?')) return;
+    await axios.delete(API+'/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
+    setEleveDocs(prev => prev.filter(d => d.id !== docId));
+  };
+
+  const ouvrirSanctions = async (el) => {
+    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null);
+    try { const r = await axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}); setEleveSanctions(r.data); }
+    catch(err) { setEleveSanctions([]); }
+    setSanctionsLoading(false);
+  };
+
+  const confirmerSanction = async () => {
+    if (!pendingCell) return;
+    try {
+      await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
+        echelle: pendingCell.echelle, infraction: pendingCell.infraction, niveau: pendingCell.niveau,
+        date_sanction: pendingCell.date_sanction || null, prof_nom: pendingCell.prof_nom || null
+      }, {headers});
+      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      setEleveSanctions(r.data); setPendingCell(null);
+    } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+  };
+
+  const supprimerSanction = async (sanctionId) => {
+    if (!window.confirm('Retirer cette sanction ?')) return;
+    await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
+    setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
   };
 
   const classesFiltrees = classes.filter(c => {
@@ -558,10 +628,136 @@ export default function Classes() {
     );
   }
 
+  const ECHELLES = [
+    { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'] },
+    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:['Chance 1','Chance 2','Chance 3','Punition Chance 1','Punition Chance 2','Retenue samedi Chance 1','Avertissement et entretien'] },
+    { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:['Mise à pied'] },
+  ];
+
   // Vue détail classe - liste élèves
   if (detailClasse) return (
     <div style={s.page}>
       <ModalZoom />
+
+      {showDocsEleve && docsEleve && (
+        <div style={s.overlay}>
+          <div style={{...s.modal, maxWidth:600, width:'100%'}}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
+              <button style={s.btnClose} onClick={() => setShowDocsEleve(false)}>✕</button>
+            </div>
+            {isAdmin() && (
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
+                <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                  <select style={{...s.inp,width:'auto',padding:'7px 10px'}} value={uploadEleveForm.type} onChange={e => setUploadEleveForm({type:e.target.value})}>
+                    {['Certificat','Justification','Bulletin','Convention','Autorisation','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
+                    📎 Choisir un fichier
+                    <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />
+                  </label>
+                  <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
+                </div>
+              </div>
+            )}
+            <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
+              {docsEleveLoading ? (
+                <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
+              ) : eleveDocs.length===0 ? (
+                <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour cet élève</div>
+              ) : eleveDocs.map(doc => (
+                <div key={doc.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,border:'1px solid #e2e8f0',marginBottom:8,background:'#f8fafc'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{fontSize:20}}>{doc.nom.endsWith('.pdf')?'📄':doc.nom.match(/\.(jpg|jpeg|png)$/i)?'🖼️':'📝'}</span>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13,color:'#1e293b'}}>{doc.nom}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>
+                        <span style={{background:'#e0e7ff',color:'#3730a3',padding:'1px 7px',borderRadius:99,fontWeight:600,marginRight:6}}>{doc.type}</span>
+                        {doc.taille ? Math.round(doc.taille/1024)+'KB · ' : ''}
+                        {new Date(doc.created_at).toLocaleDateString('fr-CH')}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Télécharger">⬇️</button>
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Supprimer">🗑️</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSanctions && sanctionsEleve && (
+        <div style={s.overlay}>
+          <div style={{...s.modal, maxWidth:860, width:'100%', maxHeight:'90vh', overflowY:'auto'}}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>⚠️ Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <button style={s.btnClose} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
+            </div>
+            {sanctionsLoading ? (
+              <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
+            ) : ECHELLES.map(echelle => (
+              <div key={echelle.id} style={{marginBottom:28}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#3730a3',background:'#e0e7ff',padding:'6px 14px',borderRadius:6,marginBottom:10}}>{echelle.titre}</div>
+                <div style={{overflowX:'auto'}}>
+                  <table style={{borderCollapse:'collapse',width:'100%',fontSize:11}}>
+                    <thead>
+                      <tr>
+                        <th style={{padding:'6px 10px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'left',fontWeight:700,color:'#64748b',minWidth:130}}>Niveau</th>
+                        {echelle.infractions.map(inf => (
+                          <th key={inf} style={{padding:'6px 10px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',minWidth:100}}>{inf}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {echelle.niveaux.map(niveau => (
+                        <tr key={niveau}>
+                          <td style={{padding:'6px 10px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa'}}>{niveau}</td>
+                          {echelle.infractions.map(infraction => {
+                            const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau);
+                            const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau;
+                            return (
+                              <td key={infraction} style={{padding:'6px 8px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'top'}}>
+                                {isPending ? (
+                                  <div style={{display:'flex',flexDirection:'column',gap:4,minWidth:130,textAlign:'left'}}>
+                                    <input type="date" style={{...s.inp,padding:'4px 6px',fontSize:11}} value={pendingCell.date_sanction} onChange={e => setPendingCell({...pendingCell,date_sanction:e.target.value})} />
+                                    <input placeholder="Nom du prof" style={{...s.inp,padding:'4px 6px',fontSize:11}} value={pendingCell.prof_nom} onChange={e => setPendingCell({...pendingCell,prof_nom:e.target.value})} />
+                                    <div style={{display:'flex',gap:4}}>
+                                      <button onClick={confirmerSanction} style={{flex:1,padding:'3px 0',background:'#10b981',color:'white',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:600}}>✓ OK</button>
+                                      <button onClick={() => setPendingCell(null)} style={{flex:1,padding:'3px 0',background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:4,cursor:'pointer',fontSize:11}}>✕</button>
+                                    </div>
+                                  </div>
+                                ) : sanction ? (
+                                  <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                                    <span style={{fontSize:16}}>✅</span>
+                                    <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}</span>
+                                    <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
+                                    {isAdmin() && <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0}} title="Retirer">🗑️</button>}
+                                  </div>
+                                ) : (
+                                  isAdmin() ? (
+                                    <button onClick={() => setPendingCell({echelle:echelle.id,infraction,niveau,date_sanction:'',prof_nom:''})}
+                                      style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
+                                  ) : (
+                                    <span style={{width:20,height:20,borderRadius:4,border:'2px solid #e2e8f0',background:'#f9fafb',display:'inline-block'}} />
+                                  )
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>
         <h2 style={s.title}>🏫 {detailClasse.nom} — Liste des élèves</h2>
@@ -584,12 +780,12 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Photo','Nom','Prénom','Contact','Absences','Excusées','Retards','Présence','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Photo','Nom','Prénom','Contact','Absences','Excusées','Retards','Présence','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
             {elevesClasse.length===0 ? (
-              <tr><td colSpan="9" style={s.empty}>Aucun élève dans cette classe</td></tr>
+              <tr><td colSpan="11" style={s.empty}>Aucun élève dans cette classe</td></tr>
             ) : elevesClasse.map(el => (
               <tr key={el.id} style={s.tr}>
                 <td style={s.td}>
@@ -631,6 +827,8 @@ export default function Classes() {
                 <td style={s.td}>
                   <span style={{...s.badge,background:tauxPresence(el)>=80?'#d1fae5':'#fee2e2',color:tauxPresence(el)>=80?'#065f46':'#991b1b'}}>{tauxPresence(el)}%</span>
                 </td>
+                <td style={s.td}><button style={{...s.btnDetail,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                <td style={s.td}><button style={{...s.btnDetail,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
                 <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>
               </tr>
             ))}

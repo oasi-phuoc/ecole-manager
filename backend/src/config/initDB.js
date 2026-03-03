@@ -35,6 +35,12 @@ const initDB = async () => {
     // Table documents professeurs
     await pool.query(`CREATE TABLE IF NOT EXISTS documents_profs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);
 
+    // Table documents élèves
+    await pool.query(`CREATE TABLE IF NOT EXISTS documents_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);
+
+    // Table sanctions élèves
+    await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), created_at TIMESTAMP DEFAULT NOW());`);
+
     // Colonnes additionnelles classes
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS actif BOOLEAN DEFAULT true`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS annee_scolaire VARCHAR(20)`);
