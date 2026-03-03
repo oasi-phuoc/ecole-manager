@@ -527,9 +527,10 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Actions', 'Statut', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
+              {['Actions', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
+              <th style={{ ...s.th, textAlign: 'center' }}>Statut</th>
               <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
             </tr>
           </thead>
@@ -542,22 +543,23 @@ export default function Notes() {
                   <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>✏️</button>
                   {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
                 </td>
-                <td style={{ ...s.td, textAlign: 'center' }}>
-                  {(() => {
-                    const total = parseInt(ev.nb_eleves_classe) || 0;
-                    const dispenses = parseInt(ev.nb_dispenses) || 0;
-                    const saisies = parseInt(ev.nb_notes_saisies) || 0;
-                    const manquants = total - dispenses - saisies;
-                    if (manquants <= 0) return <span style={{ color: '#2e7d32', fontWeight: 700, fontSize: 16 }}>✓</span>;
-                    return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>{manquants} manq.</span>;
-                  })()}
-                </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
                 <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
                 <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
                 <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
                 <td style={s.td}>{ev.coefficient}</td>
+                <td style={{ ...s.td, textAlign: 'center' }}>
+                  {(() => {
+                    const total = parseInt(ev.nb_eleves_classe) || 0;
+                    const dispenses = parseInt(ev.nb_dispenses) || 0;
+                    const saisies = parseInt(ev.nb_notes_saisies) || 0;
+                    const manquants = total - dispenses - saisies;
+                    if (total === 0) return <span style={{ color: '#aaa', fontSize: 13 }}>—</span>;
+                    if (manquants <= 0) return <span style={{ color: '#2e7d32', fontWeight: 700, fontSize: 16 }}>✓</span>;
+                    return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>{manquants} manq.</span>;
+                  })()}
+                </td>
                 <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
                   {ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? fmtNote(parseFloat(ev.moyenne_classe)) : '—'}
                 </td>
