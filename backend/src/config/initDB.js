@@ -41,12 +41,37 @@ const initDB = async () => {
     // Table sanctions élèves
     await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), created_at TIMESTAMP DEFAULT NOW());`);
 
+    // Tables planning
+    await pool.query(`CREATE TABLE IF NOT EXISTS creneaux (id SERIAL PRIMARY KEY, jour VARCHAR(20), heure_debut TIME, heure_fin TIME, periode VARCHAR(50), ordre INTEGER);`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pools (id SERIAL PRIMARY KEY, nom VARCHAR(200) NOT NULL, site VARCHAR(200), couleur VARCHAR(20) DEFAULT '#6366f1', horaires TEXT, niveau VARCHAR(100));`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS disponibilites (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, disponible BOOLEAN DEFAULT true);`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pool_profs (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE);`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pool_classes (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE);`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pool_branches (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE);`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS classe_horaires (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, jour VARCHAR(20), periode VARCHAR(50));`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS affectations (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id), creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, UNIQUE(classe_id, creneau_id));`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS planning_branches (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, UNIQUE(classe_id, matiere_id, pool_id));`);
+
+    // Table observations élèves
+    await pool.query(`CREATE TABLE IF NOT EXISTS observations (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, titre VARCHAR(200), contenu TEXT, mesure_prise TEXT, intervention_responsable BOOLEAN DEFAULT false, demande_entretien BOOLEAN DEFAULT false, auteur_id INTEGER REFERENCES utilisateurs(id), created_at TIMESTAMP DEFAULT NOW());`);
+
+    // Table plan de classe
+    await pool.query(`CREATE TABLE IF NOT EXISTS plan_classe (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE UNIQUE, positions TEXT, updated_at TIMESTAMP);`);
+
     // Colonnes additionnelles classes
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS actif BOOLEAN DEFAULT true`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS annee_scolaire VARCHAR(20)`);
 
-    // Colonnes additionnelles pools
+    // Colonnes additionnelles pools (pour DBs existantes sans niveau)
     await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS niveau VARCHAR(100)`);
+
+    // Colonnes additionnelles matieres (branches)
+    await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS niveau VARCHAR(100)`);
+    await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS periodes_semaine INTEGER`);
+    await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS type_branche VARCHAR(50) DEFAULT 'principale'`);
+
+    // Colonnes additionnelles evaluations
+    await pool.query(`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS points_max DECIMAL(4,2) DEFAULT 30`);
 
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
