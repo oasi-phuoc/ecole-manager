@@ -165,7 +165,7 @@ export default function Notes() {
         points: avecPoints && e.points !== '' ? parseFloat(e.points) : null,
         valeur: avecPoints
           ? (e.points !== '' ? calculerNote(e.points, evaluationOuverte.points_max) : null)
-          : (e.note !== '' ? parseFloat(e.note) : null),
+          : (e.note !== '' ? Math.min(parseFloat(e.note), 6) : null),
         absent: e.absent,
         dispense: e.dispense,
         commentaire: e.commentaire
@@ -266,7 +266,7 @@ export default function Notes() {
                         <input style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
                           type="number" min="1" max="6" step="0.1"
                           value={eleve.note} placeholder="—"
-                          onChange={ev => { const c = [...elevesNotes]; c[i].note = ev.target.value; setElevesNotes(c); }} />
+                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; c[i].note = v; setElevesNotes(c); }} />
                       )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
