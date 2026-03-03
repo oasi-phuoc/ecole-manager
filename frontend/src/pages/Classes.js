@@ -109,7 +109,7 @@ export default function Classes() {
   const [docsEleve, setDocsEleve] = useState(null);
   const [eleveDocs, setEleveDocs] = useState([]);
   const [docsEleveLoading, setDocsEleveLoading] = useState(false);
-  const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'Certificat' });
+  const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'CV' });
 
   const [showSanctions, setShowSanctions] = useState(false);
   const [sanctionsEleve, setSanctionsEleve] = useState(null);
@@ -651,7 +651,7 @@ export default function Classes() {
                 <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
                   <select style={{...s.inp,width:'auto',padding:'7px 10px'}} value={uploadEleveForm.type} onChange={e => setUploadEleveForm({type:e.target.value})}>
-                    {['Certificat','Justification','Bulletin','Convention','Autorisation','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                    {['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
                     📎 Choisir un fichier
