@@ -103,6 +103,7 @@ export default function Notes() {
       setElevesNotes(res.data.eleves.map(e => ({
         ...e,
         points: e.points !== null ? String(parseFloat(e.points)) : '',
+        note: e.valeur !== null ? String(parseFloat(e.valeur)) : '',
         absent: e.absent || false,
         dispense: e.dispense || false,
         commentaire: e.commentaire || ''
@@ -127,10 +128,13 @@ export default function Notes() {
 
   const handleSauvegarderNotes = async () => {
     try {
+      const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
       const notes = elevesNotes.map(e => ({
         eleve_id: e.id,
-        points: e.points !== '' ? parseFloat(e.points) : null,
-        valeur: e.points !== '' ? calculerNote(e.points, evaluationOuverte.points_max) : null,
+        points: avecPoints && e.points !== '' ? parseFloat(e.points) : null,
+        valeur: avecPoints
+          ? (e.points !== '' ? calculerNote(e.points, evaluationOuverte.points_max) : null)
+          : (e.note !== '' ? parseFloat(e.note) : null),
         absent: e.absent,
         dispense: e.dispense,
         commentaire: e.commentaire
@@ -150,11 +154,21 @@ export default function Notes() {
   };
 
   const getMoyenneClasse = () => {
-    const valides = elevesNotes.filter(e => !e.absent && !e.dispense && e.points !== '');
-    if (valides.length === 0) return '—';
-    const notes = valides.map(e => calculerNote(e.points, evaluationOuverte.points_max)).filter(n => n !== null);
-    if (notes.length === 0) return '—';
-    return Math.round(notes.reduce((a, n) => a + n, 0) / notes.length * 10) / 10;
+    const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
+    const valides = elevesNotes.filter(e => !e.absent && !e.dispense);
+    if (avecPoints) {
+      const actifs = valides.filter(e => e.points !== '');
+      if (actifs.length === 0) return '—';
+      const notes = actifs.map(e => calculerNote(e.points, evaluationOuverte.points_max)).filter(n => n !== null);
+      if (notes.length === 0) return '—';
+      return Math.round(notes.reduce((a, n) => a + n, 0) / notes.length * 10) / 10;
+    } else {
+      const actifs = valides.filter(e => e.note !== '');
+      if (actifs.length === 0) return '—';
+      const notes = actifs.map(e => parseFloat(e.note)).filter(n => !isNaN(n));
+      if (notes.length === 0) return '—';
+      return Math.round(notes.reduce((a, n) => a + n, 0) / notes.length * 10) / 10;
+    }
   };
 
   const handleImprimer = () => { window.print(); };
@@ -168,7 +182,7 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => { setVue('evaluations'); chargerEvaluationsId(classeSelectionnee, matiereSelectionnee); }}>← Retour</button>
           <div style={{ flex: 1 }}>
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
-            <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type} • Points max : {evaluationOuverte.points_max} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
+            <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${evaluationOuverte.points_max}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
           <div style={s.moyenneBox}>
             <div style={s.moyenneLabel}>Moyenne classe</div>
@@ -184,7 +198,9 @@ export default function Notes() {
               <tr style={s.theadRow}>
                 <th style={s.th}>Nom</th>
                 <th style={s.th}>Prénom</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Points /{evaluationOuverte.points_max}</th>
+                {evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0
+                  ? <th style={{ ...s.th, textAlign: 'center' }}>Points /{evaluationOuverte.points_max}</th>
+                  : null}
                 <th style={{ ...s.th, textAlign: 'center' }}>Note /6</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Absent</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Dispensé</th>
@@ -193,28 +209,41 @@ export default function Notes() {
             </thead>
             <tbody>
               {elevesNotes.map((eleve, i) => {
-                const note = calculerNote(eleve.points, evaluationOuverte.points_max);
+                const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
+                const note = avecPoints ? calculerNote(eleve.points, evaluationOuverte.points_max) : null;
+                const noteDirecte = !avecPoints && eleve.note !== '' ? parseFloat(eleve.note) : null;
                 return (
                   <tr key={eleve.id} style={{ ...s.tr, background: eleve.absent ? '#fff8f8' : eleve.dispense ? '#f8f8ff' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={s.td}><b>{eleve.nom}</b></td>
                     <td style={s.td}>{eleve.prenom}</td>
+                    {avecPoints ? (
+                      <td style={{ ...s.td, textAlign: 'center' }}>
+                        <input style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
+                          value={eleve.points} disabled={eleve.absent || eleve.dispense}
+                          onChange={ev => { const c = [...elevesNotes]; c[i].points = ev.target.value; setElevesNotes(c); }} />
+                      </td>
+                    ) : null}
                     <td style={{ ...s.td, textAlign: 'center' }}>
-                      <input style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
-                        value={eleve.points} disabled={eleve.absent || eleve.dispense}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].points = ev.target.value; setElevesNotes(c); }} />
-                    </td>
-                    <td style={{ ...s.td, textAlign: 'center' }}>
-                      <span style={{ fontWeight: 700, fontSize: 16, color: eleve.absent || eleve.dispense ? '#888' : note !== null ? (note >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
-                        {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : note !== null ? parseFloat(note).toFixed(1) + '/6' : '—'}
-                      </span>
+                      {avecPoints ? (
+                        <span style={{ fontWeight: 700, fontSize: 16, color: eleve.absent || eleve.dispense ? '#888' : note !== null ? (note >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
+                          {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : note !== null ? parseFloat(note).toFixed(1) + '/6' : '—'}
+                        </span>
+                      ) : eleve.absent || eleve.dispense ? (
+                        <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
+                      ) : (
+                        <input style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
+                          type="number" min="1" max="6" step="0.1"
+                          value={eleve.note} placeholder="—"
+                          onChange={ev => { const c = [...elevesNotes]; c[i].note = ev.target.value; setElevesNotes(c); }} />
+                      )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
                       <input type="checkbox" checked={eleve.absent} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].absent = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].dispense = false; } setElevesNotes(c); }} />
+                        onChange={ev => { const c = [...elevesNotes]; c[i].absent = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].dispense = false; } setElevesNotes(c); }} />
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
                       <input type="checkbox" checked={eleve.dispense} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].dispense = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].absent = false; } setElevesNotes(c); }} />
+                        onChange={ev => { const c = [...elevesNotes]; c[i].dispense = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].absent = false; } setElevesNotes(c); }} />
                     </td>
                     <td style={s.td}>
                       <input style={s.commentInput} type="text" placeholder="Remarque..." value={eleve.commentaire}
@@ -481,7 +510,7 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Désignation', 'Date', 'Type', 'Pts max', 'Coef.', 'Saisies', 'Actions'].map(h => (
+              {['Actions', 'Désignation', 'Date', 'Type', 'Pts max', 'Coef.', 'Moyenne'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
             </tr>
@@ -491,19 +520,17 @@ export default function Notes() {
               <tr><td colSpan="7" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                <td style={s.td}>
+                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>✏️</button>
+                  {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
+                </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
                 <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
-                <td style={s.td}>{ev.points_max}</td>
+                <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
                 <td style={s.td}>{ev.coefficient}</td>
-                <td style={s.td}>
-                  <span style={{ ...s.typeBadge, background: ev.nb_notes > 0 ? '#d1fae5' : '#fef9c3', color: ev.nb_notes > 0 ? '#065f46' : '#92400e' }}>
-                    {ev.nb_notes} élève(s)
-                  </span>
-                </td>
-                <td style={s.td}>
-                  <button style={s.btnOuvrir} onClick={() => ouvrirEvaluation(ev)}>📋 Saisir</button>
-                  {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
+                <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe !== null ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                  {ev.moyenne_classe !== null ? parseFloat(ev.moyenne_classe).toFixed(1) + '/6' : '—'}
                 </td>
               </tr>
             ))}

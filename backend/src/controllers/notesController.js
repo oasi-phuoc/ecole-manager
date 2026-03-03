@@ -8,7 +8,8 @@ const getEvaluations = async (req, res) => {
         m.nom as matiere, m.id as matiere_id,
         c.nom as classe,
         u.nom as prof_nom, u.prenom as prof_prenom,
-        COUNT(n.id) as nb_notes
+        COUNT(n.id) as nb_notes,
+        ROUND(AVG(CASE WHEN n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL THEN n.valeur END)::numeric, 1) as moyenne_classe
       FROM evaluations ev
       JOIN matieres m ON ev.matiere_id = m.id
       JOIN classes c ON ev.classe_id = c.id
