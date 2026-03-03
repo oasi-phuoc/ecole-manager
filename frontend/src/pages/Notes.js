@@ -336,7 +336,17 @@ export default function Notes() {
 
     return (
       <div style={s.page}>
-        <style>{`@media print { .no-print { display: none !important; } }`}</style>
+        <style>{`
+          @media print {
+            .no-print { display: none !important; }
+            @page { size: A4 landscape; margin: 8mm; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { margin: 0; font-size: 9px; }
+            th, td { font-size: 9px !important; padding: 3px 5px !important; }
+            h3 { font-size: 11px !important; margin: 0 0 6px 0 !important; }
+            div[class] { box-shadow: none !important; }
+          }
+        `}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📊 Vue générale — {classeNom}</h2>
@@ -378,7 +388,9 @@ export default function Notes() {
                   <th style={{ ...s.th, minWidth: 100 }}>Nom</th>
                   <th style={{ ...s.th, minWidth: 80 }}>Prénom</th>
                   {modeMatieres.map(m => (
-                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', minWidth: 80 }}>{m.matiere_nom}</th>
+                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', width: 40, padding: '0 4px 8px 4px', verticalAlign: 'bottom' }}>
+                      <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', height: 100, display: 'flex', alignItems: 'center' }}>{m.matiere_nom}</div>
+                    </th>
                   ))}
                   <th style={{ ...s.th, textAlign: 'center' }}>Moy. gén.</th>
                 </tr>
@@ -720,6 +732,7 @@ export default function Notes() {
           </div>
         )}
 
+        <div style={s.tblWrap}>
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
@@ -764,6 +777,7 @@ export default function Notes() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     );
   }
@@ -776,6 +790,7 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📚 Matières — {classeNom}</h2>
         </div>
+        <div style={s.tblWrap}>
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
@@ -805,6 +820,7 @@ export default function Notes() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     );
   }
@@ -816,6 +832,7 @@ export default function Notes() {
         <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.titre}>📝 Notes & Bulletins</h2>
       </div>
+      <div style={s.tblWrap}>
       <table style={s.tbl}>
         <thead>
           <tr style={s.theadRow}>
@@ -829,7 +846,7 @@ export default function Notes() {
             <tr><td colSpan="3" style={s.vide}>Aucune classe disponible</td></tr>
           ) : classes.map((cl, i) => (
             <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-              <td style={{ ...s.td, fontWeight: 700, color: '#0f172a', fontSize: 15 }}>{cl.nom}</td>
+              <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{cl.nom}</td>
               <td style={s.td}>{cl.niveau || '—'}</td>
               <td style={s.td}>
                 <button style={s.btnEdit} onClick={() => ouvrirClasse(cl)}>📝 Évaluations</button>
@@ -846,56 +863,58 @@ export default function Notes() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
 
 const s = {
-  page: { padding: 20, background: '#f8fafc', minHeight: '100vh' },
-  header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20, flexWrap: 'wrap' },
-  btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
-  titre: { fontSize: 24, fontWeight: 700, flex: 1 },
-  evalInfo: { fontSize: 13, color: '#888', marginTop: 3 },
-  select: { padding: 10, border: '2px solid #e0e0e0', borderRadius: 8, fontSize: 14 },
-  moyenneBox: { background: 'white', padding: '10px 20px', borderRadius: 12, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  moyenneLabel: { fontSize: 12, color: '#888' },
-  moyenneValeur: { fontSize: 24, fontWeight: 700, color: '#6366f1' },
-  btnSauver: { padding: '12px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  btnImprimer: { padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  successMsg: { background: '#d1fae5', color: '#065f46', padding: '12px 20px', borderRadius: 8, marginBottom: 15, fontWeight: 600 },
-  tableContainer: { background: 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  btnAjouter: { padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  tbl: { width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-  theadRow: { background: '#6366f1', color: 'white' },
-  th: { padding: '12px 16px', textAlign: 'left', fontSize: 13, fontWeight: 600 },
-  tr: { borderBottom: '1px solid #f0f0f0' },
-  td: { padding: '10px 16px', fontSize: 14 },
-  vide: { padding: 40, textAlign: 'center', color: '#888', background: 'white', borderRadius: 12 },
-  typeBadge: { background: '#e0e7ff', color: '#4338ca', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 },
-  btnOuvrir: { padding: '6px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, marginRight: 8 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 },
-  btnEdit: { padding: '5px 12px', background: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
-  badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 },
-  noteInput: { width: 80, padding: 8, border: '2px solid #e0e0e0', borderRadius: 8, fontSize: 16, fontWeight: 700, textAlign: 'center' },
-  commentInput: { padding: '6px 10px', border: '1px solid #e0e0e0', borderRadius: 6, fontSize: 13, width: 180 },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 },
+  page: { padding: '24px 28px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
+  btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
+  titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
+  evalInfo: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  select: { padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white', color: '#374151' },
+  moyenneBox: { background: 'white', padding: '10px 18px', borderRadius: 10, textAlign: 'center', border: '1px solid #e2e8f0' },
+  moyenneLabel: { fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  moyenneValeur: { fontSize: 22, fontWeight: 700, color: '#6366f1' },
+  btnSauver: { padding: '8px 18px', background: '#10b981', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  btnImprimer: { padding: '7px 14px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
+  tableContainer: { overflowX: 'auto', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tblWrap: { overflowX: 'auto', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
+  theadRow: { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  tr: { borderBottom: '1px solid #f8fafc' },
+  td: { padding: '10px 14px', fontSize: 13, color: '#374151' },
+  vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },
+  typeBadge: { background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
+  btnOuvrir: { padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, marginRight: 6 },
+  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 },
+  btnEdit: { padding: '4px 10px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
+  badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
+  noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },
+  commentInput: { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: 160 },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   formChamp: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#555' },
-  input: { padding: 10, border: '2px solid #e0e0e0', borderRadius: 8, fontSize: 14 },
-  formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
-  btnAnnuler: { padding: '10px 20px', background: '#f5f5f5', border: 'none', borderRadius: 8, cursor: 'pointer' },
-  card: { background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'white', borderRadius: 16, padding: 30, maxWidth: 560, width: '95%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' },
-  infoBox: { background: '#f1f5f9', borderRadius: 8, padding: '10px 16px', minWidth: 160 },
-  infoLabel: { fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
-  infoValue: { fontSize: 14, fontWeight: 700, color: '#0f172a' },
-  bulletinMatiereTitre: { display: 'flex', alignItems: 'center', background: '#e0e7ff', padding: '10px 16px', borderRadius: 8, marginBottom: 8, fontWeight: 600 },
-  moyenneGeneraleBox: { background: '#e0e7ff', padding: '16px 20px', borderRadius: 12, marginTop: 20, fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 },
-  bulletinPDF: { background: 'white', padding: 30, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', maxWidth: 800, margin: '0 auto' },
-  bulletinPDFHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 20, borderBottom: '2px solid #e0e0e0' },
+  label: { fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#64748b' },
+  input: { padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#0f172a' },
+  formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 },
+  btnAnnuler: { padding: '8px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' },
+  card: { background: 'white', borderRadius: 12, padding: 18, border: '1px solid #f1f5f9' },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'white', borderRadius: 14, padding: 28, maxWidth: 520, width: '95%', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' },
+  infoBox: { background: '#f8fafc', borderRadius: 8, padding: '8px 14px', minWidth: 140, border: '1px solid #f1f5f9' },
+  infoLabel: { fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 },
+  infoValue: { fontSize: 13, fontWeight: 700, color: '#0f172a' },
+  bulletinMatiereTitre: { display: 'flex', alignItems: 'center', background: '#f8fafc', padding: '8px 14px', borderRadius: 8, marginBottom: 6, fontWeight: 600, border: '1px solid #e2e8f0' },
+  moyenneGeneraleBox: { background: '#f1f5f9', padding: '14px 18px', borderRadius: 10, marginTop: 18, fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e2e8f0' },
+  bulletinPDF: { background: 'white', padding: 30, borderRadius: 12, maxWidth: 800, margin: '0 auto', border: '1px solid #e2e8f0' },
+  bulletinPDFHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' },
   signatures: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginTop: 40 },
   signatureBox: { textAlign: 'center' },
-  signatureLine: { height: 1, background: '#333', marginBottom: 8 },
-  signatureLabel: { fontSize: 12, color: '#555' },
+  signatureLine: { height: 1, background: '#94a3b8', marginBottom: 8 },
+  signatureLabel: { fontSize: 12, color: '#64748b' },
 };
