@@ -692,7 +692,7 @@ export default function Classes() {
 
       {showSanctions && sanctionsEleve && (
         <div style={s.overlay}>
-          <div style={{...s.modal, maxWidth:860, width:'100%', maxHeight:'90vh', overflowY:'auto'}}>
+          <div style={{...s.modal, width:'95vw', maxWidth:'95vw', maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>⚠️ Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
               <button style={s.btnClose} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
@@ -709,27 +709,26 @@ export default function Classes() {
               {ECHELLES.map(echelle => (
               <div key={echelle.id} style={{marginBottom:28}}>
                 <div style={{fontSize:13,fontWeight:700,color:'#3730a3',background:'#e0e7ff',padding:'6px 14px',borderRadius:6,marginBottom:10}}>{echelle.titre}</div>
-                <div style={{overflowX:'auto'}}>
-                  <table style={{borderCollapse:'collapse',width:'100%',fontSize:11}}>
+                <table style={{borderCollapse:'collapse',width:'100%',fontSize:11,tableLayout:'fixed'}}>
                     <thead>
                       <tr>
-                        <th style={{padding:'6px 10px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'left',fontWeight:700,color:'#64748b',minWidth:130}}>Niveau</th>
+                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'left',fontWeight:700,color:'#64748b',width:'13%',whiteSpace:'nowrap'}}>Niveau</th>
                         {echelle.infractions.map(inf => (
-                          <th key={inf} style={{padding:'6px 10px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',minWidth:100}}>{inf}</th>
+                          <th key={inf} style={{padding:'5px 6px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',wordBreak:'break-word',lineHeight:1.3}}>{inf}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {echelle.niveaux.map(niveau => (
                         <tr key={niveau}>
-                          <td style={{padding:'6px 10px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa'}}>{niveau}</td>
+                          <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'nowrap',fontSize:10}}>{niveau}</td>
                           {echelle.infractions.map(infraction => {
                             const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau);
                             const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau;
                             return (
-                              <td key={infraction} style={{padding:'6px 8px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'top'}}>
+                              <td key={infraction} style={{padding:'4px 4px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'middle'}}>
                                 {isPending ? (
-                                  <div style={{display:'flex',flexDirection:'column',gap:4,minWidth:120,textAlign:'left'}}>
+                                  <div style={{display:'flex',flexDirection:'column',gap:3,textAlign:'left'}}>
                                     <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
                                       📅 {pendingCell.date_sanction ? new Date(pendingCell.date_sanction+'T00:00:00').toLocaleDateString('fr-CH') : ''}
                                     </div>
@@ -767,7 +766,6 @@ export default function Classes() {
                       ))}
                     </tbody>
                   </table>
-                </div>
                 {echelle.note && (
                   <div style={{fontSize:11,color:'#64748b',fontStyle:'italic',marginTop:8,paddingLeft:4}}>{echelle.note}</div>
                 )}
