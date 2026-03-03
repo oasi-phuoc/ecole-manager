@@ -511,7 +511,7 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Actions', 'Désignation', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
+              {['Actions', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
               <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
@@ -519,7 +519,7 @@ export default function Notes() {
           </thead>
           <tbody>
             {evaluations.length === 0 ? (
-              <tr><td colSpan="7" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
+              <tr><td colSpan="8" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                 <td style={s.td}>
@@ -527,6 +527,7 @@ export default function Notes() {
                   {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
+                <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
                 <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
                 <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
                 <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
