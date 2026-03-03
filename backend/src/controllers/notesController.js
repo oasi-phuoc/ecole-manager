@@ -62,11 +62,13 @@ const getNotesEvaluation = async (req, res) => {
     if (evaluation.rows.length === 0) return res.status(404).json({ message: 'Evaluation non trouvee' });
 
     const eleves = await pool.query(`
-      SELECT e.id, u.nom, u.prenom
+      SELECT e.id,
+        COALESCE(e.nom, u.nom) as nom,
+        COALESCE(e.prenom, u.prenom) as prenom
       FROM eleves e
-      JOIN utilisateurs u ON e.utilisateur_id = u.id
-      WHERE e.classe_id = $1 AND e.statut = 'actif'
-      ORDER BY u.nom, u.prenom
+      LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
+      WHERE e.classe_id = $1 AND LOWER(e.statut) = 'actif'
+      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
     `, [evaluation.rows[0].classe_id]);
 
     const notes = await pool.query('SELECT * FROM notes WHERE evaluation_id = $1', [eval_id]);
