@@ -117,4 +117,40 @@ const envoyerAcces = async (req, res) => {
   }
 };
 
-module.exports = { getProfs, getProf, creerProf, modifierProf, supprimerProf, envoyerAcces };
+const getDocuments = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, nom, type, taille, created_at FROM documents_profs WHERE prof_id=$1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const uploadDocument = async (req, res) => {
+  const { nom, type, contenu, taille } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO documents_profs (prof_id, nom, type, contenu, taille) VALUES ($1,$2,$3,$4,$5) RETURNING id, nom, type, taille, created_at',
+      [req.params.id, nom, type || 'Autre', contenu, taille || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const telechargerDocument = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT nom, contenu FROM documents_profs WHERE id=$1 AND prof_id=$2', [req.params.docId, req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Document non trouvé' });
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const supprimerDocument = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM documents_profs WHERE id=$1 AND prof_id=$2', [req.params.docId, req.params.id]);
+    res.json({ message: 'Document supprimé' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+module.exports = { getProfs, getProf, creerProf, modifierProf, supprimerProf, envoyerAcces, getDocuments, uploadDocument, telechargerDocument, supprimerDocument };

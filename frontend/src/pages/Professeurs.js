@@ -19,7 +19,54 @@ export default function Professeurs() {
   const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'' });
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
   const [emailEnvoi, setEmailEnvoi] = useState({});
+  const [showDocs, setShowDocs] = useState(false);
+  const [docsProf, setDocsProf] = useState(null);
+  const [profDocs, setProfDocs] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploadForm, setUploadForm] = useState({ type: 'CV' });
   const navigate = useNavigate();
+
+  const ouvrirDocuments = async (prof) => {
+    setDocsProf(prof);
+    setShowDocs(true);
+    setDocsLoading(true);
+    try {
+      const r = await axios.get(API+'/profs/'+prof.id+'/documents', {headers});
+      setProfDocs(r.data);
+    } catch(err) { setProfDocs([]); }
+    setDocsLoading(false);
+  };
+
+  const uploadDocument = async (file, type) => {
+    if (file.size > 5*1024*1024) { alert('Fichier trop grand (max 5MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        await axios.post(API+'/profs/'+docsProf.id+'/documents', {
+          nom: file.name, type, contenu: e.target.result, taille: file.size
+        }, {headers});
+        const r = await axios.get(API+'/profs/'+docsProf.id+'/documents', {headers});
+        setProfDocs(r.data);
+      } catch(err) { alert('Erreur upload: '+err.message); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const telechargerDocument = async (doc) => {
+    try {
+      const r = await axios.get(API+'/profs/'+docsProf.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const a = document.createElement('a');
+      a.href = r.data.contenu;
+      a.download = r.data.nom;
+      a.click();
+    } catch(err) { alert('Erreur téléchargement'); }
+  };
+
+  const supprimerDocument = async (docId) => {
+    if (!window.confirm('Supprimer ce document ?')) return;
+    await axios.delete(API+'/profs/'+docsProf.id+'/documents/'+docId, {headers});
+    setProfDocs(prev => prev.filter(d => d.id !== docId));
+  };
 
   const envoyerAccesEmail = async (profId) => {
     setEmailEnvoi(prev => ({...prev, [profId]: 'loading'}));
@@ -323,11 +370,63 @@ export default function Professeurs() {
         </div>
       )}
 
+      {showDocs && docsProf && (
+        <div style={s.overlay}>
+          <div style={{...s.modal, maxWidth:600}}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {docsProf.nom}</h3>
+              <button style={s.btnClose} onClick={() => setShowDocs(false)}>✕</button>
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
+              <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                <select style={{...s.inp, width:'auto', padding:'7px 10px'}} value={uploadForm.type} onChange={e => setUploadForm({type:e.target.value})}>
+                  {['CV','Diplôme','Contrat','Certificat','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
+                  📎 Choisir un fichier
+                  <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={e => { if(e.target.files[0]) uploadDocument(e.target.files[0], uploadForm.type); e.target.value=''; }} />
+                </label>
+                <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
+              </div>
+            </div>
+            <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
+              {docsLoading ? (
+                <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
+              ) : profDocs.length === 0 ? (
+                <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour ce professeur</div>
+              ) : profDocs.map(doc => (
+                <div key={doc.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,border:'1px solid #e2e8f0',marginBottom:8,background:'#f8fafc'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{fontSize:20}}>
+                      {doc.nom.endsWith('.pdf')?'📄':doc.nom.match(/\.(jpg|jpeg|png)$/i)?'🖼️':'📝'}
+                    </span>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13,color:'#1e293b'}}>{doc.nom}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>
+                        <span style={{background:'#e0e7ff',color:'#3730a3',padding:'1px 7px',borderRadius:99,fontWeight:600,marginRight:6}}>{doc.type}</span>
+                        {doc.taille ? Math.round(doc.taille/1024)+'KB · ' : ''}
+                        {new Date(doc.created_at).toLocaleDateString('fr-CH')}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={() => telechargerDocument(doc)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Télécharger">⬇️</button>
+                    {isAdmin() && <button onClick={() => supprimerDocument(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Supprimer">🗑️</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Email','Naissance','Téléphone','Statut','Créé le'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Nom','Prénom','Email','Téléphone','Naissance','Statut','Créé le'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
@@ -351,6 +450,7 @@ export default function Professeurs() {
                 <td style={s.td}>{p.created_at?new Date(p.created_at).toLocaleDateString('fr-CH'):'—'}</td>
                 {isAdmin() && (
                   <td style={s.td}>
+                    <button style={s.btnEdit} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button>
                     <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
                     <button
                       onClick={() => envoyerAccesEmail(p.id)}
