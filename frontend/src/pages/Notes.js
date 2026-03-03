@@ -186,12 +186,13 @@ export default function Notes() {
           </div>
           <div style={s.moyenneBox}>
             <div style={s.moyenneLabel}>Moyenne classe</div>
-            <div style={s.moyenneValeur}>{getMoyenneClasse()}/6</div>
+            <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : m + '/6'; })()}</div>
           </div>
           <button style={{ ...s.btnSauver, opacity: peutModifierNotes() ? 1 : 0.4, cursor: peutModifierNotes() ? 'pointer' : 'not-allowed' }}
             disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>💾 Enregistrer</button>
         </div>
         {sauvegarde && <div style={s.successMsg}>✅ Notes enregistrées !</div>}
+        {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
           <table style={s.tbl}>
             <thead>
@@ -199,9 +200,9 @@ export default function Notes() {
                 <th style={s.th}>Nom</th>
                 <th style={s.th}>Prénom</th>
                 {evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0
-                  ? <th style={{ ...s.th, textAlign: 'center' }}>Points /{evaluationOuverte.points_max}</th>
+                  ? <th style={{ ...s.th, textAlign: 'center' }}>Points</th>
                   : null}
-                <th style={{ ...s.th, textAlign: 'center' }}>Note /6</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Note</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Absent</th>
                 <th style={{ ...s.th, textAlign: 'center' }}>Dispensé</th>
                 <th style={s.th}>Remarques</th>
@@ -510,9 +511,10 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Actions', 'Désignation', 'Date', 'Type', 'Pts max', 'Coef.', 'Moyenne'].map(h => (
+              {['Actions', 'Désignation', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
+              <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
             </tr>
           </thead>
           <tbody>
@@ -529,8 +531,8 @@ export default function Notes() {
                 <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
                 <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
                 <td style={s.td}>{ev.coefficient}</td>
-                <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe !== null ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                  {ev.moyenne_classe !== null ? parseFloat(ev.moyenne_classe).toFixed(1) + '/6' : '—'}
+                <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                  {ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? parseFloat(ev.moyenne_classe).toFixed(1) + '/6' : '—'}
                 </td>
               </tr>
             ))}
