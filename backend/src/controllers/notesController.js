@@ -45,14 +45,27 @@ const creerEvaluation = async (req, res) => {
 
 const modifierEvaluation = async (req, res) => {
   const { nom, date, type, coefficient, points_max } = req.body;
+  const pm = points_max != null && points_max !== '' ? parseFloat(points_max) : null;
+  const client = await pool.connect();
   try {
-    await pool.query(
+    await client.query('BEGIN');
+    await client.query(
       'UPDATE evaluations SET nom=$1, date=$2, type=$3, coefficient=$4, points_max=$5 WHERE id=$6',
-      [nom, date || null, type || 'Ecrit', coefficient || 1, points_max != null && points_max !== '' ? points_max : null, req.params.id]
+      [nom, date || null, type || 'Ecrit', coefficient || 1, pm, req.params.id]
     );
+    if (pm && pm > 0) {
+      await client.query(`
+        UPDATE notes SET valeur = ROUND(LEAST((points / $1) * 5 + 1, 6)::numeric, 1)
+        WHERE evaluation_id = $2 AND points IS NOT NULL AND absent = false AND dispense = false
+      `, [pm, req.params.id]);
+    }
+    await client.query('COMMIT');
     res.json({ message: 'Evaluation modifiee' });
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  } finally {
+    client.release();
   }
 };
 
