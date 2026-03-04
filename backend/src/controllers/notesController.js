@@ -219,9 +219,11 @@ const getRapportClasse = async (req, res) => {
 
     const evalsRes = await pool.query(`
       SELECT ev.id, ev.nom, ev.date, ev.type, ev.coefficient, ev.points_max,
-        m.id as matiere_id, m.nom as matiere_nom
+        m.id as matiere_id, m.nom as matiere_nom,
+        u.nom as prof_nom, u.prenom as prof_prenom
       FROM evaluations ev
       JOIN matieres m ON ev.matiere_id = m.id
+      LEFT JOIN utilisateurs u ON ev.prof_id = u.id
       WHERE ev.classe_id = $1
       ORDER BY m.nom, ev.date
     `, [classe_id]);
@@ -242,6 +244,7 @@ const getRapportClasse = async (req, res) => {
       matiereMap[ev.matiere_id].evaluations.push({
         id: ev.id, nom: ev.nom, date: ev.date, type: ev.type,
         coefficient: parseFloat(ev.coefficient),
+        prof_nom: ev.prof_nom, prof_prenom: ev.prof_prenom,
         notes: elevesRes.rows.map(e => {
           const n = evalNotes.find(n => n.eleve_id === e.id);
           return { eleve_id: e.id, valeur: n ? n.valeur : null, absent: n ? n.absent : null, dispense: n ? n.dispense : null };

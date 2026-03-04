@@ -385,8 +385,8 @@ export default function Notes() {
             <table style={{ ...s.tbl, fontSize: 12 }}>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={{ ...s.th, minWidth: 100 }}>Nom</th>
-                  <th style={{ ...s.th, minWidth: 80 }}>Prénom</th>
+                  <th style={s.th}>Nom</th>
+                  <th style={s.th}>Prénom</th>
                   {modeMatieres.map(m => (
                     <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', width: 40, padding: '0 4px 8px 4px', verticalAlign: 'bottom' }}>
                       <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', height: 100, display: 'flex', alignItems: 'center' }}>{m.matiere_nom}</div>
@@ -437,10 +437,10 @@ export default function Notes() {
             <table style={{ ...s.tbl, fontSize: 12 }}>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={{ ...s.th, minWidth: 100 }}>Nom</th>
-                  <th style={{ ...s.th, minWidth: 80 }}>Prénom</th>
+                  <th style={s.th}>Nom</th>
+                  <th style={s.th}>Prénom</th>
                   {matiereRapport.evaluations.map(ev => (
-                    <th key={ev.id} style={{ ...s.th, textAlign: 'center', minWidth: 90 }}>
+                    <th key={ev.id} style={{ ...s.th, textAlign: 'center' }}>
                       <div>{ev.nom}</div>
                       <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{ev.type} • Coef.{ev.coefficient}</div>
                     </th>
@@ -495,6 +495,7 @@ export default function Notes() {
                       <thead>
                         <tr style={s.theadRow}>
                           <th style={s.th}>Évaluation</th>
+                          <th style={s.th}>Professeur</th>
                           <th style={s.th}>Date</th>
                           <th style={s.th}>Type</th>
                           <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
@@ -509,6 +510,7 @@ export default function Notes() {
                           return (
                             <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
                               <td style={s.td}>{ev.nom}</td>
+                              <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
                               <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
                               <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
                               <td style={{ ...s.td, textAlign: 'center' }}>{ev.coefficient}</td>
