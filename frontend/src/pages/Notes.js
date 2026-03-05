@@ -69,6 +69,7 @@ export default function Notes() {
   const [rapportMatiereId, setRapportMatiereId] = useState('');
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [bulletinMode, setBulletinMode] = useState('tous');
+  const [bulletinOnglet, setBulletinOnglet] = useState('criteres');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
@@ -695,108 +696,123 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📄 Bulletin — {classeNom}</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[{ id: 'criteres', label: 'Critères de comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
+              <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: bulletinOnglet === t.id ? '#0ea5e9' : '#f1f5f9', color: bulletinOnglet === t.id ? 'white' : '#555' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {bulletinOnglet === 'criteres' && (
+          <>
+            <div className="no-print" style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>Titulaire : {titulaireNom}</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+                  Tout mettre au vert (10 critères)
+                </button>
+              </div>
+            </div>
+
+            <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
+              <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={s.theadRow}>
+                    <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
+                    {BULLETIN_CRITERES_LABELS.map((label, i) => (
+                      <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'justify', textJustify: 'inter-word', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
+                    ))}
+                    <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Absences</th>
+                    <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
+                    <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Retards</th>
+                    <th style={{ ...s.th, width: 120, textAlign: 'justify', textJustify: 'inter-word' }}>Remarques</th>
+                    <th style={{ ...s.th, width: 100, textAlign: 'center' }}>Validation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulletins.length === 0 ? (
+                    <tr><td colSpan={16} style={s.vide}>Aucun élève</td></tr>
+                  ) : bulletins.map((b, idx) => {
+                    const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
+                    const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+                    const presents = Number(st?.presents) || 0;
+                    const retards = Number(st?.retards) || 0;
+                    const absents = Number(st?.absents) || 0;
+                    const excuses = Number(st?.excuses) || 0;
+                    const conges = Number(st?.conges) || 0;
+                    const totalPeriodes = presents + absents + retards + excuses + conges;
+                    const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
+                    return (
+                      <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
+                        <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                          const key = 'c' + n;
+                          const val = cr[key] || '';
+                          const bg = val === 'vert' ? '#dcfce7' : val === 'orange' ? '#ffedd5' : val === 'rouge' ? '#fee2e2' : '#f8fafc';
+                          return (
+                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', background: bg, cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
+                              onClick={async () => {
+                                const next = cycleCouleur(val);
+                                await sauvegarderCriteres(b.eleve.id, { [key]: next });
+                              }}>
+                              {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
+                            </td>
+                          );
+                        })}
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.absents ?? '—'}</td>
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.retards ?? '—'}</td>
+                        <td style={s.td}>
+                          <input type="text"
+                            value={bulletinRemarqueEdit[b.eleve.id] !== undefined ? bulletinRemarqueEdit[b.eleve.id] : (cr.remarques || '')}
+                            style={{ width: '100%', padding: '4px 6px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6 }}
+                            onFocus={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: cr.remarques || '' }))}
+                            onChange={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: e.target.value }))}
+                            onBlur={async e => {
+                              const v = e.target.value;
+                              setBulletinRemarqueEdit(prev => { const p = { ...prev }; delete p[b.eleve.id]; return p; });
+                              if (v !== (cr.remarques || '')) await sauvegarderCriteres(b.eleve.id, { remarques: v });
+                            }}
+                            placeholder="Remarques"
+                          />
+                        </td>
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          <button type="button" style={{ padding: '4px 10px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.valide ? '#dcfce7' : 'white', color: cr.valide ? '#166534' : '#475569', fontWeight: 600 }}
+                            onClick={() => toggleValide(b.eleve.id)}>
+                            {cr.valide ? 'Bulletin validé' : 'Valider bulletin'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {bulletinOnglet === 'notes' && (
+          <div className="no-print" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
             {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
               <button key={m.id} onClick={() => setBulletinMode(m.id)}
                 style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
                 {m.label}
               </button>
             ))}
+            {bulletinMode === 'eleve' && (
+              <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
+                <option value="">-- Choisir un élève --</option>
+                {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
+              </select>
+            )}
+            <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
           </div>
-          {bulletinMode === 'eleve' && (
-            <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-              <option value="">-- Choisir un élève --</option>
-              {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
-            </select>
-          )}
-          <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
-        </div>
+        )}
 
-        <div className="no-print" style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>Titulaire : {titulaireNom}</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-              Tout mettre au vert (10 critères)
-            </button>
-          </div>
-        </div>
-
-        <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
-          <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
-            <thead>
-              <tr style={s.theadRow}>
-                <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
-                {BULLETIN_CRITERES_LABELS.map((label, i) => (
-                  <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'justify', textJustify: 'inter-word', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
-                ))}
-                <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Absences</th>
-                <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
-                <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Retards</th>
-                <th style={{ ...s.th, width: 120, textAlign: 'justify', textJustify: 'inter-word' }}>Remarques</th>
-                <th style={{ ...s.th, width: 100, textAlign: 'center' }}>Validation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bulletins.length === 0 ? (
-                <tr><td colSpan={16} style={s.vide}>Aucun élève</td></tr>
-              ) : bulletins.map((b, idx) => {
-                const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
-                const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
-                const presents = Number(st?.presents) || 0;
-                const retards = Number(st?.retards) || 0;
-                const absents = Number(st?.absents) || 0;
-                const excuses = Number(st?.excuses) || 0;
-                const conges = Number(st?.conges) || 0;
-                const totalPeriodes = presents + absents + retards + excuses + conges;
-                const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
-                return (
-                  <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
-                    <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
-                      const key = 'c' + n;
-                      const val = cr[key] || '';
-                      const bg = val === 'vert' ? '#dcfce7' : val === 'orange' ? '#ffedd5' : val === 'rouge' ? '#fee2e2' : '#f8fafc';
-                      return (
-                        <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', background: bg, cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
-                          onClick={async () => {
-                            const next = cycleCouleur(val);
-                            await sauvegarderCriteres(b.eleve.id, { [key]: next });
-                          }}>
-                          {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
-                        </td>
-                      );
-                    })}
-                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.absents ?? '—'}</td>
-                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
-                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.retards ?? '—'}</td>
-                    <td style={s.td}>
-                      <input type="text"
-                        value={bulletinRemarqueEdit[b.eleve.id] !== undefined ? bulletinRemarqueEdit[b.eleve.id] : (cr.remarques || '')}
-                        style={{ width: '100%', padding: '4px 6px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6 }}
-                        onFocus={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: cr.remarques || '' }))}
-                        onChange={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: e.target.value }))}
-                        onBlur={async e => {
-                          const v = e.target.value;
-                          setBulletinRemarqueEdit(prev => { const p = { ...prev }; delete p[b.eleve.id]; return p; });
-                          if (v !== (cr.remarques || '')) await sauvegarderCriteres(b.eleve.id, { remarques: v });
-                        }}
-                        placeholder="Remarques"
-                      />
-                    </td>
-                    <td style={{ ...s.td, textAlign: 'center' }}>
-                      <button type="button" style={{ padding: '4px 10px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.valide ? '#dcfce7' : 'white', color: cr.valide ? '#166534' : '#475569', fontWeight: 600 }}
-                        onClick={() => toggleValide(b.eleve.id)}>
-                        {cr.valide ? 'Bulletin validé' : 'Valider bulletin'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {bulletinsAImprimer.length > 0 && (
+        {bulletinOnglet === 'notes' && bulletinsAImprimer.length > 0 && (
           <div ref={printRef}>
             {bulletinsAImprimer.map((bulletin, bi) => {
               const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletin.eleve.id));

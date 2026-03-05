@@ -24,8 +24,10 @@ export default function Statistiques() {
   if (loading) return <div style={styles.loading}>⏳ Chargement des statistiques...</div>;
   if (!stats) return <div style={styles.loading}>❌ Erreur de chargement</div>;
 
-  const tauxPresence = stats.presences_aujourd.total > 0
-    ? Math.round((stats.presences_aujourd.presents / stats.presences_aujourd.total) * 100)
+  const presJour = stats.presences_aujourd || { presents: 0, absents: 0, retards: 0, total: 0 };
+  const paiements = stats.paiements || { encaisse: 0, en_attente: 0, en_retard: 0 };
+  const tauxPresence = Number(presJour.total) > 0
+    ? Math.round((Number(presJour.presents) / Number(presJour.total)) * 100)
     : null;
 
   return (
@@ -58,15 +60,15 @@ export default function Statistiques() {
         <div style={styles.col}>
           <div style={styles.sectionTitre}>✅ Présences aujourd'hui</div>
           <div style={styles.card}>
-            {stats.presences_aujourd.total == 0 ? (
+            {Number(presJour.total) === 0 ? (
               <div style={styles.vide}>Aucune présence saisie aujourd'hui</div>
             ) : (
               <>
                 <div style={styles.presenceGrid}>
                   {[
-                    { label: 'Présents', val: stats.presences_aujourd.presents, color: '#34a853', bg: '#e8f5e9' },
-                    { label: 'Absents', val: stats.presences_aujourd.absents, color: '#ea4335', bg: '#ffebee' },
-                    { label: 'Retards', val: stats.presences_aujourd.retards, color: '#fbbc04', bg: '#fff8e1' },
+                    { label: 'Présents', val: presJour.presents, color: '#34a853', bg: '#e8f5e9' },
+                    { label: 'Absents', val: presJour.absents, color: '#ea4335', bg: '#ffebee' },
+                    { label: 'Retards', val: presJour.retards, color: '#fbbc04', bg: '#fff8e1' },
                   ].map((p, i) => (
                     <div key={i} style={{ ...styles.presenceCard, background: p.bg }}>
                       <div style={{ ...styles.presenceVal, color: p.color }}>{p.val}</div>
@@ -93,9 +95,9 @@ export default function Statistiques() {
           <div style={styles.sectionTitre}>💰 Paiements</div>
           <div style={styles.card}>
             {[
-              { label: 'Encaissé', val: parseFloat(stats.paiements.encaisse).toFixed(2) + ' CHF', color: '#34a853', bg: '#e8f5e9' },
-              { label: 'En attente', val: parseFloat(stats.paiements.en_attente).toFixed(2) + ' CHF', color: '#fbbc04', bg: '#fff8e1' },
-              { label: 'En retard', val: parseFloat(stats.paiements.en_retard).toFixed(2) + ' CHF', color: '#ea4335', bg: '#ffebee' },
+              { label: 'Encaissé', val: parseFloat(paiements.encaisse || 0).toFixed(2) + ' CHF', color: '#34a853', bg: '#e8f5e9' },
+              { label: 'En attente', val: parseFloat(paiements.en_attente || 0).toFixed(2) + ' CHF', color: '#fbbc04', bg: '#fff8e1' },
+              { label: 'En retard', val: parseFloat(paiements.en_retard || 0).toFixed(2) + ' CHF', color: '#ea4335', bg: '#ffebee' },
             ].map((p, i) => (
               <div key={i} style={{ ...styles.paiementRow, background: p.bg }}>
                 <span style={styles.paiementLabel}>{p.label}</span>

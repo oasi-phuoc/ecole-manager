@@ -2,10 +2,18 @@ const pool = require('../config/database');
 
 const getStatistiques = async (req, res) => {
   try {
+    const safeQuery = async (sql, params = [], fallbackRows = []) => {
+      try {
+        return await pool.query(sql, params);
+      } catch (err) {
+        return { rows: fallbackRows };
+      }
+    };
+
     const isAdmin = req.user?.role === 'admin';
     let classesAffectees = [];
     if (!isAdmin) {
-      const classesRes = await pool.query(`
+      const classesRes = await safeQuery(`
         SELECT DISTINCT classe_id
         FROM (
           SELECT c.id as classe_id FROM classes c WHERE c.prof_principal_id = $1
@@ -21,29 +29,29 @@ const getStatistiques = async (req, res) => {
       classesAffectees = classesRes.rows.map(r => r.classe_id);
     }
 
-    const nbEleves = await pool.query("SELECT COUNT(*) FROM eleves WHERE statut='actif'");
-    const nbProfs = await pool.query("SELECT COUNT(*) FROM utilisateurs WHERE role='prof'");
-    const nbClasses = await pool.query("SELECT COUNT(*) FROM classes");
-    const nbBranches = await pool.query("SELECT COUNT(*) FROM matieres");
+    const nbEleves = await safeQuery("SELECT COUNT(*) FROM eleves WHERE statut='actif'", [], [{ count: 0 }]);
+    const nbProfs = await safeQuery("SELECT COUNT(*) FROM utilisateurs WHERE role='prof'", [], [{ count: 0 }]);
+    const nbClasses = await safeQuery("SELECT COUNT(*) FROM classes", [], [{ count: 0 }]);
+    const nbBranches = await safeQuery("SELECT COUNT(*) FROM matieres", [], [{ count: 0 }]);
 
-    const presencesAujourd = await pool.query(`
+    const presencesAujourd = await safeQuery(`
       SELECT
         COUNT(CASE WHEN statut='present' THEN 1 END) as presents,
         COUNT(CASE WHEN statut='absent' THEN 1 END) as absents,
         COUNT(CASE WHEN statut='retard' THEN 1 END) as retards,
         COUNT(*) as total
       FROM presences WHERE date = CURRENT_DATE
-    `);
+    `, [], [{ presents: 0, absents: 0, retards: 0, total: 0 }]);
 
-    const paiements = await pool.query(`
+    const paiements = await safeQuery(`
       SELECT
         COALESCE(SUM(CASE WHEN statut='paye' THEN montant END), 0) as encaisse,
         COALESCE(SUM(CASE WHEN statut='en_attente' THEN montant END), 0) as en_attente,
         COALESCE(SUM(CASE WHEN statut='en_retard' THEN montant END), 0) as en_retard
       FROM paiements
-    `);
+    `, [], [{ encaisse: 0, en_attente: 0, en_retard: 0 }]);
 
-    const moyennesParClasse = await pool.query(`
+    const moyennesParClasse = await safeQuery(`
       SELECT c.nom as classe,
         ROUND(AVG(n.valeur)::numeric, 2) as moyenne
       FROM notes n
@@ -52,9 +60,9 @@ const getStatistiques = async (req, res) => {
       WHERE n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL
       GROUP BY c.nom
       ORDER BY c.nom
-    `);
+    `, [], []);
 
-    const absencesParClasse = await pool.query(`
+    const absencesParClasse = await safeQuery(`
       SELECT c.nom as classe,
         COUNT(CASE WHEN p.statut='absent' THEN 1 END) as absents,
         COUNT(p.id) as total
@@ -63,33 +71,33 @@ const getStatistiques = async (req, res) => {
       JOIN classes c ON e.classe_id = c.id
       GROUP BY c.nom
       ORDER BY c.nom
-    `);
+    `, [], []);
 
-    const elevesParClasse = await pool.query(`
+    const elevesParClasse = await safeQuery(`
       SELECT c.nom as classe, COUNT(e.id) as nb
       FROM classes c
       LEFT JOIN eleves e ON e.classe_id = c.id AND e.statut = 'actif'
       GROUP BY c.nom
       ORDER BY c.nom
-    `);
+    `, [], []);
 
-    const prochainEvenements = await pool.query(`
+    const prochainEvenements = await safeQuery(`
       SELECT titre, date_debut, type, couleur
       FROM calendrier
       WHERE date_debut >= CURRENT_DATE
       ORDER BY date_debut
       LIMIT 5
-    `);
+    `, [], []);
 
     const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const jourAuj = JOURS[new Date().getDay()];
-    const creneauEnCoursRes = await pool.query(`
+    const creneauEnCoursRes = await safeQuery(`
       SELECT id, jour, heure_debut, heure_fin, periode, ordre
       FROM creneaux
       WHERE jour = $1 AND heure_debut <= CURRENT_TIME AND heure_fin >= CURRENT_TIME
       ORDER BY ordre
       LIMIT 1
-    `, [jourAuj]);
+    `, [jourAuj], []);
 
     let controlePresenceAujourdhui = {
       jour: jourAuj,
@@ -99,18 +107,18 @@ const getStatistiques = async (req, res) => {
 
     if (creneauEnCoursRes.rows.length > 0) {
       const creneau = creneauEnCoursRes.rows[0];
-      const classesRes = await pool.query(`
+      const classesRes = await safeQuery(`
         SELECT DISTINCT c.id, c.nom
         FROM affectations a
         JOIN classes c ON c.id = a.classe_id
         WHERE a.creneau_id = $1
         ${isAdmin ? '' : 'AND a.prof_id = $2'}
         ORDER BY c.nom
-      `, isAdmin ? [creneau.id] : [creneau.id, req.user.id]);
+      `, isAdmin ? [creneau.id] : [creneau.id, req.user.id], []);
 
       const classesEnCours = [];
       for (const cl of classesRes.rows) {
-        const elevesRes = await pool.query(`
+        const elevesRes = await safeQuery(`
           SELECT
             e.id,
             COALESCE(e.nom, u.nom) as nom,
@@ -121,7 +129,7 @@ const getStatistiques = async (req, res) => {
           LEFT JOIN presences_v2 pv ON pv.eleve_id = e.id AND pv.date = CURRENT_DATE
           WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
           ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
-        `, [cl.id]);
+        `, [cl.id], []);
 
         const eleves = elevesRes.rows.map(el => {
           const statut = el.p1 || el.p2 || el.p3 || el.p4 || el.p5 || el.p6 || el.p7 || el.p8 || '';
@@ -150,7 +158,7 @@ const getStatistiques = async (req, res) => {
         params.push(classesAffectees);
         filtre = ' AND ev.classe_id = ANY($1::int[])';
       }
-      const notesRes = await pool.query(`
+      const notesRes = await safeQuery(`
         SELECT
           n.created_at,
           n.valeur,
@@ -170,7 +178,7 @@ const getStatistiques = async (req, res) => {
         WHERE 1=1 ${filtre}
         ORDER BY n.created_at DESC
         LIMIT 3
-      `, params);
+      `, params, []);
       dernieresNotes = notesRes.rows;
     }
 
@@ -182,7 +190,7 @@ const getStatistiques = async (req, res) => {
         params.push(classesAffectees);
         filtre = ' AND e.classe_id = ANY($1::int[])';
       }
-      const obsRes = await pool.query(`
+      const obsRes = await safeQuery(`
         SELECT
           o.created_at,
           o.titre,
@@ -197,7 +205,7 @@ const getStatistiques = async (req, res) => {
         WHERE 1=1 ${filtre}
         ORDER BY o.created_at DESC
         LIMIT 3
-      `, params);
+      `, params, []);
       dernieresObservations = obsRes.rows;
     }
 
