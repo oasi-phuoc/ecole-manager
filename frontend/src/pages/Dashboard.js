@@ -48,15 +48,16 @@ export default function Dashboard() {
 
   const modules = [
     { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: null, statLabel: '', admin: true },
-    { icon: '🏫', label: 'Classes', path: '/classes', color: '#10b981', bg: '#d1fae5', stat: stats.classes, statLabel: 'classes', admin: true },
     { icon: '🎓', label: 'Élèves', path: '/eleves', color: '#f59e0b', bg: '#fef3c7', stat: stats.eleves, statLabel: 'élèves', admin: false },
     { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
+    { icon: '🏫', label: 'Classes', path: '/classes', color: '#10b981', bg: '#d1fae5', stat: stats.classes, statLabel: 'classes', admin: true },
     { icon: '📅', label: 'Emploi du Temps', path: '/emploi-du-temps', color: '#ef4444', bg: '#fee2e2', stat: null, statLabel: '', admin: false },
     { icon: '✅', label: 'Présences', path: '/presences', color: '#06b6d4', bg: '#cffafe', stat: null, statLabel: '', admin: false },
     { icon: '📝', label: 'Notes', path: '/notes', color: '#ec4899', bg: '#fce7f3', stat: null, statLabel: '', admin: false },
+    { icon: '🗣️', label: 'TCF', path: '/tcf', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: false },
     { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#14b8a6', bg: '#ccfbf1', stat: null, statLabel: '', admin: false },
     { icon: '💰', label: 'Comptabilité', path: '/comptabilite', color: '#84cc16', bg: '#ecfccb', stat: null, statLabel: '', admin: true },
-    { icon: '📊', label: 'Statistiques', path: '/statistiques', color: '#f97316', bg: '#ffedd5', stat: null, statLabel: '', admin: true },
+    { icon: '🗂️', label: 'Documents administratifs', path: '/documents-administratifs', color: '#7c3aed', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
     { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#64748b', bg: '#f1f5f9', stat: null, statLabel: '', admin: true },
   ].filter(m => !m.admin || isAdmin);
 

@@ -13,6 +13,8 @@ import Calendrier from './pages/Calendrier';
 import Parametres from './pages/Parametres';
 import Comptabilite from './pages/Comptabilite';
 import Statistiques from './pages/Statistiques';
+import TCF from './pages/TCF';
+import DocumentsAdministratifs from './pages/DocumentsAdministratifs';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -32,9 +34,11 @@ function App() {
         <Route path="/emploi-du-temps" element={<PrivateRoute><EmploiDuTemps /></PrivateRoute>} />
         <Route path="/presences" element={<PrivateRoute><Presences /></PrivateRoute>} />
         <Route path="/notes" element={<PrivateRoute><Notes /></PrivateRoute>} />
+        <Route path="/tcf" element={<PrivateRoute><TCF /></PrivateRoute>} />
         <Route path="/calendrier" element={<PrivateRoute><Calendrier /></PrivateRoute>} />
         <Route path="/parametres" element={<PrivateRoute><Parametres /></PrivateRoute>} />
         <Route path="/comptabilite" element={<PrivateRoute><Comptabilite /></PrivateRoute>} />
+        <Route path="/documents-administratifs" element={<PrivateRoute><DocumentsAdministratifs /></PrivateRoute>} />
         <Route path="/statistiques" element={<PrivateRoute><Statistiques /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
