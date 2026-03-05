@@ -15,6 +15,7 @@ import Comptabilite from './pages/Comptabilite';
 import Statistiques from './pages/Statistiques';
 import TCF from './pages/TCF';
 import DocumentsAdministratifs from './pages/DocumentsAdministratifs';
+import ClasseInventaire from './pages/ClasseInventaire';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -39,6 +40,7 @@ function App() {
         <Route path="/parametres" element={<PrivateRoute><Parametres /></PrivateRoute>} />
         <Route path="/comptabilite" element={<PrivateRoute><Comptabilite /></PrivateRoute>} />
         <Route path="/documents-administratifs" element={<PrivateRoute><DocumentsAdministratifs /></PrivateRoute>} />
+        <Route path="/classes/:classeId/inventaire" element={<PrivateRoute><ClasseInventaire /></PrivateRoute>} />
         <Route path="/statistiques" element={<PrivateRoute><Statistiques /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

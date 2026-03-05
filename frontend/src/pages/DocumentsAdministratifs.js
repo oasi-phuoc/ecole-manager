@@ -31,8 +31,10 @@ export default function DocumentsAdministratifs() {
     try {
       const r = await axios.get(API + '/documents-administratifs', { headers });
       setDocuments(r.data || []);
+      setMsg('');
     } catch (err) {
       setDocuments([]);
+      setMsg('❌ Erreur chargement: ' + (err.response?.data?.message || err.message));
     }
     setLoading(false);
   };
@@ -91,6 +93,11 @@ export default function DocumentsAdministratifs() {
 
     setSaving(true);
     try {
+      if (selectedFile && selectedFile.size > 12 * 1024 * 1024) {
+        setMsg('❌ Fichier trop volumineux (max 12MB).');
+        setSaving(false);
+        return;
+      }
       if (editing) {
         let payload = { designation: designation.trim() };
         if (selectedFile) {

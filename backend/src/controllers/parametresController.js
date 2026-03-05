@@ -152,7 +152,7 @@ const resetRentree = async (req, res) => {
 
     // Planification / affectations
     'affectations', 'planning_branches', 'pool_profs', 'pool_classes', 'pool_branches',
-    'disponibilites', 'classe_horaires', 'emploi_du_temps', 'plan_classe',
+    'classe_horaires', 'emploi_du_temps', 'plan_classe',
 
     // Comptabilité / facturation
     'paiements', 'comptabilite',

@@ -320,6 +320,34 @@ export default function Classes() {
     return Math.max(0, Math.round((1 - total/20) * 100));
   };
 
+  const convertirImagePourUpload = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.onload = () => {
+      const src = reader.result;
+      const img = new Image();
+      img.onerror = () => reject(new Error('Format image non supporte. Utilisez JPG, PNG ou WEBP.'));
+      img.onload = () => {
+        try {
+          const maxDim = 1200;
+          const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * ratio));
+          const h = Math.max(1, Math.round(img.height * ratio));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        } catch (e) {
+          resolve(src);
+        }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  });
+
   const ouvrirDocumentsEleve = async (el) => {
     setDocsEleve(el); setShowDocsEleve(true); setDocsEleveLoading(true);
     try { const r = await axios.get(API+'/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
@@ -383,6 +411,11 @@ export default function Classes() {
     const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='inactif'&&c.actif===false);
     return matchR && matchA;
   });
+
+  const ouvrirInventaireClasse = (classeId) => {
+    const url = window.location.origin + '/classes/' + classeId + '/inventaire';
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   // Modal zoom photo
   const ModalZoom = () => photoZoom ? (
@@ -847,19 +880,20 @@ export default function Classes() {
                     {isAdmin() && (
                       <label style={{position:'absolute',bottom:-2,right:-2,width:16,height:16,background:'#6366f1',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'white'}} title="Changer photo">
                         📷
-                        <input type="file" accept="image/*" style={{display:'none'}} onChange={async (ev) => {
+                        <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style={{display:'none'}} onChange={async (ev) => {
                           const file = ev.target.files[0];
                           if (!file) return;
                           if (file.size > 2*1024*1024) { alert('Image trop grande (max 2MB)'); return; }
-                          const reader = new FileReader();
-                          reader.onload = async (e) => {
-                            try {
-                              await axios.put(API+'/eleves/'+el.id+'/photo', {photo: e.target.result}, {headers});
-                              const r = await axios.get(API+'/classes/'+detailClasse.id+'/eleves', {headers});
-                              setElevesClasse(r.data);
-                            } catch(err) { alert('Erreur upload photo'); }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const photoData = await convertirImagePourUpload(file);
+                            await axios.put(API+'/eleves/'+el.id+'/photo', {photo: photoData}, {headers});
+                            const r = await axios.get(API+'/classes/'+detailClasse.id+'/eleves', {headers});
+                            setElevesClasse(r.data);
+                          } catch(err) {
+                            alert('Erreur upload photo: ' + (err.response?.data?.message || err.message || 'fichier non supporte'));
+                          } finally {
+                            ev.target.value = '';
+                          }
                         }} />
                       </label>
                     )}
@@ -946,7 +980,7 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['','Classe','Année','Titulaire','Élèves','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['','Classe','Année','Titulaire','Inventaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
@@ -962,7 +996,14 @@ export default function Classes() {
                 </td>
                 <td style={s.td}>{c.annee_scolaire||'—'}</td>
                 <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
-                <td style={s.td}><span style={{...s.badge,background:'#e0e7ff',color:'#3730a3'}}>{c.nb_eleves||0} élèves</span></td>
+                <td style={s.td}>
+                  <button
+                    style={{...s.btnDetail,background:'#ede9fe',color:'#5b21b6'}}
+                    onClick={() => ouvrirInventaireClasse(c.id)}
+                  >
+                    📦 Ouvrir
+                  </button>
+                </td>
                 <td style={s.td}>
                   <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}

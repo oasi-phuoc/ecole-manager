@@ -51,6 +51,28 @@ const initDB = async () => {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS designation VARCHAR(255)`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS nom_fichier VARCHAR(255)`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS contenu TEXT`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS taille INTEGER`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+
+    // Table inventaire des branches par classe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventaire_branches (
+        id SERIAL PRIMARY KEY,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        branche_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE,
+        date_document DATE NOT NULL DEFAULT CURRENT_DATE,
+        nom_document VARCHAR(255) NOT NULL,
+        numero_document VARCHAR(100),
+        remarques TEXT,
+        auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
 
     // Table sanctions élèves
     await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), created_at TIMESTAMP DEFAULT NOW());`);

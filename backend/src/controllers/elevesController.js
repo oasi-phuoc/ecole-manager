@@ -158,6 +158,14 @@ const supprimerEleve = async (req, res) => {
 const updatePhoto = async (req, res) => {
   const { photo } = req.body;
   try {
+    if (photo !== null && photo !== undefined) {
+      if (typeof photo !== 'string') {
+        return res.status(400).json({ message: 'Format photo invalide' });
+      }
+      if (!photo.startsWith('data:image/')) {
+        return res.status(400).json({ message: 'Le fichier doit etre une image' });
+      }
+    }
     await pool.query('UPDATE eleves SET photo=$1 WHERE id=$2', [photo, req.params.id]);
     res.json({ message: 'Photo mise à jour' });
   } catch(err) { res.status(500).json({ message: err.message }); }

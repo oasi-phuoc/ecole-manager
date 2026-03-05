@@ -366,7 +366,7 @@ export default function Parametres() {
                   <li>Élèves et toutes leurs données liées</li>
                   <li>Notes (et évaluations)</li>
                   <li>Affectations professeurs / classes</li>
-                  <li>Plannings et disponibilités</li>
+                  <li>Plannings (les disponibilités professeurs sont conservées)</li>
                   <li>Présences</li>
                   <li>Comptabilité et facturation</li>
                 </ul>

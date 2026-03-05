@@ -334,6 +334,10 @@ export default function EmploiDuTemps() {
   const totalPeriodesProfsForm = profsSelectionnesForm.reduce((sum, p) => sum + (parseInt(p.periodes_semaine) || 0), 0);
   const couleurPeriodesRequises = totalPeriodesProfsForm >= totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
   const couleurPeriodesProfs = totalPeriodesProfsForm === totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
+  const profDispoSelectionne = profs.find(p => String(p.id) === String(profSelectionne));
+  const periodesRequisesDispo = profDispoSelectionne ? getPeriodesRequisesPourTaux(profDispoSelectionne) : 0;
+  const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
+  const couleurCompteurDispo = periodesSelectionneesDispo < periodesRequisesDispo ? '#dc2626' : '#16a34a';
 
   return (
     <div style={styles.page}>
@@ -366,10 +370,8 @@ export default function EmploiDuTemps() {
               {profs.map(p => (
                 <button key={p.id} style={{...styles.chip,...(profSelectionne==p.id?styles.chipActif:{})}}
                   onClick={() => chargerDispos(p.id)}>
-                  {p.nom} {p.prenom}
-                  <span style={{marginLeft:6,fontSize:11,opacity:0.9}}>
-                    ({getPeriodesRequisesPourTaux(p)} périodes)
-                  </span>
+                  <span style={styles.chipNom}>{p.nom}</span>
+                  <span style={styles.chipPrenom}>{p.prenom}</span>
                 </button>
               ))}
             </div>
@@ -379,16 +381,19 @@ export default function EmploiDuTemps() {
             <div style={styles.card}>
               <div style={styles.rowBetween}>
                 <h3 style={styles.cardTitre}>
-                  {profs.find(p=>p.id==profSelectionne)?.nom} {profs.find(p=>p.id==profSelectionne)?.prenom}
+                  {profDispoSelectionne?.nom} {profDispoSelectionne?.prenom}
+                  <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
+                    {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
+                  </span>
                 </h3>
                 {isAdmin() && <button style={styles.btnBleu} onClick={sauverDispos}>💾 Sauvegarder</button>}
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
-                <table style={styles.tbl}>
+                <table style={{...styles.tbl, tableLayout:'fixed', minWidth:860}}>
                   <thead>
                     <tr>
-                      <th style={{...styles.thA, minWidth:160}}>Période</th>
-                      {JOURS.map(j => <th key={j} style={styles.thA}>{j}</th>)}
+                      <th style={{...styles.thA, width:160, minWidth:160, maxWidth:160}}>Période</th>
+                      {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -396,7 +401,7 @@ export default function EmploiDuTemps() {
                       const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
                       return crsLundi.map((crBase, idx) => (
                         <tr key={crBase.id}>
-                          <td style={styles.tdPer}>
+                          <td style={{...styles.tdPer, width:160, minWidth:160, maxWidth:160}}>
                             <span style={styles.periodeTag}>{periode}</span>
                             <span style={styles.periodeNum}>Période {idx+1}</span>
                           </td>
@@ -1095,12 +1100,15 @@ const styles = {
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
   flexWrap:{display:'flex',flexWrap:'wrap',gap:8},
-  chip:{padding:'7px 14px',background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13},
+  chip:{padding:'7px 14px',background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13,display:'grid',gridTemplateColumns:'minmax(110px,1fr) minmax(110px,1fr)',columnGap:12,alignItems:'center',textAlign:'left'},
+  chipNom:{fontWeight:700},
+  chipPrenom:{fontWeight:500},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
   theadRow:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
   thA:{padding:'10px 12px',background:'#f8fafc',color:'#94a3b8',fontWeight:700,fontSize:11,textAlign:'center',border:'1px solid #e2e8f0',textTransform:'uppercase',letterSpacing:'0.05em'},
+  thAJour:{padding:'10px 12px',background:'#f8fafc',color:'#94a3b8',fontWeight:700,fontSize:11,textAlign:'center',border:'1px solid #e2e8f0',textTransform:'uppercase',letterSpacing:'0.05em',minWidth:140},
   tr:{borderBottom:'1px solid #eef2f7'},
   td:{padding:'9px 12px',fontSize:13,color:'#334155'},
   tdPer:{padding:'10px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',whiteSpace:'nowrap'},

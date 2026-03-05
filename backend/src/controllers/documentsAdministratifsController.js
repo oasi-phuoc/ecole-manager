@@ -9,7 +9,6 @@ const getDocumentsAdministratifs = async (req, res) => {
         d.nom_fichier,
         d.taille,
         d.created_at,
-        d.updated_at,
         d.auteur_id,
         u.nom AS auteur_nom,
         u.prenom AS auteur_prenom
@@ -32,7 +31,7 @@ const creerDocumentAdministratif = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO documents_administratifs (designation, nom_fichier, contenu, taille, auteur_id)
        VALUES ($1,$2,$3,$4,$5)
-       RETURNING id, designation, nom_fichier, taille, created_at, updated_at, auteur_id`,
+       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id`,
       [designation, nom_fichier, contenu, taille || null, req.user.id]
     );
     res.status(201).json(result.rows[0]);
@@ -51,9 +50,9 @@ const modifierDocumentAdministratif = async (req, res) => {
     const old = current.rows[0];
     const result = await pool.query(
       `UPDATE documents_administratifs
-       SET designation=$1, nom_fichier=$2, contenu=$3, taille=$4, updated_at=NOW()
+       SET designation=$1, nom_fichier=$2, contenu=$3, taille=$4
        WHERE id=$5
-       RETURNING id, designation, nom_fichier, taille, created_at, updated_at, auteur_id`,
+       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id`,
       [
         designation,
         nom_fichier || old.nom_fichier,
