@@ -123,7 +123,6 @@ export default function Classes() {
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
-  const [showTrombinoscope, setShowTrombinoscope] = useState(false);
   const [showPlanClasse, setShowPlanClasse] = useState(false);
   const [planPositions, setPlanPositions] = useState({});
   const [dragEleve, setDragEleve] = useState(null);
@@ -159,6 +158,11 @@ export default function Classes() {
     remarques: '',
   });
   const [dragInventaireId, setDragInventaireId] = useState(null);
+  const ELEMENTS_SPECIAUX_PLAN = [
+    { id: 'SPECIAL_ENTREE', label: "Porte d'entrée" },
+    { id: 'SPECIAL_TABLEAU', label: 'Tableau' },
+    { id: 'SPECIAL_PROF', label: 'Professeur' },
+  ];
 
   const imprimerObservations = () => {
     const rows = observations.map(obs => `
@@ -238,21 +242,18 @@ export default function Classes() {
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const key = row+'-'+col;
-        const eleveId = planPositions[key];
-        const el = eleveId === 'PROF' ? null : elevesClasse.find(e => String(e.id) === String(eleveId));
-        const isProf = row === ROWS-1;
-        if (isProf && col === 0) {
-          cells += `<td colspan="${COLS}" style="background:#0f172a;color:white;text-align:center;font-weight:800;font-size:14px;padding:12px;border-radius:6px">🎓 Bureau du professeur — ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</td>`;
-          break;
-        } else if (!isProf) {
-          cells += `<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;width:80px;height:80px;background:${eleveId?'#f0f4ff':'#f8fafc'};vertical-align:middle">
-            ${el ? `
-              ${el.photo?`<img src="${el.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #6366f1;margin:0 auto;display:block"/>`:`<div style="width:44px;height:44px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#6366f1;margin:0 auto">${(el.prenom||'?')[0]}</div>`}
-              <div style="font-size:10px;font-weight:700;color:#1e293b;margin-top:3px;line-height:1.2">${el.prenom}</div>
-              <div style="font-size:9px;color:#475569">${el.nom}</div>
-            ` : ''}
-          </td>`;
-        }
+        const itemId = planPositions[key];
+        const el = elevesClasse.find(e => String(e.id) === String(itemId));
+        const special = ELEMENTS_SPECIAUX_PLAN.find(x => x.id === itemId);
+        cells += `<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;width:80px;height:80px;background:${itemId?'#f0f4ff':'#f8fafc'};vertical-align:middle">
+          ${el ? `
+            ${el.photo?`<img src="${el.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #6366f1;margin:0 auto;display:block"/>`:`<div style="width:44px;height:44px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#6366f1;margin:0 auto">${(el.prenom||'?')[0]}</div>`}
+            <div style="font-size:10px;font-weight:700;color:#1e293b;margin-top:3px;line-height:1.2">${el.prenom}</div>
+            <div style="font-size:9px;color:#475569">${el.nom}</div>
+          ` : special ? `
+            <div style="display:inline-block;padding:6px 8px;border-radius:8px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:800;line-height:1.2">${special.label}</div>
+          ` : ''}
+        </td>`;
       }
       cells += '</tr><tr>';
     }
@@ -292,39 +293,26 @@ export default function Classes() {
   const renderPlanClasseOnglet = () => {
     const COLS = 10; const ROWS = 13;
     const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
+    const elementsSpeciauxNonPlaces = ELEMENTS_SPECIAUX_PLAN.filter(sp => !Object.values(planPositions).includes(sp.id));
 
     return (
       <div>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{fontSize:12,color:'#64748b',fontWeight:700}}>Plan de classe</div>
-          <div style={{display:'flex',gap:8}}>
-            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
-            <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
-          </div>
-        </div>
-
         <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
           <div style={{flex:1,overflowX:'auto'}}>
-            <div style={{fontSize:11,color:'#94a3b8',marginBottom:8,fontWeight:600}}>↑ Tableau / Entrée</div>
             <table style={{borderCollapse:'collapse',width:'100%',minWidth:620}}>
               <tbody>
                 {Array.from({length:ROWS}).map((_,row) => (
                   <tr key={row}>
-                    {row === ROWS-1 ? (
-                      <td colSpan={COLS}
-                        style={{background:'#0f172a',color:'white',textAlign:'center',fontWeight:800,fontSize:13,padding:'10px',borderRadius:6,cursor:'default'}}>
-                        🎓 Bureau du professeur — {detailClasse.prof_prenom||''} {detailClasse.prof_nom||''}
-                      </td>
-                    ) : Array.from({length:COLS}).map((_,col) => {
+                    {Array.from({length:COLS}).map((_,col) => {
                       const key = row+'-'+col;
-                      const eleveId = planPositions[key];
-                      const el = eleveId ? elevesClasse.find(e => String(e.id)===String(eleveId)) : null;
+                      const itemId = planPositions[key];
+                      const el = itemId ? elevesClasse.find(e => String(e.id)===String(itemId)) : null;
+                      const special = ELEMENTS_SPECIAUX_PLAN.find(x => x.id === itemId);
                       return (
                         <td key={col}
                           onDragOver={e => e.preventDefault()}
                           onDrop={() => dropOnCell(row, col)}
-                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:itemId?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
                           {el ? (
                             <div draggable onDragStart={() => setDragEleve(String(el.id))}
                               style={{cursor:'grab',padding:2}}>
@@ -334,6 +322,15 @@ export default function Classes() {
                               }
                               <div style={{fontSize:9,fontWeight:700,color:'#1e293b',marginTop:2,lineHeight:1.1}}>{el.prenom}</div>
                               <div style={{fontSize:8,color:'#475569'}}>{el.nom}</div>
+                              <button onClick={() => {
+                                const np = {...planPositions}; delete np[key]; setPlanPositions(np);
+                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
+                            </div>
+                          ) : special ? (
+                            <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:6}}>
+                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:'#e0e7ff',color:'#3730a3',fontSize:10,fontWeight:800,lineHeight:1.2}}>
+                                {special.label}
+                              </div>
                               <button onClick={() => {
                                 const np = {...planPositions}; delete np[key]; setPlanPositions(np);
                               }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
@@ -352,9 +349,20 @@ export default function Classes() {
 
           <div style={{width:160,flexShrink:0}}>
             <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.05em'}}>
-              Élèves non placés ({elevesNonPlaces.length})
+              Éléments à placer ({elevesNonPlaces.length + elementsSpeciauxNonPlaces.length})
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
+              {elementsSpeciauxNonPlaces.map(sp => (
+                <div key={sp.id} draggable onDragStart={() => setDragEleve(sp.id)}
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#3730a3',flexShrink:0}}>
+                    ⌁
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.label}</div>
+                  </div>
+                </div>
+              ))}
               {elevesNonPlaces.map(el => (
                 <div key={el.id} draggable onDragStart={() => setDragEleve(String(el.id))}
                   style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
@@ -368,13 +376,30 @@ export default function Classes() {
                   </div>
                 </div>
               ))}
-              {elevesNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
+              {elevesNonPlaces.length===0 && elementsSpeciauxNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
             </div>
           </div>
         </div>
       </div>
     );
   };
+
+  const renderTrombinoscopeOnglet = () => (
+    <div style={s.trombiGrid}>
+      {elevesClasse.length === 0 ? (
+        <div style={s.empty}>Aucun élève dans cette classe</div>
+      ) : elevesClasse.map(el => (
+        <div key={el.id} style={s.trombiCard}>
+          {el.photo
+            ? <img src={el.photo} alt="photo" style={s.trombiImg} />
+            : <div style={s.trombiFallback}>{(el.prenom||'?')[0]}</div>
+          }
+          <div style={s.trombiPrenom}>{el.prenom || ''}</div>
+          <div style={s.trombiNom}>{el.nom || ''}</div>
+        </div>
+      ))}
+    </div>
+  );
 
   const imprimerTrombinoscope = () => {
     const cards = elevesClasse.map(el => `
@@ -395,32 +420,18 @@ export default function Classes() {
       <head>
         <title>Trombinoscope - ${detailClasse.nom}</title>
         <style>
-          body { font-family: 'Century Gothic', sans-serif; padding: 32px; color: #1e293b; background: #f8fafc; }
-          h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; color: #0f172a; }
-          .sub { font-size: 13px; color: #64748b; margin-bottom: 28px; }
-          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-          .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+          body { font-family: 'Century Gothic', sans-serif; padding: 18px; color: #1e293b; background: white; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
           @media print {
-            body { padding: 16px; background: white; }
+            body { padding: 10px; background: white; }
             .no-print { display: none; }
-            @page { margin: 1.5cm; }
+            @page { margin: 1cm; }
           }
         </style>
       </head>
       <body>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
-            <h1>📸 Trombinoscope — ${detailClasse.nom}</h1>
-            <div class="sub">
-              ${detailClasse.annee_scolaire ? detailClasse.annee_scolaire + ' · ' : ''}
-              ${detailClasse.prof_prenom ? 'Titulaire : ' + detailClasse.prof_prenom + ' ' + detailClasse.prof_nom + ' · ' : ''}
-              ${elevesClasse.length} élève(s)
-            </div>
-          </div>
-          <button class="no-print" onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
-        </div>
+        <button class="no-print" onclick="window.print()" style="margin-bottom:10px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
         <div class="grid">${cards}</div>
-        <div class="footer">Généré le ${new Date().toLocaleDateString('fr-CH')} · École Manager</div>
       </body>
       </html>
     `);
@@ -1081,11 +1092,24 @@ export default function Classes() {
           >
             🪑 Plan de classe
           </button>
-        </div>
-        <div style={{display:'flex',gap:8}}>
-          <button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerTrombinoscope}>
+          <button
+            style={{...s.btnAdd,...(classeVueTab==='trombinoscope'?{}:s.btnGhost)}}
+            onClick={() => setClasseVueTab('trombinoscope')}
+          >
             📸 Trombinoscope
           </button>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          {classeVueTab === 'plan' && (
+            <>
+              <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
+              <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
+              <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
+            </>
+          )}
+          {classeVueTab === 'trombinoscope' && (
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerTrombinoscope}>🖨️ Imprimer PDF</button>
+          )}
         </div>
       </div>
 
@@ -1277,8 +1301,10 @@ export default function Classes() {
             )}
           </div>
         </div>
-      ) : (
+      ) : classeVueTab === 'plan' ? (
         renderPlanClasseOnglet()
+      ) : (
+        renderTrombinoscopeOnglet()
       )}
     </div>
   );
@@ -1425,6 +1451,12 @@ const s = {
   invMsg:{margin:'12px 12px 0',padding:'8px 10px',borderRadius:8,background:'#fee2e2',color:'#991b1b',fontSize:12,fontWeight:700},
   invForm:{display:'grid',gridTemplateColumns:'140px 1.4fr auto 1fr auto',gap:8,padding:14,alignItems:'center'},
   invToggle:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',fontWeight:600,whiteSpace:'nowrap'},
+  trombiGrid:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14},
+  trombiCard:{display:'flex',flexDirection:'column',alignItems:'center',padding:16,background:'white',borderRadius:12,border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'},
+  trombiImg:{width:86,height:86,borderRadius:'50%',objectFit:'cover',border:'3px solid #e0e7ff',marginBottom:10},
+  trombiFallback:{width:86,height:86,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,fontWeight:800,color:'#6366f1',marginBottom:10},
+  trombiPrenom:{fontWeight:800,fontSize:14,color:'#1e293b',textAlign:'center'},
+  trombiNom:{fontWeight:600,fontSize:13,color:'#475569',textAlign:'center'},
   visaBadge:{display:'inline-flex',alignItems:'center',justifyContent:'center',minWidth:34,height:24,padding:'0 8px',borderRadius:99,background:'#e0e7ff',color:'#3730a3',fontSize:11,fontWeight:800,letterSpacing:'0.04em'},
   badge:{display:'inline-flex',alignItems:'center',padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
