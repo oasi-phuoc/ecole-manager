@@ -12,7 +12,7 @@ const MODULES_PROF = [
 export default function Parametres() {
   const [onglet, setOnglet] = useState('profil');
   const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '' });
-  const [ecole, setEcole] = useState({ nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', directeur: '' });
+  const [ecole, setEcole] = useState({ nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', responsable_langues_jeunes: '', responsable_niveau: '' });
   const [mdp, setMdp] = useState({ ancien: '', nouveau: '', confirmation: '' });
   const [profs, setProfs] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
@@ -215,8 +215,12 @@ export default function Parametres() {
                     <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
                   </div>
                   <div style={styles.formChamp}>
-                    <label style={styles.label}>Directeur</label>
-                    <input style={styles.input} type="text" value={ecole.directeur || ''} onChange={e => setEcole({ ...ecole, directeur: e.target.value })} />
+                    <label style={styles.label}>Responsable des cours de langues jeunes</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Responsable de niveau</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_niveau || ''} onChange={e => setEcole({ ...ecole, responsable_niveau: e.target.value })} />
                   </div>
                 </div>
                 <button type="submit" style={{ ...styles.btnSauver, background: '#34a853', marginTop: '10px' }}>💾 Sauvegarder</button>

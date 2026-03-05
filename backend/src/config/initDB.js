@@ -76,6 +76,28 @@ const initDB = async () => {
     // Colonne points dans notes (points bruts de l'élève)
     await pool.query(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS points DECIMAL(5,2)`);
 
+    // Table paramètres école (si absente)
+    await pool.query(`CREATE TABLE IF NOT EXISTS parametres_ecole (id SERIAL PRIMARY KEY, nom_ecole VARCHAR(200), adresse TEXT, telephone VARCHAR(50), email VARCHAR(150), annee_scolaire VARCHAR(20), directeur VARCHAR(200))`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_langues_jeunes VARCHAR(200)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau VARCHAR(200)`);
+
+    // Élèves: date de début des cours
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);
+
+    // Bulletin critères (comportement / compétences transversales) par élève et classe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bulletin_criteres (
+        id SERIAL PRIMARY KEY,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        c1 VARCHAR(10), c2 VARCHAR(10), c3 VARCHAR(10), c4 VARCHAR(10), c5 VARCHAR(10),
+        c6 VARCHAR(10), c7 VARCHAR(10), c8 VARCHAR(10), c9 VARCHAR(10), c10 VARCHAR(10),
+        remarques TEXT,
+        valide BOOLEAN DEFAULT false,
+        UNIQUE(classe_id, eleve_id)
+      )
+    `);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

@@ -636,26 +636,40 @@ export default function Presences() {
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
               <tr style={{background:'#f8fafc'}}>
-                {['NOM','Prénom','Jours','Présents','Absents','Retards','Excusés','Congés'].map(h => (
+                {['NOM','Prénom','Jours','Présents','Absents','Retards','Excusés','Congés','Taux présence %','Taux présence BN %'].map(h => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {statistiques.length === 0 ? (
-                <tr><td colSpan="8" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucune donnée</td></tr>
-              ) : statistiques.map((st, i) => (
-                <tr key={i} style={{borderBottom:'1px solid #f1f5f9',background:i%2===0?'white':'#fafafa'}}>
-                  <td style={{...s.td,fontWeight:800}}>{st.nom}</td>
-                  <td style={s.td}>{st.prenom}</td>
-                  <td style={{...s.td,textAlign:'center'}}>{st.jours||0}</td>
-                  <td style={{...s.td,textAlign:'center',color:'#10b981',fontWeight:700}}>{st.presents||0}</td>
-                  <td style={{...s.td,textAlign:'center',color:'#ef4444',fontWeight:700}}>{st.absents||0}</td>
-                  <td style={{...s.td,textAlign:'center',color:'#f59e0b',fontWeight:700}}>{st.retards||0}</td>
-                  <td style={{...s.td,textAlign:'center',color:'#3b82f6',fontWeight:700}}>{st.excuses||0}</td>
-                  <td style={{...s.td,textAlign:'center',color:'#8b5cf6',fontWeight:700}}>{st.conges||0}</td>
-                </tr>
-              ))}
+                <tr><td colSpan="10" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucune donnée</td></tr>
+              ) : statistiques.map((st, i) => {
+                const jours = Number(st.jours) || 0;
+                const presents = Number(st.presents) || 0;
+                const retards = Number(st.retards) || 0;
+                const excuses = Number(st.excuses) || 0;
+                const conges = Number(st.conges) || 0;
+                const totalPeriodes = jours * 4;
+                const baseTaux = totalPeriodes - excuses - conges;
+                const presentPlusRetards = presents + retards;
+                const tauxPresence = baseTaux > 0 ? Math.round((presentPlusRetards / baseTaux) * 1000) / 10 : null;
+                const tauxBN = totalPeriodes > 0 ? Math.round((presentPlusRetards / totalPeriodes) * 1000) / 10 : null;
+                return (
+                  <tr key={i} style={{borderBottom:'1px solid #f1f5f9',background:i%2===0?'white':'#fafafa'}}>
+                    <td style={{...s.td,fontWeight:800}}>{st.nom}</td>
+                    <td style={s.td}>{st.prenom}</td>
+                    <td style={{...s.td,textAlign:'center'}}>{jours}</td>
+                    <td style={{...s.td,textAlign:'center',color:'#10b981',fontWeight:700}}>{st.presents||0}</td>
+                    <td style={{...s.td,textAlign:'center',color:'#ef4444',fontWeight:700}}>{st.absents||0}</td>
+                    <td style={{...s.td,textAlign:'center',color:'#f59e0b',fontWeight:700}}>{st.retards||0}</td>
+                    <td style={{...s.td,textAlign:'center',color:'#3b82f6',fontWeight:700}}>{st.excuses||0}</td>
+                    <td style={{...s.td,textAlign:'center',color:'#8b5cf6',fontWeight:700}}>{st.conges||0}</td>
+                    <td style={{...s.td,textAlign:'center',fontWeight:700,color:tauxPresence!=null&&tauxPresence>=80?'#10b981':tauxPresence!=null?'#f59e0b':'#94a3b8'}}>{tauxPresence != null ? tauxPresence + '%' : '—'}</td>
+                    <td style={{...s.td,textAlign:'center',fontWeight:700,color:tauxBN!=null&&tauxBN>=80?'#10b981':tauxBN!=null?'#f59e0b':'#94a3b8'}}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

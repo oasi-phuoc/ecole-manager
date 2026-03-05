@@ -237,11 +237,11 @@ export default function Professeurs() {
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
-                        <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>setForm({...form,taux_activite:e.target.value})} placeholder="100" />
+                        <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
                       </div>
                       <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine</label>
-                        <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="28" />
+                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine <span style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>(100% = 32)</span></label>
+                        <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
                       </div>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>

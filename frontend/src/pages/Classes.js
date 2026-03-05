@@ -815,12 +815,12 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Photo','Nom','Prénom','Contact','Absences','Excusées','Retards','Présence','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Photo','Nom','Prénom','Contact','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
             {elevesClasse.length===0 ? (
-              <tr><td colSpan="11" style={s.empty}>Aucun élève dans cette classe</td></tr>
+              <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
             ) : elevesClasse.map(el => (
               <tr key={el.id} style={s.tr}>
                 <td style={s.td}>
@@ -856,12 +856,6 @@ export default function Classes() {
                 <td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
                 <td style={s.td}>{el.prenom || '—'}</td>
                 <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>
-                <td style={s.td}><span style={{...s.badge,background:'#fee2e2',color:'#991b1b'}}>{el.nb_absences||0}</span></td>
-                <td style={s.td}><span style={{...s.badge,background:'#fef3c7',color:'#92400e'}}>{el.nb_excuses||0}</span></td>
-                <td style={s.td}><span style={{...s.badge,background:'#ede9fe',color:'#5b21b6'}}>{el.nb_retards||0}</span></td>
-                <td style={s.td}>
-                  <span style={{...s.badge,background:tauxPresence(el)>=80?'#d1fae5':'#fee2e2',color:tauxPresence(el)>=80?'#065f46':'#991b1b'}}>{tauxPresence(el)}%</span>
-                </td>
                 <td style={s.td}><button style={{...s.btnDetail,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
                 <td style={s.td}><button style={{...s.btnDetail,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
                 <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>

@@ -36,18 +36,18 @@ const getParametresEcole = async (req, res) => {
 };
 
 const modifierParametresEcole = async (req, res) => {
-  const { nom_ecole, adresse, telephone, email, annee_scolaire, directeur } = req.body;
+  const { nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes, responsable_niveau } = req.body;
   try {
     const existe = await pool.query('SELECT id FROM parametres_ecole LIMIT 1');
     if (existe.rows.length > 0) {
       await pool.query(
-        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, directeur=$6 WHERE id=$7',
-        [nom_ecole, adresse, telephone, email, annee_scolaire, directeur, existe.rows[0].id]
+        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, responsable_langues_jeunes=$6, responsable_niveau=$7 WHERE id=$8',
+        [nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes || null, responsable_niveau || null, existe.rows[0].id]
       );
     } else {
       await pool.query(
-        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, directeur) VALUES ($1,$2,$3,$4,$5,$6)',
-        [nom_ecole, adresse, telephone, email, annee_scolaire, directeur]
+        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes, responsable_niveau) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes || null, responsable_niveau || null]
       );
     }
     res.json({ message: 'Parametres mis a jour' });

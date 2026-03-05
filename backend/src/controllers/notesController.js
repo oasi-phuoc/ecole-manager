@@ -160,11 +160,11 @@ const getBulletin = async (req, res) => {
   try {
     const { classe_id } = req.query;
     const eleves = await pool.query(`
-      SELECT e.id, u.nom, u.prenom
+      SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom, e.date_debut_cours
       FROM eleves e
-      JOIN utilisateurs u ON e.utilisateur_id = u.id
-      WHERE e.classe_id = $1 AND e.statut = 'actif'
-      ORDER BY u.nom, u.prenom
+      LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
+      WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
+      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
     `, [classe_id]);
 
     const matieres = await pool.query('SELECT * FROM matieres ORDER BY nom');
@@ -258,4 +258,33 @@ const getRapportClasse = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse };
+const getBulletinCriteres = async (req, res) => {
+  try {
+    const { classe_id } = req.query;
+    const result = await pool.query(`
+      SELECT eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide
+      FROM bulletin_criteres WHERE classe_id = $1
+    `, [classe_id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const putBulletinCriteres = async (req, res) => {
+  try {
+    const { eleve_id } = req.params;
+    const { classe_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide } = req.body;
+    await pool.query(`
+      INSERT INTO bulletin_criteres (classe_id, eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (classe_id, eleve_id) DO UPDATE SET
+        c1=$3, c2=$4, c3=$5, c4=$6, c5=$7, c6=$8, c7=$9, c8=$10, c9=$11, c10=$12, remarques=$13, valide=$14
+    `, [classe_id, eleve_id, c1||null, c2||null, c3||null, c4||null, c5||null, c6||null, c7||null, c8||null, c9||null, c10||null, remarques||null, valide === true || valide === 'true']);
+    res.json({ message: 'Critères bulletin enregistrés' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres };

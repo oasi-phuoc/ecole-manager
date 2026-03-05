@@ -71,6 +71,7 @@ const getStatistiques = async (req, res) => {
     const { classe_id } = req.query;
     const result = await pool.query(`
       SELECT
+        e.id as eleve_id,
         COALESCE(u.nom, e.nom) as nom,
         COALESCE(u.prenom, e.prenom) as prenom,
         COUNT(DISTINCT pv.date) as jours,

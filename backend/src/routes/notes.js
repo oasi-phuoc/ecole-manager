@@ -5,6 +5,8 @@ const { verifierToken } = require('../middleware/auth');
 
 router.use(verifierToken);
 router.get('/bulletin', c.getBulletin);
+router.get('/bulletin-criteres', c.getBulletinCriteres);
+router.put('/bulletin-criteres/:eleve_id', c.putBulletinCriteres);
 router.get('/rapport', c.getRapportClasse);
 router.get('/', c.getEvaluations);
 router.post('/', c.creerEvaluation);

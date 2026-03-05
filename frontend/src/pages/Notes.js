@@ -53,6 +53,9 @@ export default function Notes() {
   const [evaluationOuverte, setEvaluationOuverte] = useState(null);
   const [elevesNotes, setElevesNotes] = useState([]);
   const [bulletins, setBulletins] = useState([]);
+  const [bulletinStatsPresences, setBulletinStatsPresences] = useState([]);
+  const [bulletinCriteres, setBulletinCriteres] = useState([]);
+  const [bulletinRemarqueEdit, setBulletinRemarqueEdit] = useState({});
   const [eleveSelectionne, setEleveSelectionne] = useState(null);
   const [matiereSelectionnee, setMatiereSelectionnee] = useState('');
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
@@ -66,7 +69,7 @@ export default function Notes() {
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
-  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null });
+  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
   const printRef = useRef();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -118,8 +121,14 @@ export default function Notes() {
 
   const chargerBulletinId = async (classeId) => {
     try {
-      const res = await axios.get(API + '/notes/bulletin?classe_id=' + classeId, { headers });
-      setBulletins(res.data);
+      const [bulletinRes, statsRes, criteresRes] = await Promise.all([
+        axios.get(API + '/notes/bulletin?classe_id=' + classeId, { headers }),
+        axios.get(API + '/presences/statistiques?classe_id=' + classeId, { headers }),
+        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId, { headers }),
+      ]);
+      setBulletins(bulletinRes.data);
+      setBulletinStatsPresences(statsRes.data || []);
+      setBulletinCriteres(criteresRes.data || []);
     } catch (err) { console.error(err); }
   };
 
@@ -136,7 +145,7 @@ export default function Notes() {
     setMatiereSelectionnee(m.id);
     await chargerEvaluationsId(classeSelectionnee, m.id);
     setShowForm(false);
-    setForm({ nom: '', matiere_id: m.id, date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null });
+    setForm({ nom: '', matiere_id: m.id, date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
     setVue('evaluations');
   };
 
@@ -156,7 +165,7 @@ export default function Notes() {
     } catch (err) { console.error(err); }
   };
 
-  const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '30', sans_points: false, editId: null };
+  const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null };
 
   const ouvrirEditionEvaluation = (ev) => {
     const avecPoints = ev.points_max && parseFloat(ev.points_max) > 0;
@@ -179,7 +188,7 @@ export default function Notes() {
     try {
       const payload = {
         ...form,
-        points_max: form.sans_points ? null : (form.points_max || 30),
+        points_max: form.sans_points ? null : (form.points_max !== '' && form.points_max != null ? form.points_max : null),
         classe_id: classeSelectionnee,
         prof_id: currentUser.id || null
       };
@@ -593,74 +602,214 @@ export default function Notes() {
     );
   }
 
-  // ===================== VUE BULLETIN PDF =====================
+  // ===================== VUE BULLETIN (tableau critères + PDF) =====================
+  const BULLETIN_CRITERES_LABELS = [
+    "Je viens à l'école régulièrement.",
+    "Je suis à l'heure.",
+    "Je respecte le règlement et la charte de l'école.",
+    "Je participe activement en classe.",
+    "J'écoute les consignes.",
+    "Je parle français en classe.",
+    "Je travaille sans déranger la classe.",
+    "Je fais mon travail à la maison.",
+    "Je prends soin du matériel.",
+    "J'organise mon classeur.",
+  ];
+  const cycleCouleur = (v) => (v === '' ? 'vert' : v === 'vert' ? 'orange' : v === 'orange' ? 'rouge' : '');
+
   if (vue === 'bulletin') {
-    const bulletin = bulletins.find(b => b.eleve.id === parseInt(eleveSelectionne));
+    const titulaireNom = classeObj ? [classeObj.prof_prenom, classeObj.prof_nom].filter(Boolean).join(' ') || '—' : '—';
+
+    const sauvegarderCriteres = async (eleveId, patch) => {
+      const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(eleveId)) || {};
+      const payload = {
+        classe_id: classeSelectionnee,
+        c1: patch.c1 !== undefined ? patch.c1 : cr.c1,
+        c2: patch.c2 !== undefined ? patch.c2 : cr.c2,
+        c3: patch.c3 !== undefined ? patch.c3 : cr.c3,
+        c4: patch.c4 !== undefined ? patch.c4 : cr.c4,
+        c5: patch.c5 !== undefined ? patch.c5 : cr.c5,
+        c6: patch.c6 !== undefined ? patch.c6 : cr.c6,
+        c7: patch.c7 !== undefined ? patch.c7 : cr.c7,
+        c8: patch.c8 !== undefined ? patch.c8 : cr.c8,
+        c9: patch.c9 !== undefined ? patch.c9 : cr.c9,
+        c10: patch.c10 !== undefined ? patch.c10 : cr.c10,
+        remarques: patch.remarques !== undefined ? patch.remarques : cr.remarques,
+        valide: patch.valide !== undefined ? patch.valide : cr.valide,
+      };
+      await axios.put(API + '/notes/bulletin-criteres/' + eleveId, payload, { headers });
+      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee, { headers });
+      setBulletinCriteres(res.data || []);
+    };
+
+    const toutVert = async () => {
+      for (const b of bulletins) {
+        await sauvegarderCriteres(b.eleve.id, { c1: 'vert', c2: 'vert', c3: 'vert', c4: 'vert', c5: 'vert', c6: 'vert', c7: 'vert', c8: 'vert', c9: 'vert', c10: 'vert' });
+      }
+      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee, { headers });
+      setBulletinCriteres(res.data || []);
+    };
+
+    const toggleValide = async (eleveId) => {
+      const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(eleveId));
+      await sauvegarderCriteres(eleveId, { valide: !(cr && cr.valide) });
+    };
+
     return (
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>📄 Bulletin de notes — {classeNom}</h2>
+          <h2 style={s.titre}>📄 Bulletin — {classeNom}</h2>
           <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-            <option value="">-- Choisir un élève --</option>
+            <option value="">-- Voir bulletin PDF d'un élève --</option>
             {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
           </select>
           <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer / PDF</button>
         </div>
-        {bulletin ? (
-          <div ref={printRef} style={s.bulletinPDF}>
-            <div style={s.bulletinPDFHeader}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>BULLETIN DE NOTES</div>
-                <div style={{ fontSize: 13, color: '#555', marginTop: 5 }}>Classe : <b>{classeNom}</b></div>
-                <div style={{ fontSize: 13, color: '#555' }}>Date : {new Date().toLocaleDateString('fr-CH')}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{bulletin.eleve.prenom} {bulletin.eleve.nom}</div>
-              </div>
-            </div>
-            <table style={{ ...s.tbl, marginTop: 20 }}>
-              <thead>
-                <tr style={s.theadRow}>
-                  <th style={s.th}>Matière</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Nb éval.</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moyenne /6</th>
-                  <th style={s.th}>Appréciation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(bulletin.parMatiere).map(([matierNom, data]) => {
-                  const m = getMention(data.moyenne);
-                  return (
-                    <tr key={matierNom} style={s.tr}>
-                      <td style={s.td}><b>{matierNom}</b></td>
-                      <td style={{ ...s.td, textAlign: 'center' }}>{data.coefficient}</td>
-                      <td style={{ ...s.td, textAlign: 'center' }}>{data.nbNotes}</td>
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: m.color }}>{parseFloat(data.moyenne).toFixed(1)}</td>
-                      <td style={{ ...s.td, color: m.color }}>{m.label}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div style={s.moyenneGeneraleBox}>
-              Moyenne générale :
-              <b style={{ fontSize: 22, color: bulletin.moyenneGenerale >= 4 ? '#2e7d32' : '#ef4444' }}>
-                {parseFloat(bulletin.moyenneGenerale).toFixed(1)}/6
-              </b>
-              <span style={{ marginLeft: 15, color: getMention(bulletin.moyenneGenerale).color, fontWeight: 600 }}>
-                {getMention(bulletin.moyenneGenerale).label}
-              </span>
-            </div>
-            <div style={s.signatures}>
-              <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du directeur</div></div>
-              <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du titulaire</div></div>
-              <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature de l'élève</div></div>
-            </div>
+
+        <div className="no-print" style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>Titulaire : {titulaireNom}</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+              Tout mettre au vert (10 critères)
+            </button>
           </div>
-        ) : <div style={s.vide}>Sélectionnez un élève</div>}
+        </div>
+
+        <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
+          <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
+            <thead>
+              <tr style={s.theadRow}>
+                <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
+                {BULLETIN_CRITERES_LABELS.map((label, i) => (
+                  <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'center', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
+                ))}
+                <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Absences</th>
+                <th style={{ ...s.th, width: 70, textAlign: 'center' }}>Taux présence BN %</th>
+                <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Retards</th>
+                <th style={{ ...s.th, width: 95 }}>Début scolarité</th>
+                <th style={{ ...s.th, width: 120 }}>Remarques</th>
+                <th style={{ ...s.th, width: 100, textAlign: 'center' }}>Validation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulletins.length === 0 ? (
+                <tr><td colSpan={16} style={s.vide}>Aucun élève</td></tr>
+              ) : bulletins.map((b, idx) => {
+                const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
+                const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+                const jours = Number(st?.jours) || 0;
+                const presents = Number(st?.presents) || 0;
+                const retards = Number(st?.retards) || 0;
+                const totalPeriodes = jours * 4;
+                const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
+                return (
+                  <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
+                    <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                      const key = 'c' + n;
+                      const val = cr[key] || '';
+                      const bg = val === 'vert' ? '#dcfce7' : val === 'orange' ? '#ffedd5' : val === 'rouge' ? '#fee2e2' : '#f8fafc';
+                      return (
+                        <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', background: bg, cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
+                          onClick={async () => {
+                            const next = cycleCouleur(val);
+                            await sauvegarderCriteres(b.eleve.id, { [key]: next });
+                          }}>
+                          {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
+                        </td>
+                      );
+                    })}
+                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.absents ?? '—'}</td>
+                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
+                    <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.retards ?? '—'}</td>
+                    <td style={s.td}>{b.eleve.date_debut_cours ? new Date(b.eleve.date_debut_cours).toLocaleDateString('fr-CH') : '—'}</td>
+                    <td style={s.td}>
+                      <input type="text"
+                        value={bulletinRemarqueEdit[b.eleve.id] !== undefined ? bulletinRemarqueEdit[b.eleve.id] : (cr.remarques || '')}
+                        style={{ width: '100%', padding: '4px 6px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6 }}
+                        onFocus={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: cr.remarques || '' }))}
+                        onChange={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: e.target.value }))}
+                        onBlur={async e => {
+                          const v = e.target.value;
+                          setBulletinRemarqueEdit(prev => { const p = { ...prev }; delete p[b.eleve.id]; return p; });
+                          if (v !== (cr.remarques || '')) await sauvegarderCriteres(b.eleve.id, { remarques: v });
+                        }}
+                        placeholder="Remarques"
+                      />
+                    </td>
+                    <td style={{ ...s.td, textAlign: 'center' }}>
+                      <button type="button" style={{ padding: '4px 10px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.valide ? '#dcfce7' : 'white', color: cr.valide ? '#166534' : '#475569', fontWeight: 600 }}
+                        onClick={() => toggleValide(b.eleve.id)}>
+                        {cr.valide ? 'Bulletin validé' : 'Valider bulletin'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {eleveSelectionne && (() => {
+          const bulletin = bulletins.find(b => b.eleve.id === parseInt(eleveSelectionne));
+          if (!bulletin) return null;
+          return (
+            <div ref={printRef} style={s.bulletinPDF}>
+              <div style={s.bulletinPDFHeader}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>BULLETIN DE NOTES</div>
+                  <div style={{ fontSize: 13, color: '#555', marginTop: 5 }}>Classe : <b>{classeNom}</b></div>
+                  <div style={{ fontSize: 13, color: '#555' }}>Titulaire : {titulaireNom}</div>
+                  <div style={{ fontSize: 13, color: '#555' }}>Date : {new Date().toLocaleDateString('fr-CH')}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{bulletin.eleve.prenom} {bulletin.eleve.nom}</div>
+                </div>
+              </div>
+              <table style={{ ...s.tbl, marginTop: 20 }}>
+                <thead>
+                  <tr style={s.theadRow}>
+                    <th style={s.th}>Matière</th>
+                    <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
+                    <th style={{ ...s.th, textAlign: 'center' }}>Nb éval.</th>
+                    <th style={{ ...s.th, textAlign: 'center' }}>Moyenne /6</th>
+                    <th style={s.th}>Appréciation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(bulletin.parMatiere).map(([matierNom, data]) => {
+                    const m = getMention(data.moyenne);
+                    return (
+                      <tr key={matierNom} style={s.tr}>
+                        <td style={s.td}><b>{matierNom}</b></td>
+                        <td style={{ ...s.td, textAlign: 'center' }}>{data.coefficient}</td>
+                        <td style={{ ...s.td, textAlign: 'center' }}>{data.nbNotes}</td>
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: m.color }}>{parseFloat(data.moyenne).toFixed(1)}</td>
+                        <td style={{ ...s.td, color: m.color }}>{m.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={s.moyenneGeneraleBox}>
+                Moyenne générale :
+                <b style={{ fontSize: 22, color: bulletin.moyenneGenerale >= 4 ? '#2e7d32' : '#ef4444' }}>
+                  {parseFloat(bulletin.moyenneGenerale).toFixed(1)}/6
+                </b>
+                <span style={{ marginLeft: 15, color: getMention(bulletin.moyenneGenerale).color, fontWeight: 600 }}>
+                  {getMention(bulletin.moyenneGenerale).label}
+                </span>
+              </div>
+              <div style={s.signatures}>
+                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du directeur</div></div>
+                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du titulaire</div></div>
+                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature de l'élève</div></div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -711,10 +860,10 @@ export default function Notes() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <input style={{ ...s.input, flex: 1, opacity: form.sans_points ? 0.4 : 1 }} type="number" step="0.5"
                         value={form.points_max} disabled={form.sans_points}
-                        onChange={e => setForm({ ...form, points_max: e.target.value })} />
+                        onChange={e => setForm({ ...form, points_max: e.target.value })} placeholder="Ex: 30" />
                       <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
                         <input type="checkbox" checked={form.sans_points}
-                          onChange={e => setForm({ ...form, sans_points: e.target.checked, points_max: e.target.checked ? '' : '30' })} />
+                          onChange={e => setForm({ ...form, sans_points: e.target.checked, points_max: e.target.checked ? '' : '' })} />
                         Pas de points
                       </label>
                     </div>

@@ -18,6 +18,14 @@ router.put('/:id/classe', async (req, res) => {
     res.json({ message: 'Classe mise à jour' });
   } catch(err) { res.status(500).json({ message: err.message }); }
 });
+router.put('/:id/date-debut-cours', autoriser('admin'), async (req, res) => {
+  const pool = require('../config/database');
+  const { date_debut_cours } = req.body;
+  try {
+    await pool.query('UPDATE eleves SET date_debut_cours=$1 WHERE id=$2', [date_debut_cours || null, req.params.id]);
+    res.json({ message: 'Date de début des cours mise à jour' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
+});
 
 router.get('/:id/documents', c.getDocumentsEleve);
 router.post('/:id/documents', autoriser('admin'), c.uploadDocumentEleve);
