@@ -321,7 +321,7 @@ export default function EmploiDuTemps() {
 
           {showPoolForm && (
             <div style={styles.overlay}>
-              <div style={{...styles.modal, width:660}}>
+              <div style={{...styles.modal, width:1000}}>
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
                 <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr',gap:18,alignItems:'start'}}>
                   <div style={styles.formGrid}>
