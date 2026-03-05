@@ -6,8 +6,14 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const COULEURS = [
-  '#6366f1','#3b82f6','#10b981','#ef4444','#f59e0b',
-  '#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316'
+  '#F8B4B4', // rouge pastel
+  '#B7E4C7', // vert pastel
+  '#FFD6A5', // orange pastel
+  '#AEEBFF', // cyan pastel
+  '#FBCFE8', // rose pastel
+  '#BFDBFE', // bleu pastel
+  '#DDD6FE', // violet pastel
+  '#FEF3C7', // jaune pastel
 ];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
@@ -317,118 +323,122 @@ export default function EmploiDuTemps() {
             <div style={styles.overlay}>
               <div style={{...styles.modal, width:660}}>
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
-                <div style={styles.formGrid}>
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Désignation <span style={{color:'#ef4444'}}>*</span></label>
-                    <input style={styles.inp} value={poolForm.nom} onChange={e => setPoolForm({...poolForm,nom:e.target.value})} />
-                  </div>
-                  <div style={styles.fc}>
-                    <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
-                    <select style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})}>
-                      <option value="">— Sélectionner —</option>
-                      <option value="CSC">CSC</option>
-                      <option value="CFR">CFR</option>
-                      <option value="EPL">EPL</option>
-                    </select>
-                    <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
-                      Périodes requises (classes) : {totalPeriodesRequisesForm}
+                <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr',gap:18,alignItems:'start'}}>
+                  <div style={styles.formGrid}>
+                    <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                      <label style={styles.lbl}>Désignation <span style={{color:'#ef4444'}}>*</span></label>
+                      <input style={styles.inp} value={poolForm.nom} onChange={e => setPoolForm({...poolForm,nom:e.target.value})} />
                     </div>
-                  </div>
-                  <div style={styles.fc}>
-                    <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
-                    <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
-                      <option value="">— Sélectionner —</option>
-                      <option value="Synecom">Synecom</option>
-                      <option value="Botza">Botza</option>
-                      <option value="Creuset">Creuset</option>
-                    </select>
-                    <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
-                      Cumul périodes professeurs : {totalPeriodesProfsForm}
+                    <div style={styles.fc}>
+                      <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
+                      <select style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})}>
+                        <option value="">— Sélectionner —</option>
+                        <option value="CSC">CSC</option>
+                        <option value="CFR">CFR</option>
+                        <option value="EPL">EPL</option>
+                      </select>
+                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
+                        Périodes requises (classes) : {totalPeriodesRequisesForm}
+                      </div>
                     </div>
-                  </div>
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                      {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
-                        <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
-                          <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
-                          {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
-                        </label>
-                      ))}
+                    <div style={styles.fc}>
+                      <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
+                      <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
+                        <option value="">— Sélectionner —</option>
+                        <option value="Synecom">Synecom</option>
+                        <option value="Botza">Botza</option>
+                        <option value="Creuset">Creuset</option>
+                      </select>
+                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
+                        Cumul périodes professeurs : {totalPeriodesProfsForm}
+                      </div>
                     </div>
-                  </div>
-                  {(() => {
-                    const niveauSel = poolForm.niveau || '';
-                    const siteSel = poolForm.site || '';
-                    const respecteNiveau = (p) => (p.niveau_prefere || '') === niveauSel;
-                    const respecteLieu = (p) => (p.lieu_travail_prefere || '') === siteSel;
-                    const blocsProfs = [
-                      {
-                        label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
-                        items: profs.filter(p => respecteNiveau(p) && respecteLieu(p))
-                      },
-                      {
-                        label: `🎯 A une préférence pour ce niveau (${niveauSel || '?'})`,
-                        items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p))
-                      },
-                      {
-                        label: `📍 A une préférence pour ce lieu de travail (${siteSel || '?'})`,
-                        items: profs.filter(p => !respecteNiveau(p) && respecteLieu(p))
-                      },
-                      {
-                        label: '👤 Ne respecte pas ces critères',
-                        items: profs.filter(p => !respecteNiveau(p) && !respecteLieu(p))
-                      },
-                    ];
-                    return (
-                      <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
-                          <label style={styles.lbl}>Professeurs</label>
-                        </div>
-                        {blocsProfs.map(bloc => bloc.items.length > 0 && (
-                          <div key={bloc.label} style={{marginBottom:10}}>
-                            <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
-                            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                              {bloc.items.map(p => (
-                                <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
-                                  <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
-                                  {p.nom} {p.prenom}
-                                  {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
-                                </label>
-                              ))}
-                            </div>
-                          </div>
+                    <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                      <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                        {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
+                          <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
+                            <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
+                            {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
+                          </label>
                         ))}
                       </div>
-                    );
-                  })()}
-
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Couleur</label>
-                    <div style={{display:'flex',gap:8,marginTop:6}}>
-                      {COULEURS.map(c => <div key={c} onClick={() => setPoolForm({...poolForm,couleur:c})}
-                        style={{width:28,height:28,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
                     </div>
-                  </div>
-
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>🕐 Créneaux horaires (modifiables)</label>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}}>
-                      {['Matin','Après-midi'].map(per => (
-                        <div key={per} style={{background:'#f8f9fa',borderRadius:8,padding:12}}>
-                          <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:'#555'}}>{per}</div>
-                          {poolForm.horaires.filter(h=>h.periode===per).map((h,idx) => (
-                            <div key={idx} style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
-                              <span style={{fontSize:12,width:60,color:'#888'}}>P{idx+1}</span>
-                              <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.debut}
-                                onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,debut:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
-                              <span style={{fontSize:11,color:'#aaa'}}>→</span>
-                              <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.fin}
-                                onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                    {(() => {
+                      const niveauSel = poolForm.niveau || '';
+                      const siteSel = poolForm.site || '';
+                      const respecteNiveau = (p) => (p.niveau_prefere || '') === niveauSel;
+                      const respecteLieu = (p) => (p.lieu_travail_prefere || '') === siteSel;
+                      const blocsProfs = [
+                        {
+                          label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
+                          items: profs.filter(p => respecteNiveau(p) && respecteLieu(p))
+                        },
+                        {
+                          label: `🎯 A une préférence pour ce niveau (${niveauSel || '?'})`,
+                          items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p))
+                        },
+                        {
+                          label: `📍 A une préférence pour ce lieu de travail (${siteSel || '?'})`,
+                          items: profs.filter(p => !respecteNiveau(p) && respecteLieu(p))
+                        },
+                        {
+                          label: '👤 Ne respecte pas ces critères',
+                          items: profs.filter(p => !respecteNiveau(p) && !respecteLieu(p))
+                        },
+                      ];
+                      return (
+                        <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                            <label style={styles.lbl}>Professeurs</label>
+                          </div>
+                          {blocsProfs.map(bloc => bloc.items.length > 0 && (
+                            <div key={bloc.label} style={{marginBottom:10}}>
+                              <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
+                              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                                {bloc.items.map(p => (
+                                  <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
+                                    <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
+                                    {p.nom} {p.prenom}
+                                    {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
+                                  </label>
+                                ))}
+                              </div>
                             </div>
                           ))}
                         </div>
-                      ))}
+                      );
+                    })()}
+                  </div>
+
+                  <div style={{display:'flex',flexDirection:'column',gap:15}}>
+                    <div style={styles.fc}>
+                      <label style={styles.lbl}>Couleur</label>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:6}}>
+                        {COULEURS.map(c => <div key={c} onClick={() => setPoolForm({...poolForm,couleur:c})}
+                          style={{width:28,height:28,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
+                      </div>
+                    </div>
+
+                    <div style={styles.fc}>
+                      <label style={styles.lbl}>Créneaux horaires</label>
+                      <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8}}>
+                        {['Matin','Après-midi'].map(per => (
+                          <div key={per} style={{background:'#f8f9fa',borderRadius:8,padding:12}}>
+                            <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:'#555'}}>{per}</div>
+                            {poolForm.horaires.filter(h=>h.periode===per).map((h,idx) => (
+                              <div key={idx} style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                                <span style={{fontSize:12,width:60,color:'#888'}}>P{idx+1}</span>
+                                <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.debut}
+                                  onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,debut:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                                <span style={{fontSize:11,color:'#aaa'}}>→</span>
+                                <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.fin}
+                                  onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
