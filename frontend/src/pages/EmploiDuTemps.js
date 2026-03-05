@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
+const BASE_PERIODES_TAUX = 42;
 const COULEURS = [
   '#F8B4B4', // rouge pastel
   '#B7E4C7', // vert pastel
@@ -119,6 +120,15 @@ export default function EmploiDuTemps() {
   };
 
   const sauverDispos = async () => {
+    const prof = profs.find(p => p.id == profSelectionne);
+    const periodesRequises = getPeriodesRequisesPourTaux(prof);
+    const periodesSelectionnees = Object.values(dispos).filter(v => v !== false).length;
+    if (periodesSelectionnees < periodesRequises) {
+      const ok = window.confirm(
+        `Le professeur a ${periodesSelectionnees} période(s) sélectionnée(s) alors que ${periodesRequises} sont requises.\n\nVoulez-vous vraiment sauvegarder ?`
+      );
+      if (!ok) return;
+    }
     const liste = Object.entries(dispos).map(([creneau_id, disponible]) => ({ creneau_id: parseInt(creneau_id), disponible }));
     await axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers });
     chargerDisposAffectations(poolAffId);
@@ -128,6 +138,13 @@ export default function EmploiDuTemps() {
   const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
 
   const creneauxParJourPeriode = (jour, periode) => creneaux.filter(c => c.jour===jour && c.periode===periode);
+
+  const getPeriodesRequisesPourTaux = (prof) => {
+    const taux = parseFloat(prof?.taux_activite);
+    if (!Number.isFinite(taux)) return parseInt(prof?.periodes_semaine) || 0;
+    // Règle métier : base 42, puis arrondi inférieur au pair pour rester cohérent avec les grilles de périodes.
+    return Math.max(0, Math.floor(((BASE_PERIODES_TAUX * taux) / 100) / 2) * 2);
+  };
 
   // Horaires du pool sélectionné ou défaut
   const getHorairesPool = (pool_id) => {
@@ -286,6 +303,17 @@ export default function EmploiDuTemps() {
     acc[p.id] = affectationsPool.filter(a => String(a.prof_id) === String(p.id)).length;
     return acc;
   }, {});
+  const resumePeriodesParJour = JOURS.reduce((acc, jour) => {
+    let matin = 0;
+    let apresMidi = 0;
+    classesPool.forEach(cl => {
+      const periode = getHoraireJourClasse(cl.id, jour);
+      if (periode === 'Matin') matin += 1;
+      if (periode === 'Après-midi') apresMidi += 1;
+    });
+    acc[jour] = { matin, apresMidi };
+    return acc;
+  }, {});
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
@@ -336,6 +364,9 @@ export default function EmploiDuTemps() {
                 <button key={p.id} style={{...styles.chip,...(profSelectionne==p.id?styles.chipActif:{})}}
                   onClick={() => chargerDispos(p.id)}>
                   {p.nom} {p.prenom}
+                  <span style={{marginLeft:6,fontSize:11,opacity:0.9}}>
+                    ({getPeriodesRequisesPourTaux(p)} périodes)
+                  </span>
                 </button>
               ))}
             </div>
@@ -585,7 +616,6 @@ export default function EmploiDuTemps() {
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:12}}>
-              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>- (par défaut) puis Matin ↔ Après-midi</b></div>
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
                   <thead>
@@ -593,11 +623,22 @@ export default function EmploiDuTemps() {
                       <th style={{...styles.th,width:180,minWidth:180,maxWidth:180}}>Classe</th>
                       {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',minWidth:140}}>{j}</th>)}
                     </tr>
+                    <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
+                      <th style={{...styles.th,width:180,minWidth:180,maxWidth:180,textAlign:'center',fontWeight:600,color:'#94a3b8'}}>Totaux</th>
+                      {JOURS.map(j => (
+                        <th key={`${j}-resume`} style={{...styles.th,textAlign:'center',minWidth:140,padding:'6px 10px'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                            <span style={{fontSize:11,color:'#1d4ed8',fontWeight:700}}>M : {resumePeriodesParJour[j].matin}</span>
+                            <span style={{fontSize:11,color:'#92400e',fontWeight:700}}>A : {resumePeriodesParJour[j].apresMidi}</span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
                   </thead>
                   <tbody>
                     {classesPool.map((cl,ri) => (
                       <tr key={cl.id} style={{background:ri%2===0?'white':'#fafbfc'}}>
-                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',borderLeft:'3px solid #1a73e8',width:180,minWidth:180,maxWidth:180}}>
+                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180,minWidth:180,maxWidth:180}}>
                           {cl.nom}
                         </td>
                         {JOURS.map(jour => {
