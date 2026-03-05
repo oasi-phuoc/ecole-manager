@@ -276,7 +276,8 @@ export default function EmploiDuTemps() {
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
   const affectationsPool = affectations.filter(a =>
-    classesPoolIds.has(String(a.classe_id)) && profsPoolIds.has(String(a.prof_id))
+    profsPoolIds.has(String(a.prof_id)) &&
+    (classesPoolIds.has(String(a.classe_id)) || !!a.type_special)
   );
   const suiviClasses = classesPool.map(cl => {
     const niveauClasse = String(cl.niveau || poolSelectionne?.niveau || '').toUpperCase();
@@ -318,9 +319,9 @@ export default function EmploiDuTemps() {
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
-  const niveauClassePlanning = String(planningClasse?.classe?.niveau || '').toUpperCase();
+  const niveauPoolPlanning = String(poolClasseP?.niveau || '').toUpperCase();
   const matieresPourPlanningClasse = matieres.filter(m =>
-    niveauClassePlanning && String(m.niveau || '').toUpperCase() === niveauClassePlanning
+    niveauPoolPlanning && String(m.niveau || '').toUpperCase() === niveauPoolPlanning
   );
   const suiviBranchesClasse = planningClasse ? matieresPourPlanningClasse.map(m => {
     const affectees = (planningClasse.affectations || []).filter(a => String(a.matiere_id) === String(m.id)).length;
@@ -613,7 +614,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{...styles.rowBetween, marginBottom:16}}>
             <div style={{display:'flex',gap:8}}>
-              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Planning de classe'}].map(o => (
+              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
                   onClick={() => {
                     setSousOngletAff(o.id);
@@ -749,12 +750,18 @@ export default function EmploiDuTemps() {
               <>
               <div style={{marginBottom:10}}>
                 <h3 style={styles.suiviGrandTitre}>Suivi classes</h3>
-                {suiviClassesIncompletes.length === 0 ? (
-                  <div style={{fontSize:12,color:'#16a34a',fontWeight:700}}>Toutes les classes sont OK</div>
-                ) : (
-                  <div style={styles.suiviClassesGrid}>
-                    {suiviClassesIncompletes.map(cl => (
-                      <div key={cl.id} style={styles.suiviClasseChip}>
+                <div style={styles.suiviClassesGrid}>
+                  {suiviClasses.map(cl => {
+                    const classeOk = cl.niveauClasse === 'CSC'
+                      ? (cl.periodesNormalesAffectees === cl.periodesNormalesRequises && cl.periodesSoutienAffectees === cl.periodesSoutienRequises)
+                      : (cl.periodesNormalesAffectees === cl.periodesNormalesRequises);
+                    return (
+                      <div key={cl.id} style={{
+                        ...styles.suiviClasseChip,
+                        border: classeOk ? '1px solid #86efac' : '1px solid #fecaca',
+                        background: classeOk ? '#f0fdf4' : '#fef2f2',
+                        color: classeOk ? '#166534' : '#991b1b'
+                      }}>
                         <div style={styles.suiviClasseNom}>{cl.nom}</div>
                         {cl.niveauClasse === 'CSC' && (
                           <>
@@ -766,9 +773,9 @@ export default function EmploiDuTemps() {
                           <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
               <div style={{overflowX:'auto'}}>
               <table style={{...styles.tbl,minWidth:200+profsPool.length*140}}>
@@ -817,7 +824,9 @@ export default function EmploiDuTemps() {
                                 const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
                                 const modeAffectation = aff ? (affectationModes[aff.id] || 'classe') : 'classe';
                                 const valeurSelect = aff
-                                  ? (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id))
+                                  ? (aff.type_special
+                                      ? `special:${aff.type_special}`
+                                      : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
                                 return (
                                   <td key={prof.id} style={{...styles.td,padding:4,background:indispo?'#eeeeee':'#fff'}}>
@@ -838,11 +847,15 @@ export default function EmploiDuTemps() {
                                           }
                                           chargerTout();
                                         } else {
+                                          const estSpecial = valeur.startsWith('special:');
                                           const estSoutien = valeur.startsWith('soutien:');
-                                          const classe_id = estSoutien ? valeur.split(':')[1] : valeur;
+                                          const typeSpecial = estSpecial ? valeur.split(':')[1] : null;
+                                          const classe_id = estSoutien ? valeur.split(':')[1] : (estSpecial ? null : valeur);
                                           const ancienne = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
                                           // Vérifier si cette classe est déjà prise ce créneau par un autre prof
-                                          const conflit = affectations.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id);
+                                          const conflit = !estSpecial
+                                            ? affectations.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
+                                            : null;
                                           if (conflit) {
                                             const profConflit = profsPool.find(p => p.id == conflit.prof_id);
                                             const nomProfConflit = profConflit ? `${profConflit.nom} ${profConflit.prenom}` : 'un autre professeur';
@@ -856,15 +869,19 @@ export default function EmploiDuTemps() {
                                             if (ancienne && String(ancienne.classe_id) !== String(classe_id)) {
                                               const repSwap = await axios.post(
                                                 API + '/planning/affectations',
-                                                { prof_id: conflit.prof_id, classe_id: ancienne.classe_id, creneau_id: cr.id },
+                                                { prof_id: conflit.prof_id, classe_id: ancienne.classe_id, creneau_id: cr.id, type_special: ancienne.type_special || null },
                                                 { headers }
                                               );
-                                              setAffectationModes(prev => ({ ...prev, [repSwap.data.id]: prev[ancienne.id] || 'classe' }));
+                                              setAffectationModes(prev => ({ ...prev, [repSwap.data.id]: prev[ancienne.id] || (ancienne.type_special ? 'special' : 'classe') }));
                                             }
 
                                             // Puis on affecte la classe choisie au prof courant
-                                            const repCourant = await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
-                                            setAffectationModes(prev => ({ ...prev, [repCourant.data.id]: estSoutien ? 'soutien' : 'classe' }));
+                                            const repCourant = await axios.post(
+                                              API+'/planning/affectations',
+                                              {prof_id:prof.id, classe_id, creneau_id:cr.id, type_special: typeSpecial},
+                                              {headers}
+                                            );
+                                            setAffectationModes(prev => ({ ...prev, [repCourant.data.id]: estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe') }));
                                             chargerTout();
                                             return;
                                           }
@@ -877,8 +894,12 @@ export default function EmploiDuTemps() {
                                               return next;
                                             });
                                           }
-                                          const rep = await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
-                                          setAffectationModes(prev => ({ ...prev, [rep.data.id]: estSoutien ? 'soutien' : 'classe' }));
+                                          const rep = await axios.post(
+                                            API+'/planning/affectations',
+                                            {prof_id:prof.id, classe_id, creneau_id:cr.id, type_special: typeSpecial},
+                                            {headers}
+                                          );
+                                          setAffectationModes(prev => ({ ...prev, [rep.data.id]: estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe') }));
                                           chargerTout();
                                         }
                                       }}
@@ -897,9 +918,9 @@ export default function EmploiDuTemps() {
                                         </optgroup>
                                       )}
                                       <optgroup label="Spécial">
-                                        <option value="titulariat">Titulariat</option>
-                                        <option value="atelier">Atelier</option>
-                                        <option value="autre">Autre</option>
+                                        <option value="special:titulariat">Titulariat</option>
+                                        <option value="special:atelier">Atelier</option>
+                                        <option value="special:autre">Autre</option>
                                       </optgroup>
                                     </select>
                                   </td>
@@ -922,13 +943,6 @@ export default function EmploiDuTemps() {
           {/* AFFECTATION PLANNING CLASSE */}
           {sousOngletAff === 'branches' && (
             <div>
-              <div style={styles.card}>
-                <h3 style={{...styles.cardTitre, marginBottom:12}}>Planning de classe</h3>
-                <div style={{fontSize:13,color:'#64748b'}}>
-                  Utilisez les sélections en haut pour choisir le pool et la classe.
-                </div>
-              </div>
-
               {!classePlanningPoolId && (
                 <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
                   Sélectionnez d'abord un pool pour afficher les classes.
@@ -937,7 +951,6 @@ export default function EmploiDuTemps() {
 
               {planningClasse && classePlanningId && (
                 <div>
-                  <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
                   <div style={{marginBottom:12}}>
                     <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
                     {suiviBranchesClasse.length === 0 ? (
@@ -956,6 +969,7 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
+                  <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
                   <div style={{overflowX:'auto'}}>
                     <table style={{...styles.tbl,minWidth:700}}>

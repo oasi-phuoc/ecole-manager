@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 
 const verifierToken = async (req, res, next) => {
+  if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Configuration de securite manquante' });
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Token manquant' });

@@ -85,7 +85,8 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS pool_classes (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE);`);
     await pool.query(`CREATE TABLE IF NOT EXISTS pool_branches (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE);`);
     await pool.query(`CREATE TABLE IF NOT EXISTS classe_horaires (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, jour VARCHAR(20), periode VARCHAR(50));`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS affectations (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id), creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, UNIQUE(classe_id, creneau_id));`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS affectations (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id), creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, type_special VARCHAR(30), UNIQUE(classe_id, creneau_id));`);
+    await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS type_special VARCHAR(30)`);
     await pool.query(`CREATE TABLE IF NOT EXISTS planning_branches (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, UNIQUE(classe_id, matiere_id, pool_id));`);
 
     // Table observations élèves

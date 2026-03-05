@@ -52,6 +52,20 @@ const updatePool = async (req, res) => {
   const { id } = req.params;
   const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau } = req.body;
   try {
+    const anciensProfsRes = await pool.query('SELECT prof_id FROM pool_profs WHERE pool_id=$1', [id]);
+    const anciennesClassesRes = await pool.query('SELECT classe_id FROM pool_classes WHERE pool_id=$1', [id]);
+    const anciensProfs = anciensProfsRes.rows.map(r => Number(r.prof_id));
+    const anciennesClasses = anciennesClassesRes.rows.map(r => Number(r.classe_id));
+    const nouveauxProfs = (prof_ids || []).map(x => Number(x));
+    const profsSupprimes = anciensProfs.filter(pid => !nouveauxProfs.includes(pid));
+
+    if (profsSupprimes.length && anciennesClasses.length) {
+      await pool.query(
+        'DELETE FROM affectations WHERE prof_id = ANY($1::int[]) AND classe_id = ANY($2::int[])',
+        [profsSupprimes, anciennesClasses]
+      );
+    }
+
     await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5 WHERE id=$6', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveau||null, id]);
     await pool.query('DELETE FROM pool_profs WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_classes WHERE pool_id=$1', [id]);
@@ -92,11 +106,18 @@ const getAllClasseHoraires = async (req, res) => {
 
 const getAffectations = async (req, res) => {
   const r = await pool.query(`
-    SELECT a.*, u.nom||' '||u.prenom as prof_nom, c.nom as classe_nom, m.nom as matiere_nom,
+    SELECT a.*, u.nom||' '||u.prenom as prof_nom,
+      COALESCE(c.nom, CASE
+        WHEN a.type_special='titulariat' THEN 'Titulariat'
+        WHEN a.type_special='atelier' THEN 'Atelier'
+        WHEN a.type_special='autre' THEN 'Autre'
+        ELSE NULL
+      END) as classe_nom,
+      m.nom as matiere_nom,
       cr.jour, cr.heure_debut, cr.heure_fin, cr.periode, cr.ordre
     FROM affectations a
     JOIN utilisateurs u ON u.id=a.prof_id
-    JOIN classes c ON c.id=a.classe_id
+    LEFT JOIN classes c ON c.id=a.classe_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
     JOIN creneaux cr ON cr.id=a.creneau_id
     ORDER BY ${ORDRE_JOURS.replace('jour','cr.jour')}, cr.ordre
@@ -105,14 +126,16 @@ const getAffectations = async (req, res) => {
 };
 
 const saveAffectation = async (req, res) => {
-  const { prof_id, classe_id, matiere_id, creneau_id } = req.body;
+  const { prof_id, classe_id, matiere_id, creneau_id, type_special } = req.body;
+  const specialValide = ['titulariat', 'atelier', 'autre'].includes(type_special) ? type_special : null;
+  const classeIdFinal = specialValide ? null : (classe_id || null);
   try {
     const r = await pool.query(`
-      INSERT INTO affectations (prof_id, classe_id, matiere_id, creneau_id)
-      VALUES ($1,$2,$3,$4)
-      ON CONFLICT (classe_id, creneau_id) DO UPDATE SET prof_id=$1, matiere_id=$3
+      INSERT INTO affectations (prof_id, classe_id, matiere_id, creneau_id, type_special)
+      VALUES ($1,$2,$3,$4,$5)
+      ON CONFLICT (classe_id, creneau_id) DO UPDATE SET prof_id=$1, matiere_id=$3, type_special=$5
       RETURNING *
-    `, [prof_id||null, classe_id, matiere_id||null, creneau_id]);
+    `, [prof_id||null, classeIdFinal, matiere_id||null, creneau_id, specialValide]);
     res.json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: err.message }); }
 };
@@ -155,7 +178,19 @@ const getPlanningGeneral = async (req, res) => {
   if (pool_id) { profsQ = "SELECT u.id,u.nom,u.prenom FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1 ORDER BY u.nom"; profsP=[pool_id]; }
   const profs = await pool.query(profsQ, profsP);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
-  const affectations = await pool.query('SELECT a.prof_id,a.creneau_id,c.nom as classe_nom,m.nom as matiere_nom FROM affectations a JOIN classes c ON c.id=a.classe_id LEFT JOIN matieres m ON m.id=a.matiere_id');
+  const affectations = await pool.query(`
+    SELECT a.prof_id, a.creneau_id,
+      COALESCE(c.nom, CASE
+        WHEN a.type_special='titulariat' THEN 'Titulariat'
+        WHEN a.type_special='atelier' THEN 'Atelier'
+        WHEN a.type_special='autre' THEN 'Autre'
+        ELSE NULL
+      END) as classe_nom,
+      m.nom as matiere_nom
+    FROM affectations a
+    LEFT JOIN classes c ON c.id=a.classe_id
+    LEFT JOIN matieres m ON m.id=a.matiere_id
+  `);
   const dispos = await pool.query('SELECT prof_id,creneau_id,disponible FROM disponibilites');
   const titulaires = await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.nom||' '||u.prenom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
   res.json({ profs:profs.rows, creneaux:creneaux.rows, affectations:affectations.rows, dispos:dispos.rows, titulaires:titulaires.rows });
@@ -166,7 +201,20 @@ const getPlanningProf = async (req, res) => {
   const prof = await pool.query('SELECT id,nom,prenom FROM utilisateurs WHERE id=$1', [prof_id]);
   const classesTitulaire = await pool.query('SELECT nom FROM classes WHERE prof_principal_id=$1', [prof_id]);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
-  const affectations = await pool.query('SELECT a.creneau_id,c.nom as classe_nom,m.nom as matiere_nom FROM affectations a JOIN classes c ON c.id=a.classe_id LEFT JOIN matieres m ON m.id=a.matiere_id WHERE a.prof_id=$1', [prof_id]);
+  const affectations = await pool.query(`
+    SELECT a.creneau_id,
+      COALESCE(c.nom, CASE
+        WHEN a.type_special='titulariat' THEN 'Titulariat'
+        WHEN a.type_special='atelier' THEN 'Atelier'
+        WHEN a.type_special='autre' THEN 'Autre'
+        ELSE NULL
+      END) as classe_nom,
+      m.nom as matiere_nom
+    FROM affectations a
+    LEFT JOIN classes c ON c.id=a.classe_id
+    LEFT JOIN matieres m ON m.id=a.matiere_id
+    WHERE a.prof_id=$1
+  `, [prof_id]);
   const dispos = await pool.query('SELECT creneau_id,disponible FROM disponibilites WHERE prof_id=$1', [prof_id]);
   res.json({ prof:prof.rows[0], creneaux:creneaux.rows, affectations:affectations.rows, dispos:dispos.rows, classesTitulaire:classesTitulaire.rows });
 };
