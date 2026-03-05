@@ -69,7 +69,7 @@ export default function Presences() {
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
   };
 
-  const exporterOASI = async () => {
+  const exporterLORA = async () => {
     if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
     setExportLoading(true);
     try {
@@ -219,9 +219,10 @@ export default function Presences() {
 
   const chargerClasses = async () => {
     try {
-      const res = await axios.get(API + '/classes', { headers });
+      const res = await axios.get(API + '/presences/classes', { headers });
       setClasses(res.data);
       if (res.data.length > 0) setClasseSelectionnee(res.data[0].id);
+      else setClasseSelectionnee('');
     } catch (err) { console.error(err); }
   };
 
@@ -378,16 +379,6 @@ export default function Presences() {
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20}}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>✅ Présences</h2>
-        <div style={{display:'flex',gap:10,alignItems:'center'}}>
-          <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-          </select>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-            <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
-            <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-          </div>
-        </div>
       </div>
 
       {/* Onglets */}
@@ -396,9 +387,17 @@ export default function Presences() {
         {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
           <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
         ))}
-        <button onClick={exporterOASI} disabled={exportLoading} style={{marginLeft:'auto',padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#10b981',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
-          {exportLoading ? '⏳ Export...' : '⬇️ Export OASI'}
+        <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+        </select>
+        <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#10b981',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
+          {exportLoading ? 'Export...' : 'Export LORA'}
         </button>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+        </div>
       </div>
       </div>
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const c = require('../controllers/presencesController');
 const { verifierToken } = require('../middleware/auth');
 router.use(verifierToken);
+router.get('/classes', c.getClassesDisponibles);
 router.get('/', c.getPresences);
 router.get('/eleves', c.getElevesClasse);
 router.get('/mois', c.getPresencesMois);

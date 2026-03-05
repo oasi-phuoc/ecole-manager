@@ -155,12 +155,6 @@ export default function Professeurs() {
         </div>
       </div>
 
-      <div style={s.statsBar}>
-        <span style={s.statChip}>Total <b>{profs.length}</b></span>
-        <span style={{...s.statChip,background:'#d1fae5',color:'#065f46'}}>Actifs <b>{profs.filter(p=>p.actif!==false).length}</b></span>
-        <span style={{...s.statChip,background:'#fee2e2',color:'#991b1b'}}>Inactifs <b>{profs.filter(p=>p.actif===false).length}</b></span>
-      </div>
-
       {showForm && (
         <div style={s.overlay}>
           <div style={s.modal}>
@@ -428,13 +422,13 @@ export default function Professeurs() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Email','Téléphone','Naissance','Statut','Créé le','Documents'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['Nom','Prénom','Email','Téléphone','Naissance','Documents','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {profsFiltres.length===0 ? (
-              <tr><td colSpan="10" style={s.empty}>Aucun professeur trouvé</td></tr>
+              <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun professeur trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
                 <td style={s.td}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
@@ -442,18 +436,14 @@ export default function Professeurs() {
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                
-                
+                <td style={s.td}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
                 <td style={s.td}>
                   <button style={p.actif!==false?s.badgeActive:s.badgeInactive} onClick={() => toggleStatut(p)}>
                     {p.actif!==false?'✅ Actif':'❌ Inactif'}
                   </button>
                 </td>
-                <td style={s.td}>{p.created_at?new Date(p.created_at).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={s.td}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
                 {isAdmin() && (
                   <td style={s.td}>
-                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
                     <button
                       onClick={() => envoyerAccesEmail(p.id)}
                       disabled={emailEnvoi[p.id]==='loading'}
@@ -461,6 +451,7 @@ export default function Professeurs() {
                       style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:emailEnvoi[p.id]==='loading'?0.4:0.7}}>
                       {emailEnvoi[p.id]==='loading'?'⏳':emailEnvoi[p.id]==='ok'?'✅':'📧'}
                     </button>
+                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
                     <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>
                   </td>
                 )}

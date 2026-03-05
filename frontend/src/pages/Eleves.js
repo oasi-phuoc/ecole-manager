@@ -21,6 +21,7 @@ export default function Eleves() {
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreClasse, setFiltreClasse] = useState('tous');
+  const [showFiltreClasseSelect, setShowFiltreClasseSelect] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
@@ -388,10 +389,25 @@ export default function Eleves() {
             <span style={{position:'absolute',left:10,top:9,fontSize:13}}>🔍</span>
             <input style={{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200}} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
           </div>
-          <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-            <option value="tous">Toutes les classes</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-          </select>
+          <button
+            onClick={() => {
+              if (showFiltreClasseSelect) {
+                setShowFiltreClasseSelect(false);
+                setFiltreClasse('tous');
+              } else {
+                setShowFiltreClasseSelect(true);
+              }
+            }}
+            style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:showFiltreClasseSelect?'#eef2ff':'white',color:showFiltreClasseSelect?'#4338ca':'#475569',cursor:'pointer',fontWeight:600}}
+          >
+            Classe
+          </button>
+          {showFiltreClasseSelect && (
+            <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
+              <option value="tous">Toutes les classes</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+          )}
           <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
         </div>
@@ -400,28 +416,8 @@ export default function Eleves() {
       {/* Stats */}
       <div style={{marginBottom:20}}>
         <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginBottom:10}}>
-          <span style={{padding:'5px 12px',background:'#fef3c7',color:'#92400e',borderRadius:99,fontSize:12,fontWeight:500}}>Total <b>{eleves.length}</b> élèves</span>
-          <button onClick={() => setFiltreClasse('sans_classe')} style={{padding:'5px 14px',background: filtreClasse==='sans_classe'?'#ef4444':'white',color:filtreClasse==='sans_classe'?'white':'#ef4444',border:'1px solid #ef4444',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer'}}>
-            ⚠️ Sans classe <b>{eleves.filter(e=>!e.classe_id).length}</b>
-          </button>
           {filtreClasse==='sans_classe' && <button onClick={() => setFiltreClasse('tous')} style={{padding:'5px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:99,fontSize:12,cursor:'pointer',color:'#64748b'}}>✕ Effacer filtre</button>}
         </div>
-        {/* Groupes par niveau */}
-        {['CFR','CSC','EPL','Autre'].map(niveau => {
-          const classesNiveau = classes.filter(c => (c.niveau||'Autre')===niveau);
-          if (classesNiveau.length === 0) return null;
-          return (
-            <div key={niveau} style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:6}}>
-              <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',minWidth:36,textTransform:'uppercase'}}>{niveau}</span>
-              {classesNiveau.map(c => (
-                <button key={c.id} onClick={() => setFiltreClasse(String(c.id)===filtreClasse?'tous':String(c.id))}
-                  style={{padding:'4px 12px',background:String(c.id)===filtreClasse?'#10b981':'#d1fae5',color:String(c.id)===filtreClasse?'white':'#065f46',border:'none',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                  {c.nom} <b>{eleves.filter(e=>e.classe_id==c.id).length}</b>
-                </button>
-              ))}
-            </div>
-          );
-        })}
       </div>
 
       {/* Modal Import */}
@@ -471,7 +467,7 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#92400e','#fef3c7')}>🎓 Informations élève</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="NOM (majuscules) *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} placeholder="DUPONT" /></Champ>
+                    <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} placeholder="DUPONT" /></Champ>
                     <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" /></Champ>
                     <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="marie@ecole.ch" /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
@@ -481,11 +477,11 @@ export default function Eleves() {
                         {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                       </select>
                     </Champ>
-                    <Champ lbl="A commencé l'école le">
-                      <input style={inp} type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
+                    <Champ lbl="A commencé l'école le *">
+                      <input style={inp} required type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
                     </Champ>
-                    <Champ lbl="Catégorie">
-                      <select style={inp} value={categorie} onChange={e => setCategorie(e.target.value)}>
+                    <Champ lbl="Catégorie *">
+                      <select style={inp} required value={categorie} onChange={e => setCategorie(e.target.value)}>
                         <option value="">-- Choisir --</option>
                         <option value="OASI">OASI</option>
                         <option value="EUCMS">EUCMS</option>
@@ -501,32 +497,32 @@ export default function Eleves() {
                   </div>
                 </div>
 
-                {/* COL 2 - OASI obligatoires */}
+                {/* COL 2 - Données OASI */}
                 <div>
                   <div style={secTitle('#3730a3','#e0e7ff')}>🗂️ Données OASI</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="PROG_NOM *"><input style={inp} required value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
-                    <Champ lbl="PROG_ENCADRANT *"><input style={inp} required value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
-                    <Champ lbl="N *"><input style={inp} required type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
-                    <Champ lbl="REF *"><input style={inp} required type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
-                    <Champ lbl="POS *"><input style={inp} required type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
-                    <Champ lbl="NOM *"><input style={inp} required value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
-                    <Champ lbl="NAIS *"><input style={inp} required type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
-                    <Champ lbl="NATIONALITE *"><input style={inp} required value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
+                    <Champ lbl="PROG_NOM"><input style={inp} value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
+                    <Champ lbl="PROG_ENCADRANT"><input style={inp} value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
+                    <Champ lbl="N"><input style={inp} type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
+                    <Champ lbl="REF"><input style={inp} type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
+                    <Champ lbl="POS"><input style={inp} type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
+                    <Champ lbl="NOM"><input style={inp} value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
+                    <Champ lbl="NAIS"><input style={inp} type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
+                    <Champ lbl="NATIONALITE"><input style={inp} value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
 
-                    <Champ lbl="PROG_PRESENCES *"><input style={inp} required value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
-                    <Champ lbl="PROG_ADMIN *"><input style={inp} required value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
-                    <Champ lbl="AS *"><input style={inp} required value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
-                    <Champ lbl="PRG_ID *"><input style={inp} required type="number" value={oasiPrgId} onChange={e => setOasiPrgId(e.target.value)} /></Champ>
-                    <Champ lbl="PRG_OCCUPATION_ID *"><input style={inp} required type="number" value={oasiPrgOccupationId} onChange={e => setOasiPrgOccupationId(e.target.value)} /></Champ>
-                    <Champ lbl="RA_ID *"><input style={inp} required type="number" value={oasiRaId} onChange={e => setOasiRaId(e.target.value)} /></Champ>
-                    <Champ lbl="TEMPS_REPARTI_ID *"><input style={inp} required type="number" value={oasiTempsRepartiId} onChange={e => setOasiTempsRepartiId(e.target.value)} /></Champ>
+                    <Champ lbl="PROG_PRESENCES"><input style={inp} value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
+                    <Champ lbl="PROG_ADMIN"><input style={inp} value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
+                    <Champ lbl="AS"><input style={inp} value={oasiAs} onChange={e => setOasiAs(e.target.value)} /></Champ>
+                    <Champ lbl="PRG_ID"><input style={inp} type="number" value={oasiPrgId} onChange={e => setOasiPrgId(e.target.value)} /></Champ>
+                    <Champ lbl="PRG_OCCUPATION_ID"><input style={inp} type="number" value={oasiPrgOccupationId} onChange={e => setOasiPrgOccupationId(e.target.value)} /></Champ>
+                    <Champ lbl="RA_ID"><input style={inp} type="number" value={oasiRaId} onChange={e => setOasiRaId(e.target.value)} /></Champ>
+                    <Champ lbl="TEMPS_REPARTI_ID"><input style={inp} type="number" value={oasiTempsRepartiId} onChange={e => setOasiTempsRepartiId(e.target.value)} /></Champ>
                   </div>
                 </div>
 
                 {/* COL 3 - OASI optionnels */}
                 <div>
-                  <div style={secTitle('#475569','#f1f5f9')}>📋 OASI optionnels (I–O)</div>
+                  <div style={secTitle('#475569','#f1f5f9')}>📋 Données AOSI - présences</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     <Champ lbl="PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
                     <Champ lbl="JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} placeholder="lundi" /></Champ>
@@ -820,14 +816,14 @@ export default function Eleves() {
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-              {['Photo','Nom','Prénom','Nationalité','Classe','Date naissance','Contact','Documents','Sanctions','Observations','Statut','Actions'].map(h => (
+              {['Photo','Nom','Prénom','Nationalité','Classe','Date naissance','Documents','Sanctions','Observations','Statut','Actions'].map(h => (
                 <th key={h} style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {elevesFiltres.length===0 ? (
-              <tr><td colSpan="12" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
+              <tr><td colSpan="11" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
                 <td style={{padding:'10px 14px'}}>
@@ -875,10 +871,6 @@ export default function Eleves() {
                   </select>
                 </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{padding:'10px 14px',fontSize:13}}>
-                  <div>{el.nom_parent||'—'}</div>
-                  {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
-                </td>
                 <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
                 <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
                 <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁 Détail</button></td>

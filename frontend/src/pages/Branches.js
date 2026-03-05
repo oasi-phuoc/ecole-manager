@@ -78,15 +78,6 @@ export default function Branches() {
         </div>
       </div>
 
-      <div style={s.statsBar}>
-        <span style={s.statChip}>Total <b>{branches.length}</b> branches</span>
-        {niveaux.filter(n=>n!=='tous').map(n => (
-          <span key={n} style={{...s.statChip,background:'#e0e7ff',color:'#3730a3'}}>
-            {n} <b>{branches.filter(b=>b.niveau===n).length}</b>
-          </span>
-        ))}
-      </div>
-
       {showForm && (
         <div style={s.overlay}>
           <div style={s.modal}>
@@ -150,16 +141,11 @@ export default function Branches() {
           <tbody>
             {branchesFiltrees.length===0 ? (
               <tr><td colSpan="5" style={s.empty}>Aucune branche trouvée</td></tr>
-            ) : branchesFiltrees.map((b,i) => {
-              const COULEURS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
-              const col = COULEURS[i % COULEURS.length];
+            ) : branchesFiltrees.map((b) => {
               return (
                 <tr key={b.id} style={s.tr}>
                   <td style={s.td}>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{width:8,height:8,borderRadius:'50%',background:col,flexShrink:0}}></div>
-                      <b style={{color:'#1e293b'}}>{b.nom}</b>
-                    </div>
+                    <b style={{color:'#1e293b'}}>{b.nom}</b>
                   </td>
                   <td style={s.td}>
                     <span style={{background:b.type_branche==='principale'?'#fef3c7':'#f1f5f9',color:b.type_branche==='principale'?'#92400e':'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>

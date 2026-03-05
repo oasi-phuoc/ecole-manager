@@ -1,5 +1,33 @@
 const pool = require('../config/database');
 
+const getClassesDisponibles = async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      const result = await pool.query(`
+        SELECT id, nom, niveau, annee_scolaire
+        FROM classes
+        WHERE actif IS DISTINCT FROM false
+        ORDER BY nom
+      `);
+      return res.json(result.rows);
+    }
+
+    const result = await pool.query(`
+      SELECT DISTINCT c.id, c.nom, c.niveau, c.annee_scolaire
+      FROM classes c
+      LEFT JOIN affectations a ON a.classe_id = c.id AND a.prof_id = $1
+      LEFT JOIN emploi_du_temps et ON et.classe_id = c.id AND et.prof_id = $1
+      WHERE c.prof_principal_id = $1
+         OR a.id IS NOT NULL
+         OR et.id IS NOT NULL
+      ORDER BY c.nom
+    `, [req.user.id]);
+    return res.json(result.rows);
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
 const getPresences = async (req, res) => {
   try {
     const { classe_id, date } = req.query;
@@ -123,4 +151,4 @@ const getPresencesMois = async (req, res) => {
   }
 };
 
-module.exports = { getPresences, getElevesClasse, enregistrerPresences, getStatistiques, getPresencesMois };
+module.exports = { getClassesDisponibles, getPresences, getElevesClasse, enregistrerPresences, getStatistiques, getPresencesMois };
