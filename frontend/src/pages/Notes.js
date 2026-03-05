@@ -298,6 +298,44 @@ export default function Notes() {
     }
   };
 
+  const renderActionsBar = (className = '') => (
+    <div className={className} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <button
+          style={{ ...s.btnTopAction, background: vueClasseAction === 'evaluations' ? '#6366f1' : 'white', color: vueClasseAction === 'evaluations' ? 'white' : '#475569', border: vueClasseAction === 'evaluations' ? 'none' : '1px solid #e2e8f0' }}
+          onClick={() => { setVueClasseAction('evaluations'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('evaluations'); }}
+        >
+          📝 Évaluations
+        </button>
+        <button
+          style={{ ...s.btnTopAction, background: vueClasseAction === 'generale' ? '#6366f1' : 'white', color: vueClasseAction === 'generale' ? 'white' : '#475569', border: vueClasseAction === 'generale' ? 'none' : '1px solid #e2e8f0' }}
+          onClick={() => { setVueClasseAction('generale'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('generale'); }}
+        >
+          📊 Vue générale
+        </button>
+        <button
+          style={{ ...s.btnTopAction, background: vueClasseAction === 'bulletin' ? '#6366f1' : 'white', color: vueClasseAction === 'bulletin' ? 'white' : '#475569', border: vueClasseAction === 'bulletin' ? 'none' : '1px solid #e2e8f0' }}
+          onClick={() => { setVueClasseAction('bulletin'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('bulletin'); }}
+        >
+          📄 Bulletin
+        </button>
+        <select
+          style={{...s.select, minWidth:230, height:35}}
+          value={classeSelectionnee}
+          onChange={e => {
+            const next = e.target.value;
+            setClasseSelectionnee(next);
+            if (!next) { setClasseObj(null); return; }
+            ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
+          }}
+        >
+          <option value="">- Sélectionner une classe -</option>
+          {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+
   // ===================== VUE SAISIE NOTES =====================
   if (vue === 'saisie' && evaluationOuverte) {
     return (
@@ -408,6 +446,7 @@ export default function Notes() {
           <h2 style={s.titre}>📊 Vue générale — {classeNom}</h2>
           <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
         </div>
+        {renderActionsBar('no-print')}
 
         {/* Sélecteur de mode */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }} className="no-print">
@@ -736,6 +775,7 @@ export default function Notes() {
             ))}
           </div>
         </div>
+        {renderActionsBar('no-print')}
 
         {bulletinOnglet === 'criteres' && (
           <>
@@ -1095,6 +1135,7 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📚 Matières — {classeNom}</h2>
         </div>
+        {renderActionsBar()}
         <div style={s.tblWrap}>
         <table style={s.tbl}>
           <thead>
@@ -1137,41 +1178,7 @@ export default function Notes() {
         <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.titre}>📝 Notes & Bulletins</h2>
       </div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-          <button
-            style={{ ...s.btnTopAction, background: vueClasseAction === 'evaluations' ? '#6366f1' : 'white', color: vueClasseAction === 'evaluations' ? 'white' : '#475569', border: vueClasseAction === 'evaluations' ? 'none' : '1px solid #e2e8f0' }}
-            onClick={() => { setVueClasseAction('evaluations'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('evaluations'); }}
-          >
-            📝 Évaluations
-          </button>
-          <button
-            style={{ ...s.btnTopAction, background: vueClasseAction === 'generale' ? '#6366f1' : 'white', color: vueClasseAction === 'generale' ? 'white' : '#475569', border: vueClasseAction === 'generale' ? 'none' : '1px solid #e2e8f0' }}
-            onClick={() => { setVueClasseAction('generale'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('generale'); }}
-          >
-            📊 Vue générale
-          </button>
-          <button
-            style={{ ...s.btnTopAction, background: vueClasseAction === 'bulletin' ? '#6366f1' : 'white', color: vueClasseAction === 'bulletin' ? 'white' : '#475569', border: vueClasseAction === 'bulletin' ? 'none' : '1px solid #e2e8f0' }}
-            onClick={() => { setVueClasseAction('bulletin'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('bulletin'); }}
-          >
-            📄 Bulletin
-          </button>
-          <select
-            style={{...s.select, minWidth:230, height:35}}
-            value={classeSelectionnee}
-            onChange={e => {
-              const next = e.target.value;
-              setClasseSelectionnee(next);
-              if (!next) { setClasseObj(null); return; }
-              ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
-            }}
-          >
-            <option value="">- Sélectionner une classe -</option>
-            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-          </select>
-        </div>
-      </div>
+      {renderActionsBar()}
       <div style={s.tblWrap}>
         <div style={s.vide}>
           {classeSelectionnee
