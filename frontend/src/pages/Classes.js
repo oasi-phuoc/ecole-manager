@@ -233,7 +233,7 @@ export default function Classes() {
   };
 
   const imprimerPlanClasse = () => {
-    const COLS = 12; const ROWS = 13;
+    const COLS = 10; const ROWS = 13;
     let cells = '';
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
@@ -242,7 +242,7 @@ export default function Classes() {
         const el = eleveId === 'PROF' ? null : elevesClasse.find(e => String(e.id) === String(eleveId));
         const isProf = row === ROWS-1;
         if (isProf && col === 0) {
-          cells += `<td colspan="12" style="background:#0f172a;color:white;text-align:center;font-weight:800;font-size:14px;padding:12px;border-radius:6px">🎓 Bureau du professeur — ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</td>`;
+          cells += `<td colspan="${COLS}" style="background:#0f172a;color:white;text-align:center;font-weight:800;font-size:14px;padding:12px;border-radius:6px">🎓 Bureau du professeur — ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</td>`;
           break;
         } else if (!isProf) {
           cells += `<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;width:80px;height:80px;background:${eleveId?'#f0f4ff':'#f8fafc'};vertical-align:middle">
@@ -278,11 +278,6 @@ export default function Classes() {
     win.document.close();
   };
 
-  const ouvrirPlanClasse = async () => {
-    await chargerPlanClasse();
-    setShowPlanClasse(true);
-  };
-
   const dropOnCell = (row, col) => {
     if (dragEleve === null) return;
     const key = row+'-'+col;
@@ -292,6 +287,93 @@ export default function Classes() {
     if (dragEleve !== 'VIDE') newPos[key] = dragEleve;
     setPlanPositions(newPos);
     setDragEleve(null);
+  };
+
+  const renderPlanClasseOnglet = () => {
+    const COLS = 10; const ROWS = 13;
+    const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
+
+    return (
+      <div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <div style={{fontSize:12,color:'#64748b',fontWeight:700}}>Plan de classe</div>
+          <div style={{display:'flex',gap:8}}>
+            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
+            <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
+          <div style={{flex:1,overflowX:'auto'}}>
+            <div style={{fontSize:11,color:'#94a3b8',marginBottom:8,fontWeight:600}}>↑ Tableau / Entrée</div>
+            <table style={{borderCollapse:'collapse',width:'100%',minWidth:620}}>
+              <tbody>
+                {Array.from({length:ROWS}).map((_,row) => (
+                  <tr key={row}>
+                    {row === ROWS-1 ? (
+                      <td colSpan={COLS}
+                        style={{background:'#0f172a',color:'white',textAlign:'center',fontWeight:800,fontSize:13,padding:'10px',borderRadius:6,cursor:'default'}}>
+                        🎓 Bureau du professeur — {detailClasse.prof_prenom||''} {detailClasse.prof_nom||''}
+                      </td>
+                    ) : Array.from({length:COLS}).map((_,col) => {
+                      const key = row+'-'+col;
+                      const eleveId = planPositions[key];
+                      const el = eleveId ? elevesClasse.find(e => String(e.id)===String(eleveId)) : null;
+                      return (
+                        <td key={col}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => dropOnCell(row, col)}
+                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                          {el ? (
+                            <div draggable onDragStart={() => setDragEleve(String(el.id))}
+                              style={{cursor:'grab',padding:2}}>
+                              {el.photo
+                                ? <img src={el.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #6366f1',display:'block',margin:'0 auto'}} />
+                                : <div style={{width:36,height:36,borderRadius:'50%',background:'#6366f1',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:800,color:'white',margin:'0 auto'}}>{(el.prenom||'?')[0]}</div>
+                              }
+                              <div style={{fontSize:9,fontWeight:700,color:'#1e293b',marginTop:2,lineHeight:1.1}}>{el.prenom}</div>
+                              <div style={{fontSize:8,color:'#475569'}}>{el.nom}</div>
+                              <button onClick={() => {
+                                const np = {...planPositions}; delete np[key]; setPlanPositions(np);
+                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{color:'#e2e8f0',fontSize:10}}>·</div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{width:160,flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+              Élèves non placés ({elevesNonPlaces.length})
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
+              {elevesNonPlaces.map(el => (
+                <div key={el.id} draggable onDragStart={() => setDragEleve(String(el.id))}
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+                  {el.photo
+                    ? <img src={el.photo} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}} />
+                    : <div style={{width:32,height:32,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#6366f1',flexShrink:0}}>{(el.prenom||'?')[0]}</div>
+                  }
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{el.prenom}</div>
+                    <div style={{fontSize:10,color:'#64748b'}}>{el.nom}</div>
+                  </div>
+                </div>
+              ))}
+              {elevesNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const imprimerTrombinoscope = () => {
@@ -541,6 +623,9 @@ export default function Classes() {
     if (classeVueTab === 'inventaire' && brancheInventaireActive?.id) {
       chargerInventaireBranche(brancheInventaireActive.id);
     }
+    if (classeVueTab === 'plan' && detailClasse?.id) {
+      chargerPlanClasse();
+    }
   }, [classeVueTab, brancheInventaireActive?.id]);
 
   const classesFiltrees = classes.filter(c => {
@@ -716,7 +801,7 @@ export default function Classes() {
 
   // Vue PLAN DE CLASSE
   if (showPlanClasse && detailClasse) {
-    const COLS = 12; const ROWS = 13;
+    const COLS = 10; const ROWS = 13;
     const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
 
     return (
@@ -990,13 +1075,16 @@ export default function Classes() {
           >
             📦 Inventaire
           </button>
+          <button
+            style={{...s.btnAdd,...(classeVueTab==='plan'?{}:s.btnGhost)}}
+            onClick={() => setClasseVueTab('plan')}
+          >
+            🪑 Plan de classe
+          </button>
         </div>
         <div style={{display:'flex',gap:8}}>
           <button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerTrombinoscope}>
             📸 Trombinoscope
-          </button>
-          <button style={{...s.btnAdd,background:'#0f172a',display:'flex',alignItems:'center',gap:6}} onClick={ouvrirPlanClasse}>
-            🪑 Plan de classe
           </button>
         </div>
       </div>
@@ -1056,7 +1144,7 @@ export default function Classes() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : classeVueTab === 'inventaire' ? (
         <div style={s.inventoryLayout}>
           <div style={s.tableWrap}>
             <table style={s.table}>
@@ -1189,6 +1277,8 @@ export default function Classes() {
             )}
           </div>
         </div>
+      ) : (
+        renderPlanClasseOnglet()
       )}
     </div>
   );
