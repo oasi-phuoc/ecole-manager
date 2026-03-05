@@ -60,10 +60,26 @@ export default function Eleves() {
   const [oasiPrgOccupationId, setOasiPrgOccupationId] = useState('');
   const [oasiRaId, setOasiRaId] = useState('');
   const [oasiTempsRepartiId, setOasiTempsRepartiId] = useState('');
+  const [showDocsEleve, setShowDocsEleve] = useState(false);
+  const [docsEleve, setDocsEleve] = useState(null);
+  const [eleveDocs, setEleveDocs] = useState([]);
+  const [docsEleveLoading, setDocsEleveLoading] = useState(false);
+  const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'Autre' });
+  const [showSanctions, setShowSanctions] = useState(false);
+  const [sanctionsEleve, setSanctionsEleve] = useState(null);
+  const [eleveSanctions, setEleveSanctions] = useState([]);
+  const [sanctionsLoading, setSanctionsLoading] = useState(false);
+  const [newSanction, setNewSanction] = useState({ echelle: '', infraction: '', niveau: '', date_sanction: new Date().toISOString().split('T')[0], prof_nom: '' });
+  const [showObs, setShowObs] = useState(false);
+  const [obsEleve, setObsEleve] = useState(null);
+  const [observations, setObservations] = useState([]);
+  const [obsLoading, setObsLoading] = useState(false);
+  const [obsForm, setObsForm] = useState({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
 
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
+  const currentUser = JSON.parse(localStorage.getItem('utilisateur') || '{}');
 
   useEffect(() => { chargerTout(); }, []);
 
@@ -163,6 +179,83 @@ export default function Eleves() {
       await axios.put(API+'/eleves/'+eleveId+'/categorie', { categorie: val || null }, {headers});
       setEleves(prev => prev.map(el => el.id===eleveId ? {...el, categorie: val || null} : el));
     } catch(err) { alert('Erreur: '+err.message); }
+  };
+
+  const ouvrirDocumentsEleve = async (el) => {
+    setDocsEleve(el); setShowDocsEleve(true); setDocsEleveLoading(true);
+    try { const r = await axios.get(API+'/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
+    catch(err) { setEleveDocs([]); }
+    setDocsEleveLoading(false);
+  };
+
+  const uploadDocumentEleve = async (file, type) => {
+    if (file.size > 5*1024*1024) { alert('Fichier trop grand (max 5MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        await axios.post(API+'/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
+        const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents', {headers});
+        setEleveDocs(r.data);
+      } catch(err) { alert('Erreur upload: '+err.message); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const telechargerDocumentEleve = async (doc) => {
+    try {
+      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
+    } catch(err) { alert('Erreur téléchargement'); }
+  };
+
+  const supprimerDocumentEleve = async (docId) => {
+    if (!window.confirm('Supprimer ce document ?')) return;
+    await axios.delete(API+'/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
+    setEleveDocs(prev => prev.filter(d => d.id !== docId));
+  };
+
+  const ouvrirSanctions = async (el) => {
+    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true);
+    setNewSanction({ echelle: '', infraction: '', niveau: '', date_sanction: new Date().toISOString().split('T')[0], prof_nom: ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() });
+    try { const r = await axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}); setEleveSanctions(r.data); }
+    catch(err) { setEleveSanctions([]); }
+    setSanctionsLoading(false);
+  };
+
+  const ajouterSanction = async () => {
+    if (!newSanction.echelle || !newSanction.infraction || !newSanction.niveau) { alert('Complétez échelle, infraction et niveau'); return; }
+    await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
+      echelle: parseInt(newSanction.echelle),
+      infraction: newSanction.infraction,
+      niveau: newSanction.niveau,
+      date_sanction: newSanction.date_sanction || null,
+      prof_nom: newSanction.prof_nom || null
+    }, {headers});
+    const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+    setEleveSanctions(r.data);
+  };
+
+  const supprimerSanction = async (sanctionId) => {
+    if (!window.confirm('Retirer cette sanction ?')) return;
+    await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
+    setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
+  };
+
+  const ouvrirObservations = async (el) => {
+    setObsEleve(el); setShowObs(true); setObsLoading(true);
+    setObsForm({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
+    try { const r = await axios.get(API+'/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
+    catch(err) { setObservations([]); }
+    setObsLoading(false);
+  };
+
+  const ajouterObservation = async (e) => {
+    e.preventDefault();
+    if (!obsEleve) return;
+    await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
+    const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+    setObservations(r.data);
+    setObsForm({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
   };
 
   const handleImport = async (e) => {
@@ -374,12 +467,111 @@ export default function Eleves() {
         </div>
       )}
 
+      {showDocsEleve && docsEleve && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+          <div style={{background:'white',padding:24,borderRadius:14,width:'90vw',maxWidth:760,maxHeight:'85vh',overflowY:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
+            </div>
+            {isAdmin() && (
+              <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:14,flexWrap:'wrap'}}>
+                <select style={{...inp,width:'auto'}} value={uploadEleveForm.type} onChange={e => setUploadEleveForm({type:e.target.value})}>
+                  {['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <label style={{padding:'8px 14px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
+                  📎 Choisir un fichier
+                  <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />
+                </label>
+              </div>
+            )}
+            {docsEleveLoading ? <div style={{padding:20,color:'#94a3b8'}}>Chargement...</div> : eleveDocs.length===0 ? <div style={{padding:20,color:'#94a3b8'}}>Aucun document</div> : eleveDocs.map(doc => (
+              <div key={doc.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',border:'1px solid #e2e8f0',borderRadius:8,marginBottom:8}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13}}>{doc.nom}</div>
+                  <div style={{fontSize:11,color:'#94a3b8'}}>{doc.type} · {new Date(doc.created_at).toLocaleDateString('fr-CH')}</div>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button style={{background:'none',border:'none',cursor:'pointer',fontSize:16}} onClick={() => telechargerDocumentEleve(doc)}>⬇️</button>
+                  {isAdmin() && <button style={{background:'none',border:'none',cursor:'pointer',fontSize:16}} onClick={() => supprimerDocumentEleve(doc.id)}>🗑️</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showSanctions && sanctionsEleve && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+          <div style={{background:'white',padding:24,borderRadius:14,width:'90vw',maxWidth:900,maxHeight:'85vh',overflowY:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>⚠️ Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowSanctions(false)}>✕</button>
+            </div>
+            {isAdmin() && (
+              <div style={{display:'grid',gridTemplateColumns:'100px 1fr 1fr 140px 1fr auto',gap:8,marginBottom:12}}>
+                <input style={inp} type="number" placeholder="Échelle" value={newSanction.echelle} onChange={e => setNewSanction({...newSanction,echelle:e.target.value})} />
+                <input style={inp} placeholder="Infraction" value={newSanction.infraction} onChange={e => setNewSanction({...newSanction,infraction:e.target.value})} />
+                <input style={inp} placeholder="Niveau" value={newSanction.niveau} onChange={e => setNewSanction({...newSanction,niveau:e.target.value})} />
+                <input style={inp} type="date" value={newSanction.date_sanction} onChange={e => setNewSanction({...newSanction,date_sanction:e.target.value})} />
+                <input style={inp} placeholder="Professeur" value={newSanction.prof_nom} onChange={e => setNewSanction({...newSanction,prof_nom:e.target.value})} />
+                <button style={{padding:'8px 12px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600}} onClick={ajouterSanction}>Ajouter</button>
+              </div>
+            )}
+            <table style={{width:'100%',borderCollapse:'collapse'}}>
+              <thead><tr style={{background:'#f8fafc'}}>{['Échelle','Infraction','Niveau','Date','Professeur','Action'].map(h => <th key={h} style={{padding:'8px 10px',borderBottom:'1px solid #e2e8f0',textAlign:'left',fontSize:12,color:'#64748b'}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {sanctionsLoading ? <tr><td colSpan="6" style={{padding:16,color:'#94a3b8'}}>Chargement...</td></tr> :
+                  eleveSanctions.length===0 ? <tr><td colSpan="6" style={{padding:16,color:'#94a3b8'}}>Aucune sanction</td></tr> :
+                    eleveSanctions.map(s => (
+                      <tr key={s.id}>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{s.echelle}</td>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{s.infraction}</td>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{s.niveau}</td>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{s.date_sanction ? new Date(s.date_sanction).toLocaleDateString('fr-CH') : '—'}</td>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{s.prof_nom || '—'}</td>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid #f1f5f9'}}>{isAdmin() && <button style={{background:'none',border:'none',cursor:'pointer',fontSize:16}} onClick={() => supprimerSanction(s.id)}>🗑️</button>}</td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showObs && obsEleve && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+          <div style={{background:'white',padding:24,borderRadius:14,width:'90vw',maxWidth:900,maxHeight:'85vh',overflowY:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>👁 Observations — {obsEleve.prenom} {obsEleve.nom}</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowObs(false)}>✕</button>
+            </div>
+            <form onSubmit={ajouterObservation} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+              <input style={{...inp,gridColumn:'1/-1'}} placeholder="Titre" value={obsForm.titre} onChange={e => setObsForm({...obsForm,titre:e.target.value})} required />
+              <textarea style={{...inp,minHeight:70,gridColumn:'1/-1',resize:'vertical'}} placeholder="Contenu" value={obsForm.contenu} onChange={e => setObsForm({...obsForm,contenu:e.target.value})} required />
+              <input style={{...inp,gridColumn:'1/-1'}} placeholder="Mesure prise" value={obsForm.mesure_prise} onChange={e => setObsForm({...obsForm,mesure_prise:e.target.value})} />
+              <label style={{fontSize:12,color:'#475569'}}><input type="checkbox" checked={obsForm.intervention_responsable} onChange={e => setObsForm({...obsForm,intervention_responsable:e.target.checked})} /> Intervention responsable</label>
+              <label style={{fontSize:12,color:'#475569'}}><input type="checkbox" checked={obsForm.demande_entretien} onChange={e => setObsForm({...obsForm,demande_entretien:e.target.checked})} /> Demande entretien</label>
+              <div style={{gridColumn:'1/-1',textAlign:'right'}}><button style={{padding:'8px 12px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600}}>Ajouter observation</button></div>
+            </form>
+            {obsLoading ? <div style={{padding:16,color:'#94a3b8'}}>Chargement...</div> : observations.length===0 ? <div style={{padding:16,color:'#94a3b8'}}>Aucune observation</div> : observations.map(o => (
+              <div key={o.id} style={{border:'1px solid #e2e8f0',borderRadius:8,padding:10,marginBottom:8}}>
+                <div style={{fontWeight:700,fontSize:13}}>{o.titre}</div>
+                <div style={{fontSize:12,color:'#475569',marginTop:4,whiteSpace:'pre-wrap'}}>{o.contenu}</div>
+                {o.mesure_prise && <div style={{fontSize:12,color:'#0f766e',marginTop:6}}>Mesure: {o.mesure_prise}</div>}
+                <div style={{fontSize:11,color:'#94a3b8',marginTop:6}}>{new Date(o.created_at).toLocaleString('fr-CH')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tableau */}
       <div style={{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-              {['Photo','Nom','Prénom','REF','Nationalité','Classe',"A commencé l'école le",'Catégorie','Date naissance','Contact','Statut','Actions'].map(h => (
+              {['Photo','Nom','Prénom','Nationalité','Classe','Date naissance','Contact','Documents','Sanctions','Observations','Statut','Actions'].map(h => (
                 <th key={h} style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
@@ -425,9 +617,6 @@ export default function Eleves() {
                 </td>
                 <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13}}>{el.nom||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.prenom||'—'}</td>
-                <td style={{padding:'10px 14px',fontSize:13}}>
-                  {el.oasi_ref ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{el.oasi_ref}</span> : <span style={{color:'#94a3b8'}}>—</span>}
-                </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.oasi_nationalite||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <select value={el.classe_id||''} onChange={e => handleClasseChange(el.id, e.target.value)}
@@ -436,27 +625,14 @@ export default function Eleves() {
                     {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </td>
-                <td style={{padding:'10px 14px',fontSize:13}}>
-                  <input type="date" value={el.date_debut_cours?el.date_debut_cours.substring(0,10):''} style={{...inp,padding:'4px 8px',fontSize:12,maxWidth:140}}
-                    onChange={async e => {
-                      const v = e.target.value || null;
-                      try { await axios.put(API+'/eleves/'+el.id+'/date-debut-cours', { date_debut_cours: v }, {headers}); chargerTout(); }
-                      catch(err) { alert('Erreur: '+err.message); }
-                    }} />
-                </td>
-                <td style={{padding:'10px 14px',fontSize:13}}>
-                  <select value={el.categorie||''} onChange={e => handleCategorieChange(el.id, e.target.value)}
-                    style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,background:'white',cursor:'pointer',maxWidth:120}}>
-                    <option value="">—</option>
-                    <option value="OASI">OASI</option>
-                    <option value="EUCMS">EUCMS</option>
-                  </select>
-                </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <div>{el.nom_parent||'—'}</div>
                   {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}
                 </td>
+                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
+                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁</button></td>
                 <td style={{padding:'10px 14px'}}>
                   <span style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
                     {el.statut==='actif'?'✅ Actif':'❌ Inactif'}

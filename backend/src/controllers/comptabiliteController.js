@@ -77,4 +77,63 @@ const getStatistiques = async (req, res) => {
   }
 };
 
-module.exports = { getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques };
+const getMateriels = async (req, res) => {
+  try {
+    const { section } = req.query;
+    const params = [];
+    let q = 'SELECT * FROM materiels';
+    if (section) {
+      params.push(section);
+      q += ' WHERE section=$1';
+    }
+    q += ' ORDER BY nom';
+    const result = await pool.query(q, params);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const creerMateriel = async (req, res) => {
+  const { nom, section, prix, ref, fournisseur, rabais, remarques } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO materiels (nom, section, prix, ref, fournisseur, rabais, remarques)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null]
+    );
+    res.status(201).json({ message: 'Materiel cree', materiel: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const modifierMateriel = async (req, res) => {
+  const { nom, section, prix, ref, fournisseur, rabais, remarques } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE materiels
+       SET nom=$1, section=$2, prix=$3, ref=$4, fournisseur=$5, rabais=$6, remarques=$7
+       WHERE id=$8 RETURNING *`,
+      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Materiel non trouve' });
+    res.json({ message: 'Materiel modifie', materiel: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const supprimerMateriel = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM materiels WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Materiel supprime' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = {
+  getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques,
+  getMateriels, creerMateriel, modifierMateriel, supprimerMateriel
+};

@@ -99,6 +99,40 @@ const initDB = async () => {
       )
     `);
 
+    // Matériel scolaire / fournitures (comptabilité)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS materiels (
+        id SERIAL PRIMARY KEY,
+        nom VARCHAR(255) NOT NULL,
+        section VARCHAR(30) NOT NULL DEFAULT 'scolaire',
+        prix DECIMAL(10,2) NOT NULL DEFAULT 0,
+        ref VARCHAR(100),
+        fournisseur VARCHAR(200),
+        rabais DECIMAL(5,2) DEFAULT 0,
+        remarques TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS section VARCHAR(30) NOT NULL DEFAULT 'scolaire'`);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS ref VARCHAR(100)`);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS fournisseur VARCHAR(200)`);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS rabais DECIMAL(5,2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS remarques TEXT`);
+    const nbMateriels = await pool.query('SELECT COUNT(*)::int as nb FROM materiels');
+    if ((nbMateriels.rows[0]?.nb || 0) === 0) {
+      const seed = [
+        ['Manifestations', 'scolaire', 20.00], ['Photocopies / feuilles', 'scolaire', 47.00], ["Matériel d'enseignement", 'scolaire', 15.00],
+        ['ACM / Sports', 'scolaire', 22.20], ['Déplacement', 'scolaire', 35.00], ['Classeur 7 cm', 'scolaire', 2.80],
+        ['Classeur 4 cm', 'scolaire', 2.00], ['Cahier A4', 'scolaire', 1.90], ['Feuilles de dessin', 'scolaire', 10.00],
+        ['Agenda', 'fournitures', 12.00], ['Jeux de répertoires', 'fournitures', 1.60], ['Fixpencil pour mines HB', 'fournitures', 6.00],
+        ['Boîte de mines (HB)', 'fournitures', 1.80], ['Gomme', 'fournitures', 1.40], ['Crayons de couleur', 'fournitures', 6.90],
+        ['Plume pilot + 3 cartouches', 'fournitures', 14.80]
+      ];
+      for (const s of seed) {
+        await pool.query('INSERT INTO materiels (nom, section, prix) VALUES ($1,$2,$3)', s);
+      }
+    }
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

@@ -2,7 +2,7 @@ import { peutModifierPresences } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -37,10 +37,18 @@ export default function Presences() {
   const [loadingApercu, setLoadingApercu] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
   useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);
+  useEffect(() => {
+    const classeDepuisDashboard = location.state?.classe_id;
+    if (classeDepuisDashboard && classes.length > 0) {
+      const ok = classes.find(c => String(c.id) === String(classeDepuisDashboard));
+      if (ok) setClasseSelectionnee(String(classeDepuisDashboard));
+    }
+  }, [location.state, classes]);
   useEffect(() => {
     if (classeSelectionnee) {
       const cl = classes.find(c => String(c.id) === String(classeSelectionnee));

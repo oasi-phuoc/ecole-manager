@@ -4,24 +4,6 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
-const MATERIEL_DISTRIBUTION = [
-  { article: 'Manifestations', prix: 20.00 },
-  { article: 'Photocopies / feuilles', prix: 47.00 },
-  { article: "Matériel d'enseignement", prix: 15.00 },
-  { article: 'ACM / Sports', prix: 22.20 },
-  { article: 'Déplacement', prix: 35.00 },
-  { article: 'Classeur 7 cm', prix: 2.80 },
-  { article: 'Classeur 4 cm', prix: 2.00 },
-  { article: 'Cahier A4', prix: 1.90 },
-  { article: 'Feuilles de dessin', prix: 10.00 },
-  { article: 'Agenda', prix: 12.00 },
-  { article: 'Jeux de répertoires', prix: 1.60 },
-  { article: 'Fixpoint pour mines HB', prix: 6.00 },
-  { article: 'Boîte de mines (HB)', prix: 1.80 },
-  { article: 'Gomme', prix: 1.40 },
-  { article: 'Crayons de couleur', prix: 6.90 },
-  { article: 'Plume pilot + 3 cartouches', prix: 14.80 },
-];
 const MATERIEL_FACTURATION = [
   { key: 'classeur_7', label: 'Classeur 7 cm', prix: 2.80, qteDefaut: 1 },
   { key: 'classeur_4', label: 'Classeur 4 cm', prix: 2.00, qteDefaut: 1 },
@@ -47,21 +29,25 @@ export default function Comptabilite() {
   const [stats, setStats] = useState(null);
   const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [materiels, setMateriels] = useState([]);
   const [filtreStatut, setFiltreStatut] = useState('');
   const [filtreClasse, setFiltreClasse] = useState('');
   const [onglet, setOnglet] = useState('liste');
-  const [materielMode, setMaterielMode] = useState('prix'); // prix | facturation
+  const [materielMode, setMaterielMode] = useState('scolaire'); // scolaire | fournitures
   const [classeFacturationId, setClasseFacturationId] = useState('');
   const [materielDistribue, setMaterielDistribue] = useState({});
   const [factureEleve, setFactureEleve] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showMaterielForm, setShowMaterielForm] = useState(false);
   const [paiementEdit, setPaiementEdit] = useState(null);
+  const [materielEdit, setMaterielEdit] = useState(null);
   const [form, setForm] = useState({ eleve_id: '', montant: '', type: 'Ecolage', statut: 'en_attente', date_paiement: '', commentaire: '' });
+  const [materielForm, setMaterielForm] = useState({ nom: '', section: 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
-  useEffect(() => { chargerPaiements(); chargerStats(); chargerEleves(); chargerClasses(); }, []);
+  useEffect(() => { chargerPaiements(); chargerStats(); chargerEleves(); chargerClasses(); chargerMateriels(); }, []);
   useEffect(() => { chargerPaiements(); }, [filtreStatut, filtreClasse]);
 
   const chargerPaiements = async () => {
@@ -95,6 +81,13 @@ export default function Comptabilite() {
     } catch (err) { console.error(err); }
   };
 
+  const chargerMateriels = async () => {
+    try {
+      const res = await axios.get(API + '/comptabilite/materiels', { headers });
+      setMateriels(res.data || []);
+    } catch (err) { console.error(err); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -125,15 +118,62 @@ export default function Comptabilite() {
     }
   };
 
+  const ouvrirFormMateriel = (m = null) => {
+    setMaterielEdit(m);
+    setMaterielForm(m
+      ? {
+          nom: m.nom || '',
+          section: m.section || 'scolaire',
+          prix: m.prix != null ? String(m.prix) : '',
+          ref: m.ref || '',
+          fournisseur: m.fournisseur || '',
+          rabais: m.rabais != null ? String(m.rabais) : '',
+          remarques: m.remarques || '',
+        }
+      : { nom: '', section: materielMode === 'fournitures' ? 'fournitures' : 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }
+    );
+    setShowMaterielForm(true);
+  };
+
+  const handleSaveMateriel = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...materielForm,
+        prix: materielForm.prix === '' ? 0 : parseFloat(materielForm.prix),
+        rabais: materielForm.rabais === '' ? 0 : parseFloat(materielForm.rabais),
+      };
+      if (materielEdit) {
+        await axios.put(API + '/comptabilite/materiels/' + materielEdit.id, payload, { headers });
+      } else {
+        await axios.post(API + '/comptabilite/materiels', payload, { headers });
+      }
+      setShowMaterielForm(false);
+      setMaterielEdit(null);
+      await chargerMateriels();
+    } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+  };
+
+  const handleDeleteMateriel = async (id) => {
+    if (!window.confirm('Supprimer ce matériel ?')) return;
+    await axios.delete(API + '/comptabilite/materiels/' + id, { headers });
+    await chargerMateriels();
+  };
+
   const getStatut = (val) => STATUTS.find(s => s.val === val) || STATUTS[0];
-  const totalMateriel = MATERIEL_DISTRIBUTION.reduce((acc, m) => acc + m.prix, 0);
+  const materielsScolaires = materiels.filter(m => (m.section || 'scolaire') === 'scolaire');
+  const materielsFournitures = materiels.filter(m => (m.section || 'scolaire') === 'fournitures');
+  const materielsFacturation = materielsFournitures.length > 0
+    ? materielsFournitures.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qteDefaut: 1 }))
+    : MATERIEL_FACTURATION.map(m => ({ id: m.key, nom: m.label, prix: m.prix, qteDefaut: m.qteDefaut }));
+  const totalMateriel = materielsScolaires.reduce((acc, m) => acc + Number(m.prix || 0), 0);
   const elevesClasseFacturation = eleves
     .filter(e => String(e.classe_id || '') === String(classeFacturationId || ''))
     .sort((a, b) => ((a.nom || '') + ' ' + (a.prenom || '')).localeCompare((b.nom || '') + ' ' + (b.prenom || ''), 'fr'));
 
   const creerLigneDefaut = () => {
     const d = {};
-    MATERIEL_FACTURATION.forEach(m => { d[m.key] = m.qteDefaut; });
+    materielsFacturation.forEach(m => { d[m.id] = m.qteDefaut; });
     return d;
   };
 
@@ -145,8 +185,8 @@ export default function Comptabilite() {
     }));
   };
 
-  const totalEleve = (eleveId) => MATERIEL_FACTURATION.reduce((acc, m) => {
-    const q = Number(materielDistribue[eleveId]?.[m.key] ?? m.qteDefaut);
+  const totalEleve = (eleveId) => materielsFacturation.reduce((acc, m) => {
+    const q = Number(materielDistribue[eleveId]?.[m.id] ?? m.qteDefaut);
     return acc + (q * m.prix);
   }, 0);
 
@@ -155,9 +195,9 @@ export default function Comptabilite() {
 
   const ouvrirFacture = (eleve) => {
     const classe = classes.find(c => String(c.id) === String(classeFacturationId));
-    const lignes = MATERIEL_FACTURATION
+    const lignes = materielsFacturation
       .map(m => {
-        const qte = Number(materielDistribue[eleve.id]?.[m.key] ?? m.qteDefaut);
+        const qte = Number(materielDistribue[eleve.id]?.[m.id] ?? m.qteDefaut);
         return { ...m, qte, montant: qte * m.prix };
       })
       .filter(l => l.qte > 0);
@@ -195,7 +235,7 @@ export default function Comptabilite() {
   };
 
   useEffect(() => {
-    if (onglet === 'materiel' && materielMode === 'facturation' && !classeFacturationId && classes.length > 0) {
+    if (onglet === 'materiel' && materielMode === 'fournitures' && !classeFacturationId && classes.length > 0) {
       setClasseFacturationId(String(classes[0].id));
     }
   }, [onglet, materielMode, classeFacturationId, classes]);
@@ -244,10 +284,12 @@ export default function Comptabilite() {
         </div>
       )}
 
-      <div style={styles.onglets}>
-        <button style={{ ...styles.onglet, ...(onglet === 'liste' ? styles.ongletActif : {}) }} onClick={() => setOnglet('liste')}>📋 Liste des paiements</button>
-        <button style={{ ...styles.onglet, ...(onglet === 'stats' ? styles.ongletActif : {}) }} onClick={() => setOnglet('stats')}>📊 Par type</button>
-        <button style={{ ...styles.onglet, ...(onglet === 'materiel' ? styles.ongletActif : {}) }} onClick={() => setOnglet('materiel')}>🎒 Matériel à distribuer</button>
+      <div style={styles.ongletsWrap}>
+        <div style={styles.onglets}>
+          <button style={{ ...styles.onglet, ...(onglet === 'liste' ? styles.ongletActif : {}) }} onClick={() => setOnglet('liste')}>📋 Liste des paiements</button>
+          <button style={{ ...styles.onglet, ...(onglet === 'stats' ? styles.ongletActif : {}) }} onClick={() => setOnglet('stats')}>📊 Par type</button>
+        </div>
+        <button style={{ ...styles.onglet, ...(onglet === 'materiel' ? styles.ongletActif : {}) }} onClick={() => setOnglet('materiel')}>🧰 Matériel</button>
       </div>
 
       {showForm && (
@@ -290,6 +332,53 @@ export default function Comptabilite() {
               </div>
               <div style={styles.formActions}>
                 <button type="button" style={styles.btnAnnuler} onClick={() => setShowForm(false)}>Annuler</button>
+                <button type="submit" style={styles.btnSauver}>Sauvegarder</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showMaterielForm && (
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitre}>{materielEdit ? 'Modifier' : 'Ajouter'} un matériel</h3>
+            <form onSubmit={handleSaveMateriel}>
+              <div style={styles.formGrid}>
+                <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                  <label style={styles.label}>Nom du matériel *</label>
+                  <input style={styles.input} required value={materielForm.nom} onChange={e => setMaterielForm({ ...materielForm, nom: e.target.value })} />
+                </div>
+                <div style={styles.formChamp}>
+                  <label style={styles.label}>Section</label>
+                  <select style={styles.input} value={materielForm.section} onChange={e => setMaterielForm({ ...materielForm, section: e.target.value })}>
+                    <option value="scolaire">Matériel scolaire</option>
+                    <option value="fournitures">Fournitures</option>
+                  </select>
+                </div>
+                <div style={styles.formChamp}>
+                  <label style={styles.label}>Prix</label>
+                  <input style={styles.input} type="number" step="0.05" value={materielForm.prix} onChange={e => setMaterielForm({ ...materielForm, prix: e.target.value })} />
+                </div>
+                <div style={styles.formChamp}>
+                  <label style={styles.label}>REF</label>
+                  <input style={styles.input} value={materielForm.ref} onChange={e => setMaterielForm({ ...materielForm, ref: e.target.value })} />
+                </div>
+                <div style={styles.formChamp}>
+                  <label style={styles.label}>Fournisseur</label>
+                  <input style={styles.input} value={materielForm.fournisseur} onChange={e => setMaterielForm({ ...materielForm, fournisseur: e.target.value })} />
+                </div>
+                <div style={styles.formChamp}>
+                  <label style={styles.label}>Rabais (%)</label>
+                  <input style={styles.input} type="number" step="0.01" value={materielForm.rabais} onChange={e => setMaterielForm({ ...materielForm, rabais: e.target.value })} />
+                </div>
+                <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                  <label style={styles.label}>Remarques</label>
+                  <input style={styles.input} value={materielForm.remarques} onChange={e => setMaterielForm({ ...materielForm, remarques: e.target.value })} />
+                </div>
+              </div>
+              <div style={styles.formActions}>
+                <button type="button" style={styles.btnAnnuler} onClick={() => setShowMaterielForm(false)}>Annuler</button>
                 <button type="submit" style={styles.btnSauver}>Sauvegarder</button>
               </div>
             </form>
@@ -362,19 +451,20 @@ export default function Comptabilite() {
       {onglet === 'materiel' && (
         <div style={styles.cardMateriel}>
           <div style={styles.cardMaterielHeader}>
-            <h3 style={styles.cardMaterielTitre}>Liste du matériel à distribuer</h3>
+            <h3 style={styles.cardMaterielTitre}>Gestion du matériel</h3>
             <div style={styles.materielActions}>
-              <button style={{ ...styles.materielBtn, ...(materielMode === 'prix' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('prix')}>
-                💵 Liste de prix
+              <button style={{ ...styles.materielBtn, ...(materielMode === 'scolaire' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('scolaire')}>
+                📚 Matériel scolaire
               </button>
-              <button style={{ ...styles.materielBtn, ...(materielMode === 'facturation' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('facturation')}>
-                🧾 Facturation par classe
+              <button style={{ ...styles.materielBtn, ...(materielMode === 'fournitures' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('fournitures')}>
+                🧾 Fournitures
               </button>
             </div>
           </div>
-          {materielMode === 'prix' ? (
+          {materielMode === 'scolaire' ? (
             <>
-              <div style={{ padding: '0 18px 12px' }}>
+              <div style={{ padding: '0 18px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <button style={styles.btnAjouter} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
                 <span style={styles.totalMaterielBadge}>Total: {totalMateriel.toFixed(2)} CHF</span>
               </div>
               <table style={styles.tableMateriel}>
@@ -382,14 +472,29 @@ export default function Comptabilite() {
                   <tr style={styles.theadRowMateriel}>
                     <th style={styles.thMateriel}>Matériel</th>
                     <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Prix</th>
+                    <th style={styles.thMateriel}>REF</th>
+                    <th style={styles.thMateriel}>Fournisseur</th>
+                    <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Rabais</th>
+                    <th style={styles.thMateriel}>Remarques</th>
+                    <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MATERIEL_DISTRIBUTION.map((m, i) => (
-                    <tr key={m.article} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={styles.tdMateriel}>{m.article}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right', fontWeight: '700', color: '#1a73e8' }}>
-                        {m.prix.toFixed(2)} CHF
+                  {materielsScolaires.length === 0 ? (
+                    <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
+                  ) : materielsScolaires.map((m, i) => (
+                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={styles.tdMateriel}>{m.nom}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>
+                        <input style={{ ...styles.input, width: 90, padding: '6px 8px' }} readOnly value={Number(m.prix || 0).toFixed(2)} />
+                      </td>
+                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
+                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -427,8 +532,8 @@ export default function Comptabilite() {
                           <tr style={styles.theadRowMateriel}>
                             <th style={styles.thFacturationBase}>Nom</th>
                             <th style={styles.thFacturationBase}>Prénom</th>
-                            {MATERIEL_FACTURATION.map(m => (
-                              <th key={m.key} style={styles.thFacturationItem} title={m.label}>{m.label}</th>
+                            {materielsFacturation.map(m => (
+                              <th key={m.id} style={styles.thFacturationItem} title={m.nom}>{m.nom}</th>
                             ))}
                             <th style={{ ...styles.thFacturationBase, textAlign: 'right' }}>Total élève</th>
                             <th style={{ ...styles.thFacturationBase, textAlign: 'center' }}>Détail</th>
@@ -436,19 +541,19 @@ export default function Comptabilite() {
                         </thead>
                         <tbody>
                           {elevesClasseFacturation.length === 0 ? (
-                            <tr><td colSpan={MATERIEL_FACTURATION.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
+                            <tr><td colSpan={materielsFacturation.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
                           ) : elevesClasseFacturation.map((e, idx) => (
                             <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                               <td style={styles.tdFacturation}>{e.nom || '—'}</td>
                               <td style={styles.tdFacturation}>{e.prenom || '—'}</td>
-                              {MATERIEL_FACTURATION.map(m => (
-                                <td key={m.key} style={{ ...styles.tdFacturation, textAlign: 'center' }}>
+                              {materielsFacturation.map(m => (
+                                <td key={m.id} style={{ ...styles.tdFacturation, textAlign: 'center' }}>
                                   <input
                                     type="number"
                                     min="0"
                                     style={styles.qtyInput}
-                                    value={materielDistribue[e.id]?.[m.key] ?? m.qteDefaut}
-                                    onChange={ev => majQteMateriel(e.id, m.key, ev.target.value)}
+                                    value={materielDistribue[e.id]?.[m.id] ?? m.qteDefaut}
+                                    onChange={ev => majQteMateriel(e.id, m.id, ev.target.value)}
                                   />
                                 </td>
                               ))}
@@ -506,8 +611,8 @@ export default function Comptabilite() {
                 </thead>
                 <tbody>
                   {factureEleve.lignes.map(l => (
-                    <tr key={l.key}>
-                      <td style={styles.factureTd}>{l.label}</td>
+                    <tr key={l.id}>
+                      <td style={styles.factureTd}>{l.nom}</td>
                       <td style={{ ...styles.factureTd, textAlign: 'right' }}>{fmtCHF(l.prix)}</td>
                       <td style={{ ...styles.factureTd, textAlign: 'center' }}>{l.qte}</td>
                       <td style={{ ...styles.factureTd, textAlign: 'right' }}>{fmtCHF(l.montant)}</td>
@@ -545,7 +650,8 @@ const styles = {
   statIcon: { fontSize: '28px', marginBottom: '8px' },
   statValeur: { fontSize: '22px', fontWeight: '700', color: '#333', marginBottom: '4px' },
   statLabel: { fontSize: '13px', color: '#888' },
-  onglets: { display: 'flex', gap: '10px', marginBottom: '20px' },
+  ongletsWrap: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: '20px' },
+  onglets: { display: 'flex', gap: '10px', marginBottom: 0 },
   onglet: { padding: '10px 20px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
   ongletActif: { background: '#1a73e8', color: 'white', border: '2px solid #1a73e8' },
   filtres: { display: 'flex', gap: '10px', marginBottom: '15px' },

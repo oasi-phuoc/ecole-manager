@@ -5,6 +5,10 @@ const { verifierToken, autoriser } = require('../middleware/auth');
 
 router.use(verifierToken);
 router.get('/statistiques', c.getStatistiques);
+router.get('/materiels', c.getMateriels);
+router.post('/materiels', autoriser('admin'), c.creerMateriel);
+router.put('/materiels/:id', autoriser('admin'), c.modifierMateriel);
+router.delete('/materiels/:id', autoriser('admin'), c.supprimerMateriel);
 router.get('/', c.getPaiements);
 router.post('/', autoriser('admin'), c.creerPaiement);
 router.put('/:id', autoriser('admin'), c.modifierPaiement);

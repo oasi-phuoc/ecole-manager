@@ -8,6 +8,7 @@ const API = 'https://ecole-manager-backend.onrender.com/api';
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ profs: 0, classes: 0, eleves: 0, branches: 0 });
+  const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -20,13 +21,22 @@ export default function Dashboard() {
 
   const chargerStats = async () => {
     try {
-      const [p, cl, el, br] = await Promise.all([
+      const [p, cl, el, br, st] = await Promise.all([
         axios.get(API + '/profs', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/branches', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/statistiques', { headers }).catch(() => ({ data: null })),
       ]);
       setStats({ profs: p.data.length, classes: cl.data.length, eleves: el.data.length, branches: br.data.length });
+      if (st.data) {
+        setDashboardInfo({
+          prochain_evenement: st.data.prochain_evenement || null,
+          dernieres_notes: st.data.dernieres_notes || [],
+          dernieres_observations: st.data.dernieres_observations || [],
+          controle_presence_aujourdhui: st.data.controle_presence_aujourdhui || { creneau_en_cours: null, classes_en_cours: [] },
+        });
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -54,6 +64,12 @@ export default function Dashboard() {
 
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const fmtDate = (raw) => {
+    if (!raw) return '—';
+    const d = new Date(raw);
+    if (isNaN(d)) return raw;
+    return d.toLocaleDateString('fr-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   return (
     <div style={styles.page}>
@@ -114,6 +130,87 @@ export default function Dashboard() {
           </div>
         )}
 
+        <div style={styles.sectionTitle}>Informations utiles</div>
+        <div style={styles.infoRow}>
+          <div style={styles.infoCard}>
+            <div style={styles.infoCardTitle}>📅 Prochain événement du calendrier</div>
+            {dashboardInfo.prochain_evenement ? (
+              <div>
+                <div style={styles.infoMain}>{dashboardInfo.prochain_evenement.titre}</div>
+                <div style={styles.infoSub}>
+                  {fmtDate(dashboardInfo.prochain_evenement.date_debut)} • {dashboardInfo.prochain_evenement.type || 'Événement'}
+                </div>
+              </div>
+            ) : <div style={styles.infoEmpty}>Aucun événement à venir</div>}
+          </div>
+
+          <div style={styles.infoCard}>
+            <div style={styles.infoCardTitle}>📝 3 dernières notes saisies</div>
+            {dashboardInfo.dernieres_notes.length === 0 ? (
+              <div style={styles.infoEmpty}>Aucune note récente</div>
+            ) : dashboardInfo.dernieres_notes.map((n, i) => (
+              <div key={i} style={styles.infoLine}>
+                <span style={styles.infoLineMain}>{n.eleve_prenom} {n.eleve_nom} • {n.classe || '—'}</span>
+                <span style={styles.infoLineSub}>
+                  {n.matiere || n.evaluation_nom || '—'} • {n.absent ? 'Absent' : n.dispense ? 'Dispensé' : (n.valeur ?? '—')} • {fmtDate(n.created_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.infoCard}>
+            <div style={styles.infoCardTitle}>📌 3 dernières observations</div>
+            {dashboardInfo.dernieres_observations.length === 0 ? (
+              <div style={styles.infoEmpty}>Aucune observation récente</div>
+            ) : dashboardInfo.dernieres_observations.map((o, i) => (
+              <div key={i} style={styles.infoLine}>
+                <span style={styles.infoLineMain}>{o.eleve_prenom} {o.eleve_nom} • {o.classe || '—'}</span>
+                <span style={styles.infoLineSub}>
+                  {(o.titre || o.contenu || 'Observation').toString().slice(0, 70)} • {fmtDate(o.created_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.infoCard}>
+            <div style={styles.infoCardTitle}>✅ Contrôle de présence aujourd'hui</div>
+            {!dashboardInfo.controle_presence_aujourdhui?.creneau_en_cours ? (
+              <div style={styles.infoEmpty}>Aucune période en cours pour maintenant</div>
+            ) : (
+              <div>
+                <div style={styles.infoSub}>
+                  {dashboardInfo.controle_presence_aujourdhui.jour} • {dashboardInfo.controle_presence_aujourdhui.creneau_en_cours.heure_debut} - {dashboardInfo.controle_presence_aujourdhui.creneau_en_cours.heure_fin}
+                </div>
+                {dashboardInfo.controle_presence_aujourdhui.classes_en_cours.length === 0 ? (
+                  <div style={styles.infoEmpty}>Aucune classe affectée sur ce créneau</div>
+                ) : dashboardInfo.controle_presence_aujourdhui.classes_en_cours.map((cl) => (
+                  <div key={cl.id} style={styles.presenceClassCard}>
+                    <div style={styles.presenceClassHead}>
+                      <b>{cl.nom}</b>
+                      <button
+                        style={styles.quickBtn}
+                        onClick={() => navigate('/presences', { state: { classe_id: cl.id } })}
+                      >
+                        Accès rapide
+                      </button>
+                    </div>
+                    <div style={styles.presenceElevesList}>
+                      {cl.eleves.map((e) => (
+                        <div key={e.id} style={styles.presenceEleveRow}>
+                          <span>{e.prenom} {e.nom}</span>
+                          <span style={{ ...styles.presenceBadge, ...(e.statut ? {} : { background: '#f1f5f9', color: '#94a3b8' }) }}>
+                            {e.statut || '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Modules Grid */}
         <div style={styles.sectionTitle}>Accès rapide</div>
         <div style={styles.grid}>
@@ -161,6 +258,21 @@ const styles = {
   statIcon: { width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 },
   statValue: { fontSize: 28, fontWeight: 800, color: '#0f172a', lineHeight: 1 },
   statLabel: { fontSize: 12, color: '#64748b', fontWeight: 500 },
+  infoRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 24 },
+  infoCard: { background: 'white', borderRadius: 12, padding: 14, border: '1px solid #eef2f7', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', minHeight: 150 },
+  infoCardTitle: { fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  infoMain: { fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 },
+  infoSub: { fontSize: 12, color: '#64748b' },
+  infoEmpty: { fontSize: 13, color: '#94a3b8', paddingTop: 8 },
+  infoLine: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 0', borderBottom: '1px dashed #eef2f7' },
+  infoLineMain: { fontSize: 13, fontWeight: 600, color: '#1f2937' },
+  infoLineSub: { fontSize: 12, color: '#64748b' },
+  presenceClassCard: { marginTop: 10, border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#fbfdff' },
+  presenceClassHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: '#0f172a' },
+  quickBtn: { padding: '5px 10px', borderRadius: 7, border: '1px solid #1a73e8', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: 11, fontWeight: 700 },
+  presenceElevesList: { maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 },
+  presenceEleveRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#334155', padding: '4px 0', borderBottom: '1px dashed #eef2f7' },
+  presenceBadge: { minWidth: 26, textAlign: 'center', padding: '2px 6px', borderRadius: 8, background: '#e0e7ff', color: '#4338ca', fontWeight: 700, fontSize: 11 },
   sectionTitle: { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 },
   moduleCard: { background: 'white', borderRadius: 14, padding: '20px 16px', border: '1px solid #f1f5f9', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8, transition: 'box-shadow 0.15s', position: 'relative' },
