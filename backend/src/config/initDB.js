@@ -80,6 +80,9 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS parametres_ecole (id SERIAL PRIMARY KEY, nom_ecole VARCHAR(200), adresse TEXT, telephone VARCHAR(50), email VARCHAR(150), annee_scolaire VARCHAR(20), directeur VARCHAR(200))`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_langues_jeunes VARCHAR(200)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau VARCHAR(200)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_csc VARCHAR(200)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_cfr VARCHAR(200)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_epl VARCHAR(200)`);
 
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);

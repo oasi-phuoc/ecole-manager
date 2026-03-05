@@ -7,7 +7,7 @@ const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [stats, setStats] = useState({ profs: 0, classes: 0, eleves: 0, branches: 0 });
+  const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -21,14 +21,12 @@ export default function Dashboard() {
 
   const chargerStats = async () => {
     try {
-      const [p, cl, el, br, st] = await Promise.all([
-        axios.get(API + '/profs', { headers }).catch(() => ({ data: [] })),
+      const [cl, el, st] = await Promise.all([
         axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/branches', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/statistiques', { headers }).catch(() => ({ data: null })),
       ]);
-      setStats({ profs: p.data.length, classes: cl.data.length, eleves: el.data.length, branches: br.data.length });
+      setStats({ classes: cl.data.length, eleves: el.data.length });
       if (st.data) {
         setDashboardInfo({
           prochain_evenement: st.data.prochain_evenement || null,
@@ -49,10 +47,10 @@ export default function Dashboard() {
   const isAdmin = user?.role === 'admin';
 
   const modules = [
-    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: stats.profs, statLabel: 'actifs', admin: true },
+    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: null, statLabel: '', admin: true },
     { icon: '🏫', label: 'Classes', path: '/classes', color: '#10b981', bg: '#d1fae5', stat: stats.classes, statLabel: 'classes', admin: true },
     { icon: '🎓', label: 'Élèves', path: '/eleves', color: '#f59e0b', bg: '#fef3c7', stat: stats.eleves, statLabel: 'élèves', admin: false },
-    { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: stats.branches, statLabel: 'branches', admin: true },
+    { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
     { icon: '📅', label: 'Emploi du Temps', path: '/emploi-du-temps', color: '#ef4444', bg: '#fee2e2', stat: null, statLabel: '', admin: false },
     { icon: '✅', label: 'Présences', path: '/presences', color: '#06b6d4', bg: '#cffafe', stat: null, statLabel: '', admin: false },
     { icon: '📝', label: 'Notes', path: '/notes', color: '#ec4899', bg: '#fce7f3', stat: null, statLabel: '', admin: false },
@@ -116,10 +114,8 @@ export default function Dashboard() {
         {isAdmin && (
           <div style={styles.statsRow}>
             {[
-              { icon: '👨‍🏫', label: 'Professeurs', value: stats.profs, color: '#6366f1', bg: '#e0e7ff' },
               { icon: '🏫', label: 'Classes', value: stats.classes, color: '#10b981', bg: '#d1fae5' },
               { icon: '🎓', label: 'Élèves', value: stats.eleves, color: '#f59e0b', bg: '#fef3c7' },
-              { icon: '📚', label: 'Branches', value: stats.branches, color: '#8b5cf6', bg: '#ede9fe' },
             ].map(s => (
               <div key={s.label} style={styles.statCard}>
                 <div style={{...styles.statIcon, background: s.bg, color: s.color}}>{s.icon}</div>
@@ -209,21 +205,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Modules Grid */}
-        <div style={styles.sectionTitle}>Accès rapide</div>
-        <div style={styles.grid}>
-          {modules.map(m => (
-            <button key={m.path} style={styles.moduleCard} onClick={() => navigate(m.path)}>
-              <div style={{...styles.moduleIcon, background: m.bg, color: m.color}}>{m.icon}</div>
-              <div style={styles.moduleLabel}>{m.label}</div>
-              {m.stat !== null && (
-                <div style={{...styles.moduleStat, color: m.color}}>{m.stat} {m.statLabel}</div>
-              )}
-              <div style={{...styles.moduleArrow, color: m.color}}>→</div>
-            </button>
-          ))}
         </div>
       </div>
     </div>

@@ -783,13 +783,20 @@ export default function Notes() {
               const secondaires = parMatiere.filter(([, d]) => Number(d.coefficient || 1) < 2);
               return (
                 <div key={bulletin.eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < bulletinsAImprimer.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
-                  <div style={{ fontSize: 12, lineHeight: 1.35, marginBottom: 12 }}>
-                    <div>Département de la santé, des affaires sociales et de la culture</div>
-                    <div>Service de l'action sociale</div>
-                    <div>Office de l'asile</div>
-                    <div>Centre de formation "Le Botza"</div>
-                    <div>Zone Industrielle 4, 1963 Vétroz</div>
-                    <div>Tél. 027 606 18 60</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                    <img
+                      src="/logo-etat-du-valais.png"
+                      alt="Logo État du Valais"
+                      style={{ width: 90, height: 'auto', objectFit: 'contain', flexShrink: 0 }}
+                    />
+                    <div style={{ fontSize: 12, lineHeight: 1.35 }}>
+                      <div>Département de la santé, des affaires sociales et de la culture</div>
+                      <div>Service de l'action sociale</div>
+                      <div>Office de l'asile</div>
+                      <div>Centre de formation "Le Botza"</div>
+                      <div>Zone Industrielle 4, 1963 Vétroz</div>
+                      <div>Tél. 027 606 18 60</div>
+                    </div>
                   </div>
                   <div style={s.bulletinPDFHeader}>
                     <div>

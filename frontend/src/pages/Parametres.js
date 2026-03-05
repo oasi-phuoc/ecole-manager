@@ -12,7 +12,11 @@ const MODULES_PROF = [
 export default function Parametres() {
   const [onglet, setOnglet] = useState('profil');
   const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '' });
-  const [ecole, setEcole] = useState({ nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', responsable_langues_jeunes: '', responsable_niveau: '' });
+  const [ecole, setEcole] = useState({
+    nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '',
+    responsable_langues_jeunes: '', responsable_niveau: '',
+    responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: ''
+  });
   const [mdp, setMdp] = useState({ ancien: '', nouveau: '', confirmation: '' });
   const [profs, setProfs] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
@@ -127,7 +131,7 @@ export default function Parametres() {
     { key: 'mdp', label: '🔒 Mot de passe', show: true },
     { key: 'ecole', label: '🏫 École', show: isAdmin },
     { key: 'acces', label: '🔑 Gestion des accès', show: isAdmin },
-    { key: 'danger', label: '⚠️ Zone de danger', show: isAdmin },
+    { key: 'danger', label: '⚠️ Réinitialisation', show: isAdmin },
   ].filter(o => o.show);
 
   const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', ecole: '#34a853', acces: '#ff9800', danger: '#dc2626' };
@@ -213,6 +217,22 @@ export default function Parametres() {
                     <input style={styles.input} type="text" value={ecole.nom_ecole || ''} onChange={e => setEcole({ ...ecole, nom_ecole: e.target.value })} />
                   </div>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                    <label style={styles.label}>Responsable des cours de langues jeunes</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Responsable de niveau - CSC</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_niveau_csc || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_csc: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Responsable de niveau - CFR</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_niveau_cfr || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_cfr: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Responsable de niveau - EPL</label>
+                    <input style={styles.input} type="text" value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })} />
+                  </div>
+                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={styles.label}>Adresse</label>
                     <input style={styles.input} type="text" value={ecole.adresse || ''} onChange={e => setEcole({ ...ecole, adresse: e.target.value })} />
                   </div>
@@ -227,14 +247,6 @@ export default function Parametres() {
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Année scolaire</label>
                     <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Responsable des cours de langues jeunes</label>
-                    <input style={styles.input} type="text" value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Responsable de niveau</label>
-                    <input style={styles.input} type="text" value={ecole.responsable_niveau || ''} onChange={e => setEcole({ ...ecole, responsable_niveau: e.target.value })} />
                   </div>
                 </div>
                 <button type="submit" style={{ ...styles.btnSauver, background: '#34a853', marginTop: '10px' }}>💾 Sauvegarder</button>
@@ -301,62 +313,10 @@ export default function Parametres() {
           )}
           {onglet === 'danger' && isAdmin && (
             <div style={{...styles.card,border:'2px solid #fecaca'}}>
-              <h3 style={{...styles.cardTitre,color:'#dc2626'}}>⚠️ Zone de danger</h3>
-              <p style={{color:'#64748b',fontSize:14,marginBottom:24,lineHeight:1.6}}>
-                Cette action supprime <b>définitivement et irréversiblement</b> toutes les données :
-                élèves, classes, professeurs, notes, branches, emploi du temps, présences, comptabilité, calendrier, etc.<br/>
-                <b>Les comptes administrateurs sont conservés.</b>
-              </p>
+              <h3 style={{...styles.cardTitre,color:'#dc2626'}}>⚠️ Réinitialisation</h3>
 
-              {resetMsg && (
-                <div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,fontWeight:600,fontSize:14,
-                  background:resetMsg.startsWith('✅')?'#d1fae5':'#fee2e2',
-                  color:resetMsg.startsWith('✅')?'#065f46':'#991b1b'}}>
-                  {resetMsg}
-                </div>
-              )}
-
-              {resetEtape === 0 && (
-                <button onClick={() => setResetEtape(1)}
-                  style={{padding:'12px 24px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
-                  🗑️ Réinitialiser toutes les données
-                </button>
-              )}
-
-              {resetEtape === 1 && (
-                <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:20}}>
-                  <p style={{fontWeight:700,color:'#dc2626',marginBottom:16}}>⚠️ Première confirmation — Êtes-vous sûr ?</p>
-                  <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Cette action est irréversible. Toutes les données seront perdues.</p>
-                  <div style={{display:'flex',gap:10}}>
-                    <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                    <button onClick={() => setResetEtape(2)} style={{padding:'10px 20px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700}}>Oui, continuer</button>
-                  </div>
-                </div>
-              )}
-
-              {resetEtape === 2 && (
-                <div style={{background:'#fef2f2',border:'2px solid #dc2626',borderRadius:10,padding:20}}>
-                  <p style={{fontWeight:800,color:'#dc2626',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Cette action est irréversible !</p>
-                  <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Toutes les données seront <b>définitivement supprimées</b>. Confirmez une dernière fois.</p>
-                  <div style={{display:'flex',gap:10}}>
-                    <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                    <button onClick={handleReset} style={{padding:'10px 20px',background:'#991b1b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800}}>⚠️ SUPPRIMER TOUTES LES DONNÉES</button>
-                  </div>
-                </div>
-              )}
-
-              {resetEtape === 3 && (
-                <div style={{padding:20,textAlign:'center',color:'#dc2626',fontWeight:700}}>⏳ Suppression en cours...</div>
-              )}
-
-              {resetEtape === 4 && (
-                <button onClick={() => { setResetEtape(0); setResetMsg(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,marginTop:10}}>
-                  Réinitialiser
-                </button>
-              )}
-
-              <div style={{marginTop:30,paddingTop:24,borderTop:'2px dashed #fed7aa'}}>
-                <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>🔁 Reset rentrée scolaire</h4>
+              <div style={{marginTop:4,paddingTop:0}}>
+                <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>🔁 Réinitialisation pour la rentrée scolaire</h4>
                 <p style={{color:'#7c2d12',fontSize:14,marginBottom:16,lineHeight:1.6}}>
                   Cette option supprime uniquement les données de l'année à réinitialiser :
                 </p>
@@ -380,7 +340,7 @@ export default function Parametres() {
                 {resetRentreeEtape === 0 && (
                   <button onClick={() => setResetRentreeEtape(1)}
                     style={{padding:'12px 24px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
-                    🧹 Lancer reset rentrée scolaire
+                    🧹 Lancer la réinitialisation pour la rentrée scolaire
                   </button>
                 )}
 
@@ -397,7 +357,7 @@ export default function Parametres() {
 
                 {resetRentreeEtape === 2 && (
                   <div style={{background:'#fff7ed',border:'2px solid #c2410c',borderRadius:10,padding:20}}>
-                    <p style={{fontWeight:800,color:'#c2410c',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Reset rentrée ?</p>
+                    <p style={{fontWeight:800,color:'#c2410c',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Réinitialisation de rentrée ?</p>
                     <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Les données de rentrée seront supprimées immédiatement.</p>
                     <div style={{display:'flex',gap:10}}>
                       <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
@@ -407,11 +367,67 @@ export default function Parametres() {
                 )}
 
                 {resetRentreeEtape === 3 && (
-                  <div style={{padding:20,textAlign:'center',color:'#c2410c',fontWeight:700}}>⏳ Reset rentrée en cours...</div>
+                  <div style={{padding:20,textAlign:'center',color:'#c2410c',fontWeight:700}}>⏳ Réinitialisation de rentrée en cours...</div>
                 )}
 
                 {resetRentreeEtape === 4 && (
                   <button onClick={() => { setResetRentreeEtape(0); setResetRentreeMsg(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,marginTop:10}}>
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
+
+              <div style={{marginTop:30,paddingTop:24,borderTop:'2px dashed #fecaca'}}>
+                <h4 style={{margin:'0 0 10px',color:'#dc2626',fontSize:18}}>⚠️ Zone de danger</h4>
+                <p style={{color:'#64748b',fontSize:14,marginBottom:24,lineHeight:1.6}}>
+                  Cette action supprime <b>définitivement et irréversiblement</b> toutes les données :
+                  élèves, classes, professeurs, notes, branches, emploi du temps, présences, comptabilité, calendrier, etc.<br/>
+                  <b>Les comptes administrateurs sont conservés.</b>
+                </p>
+
+                {resetMsg && (
+                  <div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,fontWeight:600,fontSize:14,
+                    background:resetMsg.startsWith('✅')?'#d1fae5':'#fee2e2',
+                    color:resetMsg.startsWith('✅')?'#065f46':'#991b1b'}}>
+                    {resetMsg}
+                  </div>
+                )}
+
+                {resetEtape === 0 && (
+                  <button onClick={() => setResetEtape(1)}
+                    style={{padding:'12px 24px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
+                    🗑️ Réinitialiser toutes les données
+                  </button>
+                )}
+
+                {resetEtape === 1 && (
+                  <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:20}}>
+                    <p style={{fontWeight:700,color:'#dc2626',marginBottom:16}}>⚠️ Première confirmation — Êtes-vous sûr ?</p>
+                    <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Cette action est irréversible. Toutes les données seront perdues.</p>
+                    <div style={{display:'flex',gap:10}}>
+                      <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
+                      <button onClick={() => setResetEtape(2)} style={{padding:'10px 20px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700}}>Oui, continuer</button>
+                    </div>
+                  </div>
+                )}
+
+                {resetEtape === 2 && (
+                  <div style={{background:'#fef2f2',border:'2px solid #dc2626',borderRadius:10,padding:20}}>
+                    <p style={{fontWeight:800,color:'#dc2626',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Cette action est irréversible !</p>
+                    <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Toutes les données seront <b>définitivement supprimées</b>. Confirmez une dernière fois.</p>
+                    <div style={{display:'flex',gap:10}}>
+                      <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
+                      <button onClick={handleReset} style={{padding:'10px 20px',background:'#991b1b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800}}>⚠️ SUPPRIMER TOUTES LES DONNÉES</button>
+                    </div>
+                  </div>
+                )}
+
+                {resetEtape === 3 && (
+                  <div style={{padding:20,textAlign:'center',color:'#dc2626',fontWeight:700}}>⏳ Suppression en cours...</div>
+                )}
+
+                {resetEtape === 4 && (
+                  <button onClick={() => { setResetEtape(0); setResetMsg(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,marginTop:10}}>
                     Réinitialiser
                   </button>
                 )}
