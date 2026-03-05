@@ -19,6 +19,7 @@ const HORAIRES_DEFAUT = [
   {periode:'Après-midi',num:3,debut:'15:20',fin:'16:05'},
   {periode:'Après-midi',num:4,debut:'16:05',fin:'16:50'},
 ];
+const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('pools');
@@ -99,6 +100,8 @@ export default function EmploiDuTemps() {
 
   const handleSavePool = async () => {
     try {
+      if (!poolForm.niveau) { alert('Veuillez sélectionner un niveau.'); return; }
+      if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
       if (poolEdit) {
         await axios.put(API + '/planning/pools/' + poolEdit.id, poolForm, { headers });
       } else {
@@ -205,6 +208,18 @@ export default function EmploiDuTemps() {
   const branchesPoolP = poolClasseP ? poolClasseP.branches : matieres;
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
 
+  const niveauPool = String(poolForm.niveau || '').toUpperCase();
+  const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
+  const totalPeriodesRequisesForm = classesSelectionneesForm.reduce((sum, c) => {
+    const niv = String(c.niveau || niveauPool || '').toUpperCase();
+    const nb = PERIODES_PAR_NIVEAU[niv] || 0;
+    return sum + nb;
+  }, 0);
+  const profsSelectionnesForm = profs.filter(p => poolForm.prof_ids.includes(p.id));
+  const totalPeriodesProfsForm = profsSelectionnesForm.reduce((sum, p) => sum + (parseInt(p.periodes_semaine) || 0), 0);
+  const periodesEquilibrees = totalPeriodesRequisesForm === totalPeriodesProfsForm;
+  const couleurPeriodes = periodesEquilibrees ? '#16a34a' : '#dc2626';
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -303,18 +318,91 @@ export default function EmploiDuTemps() {
               <div style={{...styles.modal, width:660}}>
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
                 <div style={styles.formGrid}>
-                  <div style={styles.fc}>
-                    <label style={styles.lbl}>Nom <span style={{color:'#ef4444'}}>*</span></label>
+                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                    <label style={styles.lbl}>Désignation <span style={{color:'#ef4444'}}>*</span></label>
                     <input style={styles.inp} value={poolForm.nom} onChange={e => setPoolForm({...poolForm,nom:e.target.value})} />
                   </div>
                   <div style={styles.fc}>
                     <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
-                    <input style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})} placeholder="ex: 4ème, CYT1..." />
+                    <select style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})}>
+                      <option value="">— Sélectionner —</option>
+                      <option value="CSC">CSC</option>
+                      <option value="CFR">CFR</option>
+                      <option value="EPL">EPL</option>
+                    </select>
+                    <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
+                      Périodes requises (classes) : {totalPeriodesRequisesForm}
+                    </div>
                   </div>
                   <div style={styles.fc}>
-                    <label style={styles.lbl}>Lieu de travail</label>
-                    <input style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})} />
+                    <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
+                    <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
+                      <option value="">— Sélectionner —</option>
+                      <option value="Synecom">Synecom</option>
+                      <option value="Botza">Botza</option>
+                      <option value="Creuset">Creuset</option>
+                    </select>
+                    <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
+                      Cumul périodes professeurs : {totalPeriodesProfsForm}
+                    </div>
                   </div>
+                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                    <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                      {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
+                        <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
+                          <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
+                          {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {(() => {
+                    const niveauSel = poolForm.niveau || '';
+                    const siteSel = poolForm.site || '';
+                    const respecteNiveau = (p) => (p.niveau_prefere || '') === niveauSel;
+                    const respecteLieu = (p) => (p.lieu_travail_prefere || '') === siteSel;
+                    const blocsProfs = [
+                      {
+                        label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
+                        items: profs.filter(p => respecteNiveau(p) && respecteLieu(p))
+                      },
+                      {
+                        label: `🎯 A une préférence pour ce niveau (${niveauSel || '?'})`,
+                        items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p))
+                      },
+                      {
+                        label: `📍 A une préférence pour ce lieu de travail (${siteSel || '?'})`,
+                        items: profs.filter(p => !respecteNiveau(p) && respecteLieu(p))
+                      },
+                      {
+                        label: '👤 Ne respecte pas ces critères',
+                        items: profs.filter(p => !respecteNiveau(p) && !respecteLieu(p))
+                      },
+                    ];
+                    return (
+                      <div style={{...styles.fc, gridColumn:'1/-1'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                          <label style={styles.lbl}>Professeurs</label>
+                        </div>
+                        {blocsProfs.map(bloc => bloc.items.length > 0 && (
+                          <div key={bloc.label} style={{marginBottom:10}}>
+                            <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
+                            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                              {bloc.items.map(p => (
+                                <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
+                                  <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
+                                  {p.nom} {p.prenom}
+                                  {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   <div style={{...styles.fc, gridColumn:'1/-1'}}>
                     <label style={styles.lbl}>Couleur</label>
                     <div style={{display:'flex',gap:8,marginTop:6}}>
@@ -340,54 +428,6 @@ export default function EmploiDuTemps() {
                             </div>
                           ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const selProfs = profs.filter(p => poolForm.prof_ids.includes(p.id));
-                    const cumTaux = selProfs.reduce((s,p) => s + (parseInt(p.taux_activite)||0), 0);
-                    const cumPer = selProfs.reduce((s,p) => s + (parseInt(p.periodes_semaine)||0), 0);
-                    const blocsProfs = [
-                      { label:`🎯 Niveau correspondant (${poolForm.niveau||'?'})`, items:profs.filter(p => p.niveau_prefere && p.niveau_prefere === poolForm.niveau) },
-                      { label:`📍 Lieu correspondant (${poolForm.site||'?'})`, items:profs.filter(p => p.lieu_travail_prefere && p.lieu_travail_prefere === poolForm.site && !(p.niveau_prefere && p.niveau_prefere === poolForm.niveau)) },
-                      { label:'👤 Autres professeurs', items:profs.filter(p => !(p.niveau_prefere && p.niveau_prefere === poolForm.niveau) && !(p.lieu_travail_prefere && p.lieu_travail_prefere === poolForm.site)) },
-                    ];
-                    return (
-                      <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
-                          <label style={styles.lbl}>Professeurs</label>
-                          {poolForm.prof_ids.length > 0 && (
-                            <span style={{fontSize:12,background:'#e0e7ff',color:'#4338ca',borderRadius:8,padding:'3px 10px',fontWeight:700}}>
-                              Cumul : {cumTaux}% · {cumPer} périodes/sem.
-                            </span>
-                          )}
-                        </div>
-                        {blocsProfs.map(bloc => bloc.items.length > 0 && (
-                          <div key={bloc.label} style={{marginBottom:10}}>
-                            <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
-                            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                              {bloc.items.map(p => (
-                                <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:poolForm.prof_ids.includes(p.id)?'white':'#333'}}>
-                                  <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
-                                  {p.nom} {p.prenom}
-                                  {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                  <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                    <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                      {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
-                        <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:poolForm.classe_ids.includes(c.id)?'white':'#333'}}>
-                          <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
-                          {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
-                        </label>
                       ))}
                     </div>
                   </div>
