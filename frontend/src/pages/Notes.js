@@ -66,6 +66,7 @@ export default function Notes() {
   const [rapportChargement, setRapportChargement] = useState(false);
   const [rapportErreur, setRapportErreur] = useState('');
   const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
+  const [vueClasseAction, setVueClasseAction] = useState('evaluations');
   const [rapportMatiereId, setRapportMatiereId] = useState('');
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [bulletinMode, setBulletinMode] = useState('tous');
@@ -266,6 +267,40 @@ export default function Notes() {
     window.print();
   };
   const classeNom = classeObj?.nom || '';
+
+  const ouvrirVueDepuisSelectionClasse = async (mode) => {
+    if (!classeSelectionnee) {
+      alert("Sélectionnez d'abord une classe.");
+      return;
+    }
+    const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
+    if (!cl) {
+      alert('Classe introuvable.');
+      return;
+    }
+    if (mode === 'evaluations') {
+      await ouvrirClasse(cl);
+      return;
+    }
+    if (mode === 'generale') {
+      setClasseObj(cl);
+      setClasseSelectionnee(cl.id);
+      setVueGeneraleMode('tous');
+      setRapportMatiereId('');
+      setRapportEleveId('');
+      await chargerRapport(cl.id);
+      setVue('generale');
+      return;
+    }
+    if (mode === 'bulletin') {
+      setClasseObj(cl);
+      setClasseSelectionnee(cl.id);
+      setBulletinMode('tous');
+      setEleveSelectionne('');
+      await chargerBulletinId(cl.id);
+      setVue('bulletin');
+    }
+  };
 
   // ===================== VUE SAISIE NOTES =====================
   if (vue === 'saisie' && evaluationOuverte) {
@@ -1106,33 +1141,57 @@ export default function Notes() {
         <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.titre}>📝 Notes & Bulletins</h2>
       </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          <button
+            style={{ ...s.btnEdit, background: vueClasseAction === 'evaluations' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'evaluations' ? 'white' : '#4338ca' }}
+            onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations'); }}
+          >
+            📝 Évaluations
+          </button>
+          <button
+            style={{ ...s.btnEdit, background: vueClasseAction === 'generale' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'generale' ? 'white' : '#4338ca' }}
+            onClick={() => { setVueClasseAction('generale'); ouvrirVueDepuisSelectionClasse('generale'); }}
+          >
+            📊 Vue générale
+          </button>
+          <button
+            style={{ ...s.btnEdit, background: vueClasseAction === 'bulletin' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'bulletin' ? 'white' : '#4338ca' }}
+            onClick={() => { setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin'); }}
+          >
+            📄 Bulletin
+          </button>
+          <select style={{...s.select, minWidth:230}} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+            <option value="">- Sélectionner une classe -</option>
+            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+          </select>
+        </div>
+      </div>
       <div style={s.tblWrap}>
       <table style={s.tbl}>
         <thead>
           <tr style={s.theadRow}>
             <th style={s.th}>Classe</th>
             <th style={s.th}>Niveau</th>
-            <th style={s.th}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {classes.length === 0 ? (
-            <tr><td colSpan="3" style={s.vide}>Aucune classe disponible</td></tr>
+            <tr><td colSpan="2" style={s.vide}>Aucune classe disponible</td></tr>
           ) : classes.map((cl, i) => (
-            <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+            <tr
+              key={cl.id}
+              style={{
+                ...s.tr,
+                background: String(classeSelectionnee) === String(cl.id)
+                  ? '#eef2ff'
+                  : (i % 2 === 0 ? 'white' : '#fafbfc'),
+                cursor: 'pointer'
+              }}
+              onClick={() => setClasseSelectionnee(cl.id)}
+            >
               <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{cl.nom}</td>
               <td style={s.td}>{cl.niveau || '—'}</td>
-              <td style={s.td}>
-                <button style={s.btnEdit} onClick={() => ouvrirClasse(cl)}>📝 Évaluations</button>
-                <button style={{ ...s.btnEdit, background: '#f3e5f5', color: '#7b1fa2' }}
-                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); setVueGeneraleMode('tous'); setRapportMatiereId(''); setRapportEleveId(''); await chargerRapport(cl.id); setVue('generale'); }}>
-                  📊 Vue générale
-                </button>
-                <button style={{ ...s.btnEdit, background: '#fce4ec', color: '#c62828' }}
-                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); setBulletinMode('tous'); setEleveSelectionne(''); await chargerBulletinId(cl.id); setVue('bulletin'); }}>
-                  📄 Bulletin
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>

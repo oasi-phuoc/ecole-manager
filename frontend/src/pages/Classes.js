@@ -1370,7 +1370,7 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['','Classe','Année','Titulaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['','Classe','Titulaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
@@ -1384,7 +1384,6 @@ export default function Classes() {
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                   {c.niveau && <div style={{fontSize:11,color:'#94a3b8'}}>{c.niveau}</div>}
                 </td>
-                <td style={s.td}>{c.annee_scolaire||'—'}</td>
                 <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}>
                   <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>

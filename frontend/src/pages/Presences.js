@@ -56,6 +56,14 @@ export default function Presences() {
       chargerEleves();
       chargerStats();
       chargerClasseHoraires(classeSelectionnee);
+    } else {
+      setClasseInfo(null);
+      setEleves([]);
+      setPresences({});
+      setStatistiques([]);
+      setClasseHoraires([]);
+      setApercuMois({});
+      setValide(false);
     }
   }, [classeSelectionnee, date]);
 
@@ -221,8 +229,7 @@ export default function Presences() {
     try {
       const res = await axios.get(API + '/presences/classes', { headers });
       setClasses(res.data);
-      if (res.data.length > 0) setClasseSelectionnee(res.data[0].id);
-      else setClasseSelectionnee('');
+      setClasseSelectionnee('');
     } catch (err) { console.error(err); }
   };
 
@@ -384,20 +391,21 @@ export default function Presences() {
       {/* Onglets */}
       <div style={{display:'flex',gap:10,marginBottom:12,alignItems:'center'}}>
         <div style={{display:'flex',gap:10,alignItems:'center',flex:1}}>
+        <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+          <option value="">- Sélectionner une classe -</option>
+          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+        </select>
         {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
           <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
         ))}
-        <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-        </select>
-        <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
-          {exportLoading ? 'Export...' : 'Export LORA'}
-        </button>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
           <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
           <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
           <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
         </div>
+        <button onClick={exporterLORA} disabled={exportLoading} style={{marginLeft:'auto',padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
+          {exportLoading ? 'Export...' : 'Export LORA'}
+        </button>
       </div>
       </div>
 
