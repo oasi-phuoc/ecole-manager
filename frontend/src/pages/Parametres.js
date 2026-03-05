@@ -23,6 +23,8 @@ export default function Parametres() {
   const [msgPerms, setMsgPerms] = useState('');
   const [resetEtape, setResetEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetMsg, setResetMsg] = useState('');
+  const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
+  const [resetRentreeMsg, setResetRentreeMsg] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -105,6 +107,18 @@ export default function Parametres() {
     } catch (err) {
       setResetEtape(0);
       setResetMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleResetRentree = async () => {
+    setResetRentreeEtape(3);
+    try {
+      await axios.delete(API + '/parametres/reset-rentree', { headers });
+      setResetRentreeEtape(4);
+      setResetRentreeMsg('✅ Reset de rentrée scolaire effectué.');
+    } catch (err) {
+      setResetRentreeEtape(0);
+      setResetRentreeMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -340,6 +354,68 @@ export default function Parametres() {
                   Réinitialiser
                 </button>
               )}
+
+              <div style={{marginTop:30,paddingTop:24,borderTop:'2px dashed #fed7aa'}}>
+                <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>🔁 Reset rentrée scolaire</h4>
+                <p style={{color:'#7c2d12',fontSize:14,marginBottom:16,lineHeight:1.6}}>
+                  Cette option supprime uniquement les données de l'année à réinitialiser :
+                </p>
+                <ul style={{color:'#7c2d12',fontSize:13,lineHeight:1.7,margin:'0 0 16px 18px'}}>
+                  <li>Élèves et toutes leurs données liées</li>
+                  <li>Notes (et évaluations)</li>
+                  <li>Affectations professeurs / classes</li>
+                  <li>Plannings et disponibilités</li>
+                  <li>Présences</li>
+                  <li>Comptabilité et facturation</li>
+                </ul>
+
+                {resetRentreeMsg && (
+                  <div style={{padding:'12px 16px',borderRadius:8,marginBottom:14,fontWeight:600,fontSize:14,
+                    background:resetRentreeMsg.startsWith('✅')?'#d1fae5':'#fee2e2',
+                    color:resetRentreeMsg.startsWith('✅')?'#065f46':'#991b1b'}}>
+                    {resetRentreeMsg}
+                  </div>
+                )}
+
+                {resetRentreeEtape === 0 && (
+                  <button onClick={() => setResetRentreeEtape(1)}
+                    style={{padding:'12px 24px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
+                    🧹 Lancer reset rentrée scolaire
+                  </button>
+                )}
+
+                {resetRentreeEtape === 1 && (
+                  <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:10,padding:20}}>
+                    <p style={{fontWeight:700,color:'#c2410c',marginBottom:16}}>⚠️ Première confirmation — Continuer ?</p>
+                    <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Cette action supprime les données scolaires listées ci-dessus.</p>
+                    <div style={{display:'flex',gap:10}}>
+                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
+                      <button onClick={() => setResetRentreeEtape(2)} style={{padding:'10px 20px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700}}>Oui, continuer</button>
+                    </div>
+                  </div>
+                )}
+
+                {resetRentreeEtape === 2 && (
+                  <div style={{background:'#fff7ed',border:'2px solid #c2410c',borderRadius:10,padding:20}}>
+                    <p style={{fontWeight:800,color:'#c2410c',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Reset rentrée ?</p>
+                    <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Les données de rentrée seront supprimées immédiatement.</p>
+                    <div style={{display:'flex',gap:10}}>
+                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
+                      <button onClick={handleResetRentree} style={{padding:'10px 20px',background:'#9a3412',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800}}>⚠️ SUPPRIMER LES DONNÉES DE RENTRÉE</button>
+                    </div>
+                  </div>
+                )}
+
+                {resetRentreeEtape === 3 && (
+                  <div style={{padding:20,textAlign:'center',color:'#c2410c',fontWeight:700}}>⏳ Reset rentrée en cours...</div>
+                )}
+
+                {resetRentreeEtape === 4 && (
+                  <button onClick={() => { setResetRentreeEtape(0); setResetRentreeMsg(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,marginTop:10}}>
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

@@ -4,6 +4,37 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
+const MATERIEL_DISTRIBUTION = [
+  { article: 'Manifestations', prix: 20.00 },
+  { article: 'Photocopies / feuilles', prix: 47.00 },
+  { article: "Matériel d'enseignement", prix: 15.00 },
+  { article: 'ACM / Sports', prix: 22.20 },
+  { article: 'Déplacement', prix: 35.00 },
+  { article: 'Classeur 7 cm', prix: 2.80 },
+  { article: 'Classeur 4 cm', prix: 2.00 },
+  { article: 'Cahier A4', prix: 1.90 },
+  { article: 'Feuilles de dessin', prix: 10.00 },
+  { article: 'Agenda', prix: 12.00 },
+  { article: 'Jeux de répertoires', prix: 1.60 },
+  { article: 'Fixpoint pour mines HB', prix: 6.00 },
+  { article: 'Boîte de mines (HB)', prix: 1.80 },
+  { article: 'Gomme', prix: 1.40 },
+  { article: 'Crayons de couleur', prix: 6.90 },
+  { article: 'Plume pilot + 3 cartouches', prix: 14.80 },
+];
+const MATERIEL_FACTURATION = [
+  { key: 'classeur_7', label: 'Classeur 7 cm', prix: 2.80, qteDefaut: 1 },
+  { key: 'classeur_4', label: 'Classeur 4 cm', prix: 2.00, qteDefaut: 1 },
+  { key: 'cahier_a4', label: 'Cahier A4', prix: 1.90, qteDefaut: 1 },
+  { key: 'feuilles_dessin', label: 'Feuilles de dessin', prix: 10.00, qteDefaut: 1 },
+  { key: 'agenda', label: 'Agenda', prix: 12.00, qteDefaut: 1 },
+  { key: 'jeux_repertoires', label: 'Jeux de répertoires', prix: 1.60, qteDefaut: 2 },
+  { key: 'fixpoint_hb', label: 'Fixpencil pour mines HB', prix: 6.00, qteDefaut: 2 },
+  { key: 'boite_mines_hb', label: 'Boîte de mines (HB)', prix: 1.80, qteDefaut: 1 },
+  { key: 'gomme', label: 'Gomme', prix: 1.40, qteDefaut: 1 },
+  { key: 'crayons_couleur', label: 'Crayons de couleur', prix: 6.90, qteDefaut: 1 },
+  { key: 'plume_pilot', label: 'Plume pilot + 3 cartouches', prix: 14.80, qteDefaut: 1 },
+];
 const STATUTS = [
   { val: 'en_attente', label: '⏳ En attente', color: '#fbbc04', bg: '#fff8e1' },
   { val: 'paye', label: '✅ Payé', color: '#34a853', bg: '#e8f5e9' },
@@ -19,6 +50,10 @@ export default function Comptabilite() {
   const [filtreStatut, setFiltreStatut] = useState('');
   const [filtreClasse, setFiltreClasse] = useState('');
   const [onglet, setOnglet] = useState('liste');
+  const [materielMode, setMaterielMode] = useState('prix'); // prix | facturation
+  const [classeFacturationId, setClasseFacturationId] = useState('');
+  const [materielDistribue, setMaterielDistribue] = useState({});
+  const [factureEleve, setFactureEleve] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [paiementEdit, setPaiementEdit] = useState(null);
   const [form, setForm] = useState({ eleve_id: '', montant: '', type: 'Ecolage', statut: 'en_attente', date_paiement: '', commentaire: '' });
@@ -91,6 +126,90 @@ export default function Comptabilite() {
   };
 
   const getStatut = (val) => STATUTS.find(s => s.val === val) || STATUTS[0];
+  const totalMateriel = MATERIEL_DISTRIBUTION.reduce((acc, m) => acc + m.prix, 0);
+  const elevesClasseFacturation = eleves
+    .filter(e => String(e.classe_id || '') === String(classeFacturationId || ''))
+    .sort((a, b) => ((a.nom || '') + ' ' + (a.prenom || '')).localeCompare((b.nom || '') + ' ' + (b.prenom || ''), 'fr'));
+
+  const creerLigneDefaut = () => {
+    const d = {};
+    MATERIEL_FACTURATION.forEach(m => { d[m.key] = m.qteDefaut; });
+    return d;
+  };
+
+  const majQteMateriel = (eleveId, key, value) => {
+    const qte = Math.max(0, parseInt(value || '0', 10) || 0);
+    setMaterielDistribue(prev => ({
+      ...prev,
+      [eleveId]: { ...(prev[eleveId] || creerLigneDefaut()), [key]: qte }
+    }));
+  };
+
+  const totalEleve = (eleveId) => MATERIEL_FACTURATION.reduce((acc, m) => {
+    const q = Number(materielDistribue[eleveId]?.[m.key] ?? m.qteDefaut);
+    return acc + (q * m.prix);
+  }, 0);
+
+  const totalClasse = elevesClasseFacturation.reduce((acc, e) => acc + totalEleve(e.id), 0);
+  const fmtCHF = (v) => 'CHF ' + (Number(v || 0).toFixed(2).replace('.', ','));
+
+  const ouvrirFacture = (eleve) => {
+    const classe = classes.find(c => String(c.id) === String(classeFacturationId));
+    const lignes = MATERIEL_FACTURATION
+      .map(m => {
+        const qte = Number(materielDistribue[eleve.id]?.[m.key] ?? m.qteDefaut);
+        return { ...m, qte, montant: qte * m.prix };
+      })
+      .filter(l => l.qte > 0);
+    setFactureEleve({
+      eleve,
+      classeNom: classe?.nom || '—',
+      dateFacture: new Date().toLocaleDateString('fr-CH'),
+      lignes,
+      total: lignes.reduce((acc, l) => acc + l.montant, 0),
+    });
+  };
+
+  const imprimerFacture = () => {
+    const node = document.getElementById('facture-pdf');
+    if (!node) return;
+    const popup = window.open('', '_blank', 'width=1000,height=800');
+    if (!popup) return;
+    popup.document.write(`
+      <html>
+        <head>
+          <title>Facture matériel</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color:#111; }
+            table { width:100%; border-collapse:collapse; margin-top:14px; }
+            th, td { border:1px solid #dbe3ee; padding:8px; font-size:12px; }
+            th { background:#f8fafc; text-align:left; }
+          </style>
+        </head>
+        <body>${node.outerHTML}</body>
+      </html>
+    `);
+    popup.document.close();
+    popup.focus();
+    popup.print();
+  };
+
+  useEffect(() => {
+    if (onglet === 'materiel' && materielMode === 'facturation' && !classeFacturationId && classes.length > 0) {
+      setClasseFacturationId(String(classes[0].id));
+    }
+  }, [onglet, materielMode, classeFacturationId, classes]);
+
+  useEffect(() => {
+    if (!classeFacturationId) return;
+    setMaterielDistribue(prev => {
+      const next = { ...prev };
+      elevesClasseFacturation.forEach(e => {
+        if (!next[e.id]) next[e.id] = creerLigneDefaut();
+      });
+      return next;
+    });
+  }, [classeFacturationId, eleves.length]);
 
   return (
     <div style={styles.page}>
@@ -128,6 +247,7 @@ export default function Comptabilite() {
       <div style={styles.onglets}>
         <button style={{ ...styles.onglet, ...(onglet === 'liste' ? styles.ongletActif : {}) }} onClick={() => setOnglet('liste')}>📋 Liste des paiements</button>
         <button style={{ ...styles.onglet, ...(onglet === 'stats' ? styles.ongletActif : {}) }} onClick={() => setOnglet('stats')}>📊 Par type</button>
+        <button style={{ ...styles.onglet, ...(onglet === 'materiel' ? styles.ongletActif : {}) }} onClick={() => setOnglet('materiel')}>🎒 Matériel à distribuer</button>
       </div>
 
       {showForm && (
@@ -238,6 +358,178 @@ export default function Comptabilite() {
           ))}
         </div>
       )}
+
+      {onglet === 'materiel' && (
+        <div style={styles.cardMateriel}>
+          <div style={styles.cardMaterielHeader}>
+            <h3 style={styles.cardMaterielTitre}>Liste du matériel à distribuer</h3>
+            <div style={styles.materielActions}>
+              <button style={{ ...styles.materielBtn, ...(materielMode === 'prix' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('prix')}>
+                💵 Liste de prix
+              </button>
+              <button style={{ ...styles.materielBtn, ...(materielMode === 'facturation' ? styles.materielBtnActif : {}) }} onClick={() => setMaterielMode('facturation')}>
+                🧾 Facturation par classe
+              </button>
+            </div>
+          </div>
+          {materielMode === 'prix' ? (
+            <>
+              <div style={{ padding: '0 18px 12px' }}>
+                <span style={styles.totalMaterielBadge}>Total: {totalMateriel.toFixed(2)} CHF</span>
+              </div>
+              <table style={styles.tableMateriel}>
+                <thead>
+                  <tr style={styles.theadRowMateriel}>
+                    <th style={styles.thMateriel}>Matériel</th>
+                    <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Prix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MATERIEL_DISTRIBUTION.map((m, i) => (
+                    <tr key={m.article} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={styles.tdMateriel}>{m.article}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right', fontWeight: '700', color: '#1a73e8' }}>
+                        {m.prix.toFixed(2)} CHF
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <div style={styles.facturationLayout}>
+              <div style={styles.classesList}>
+                <div style={styles.classesListTitre}>Classes</div>
+                {classes.length === 0 ? (
+                  <div style={styles.classesVide}>Aucune classe</div>
+                ) : classes.map(c => (
+                  <button
+                    key={c.id}
+                    style={{ ...styles.classeBtn, ...(String(c.id) === String(classeFacturationId) ? styles.classeBtnActive : {}) }}
+                    onClick={() => setClasseFacturationId(String(c.id))}
+                  >
+                    {c.nom}
+                  </button>
+                ))}
+              </div>
+              <div style={styles.facturationTableWrap}>
+                {!classeFacturationId ? (
+                  <div style={styles.vide}>Sélectionnez une classe</div>
+                ) : (
+                  <>
+                    <div style={styles.facturationHeader}>
+                      <b>Classe: {(classes.find(c => String(c.id) === String(classeFacturationId)) || {}).nom || '—'}</b>
+                      <span style={styles.totalMaterielBadge}>Total classe: {totalClasse.toFixed(2)} CHF</span>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={styles.tableFacturation}>
+                        <thead>
+                          <tr style={styles.theadRowMateriel}>
+                            <th style={styles.thFacturationBase}>Nom</th>
+                            <th style={styles.thFacturationBase}>Prénom</th>
+                            {MATERIEL_FACTURATION.map(m => (
+                              <th key={m.key} style={styles.thFacturationItem} title={m.label}>{m.label}</th>
+                            ))}
+                            <th style={{ ...styles.thFacturationBase, textAlign: 'right' }}>Total élève</th>
+                            <th style={{ ...styles.thFacturationBase, textAlign: 'center' }}>Détail</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {elevesClasseFacturation.length === 0 ? (
+                            <tr><td colSpan={MATERIEL_FACTURATION.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
+                          ) : elevesClasseFacturation.map((e, idx) => (
+                            <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                              <td style={styles.tdFacturation}>{e.nom || '—'}</td>
+                              <td style={styles.tdFacturation}>{e.prenom || '—'}</td>
+                              {MATERIEL_FACTURATION.map(m => (
+                                <td key={m.key} style={{ ...styles.tdFacturation, textAlign: 'center' }}>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    style={styles.qtyInput}
+                                    value={materielDistribue[e.id]?.[m.key] ?? m.qteDefaut}
+                                    onChange={ev => majQteMateriel(e.id, m.key, ev.target.value)}
+                                  />
+                                </td>
+                              ))}
+                              <td style={{ ...styles.tdFacturation, textAlign: 'right', fontWeight: '700', color: '#1a73e8' }}>
+                                {totalEleve(e.id).toFixed(2)} CHF
+                              </td>
+                              <td style={{ ...styles.tdFacturation, textAlign: 'center' }}>
+                                <button style={styles.btnDetailFacture} onClick={() => ouvrirFacture(e)}>Détail</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {factureEleve && (
+        <div style={styles.overlay}>
+          <div style={styles.modalFacture}>
+            <div style={styles.modalFactureActions}>
+              <button style={styles.btnAnnuler} onClick={() => setFactureEleve(null)}>Fermer</button>
+              <button style={styles.btnSauver} onClick={imprimerFacture}>🖨️ Imprimer / PDF</button>
+            </div>
+            <div id="facture-pdf" style={styles.factureA4}>
+              <div style={styles.factureEnteteTop}>Département de la santé, des affaires sociales et de la culture</div>
+              <div style={styles.factureEnteteTop}>Service de l'action sociale</div>
+              <div style={styles.factureEnteteTop}>Office de l'asile</div>
+              <div style={styles.factureEnteteTop}>Centre de formation "Le Botza"</div>
+              <div style={styles.factureEnteteTop}>Zone Industrielle 4, 1963 Vétroz</div>
+              <div style={{ ...styles.factureEnteteTop, marginBottom: 12 }}>Tél. 027 606 18 60</div>
+
+              <div style={styles.factureTitre}>FINANCE ECOLAGE & MATERIEL GENERAL</div>
+              <div style={styles.factureSousTitre}>Facture du matériel scolaire</div>
+
+              <div style={styles.factureInfos}>
+                <div><b>NOM Prénom :</b> {factureEleve.eleve.nom || ''} {factureEleve.eleve.prenom || ''}</div>
+                <div><b>Classe :</b> {factureEleve.classeNom}</div>
+                <div><b>Date :</b> {factureEleve.dateFacture}</div>
+              </div>
+
+              <table style={styles.factureTable}>
+                <thead>
+                  <tr>
+                    <th style={styles.factureTh}>Article</th>
+                    <th style={{ ...styles.factureTh, textAlign: 'right' }}>Prix unitaire</th>
+                    <th style={{ ...styles.factureTh, textAlign: 'center' }}>Quantité</th>
+                    <th style={{ ...styles.factureTh, textAlign: 'right' }}>Prix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {factureEleve.lignes.map(l => (
+                    <tr key={l.key}>
+                      <td style={styles.factureTd}>{l.label}</td>
+                      <td style={{ ...styles.factureTd, textAlign: 'right' }}>{fmtCHF(l.prix)}</td>
+                      <td style={{ ...styles.factureTd, textAlign: 'center' }}>{l.qte}</td>
+                      <td style={{ ...styles.factureTd, textAlign: 'right' }}>{fmtCHF(l.montant)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={styles.factureTotalLigne}>
+                <span>Sous-Total</span>
+                <b>{fmtCHF(factureEleve.total)}</b>
+              </div>
+              <div style={styles.factureMontantFinal}>
+                <span>MONTANT DE LA FACTURE</span>
+                <b>{fmtCHF(factureEleve.total)}</b>
+              </div>
+
+              <div style={styles.factureSignature}>Signature: ____________________________</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -283,4 +575,42 @@ const styles = {
   typeNom: { fontSize: '16px', fontWeight: '700', marginBottom: '8px' },
   typeMontant: { fontSize: '22px', fontWeight: '700', color: '#34a853', marginBottom: '4px' },
   typeNb: { fontSize: '13px', color: '#888' },
+  cardMateriel: { background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden' },
+  cardMaterielHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid #eef2f7' },
+  cardMaterielTitre: { margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' },
+  materielActions: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  materielBtn: { padding: '7px 12px', border: '1px solid #dbe3ee', borderRadius: 8, background: 'white', color: '#334155', fontWeight: '600', cursor: 'pointer', fontSize: '12px' },
+  materielBtnActif: { background: '#1a73e8', color: 'white', border: '1px solid #1a73e8' },
+  totalMaterielBadge: { background: '#e8f5e9', color: '#2e7d32', padding: '6px 10px', borderRadius: '10px', fontWeight: '700', fontSize: '13px' },
+  tableMateriel: { width: '100%', borderCollapse: 'collapse' },
+  theadRowMateriel: { background: '#f8fafc' },
+  thMateriel: { padding: '10px 14px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b', borderBottom: '1px solid #e5e7eb' },
+  tdMateriel: { padding: '10px 14px', fontSize: '14px', color: '#334155', borderBottom: '1px solid #f1f5f9' },
+  facturationLayout: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: 14, padding: 14 },
+  classesList: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#f8fafc', height: 'fit-content' },
+  classesListTitre: { fontWeight: '700', fontSize: '13px', color: '#475569', marginBottom: 8 },
+  classesVide: { fontSize: '12px', color: '#94a3b8', padding: '8px 4px' },
+  classeBtn: { width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#334155', cursor: 'pointer', marginBottom: 6, fontSize: '13px', fontWeight: '600' },
+  classeBtnActive: { background: '#e3f2fd', border: '1px solid #1a73e8', color: '#1a73e8' },
+  facturationTableWrap: { border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', background: 'white' },
+  facturationHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '13px', color: '#334155' },
+  tableFacturation: { width: '100%', borderCollapse: 'collapse', minWidth: 1300 },
+  thFacturationBase: { padding: '8px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
+  thFacturationItem: { padding: '8px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: '#64748b', borderBottom: '1px solid #e5e7eb', minWidth: 85, lineHeight: 1.2 },
+  tdFacturation: { padding: '7px 10px', fontSize: '12px', color: '#334155', borderBottom: '1px solid #f1f5f9' },
+  qtyInput: { width: 48, padding: '4px 6px', border: '1px solid #dbe3ee', borderRadius: 6, fontSize: '12px', textAlign: 'center' },
+  btnDetailFacture: { padding: '5px 10px', borderRadius: 7, border: '1px solid #1a73e8', background: 'white', color: '#1a73e8', cursor: 'pointer', fontWeight: '700', fontSize: '11px' },
+  modalFacture: { background: 'white', width: '900px', maxWidth: '95vw', maxHeight: '90vh', overflow: 'auto', borderRadius: '14px', padding: '18px' },
+  modalFactureActions: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '12px' },
+  factureA4: { background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '22px', color: '#111' },
+  factureEnteteTop: { fontSize: '12px', lineHeight: 1.4 },
+  factureTitre: { marginTop: '6px', fontSize: '18px', fontWeight: '700', color: '#0f172a' },
+  factureSousTitre: { fontSize: '13px', color: '#334155', marginBottom: '10px' },
+  factureInfos: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '12px' },
+  factureTable: { width: '100%', borderCollapse: 'collapse', marginBottom: '12px' },
+  factureTh: { border: '1px solid #dbe3ee', padding: '8px', fontSize: '12px', background: '#f8fafc' },
+  factureTd: { border: '1px solid #dbe3ee', padding: '8px', fontSize: '12px' },
+  factureTotalLigne: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 2px' },
+  factureMontantFinal: { display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', borderTop: '2px solid #0f172a', paddingTop: '10px', marginTop: '8px' },
+  factureSignature: { marginTop: '28px', fontSize: '13px' },
 };

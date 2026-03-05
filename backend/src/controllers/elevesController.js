@@ -22,7 +22,7 @@ const getEleves = async (req, res) => {
 const getEleve = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT e.id, u.nom, u.prenom, u.email, c.nom as classe, e.classe_id, e.date_naissance, e.telephone, e.adresse, e.nom_parent, e.telephone_parent, e.statut
+      SELECT e.id, u.nom, u.prenom, u.email, c.nom as classe, e.classe_id, e.date_naissance, e.date_debut_cours, e.categorie, e.telephone, e.adresse, e.nom_parent, e.telephone_parent, e.statut
       FROM eleves e
       JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id
@@ -36,7 +36,7 @@ const getEleve = async (req, res) => {
 };
 
 const creerEleve = async (req, res) => {
-  const { nom, prenom, email, mot_de_passe, classe_id, date_naissance, date_debut_cours, telephone, adresse, nom_parent, telephone_parent } = req.body;
+  const { nom, prenom, email, mot_de_passe, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent } = req.body;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -48,8 +48,8 @@ const creerEleve = async (req, res) => {
     );
     const userId = userResult.rows[0].id;
     const eleveResult = await client.query(
-      'INSERT INTO eleves (utilisateur_id, classe_id, date_naissance, date_debut_cours, telephone, adresse, nom_parent, telephone_parent) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-      [userId, classe_id || null, date_naissance || null, date_debut_cours || null, telephone || null, adresse || null, nom_parent || null, telephone_parent || null]
+      'INSERT INTO eleves (utilisateur_id, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [userId, classe_id || null, date_naissance || null, date_debut_cours || null, categorie || null, telephone || null, adresse || null, nom_parent || null, telephone_parent || null]
     );
     await client.query('COMMIT');
     res.status(201).json({ message: 'Eleve cree', id: eleveResult.rows[0].id });
@@ -63,7 +63,7 @@ const creerEleve = async (req, res) => {
 
 const modifierEleve = async (req, res) => {
   const {
-    nom, prenom, email, classe_id, date_naissance, date_debut_cours, telephone, adresse, nom_parent, telephone_parent, statut,
+    nom, prenom, email, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent, statut,
     oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
     oasi_nom, oasi_nais, oasi_nationalite,
     oasi_presence_date, oasi_jour_semaine, oasi_presence_periode, oasi_presence_type,
@@ -89,17 +89,17 @@ const modifierEleve = async (req, res) => {
     // Mettre à jour eleves avec tous les champs
     await client.query(`
       UPDATE eleves SET
-        nom=$1, prenom=$2, email=$3, classe_id=$4, date_naissance=$5, date_debut_cours=$6,
-        telephone=$7, adresse=$8, nom_parent=$9, telephone_parent=$10, statut=$11,
-        oasi_prog_nom=$12, oasi_prog_encadrant=$13, oasi_n=$14, oasi_ref=$15, oasi_pos=$16,
-        oasi_nom=$17, oasi_nais=$18, oasi_nationalite=$19,
-        oasi_presence_date=$20, oasi_jour_semaine=$21, oasi_presence_periode=$22,
-        oasi_presence_type=$23, oasi_remarque=$24, oasi_controle_du=$25, oasi_controle_au=$26,
-        oasi_prog_presences=$27, oasi_prog_admin=$28, oasi_as=$29,
-        oasi_prg_id=$30, oasi_prg_occupation_id=$31, oasi_ra_id=$32, oasi_temps_reparti_id=$33
-      WHERE id=$34
+        nom=$1, prenom=$2, email=$3, classe_id=$4, date_naissance=$5, date_debut_cours=$6, categorie=$7,
+        telephone=$8, adresse=$9, nom_parent=$10, telephone_parent=$11, statut=$12,
+        oasi_prog_nom=$13, oasi_prog_encadrant=$14, oasi_n=$15, oasi_ref=$16, oasi_pos=$17,
+        oasi_nom=$18, oasi_nais=$19, oasi_nationalite=$20,
+        oasi_presence_date=$21, oasi_jour_semaine=$22, oasi_presence_periode=$23,
+        oasi_presence_type=$24, oasi_remarque=$25, oasi_controle_du=$26, oasi_controle_au=$27,
+        oasi_prog_presences=$28, oasi_prog_admin=$29, oasi_as=$30,
+        oasi_prg_id=$31, oasi_prg_occupation_id=$32, oasi_ra_id=$33, oasi_temps_reparti_id=$34
+      WHERE id=$35
     `, [
-      nom, prenom, email||null, classe_id||null, date_naissance||null, date_debut_cours||null,
+      nom, prenom, email||null, classe_id||null, date_naissance||null, date_debut_cours||null, categorie||null,
       telephone||null, adresse||null, nom_parent||null, telephone_parent||null, statut||'actif',
       oasi_prog_nom||null, oasi_prog_encadrant||null,
       oasi_n?parseInt(oasi_n):null, oasi_ref?parseInt(oasi_ref):null, oasi_pos?parseInt(oasi_pos):null,

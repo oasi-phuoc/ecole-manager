@@ -67,6 +67,7 @@ export default function Notes() {
   const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
   const [rapportMatiereId, setRapportMatiereId] = useState('');
   const [rapportEleveId, setRapportEleveId] = useState('');
+  const [bulletinMode, setBulletinMode] = useState('tous');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
@@ -248,7 +249,13 @@ export default function Notes() {
     }
   };
 
-  const handleImprimer = () => { window.print(); };
+  const handleImprimer = () => {
+    if (vue === 'bulletin' && bulletinMode === 'eleve' && !eleveSelectionne) {
+      alert('Sélectionnez un élève avant impression.');
+      return;
+    }
+    window.print();
+  };
   const classeNom = classeObj?.nom || '';
 
   // ===================== VUE SAISIE NOTES =====================
@@ -619,6 +626,9 @@ export default function Notes() {
 
   if (vue === 'bulletin') {
     const titulaireNom = classeObj ? [classeObj.prof_prenom, classeObj.prof_nom].filter(Boolean).join(' ') || '—' : '—';
+    const bulletinsAImprimer = bulletinMode === 'tous'
+      ? bulletins
+      : bulletins.filter(b => b.eleve.id === parseInt(eleveSelectionne));
 
     const sauvegarderCriteres = async (eleveId, patch) => {
       const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(eleveId)) || {};
@@ -661,11 +671,21 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📄 Bulletin — {classeNom}</h2>
-          <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-            <option value="">-- Voir bulletin PDF d'un élève --</option>
-            {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
-          </select>
-          <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer / PDF</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
+              <button key={m.id} onClick={() => setBulletinMode(m.id)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {bulletinMode === 'eleve' && (
+            <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
+              <option value="">-- Choisir un élève --</option>
+              {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
+            </select>
+          )}
+          <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
         </div>
 
         <div className="no-print" style={{ marginBottom: 16 }}>
@@ -699,10 +719,12 @@ export default function Notes() {
               ) : bulletins.map((b, idx) => {
                 const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
                 const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
-                const jours = Number(st?.jours) || 0;
                 const presents = Number(st?.presents) || 0;
                 const retards = Number(st?.retards) || 0;
-                const totalPeriodes = jours * 4;
+                const absents = Number(st?.absents) || 0;
+                const excuses = Number(st?.excuses) || 0;
+                const conges = Number(st?.conges) || 0;
+                const totalPeriodes = presents + absents + retards + excuses + conges;
                 const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
                 return (
                   <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
@@ -752,64 +774,101 @@ export default function Notes() {
           </table>
         </div>
 
-        {eleveSelectionne && (() => {
-          const bulletin = bulletins.find(b => b.eleve.id === parseInt(eleveSelectionne));
-          if (!bulletin) return null;
-          return (
-            <div ref={printRef} style={s.bulletinPDF}>
-              <div style={s.bulletinPDFHeader}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 18 }}>BULLETIN DE NOTES</div>
-                  <div style={{ fontSize: 13, color: '#555', marginTop: 5 }}>Classe : <b>{classeNom}</b></div>
-                  <div style={{ fontSize: 13, color: '#555' }}>Titulaire : {titulaireNom}</div>
-                  <div style={{ fontSize: 13, color: '#555' }}>Date : {new Date().toLocaleDateString('fr-CH')}</div>
+        {bulletinsAImprimer.length > 0 && (
+          <div ref={printRef}>
+            {bulletinsAImprimer.map((bulletin, bi) => {
+              const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletin.eleve.id));
+              const parMatiere = Object.entries(bulletin.parMatiere || {});
+              const principales = parMatiere.filter(([, d]) => Number(d.coefficient || 1) >= 2);
+              const secondaires = parMatiere.filter(([, d]) => Number(d.coefficient || 1) < 2);
+              return (
+                <div key={bulletin.eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < bulletinsAImprimer.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.35, marginBottom: 12 }}>
+                    <div>Département de la santé, des affaires sociales et de la culture</div>
+                    <div>Service de l'action sociale</div>
+                    <div>Office de l'asile</div>
+                    <div>Centre de formation "Le Botza"</div>
+                    <div>Zone Industrielle 4, 1963 Vétroz</div>
+                    <div>Tél. 027 606 18 60</div>
+                  </div>
+                  <div style={s.bulletinPDFHeader}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 20 }}>BULLETIN DE NOTES</div>
+                      <div style={{ fontSize: 13, color: '#334155', marginTop: 5 }}>Classe : <b>{classeNom}</b></div>
+                      <div style={{ fontSize: 13, color: '#334155' }}>Date : Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 13 }}>
+                      <div><b>NOM Prénom :</b> {bulletin.eleve.prenom} {bulletin.eleve.nom}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>Branches principales (x2)</div>
+                      <table style={s.tbl}>
+                        <thead>
+                          <tr style={s.theadRow}>
+                            <th style={s.th}>Branche</th>
+                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
+                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(principales.length ? principales : parMatiere).map(([nom, d]) => (
+                            <tr key={'p-' + nom} style={s.tr}>
+                              <td style={s.td}>{nom}</td>
+                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>Branches secondaires (x1)</div>
+                      <table style={s.tbl}>
+                        <thead>
+                          <tr style={s.theadRow}>
+                            <th style={s.th}>Branche</th>
+                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
+                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(secondaires.length ? secondaires : []).map(([nom, d]) => (
+                            <tr key={'s-' + nom} style={s.tr}>
+                              <td style={s.td}>{nom}</td>
+                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                            </tr>
+                          ))}
+                          {secondaires.length === 0 && <tr><td colSpan="3" style={s.vide}>—</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 12 }}>
+                    <div style={{ ...s.card, padding: 12 }}>
+                      <div style={{ fontSize: 13, marginBottom: 5 }}>Absences excusées : <b>{st?.excuses ?? 0}</b></div>
+                      <div style={{ fontSize: 13 }}>Absences non excusées : <b>{st?.absents ?? 0}</b></div>
+                    </div>
+                    <div style={{ ...s.card, padding: 12 }}>
+                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne annuelle : <b>{fmtNote(bulletin.moyenneGenerale)}</b></div>
+                      <div style={{ fontSize: 13 }}>Observation : ______________________________</div>
+                    </div>
+                  </div>
+
+                  <div style={s.signatures}>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du/de la titulaire</div></div>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du/de la coordinatrice</div></div>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du responsable des cours</div></div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{bulletin.eleve.prenom} {bulletin.eleve.nom}</div>
-                </div>
-              </div>
-              <table style={{ ...s.tbl, marginTop: 20 }}>
-                <thead>
-                  <tr style={s.theadRow}>
-                    <th style={s.th}>Matière</th>
-                    <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
-                    <th style={{ ...s.th, textAlign: 'center' }}>Nb éval.</th>
-                    <th style={{ ...s.th, textAlign: 'center' }}>Moyenne /6</th>
-                    <th style={s.th}>Appréciation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(bulletin.parMatiere).map(([matierNom, data]) => {
-                    const m = getMention(data.moyenne);
-                    return (
-                      <tr key={matierNom} style={s.tr}>
-                        <td style={s.td}><b>{matierNom}</b></td>
-                        <td style={{ ...s.td, textAlign: 'center' }}>{data.coefficient}</td>
-                        <td style={{ ...s.td, textAlign: 'center' }}>{data.nbNotes}</td>
-                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: m.color }}>{parseFloat(data.moyenne).toFixed(1)}</td>
-                        <td style={{ ...s.td, color: m.color }}>{m.label}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div style={s.moyenneGeneraleBox}>
-                Moyenne générale :
-                <b style={{ fontSize: 22, color: bulletin.moyenneGenerale >= 4 ? '#2e7d32' : '#ef4444' }}>
-                  {parseFloat(bulletin.moyenneGenerale).toFixed(1)}/6
-                </b>
-                <span style={{ marginLeft: 15, color: getMention(bulletin.moyenneGenerale).color, fontWeight: 600 }}>
-                  {getMention(bulletin.moyenneGenerale).label}
-                </span>
-              </div>
-              <div style={s.signatures}>
-                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du directeur</div></div>
-                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du titulaire</div></div>
-                <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature de l'élève</div></div>
-              </div>
-            </div>
-          );
-        })()}
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -1006,7 +1065,7 @@ export default function Notes() {
                   📊 Vue générale
                 </button>
                 <button style={{ ...s.btnEdit, background: '#fce4ec', color: '#c62828' }}
-                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); await chargerBulletinId(cl.id); setVue('bulletin'); }}>
+                  onClick={async () => { setClasseObj(cl); setClasseSelectionnee(cl.id); setBulletinMode('tous'); setEleveSelectionne(''); await chargerBulletinId(cl.id); setVue('bulletin'); }}>
                   📄 Bulletin
                 </button>
               </td>

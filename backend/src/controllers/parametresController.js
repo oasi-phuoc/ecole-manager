@@ -114,4 +114,49 @@ const resetTout = async (req, res) => {
   });
 };
 
-module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout };
+const resetRentree = async (req, res) => {
+  const tables = [
+    // Présences
+    'presences_v2', 'presences', 'absences',
+
+    // Notes
+    'notes', 'evaluations',
+
+    // Planification / affectations
+    'affectations', 'planning_branches', 'pool_profs', 'pool_classes', 'pool_branches',
+    'disponibilites', 'classe_horaires', 'emploi_du_temps', 'plan_classe',
+
+    // Comptabilité / facturation
+    'paiements', 'comptabilite',
+
+    // Données liées aux élèves
+    'documents_eleves', 'sanctions_eleves', 'observations',
+    'eleves'
+  ];
+
+  const resultats = [];
+  for (const table of tables) {
+    try {
+      const r = await pool.query('DELETE FROM ' + table);
+      resultats.push('OK:' + table + '(' + r.rowCount + ')');
+    } catch (err) {
+      resultats.push('ERR:' + table + ':' + err.message);
+    }
+  }
+
+  try {
+    const r = await pool.query("DELETE FROM utilisateurs WHERE role IN ('eleve','parent')");
+    resultats.push('OK:utilisateurs-eleves-parents(' + r.rowCount + ')');
+  } catch (err) {
+    resultats.push('ERR:utilisateurs-eleves-parents:' + err.message);
+  }
+
+  const erreurs = resultats.filter(r => r.startsWith('ERR'));
+  res.json({
+    message: erreurs.length === 0 ? 'Reset rentree effectue' : 'Reset rentree partiel - ' + erreurs.length + ' erreur(s)',
+    details: resultats,
+    erreurs: erreurs
+  });
+};
+
+module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout, resetRentree };

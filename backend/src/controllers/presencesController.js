@@ -75,11 +75,26 @@ const getStatistiques = async (req, res) => {
         COALESCE(u.nom, e.nom) as nom,
         COALESCE(u.prenom, e.prenom) as prenom,
         COUNT(DISTINCT pv.date) as jours,
-        SUM(CASE WHEN pv.p1='P' OR pv.p2='P' OR pv.p3='P' OR pv.p4='P' OR pv.p5='P' OR pv.p6='P' OR pv.p7='P' OR pv.p8='P' THEN 1 ELSE 0 END) as presents,
-        SUM(CASE WHEN pv.p1='A' OR pv.p2='A' OR pv.p3='A' OR pv.p4='A' OR pv.p5='A' OR pv.p6='A' OR pv.p7='A' OR pv.p8='A' THEN 1 ELSE 0 END) as absents,
-        SUM(CASE WHEN pv.p1='R' OR pv.p2='R' OR pv.p3='R' OR pv.p4='R' OR pv.p5='R' OR pv.p6='R' OR pv.p7='R' OR pv.p8='R' THEN 1 ELSE 0 END) as retards,
-        SUM(CASE WHEN pv.p1='E' OR pv.p2='E' OR pv.p3='E' OR pv.p4='E' OR pv.p5='E' OR pv.p6='E' OR pv.p7='E' OR pv.p8='E' THEN 1 ELSE 0 END) as excuses,
-        SUM(CASE WHEN pv.p1='C' OR pv.p2='C' OR pv.p3='C' OR pv.p4='C' OR pv.p5='C' OR pv.p6='C' OR pv.p7='C' OR pv.p8='C' THEN 1 ELSE 0 END) as conges
+        SUM(
+          (CASE WHEN pv.p1='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='P' THEN 1 ELSE 0 END)+
+          (CASE WHEN pv.p5='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p6='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p7='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p8='P' THEN 1 ELSE 0 END)
+        ) as presents,
+        SUM(
+          (CASE WHEN pv.p1='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='A' THEN 1 ELSE 0 END)+
+          (CASE WHEN pv.p5='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p6='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p7='A' THEN 1 ELSE 0 END)+(CASE WHEN pv.p8='A' THEN 1 ELSE 0 END)
+        ) as absents,
+        SUM(
+          (CASE WHEN pv.p1='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='R' THEN 1 ELSE 0 END)+
+          (CASE WHEN pv.p5='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p6='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p7='R' THEN 1 ELSE 0 END)+(CASE WHEN pv.p8='R' THEN 1 ELSE 0 END)
+        ) as retards,
+        SUM(
+          (CASE WHEN pv.p1='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='E' THEN 1 ELSE 0 END)+
+          (CASE WHEN pv.p5='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p6='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p7='E' THEN 1 ELSE 0 END)+(CASE WHEN pv.p8='E' THEN 1 ELSE 0 END)
+        ) as excuses,
+        SUM(
+          (CASE WHEN pv.p1='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='C' THEN 1 ELSE 0 END)+
+          (CASE WHEN pv.p5='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p6='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p7='C' THEN 1 ELSE 0 END)+(CASE WHEN pv.p8='C' THEN 1 ELSE 0 END)
+        ) as conges
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN presences_v2 pv ON pv.eleve_id = e.id

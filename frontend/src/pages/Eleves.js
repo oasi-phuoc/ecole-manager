@@ -32,6 +32,7 @@ export default function Eleves() {
   const [classeId, setClasseId] = useState('');
   const [dateNaissance, setDateNaissance] = useState('');
   const [dateDebutCours, setDateDebutCours] = useState('');
+  const [categorie, setCategorie] = useState('');
   const [adresse, setAdresse] = useState('');
   const [telephone, setTelephone] = useState('');
   const [nomParent, setNomParent] = useState('');
@@ -79,7 +80,7 @@ export default function Eleves() {
 
   const resetForm = () => {
     setNom(''); setPrenom(''); setEmail(''); setClasseId('');
-    setDateNaissance(''); setAdresse(''); setTelephone('');
+    setDateNaissance(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
     setNomParent(''); setTelephoneParent(''); setStatut('actif');
     setOasiProgNom(''); setOasiProgEncadrant(''); setOasiN(''); setOasiRef(''); setOasiPos('');
     setOasiNom(''); setOasiNais(''); setOasiNationalite('');
@@ -95,6 +96,7 @@ export default function Eleves() {
     setClasseId(el.classe_id||'');
     setDateNaissance(el.date_naissance?el.date_naissance.substring(0,10):'');
     setDateDebutCours(el.date_debut_cours?el.date_debut_cours.substring(0,10):'');
+    setCategorie(el.categorie||'');
     setAdresse(el.adresse||''); setTelephone(el.telephone||'');
     setNomParent(el.nom_parent||''); setTelephoneParent(el.telephone_parent||'');
     setStatut(el.statut||'actif');
@@ -119,7 +121,7 @@ export default function Eleves() {
     try {
       const data = {
         nom, prenom, email, classe_id: classeId||null,
-        date_naissance: dateNaissance||null, adresse, telephone,
+        date_naissance: dateNaissance||null, date_debut_cours: dateDebutCours||null, categorie: categorie||null, adresse, telephone,
         nom_parent: nomParent, telephone_parent: telephoneParent, statut,
         oasi_prog_nom: oasiProgNom, oasi_prog_encadrant: oasiProgEncadrant,
         oasi_n: oasiN?parseInt(oasiN):null, oasi_ref: oasiRef?parseInt(oasiRef):null,
@@ -153,6 +155,13 @@ export default function Eleves() {
     try {
       await axios.put(API+'/eleves/'+eleveId+'/classe', { classe_id: cId||null }, {headers});
       setEleves(prev => prev.map(el => el.id===eleveId ? {...el, classe_id: cId||null} : el));
+    } catch(err) { alert('Erreur: '+err.message); }
+  };
+
+  const handleCategorieChange = async (eleveId, val) => {
+    try {
+      await axios.put(API+'/eleves/'+eleveId+'/categorie', { categorie: val || null }, {headers});
+      setEleves(prev => prev.map(el => el.id===eleveId ? {...el, categorie: val || null} : el));
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
@@ -298,6 +307,16 @@ export default function Eleves() {
                         {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                       </select>
                     </Champ>
+                    <Champ lbl="A commencé l'école le">
+                      <input style={inp} type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
+                    </Champ>
+                    <Champ lbl="Catégorie">
+                      <select style={inp} value={categorie} onChange={e => setCategorie(e.target.value)}>
+                        <option value="">-- Choisir --</option>
+                        <option value="OASI">OASI</option>
+                        <option value="EUCMS">EUCMS</option>
+                      </select>
+                    </Champ>
                     <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="079 123 45 67" /></Champ>
                     <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="Rue de la Paix 10, 1950 Sion" /></Champ>
                   </div>
@@ -360,14 +379,14 @@ export default function Eleves() {
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-              {['Photo','Nom','Prénom','REF','Nationalité','Classe','Date naissance','Début cours','Contact','Statut','Actions'].map(h => (
+              {['Photo','Nom','Prénom','REF','Nationalité','Classe',"A commencé l'école le",'Catégorie','Date naissance','Contact','Statut','Actions'].map(h => (
                 <th key={h} style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {elevesFiltres.length===0 ? (
-              <tr><td colSpan="11" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
+              <tr><td colSpan="12" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
                 <td style={{padding:'10px 14px'}}>
@@ -417,7 +436,6 @@ export default function Eleves() {
                     {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </td>
-                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <input type="date" value={el.date_debut_cours?el.date_debut_cours.substring(0,10):''} style={{...inp,padding:'4px 8px',fontSize:12,maxWidth:140}}
                     onChange={async e => {
@@ -426,6 +444,15 @@ export default function Eleves() {
                       catch(err) { alert('Erreur: '+err.message); }
                     }} />
                 </td>
+                <td style={{padding:'10px 14px',fontSize:13}}>
+                  <select value={el.categorie||''} onChange={e => handleCategorieChange(el.id, e.target.value)}
+                    style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,background:'white',cursor:'pointer',maxWidth:120}}>
+                    <option value="">—</option>
+                    <option value="OASI">OASI</option>
+                    <option value="EUCMS">EUCMS</option>
+                  </select>
+                </td>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <div>{el.nom_parent||'—'}</div>
                   {el.telephone_parent && <div style={{fontSize:11,color:'#94a3b8'}}>{el.telephone_parent}</div>}

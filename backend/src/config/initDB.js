@@ -83,6 +83,7 @@ const initDB = async () => {
 
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS categorie VARCHAR(20)`);
 
     // Bulletin critères (comportement / compétences transversales) par élève et classe
     await pool.query(`

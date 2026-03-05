@@ -14,5 +14,6 @@ router.put('/permissions/:id', autoriser('admin'), c.modifierPermissions);
 router.get('/mes-classes', c.getClassesProf);
 
 router.delete('/reset-tout', autoriser('admin'), c.resetTout);
+router.delete('/reset-rentree', autoriser('admin'), c.resetRentree);
 
 module.exports = router;
