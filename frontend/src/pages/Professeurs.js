@@ -466,7 +466,7 @@ export default function Professeurs() {
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif'},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},

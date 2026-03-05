@@ -85,11 +85,22 @@ export default function Classes() {
 
   const ouvrirDetail = async (c) => {
     setDetailClasse(c);
+    setClasseVueTab('eleves');
     setEleveDetail(null);
     setObservations([]);
+    setInventaireMsg('');
+    setInventaireRows([]);
+    setBranchesInventaire([]);
+    setBrancheInventaireActive(null);
     try {
-      const r = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
-      setElevesClasse(r.data);
+      const [elevesRes, branchesRes] = await Promise.all([
+        axios.get(API+'/classes/'+c.id+'/eleves', {headers}),
+        axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers}),
+      ]);
+      setElevesClasse(elevesRes.data);
+      const brs = branchesRes.data?.branches || [];
+      setBranchesInventaire(brs);
+      if (brs.length > 0) setBrancheInventaireActive(brs[0]);
     } catch(err) { console.error(err); }
   };
 
@@ -128,6 +139,26 @@ export default function Classes() {
   const [eleveSanctions, setEleveSanctions] = useState([]);
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
   const [pendingCell, setPendingCell] = useState(null);
+  const [classeVueTab, setClasseVueTab] = useState('eleves');
+  const [branchesInventaire, setBranchesInventaire] = useState([]);
+  const [brancheInventaireActive, setBrancheInventaireActive] = useState(null);
+  const [inventaireRows, setInventaireRows] = useState([]);
+  const [inventaireLoading, setInventaireLoading] = useState(false);
+  const [inventaireMsg, setInventaireMsg] = useState('');
+  const [inventaireForm, setInventaireForm] = useState({
+    date_document: new Date().toISOString().split('T')[0],
+    nom_document: '',
+    sans_numero: false,
+    remarques: '',
+  });
+  const [inventaireEditId, setInventaireEditId] = useState(null);
+  const [inventaireEditForm, setInventaireEditForm] = useState({
+    date_document: '',
+    nom_document: '',
+    sans_numero: false,
+    remarques: '',
+  });
+  const [dragInventaireId, setDragInventaireId] = useState(null);
 
   const imprimerObservations = () => {
     const rows = observations.map(obs => `
@@ -406,16 +437,117 @@ export default function Classes() {
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
   };
 
+  const chargerInventaireBranche = async (brancheId) => {
+    if (!detailClasse?.id || !brancheId) return;
+    setInventaireLoading(true);
+    setInventaireMsg('');
+    try {
+      const r = await axios.get(API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheId, { headers });
+      setInventaireRows(r.data || []);
+    } catch (err) {
+      setInventaireRows([]);
+      setInventaireMsg('Erreur chargement inventaire');
+    }
+    setInventaireLoading(false);
+  };
+
+  const ajouterLigneInventaire = async (e) => {
+    e.preventDefault();
+    if (!detailClasse?.id || !brancheInventaireActive?.id) return;
+    if (!inventaireForm.nom_document.trim()) {
+      setInventaireMsg('Le nom du document est requis');
+      return;
+    }
+    try {
+      await axios.post(
+        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id,
+        inventaireForm,
+        { headers }
+      );
+      setInventaireForm({
+        date_document: new Date().toISOString().split('T')[0],
+        nom_document: '',
+        sans_numero: false,
+        remarques: '',
+      });
+      await chargerInventaireBranche(brancheInventaireActive.id);
+    } catch (err) {
+      setInventaireMsg('Erreur enregistrement inventaire');
+    }
+  };
+
+  const supprimerLigneInventaire = async (id) => {
+    if (!detailClasse?.id || !brancheInventaireActive?.id) return;
+    if (!window.confirm('Supprimer cette ligne ?')) return;
+    try {
+      await axios.delete(
+        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
+        { headers }
+      );
+      await chargerInventaireBranche(brancheInventaireActive.id);
+    } catch (err) {
+      setInventaireMsg('Erreur suppression inventaire');
+    }
+  };
+
+  const sauvegarderEditionInventaire = async (id) => {
+    if (!detailClasse?.id || !brancheInventaireActive?.id) return;
+    if (!inventaireEditForm.nom_document.trim()) {
+      setInventaireMsg('Le nom du document est requis');
+      return;
+    }
+    try {
+      await axios.put(
+        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
+        inventaireEditForm,
+        { headers }
+      );
+      setInventaireEditId(null);
+      await chargerInventaireBranche(brancheInventaireActive.id);
+    } catch (err) {
+      setInventaireMsg('Erreur modification inventaire');
+    }
+  };
+
+  const reordonnerInventaire = async (sourceId, targetId) => {
+    if (!detailClasse?.id || !brancheInventaireActive?.id || !sourceId || !targetId || sourceId === targetId) return;
+    const rows = [...inventaireRows];
+    const srcIndex = rows.findIndex(r => String(r.id) === String(sourceId));
+    const tgtIndex = rows.findIndex(r => String(r.id) === String(targetId));
+    if (srcIndex < 0 || tgtIndex < 0) return;
+    const [moved] = rows.splice(srcIndex, 1);
+    rows.splice(tgtIndex, 0, moved);
+    setInventaireRows(rows);
+    try {
+      await axios.post(
+        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/reorder',
+        { ids: rows.map(r => r.id) },
+        { headers }
+      );
+    } catch (err) {
+      setInventaireMsg('Erreur réorganisation inventaire');
+      await chargerInventaireBranche(brancheInventaireActive.id);
+    }
+  };
+
+  const getVisaInitiales = (ligne) => {
+    const nom = String(ligne?.auteur_nom || '').trim();
+    const prenom = String(ligne?.auteur_prenom || '').trim();
+    const initiales = (prenom ? prenom[0] : '') + (nom ? nom[0] : '');
+    return initiales ? initiales.toUpperCase() : '—';
+  };
+
+  useEffect(() => {
+    if (classeVueTab === 'inventaire' && brancheInventaireActive?.id) {
+      chargerInventaireBranche(brancheInventaireActive.id);
+    }
+  }, [classeVueTab, brancheInventaireActive?.id]);
+
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
     const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='inactif'&&c.actif===false);
     return matchR && matchA;
   });
-
-  const ouvrirInventaireClasse = (classeId) => {
-    const url = window.location.origin + '/classes/' + classeId + '/inventaire';
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   // Modal zoom photo
   const ModalZoom = () => photoZoom ? (
@@ -840,12 +972,25 @@ export default function Classes() {
       )}
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>
-        <h2 style={s.title}>🏫 {detailClasse.nom} — Liste des élèves</h2>
+        <h2 style={s.title}>🏫 Classe {detailClasse.nom}</h2>
         {detailClasse.prof_prenom && <span style={{...s.chip,background:'#d1fae5',color:'#065f46'}}>Titulaire : {detailClasse.prof_prenom} {detailClasse.prof_nom}</span>}
       </div>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <span style={s.statChip}><b>{elevesClasse.length}</b> élèves</span>
+        <div style={{display:'flex',gap:8}}>
+          <button
+            style={{...s.btnAdd,...(classeVueTab==='eleves'?{}:s.btnGhost)}}
+            onClick={() => setClasseVueTab('eleves')}
+          >
+            📋 Liste des élèves
+          </button>
+          <button
+            style={{...s.btnAdd,...(classeVueTab==='inventaire'?{}:s.btnGhost)}}
+            onClick={() => setClasseVueTab('inventaire')}
+          >
+            📦 Inventaire
+          </button>
+        </div>
         <div style={{display:'flex',gap:8}}>
           <button style={{...s.btnAdd,background:'#6366f1',display:'flex',alignItems:'center',gap:6}} onClick={imprimerTrombinoscope}>
             📸 Trombinoscope
@@ -856,60 +1001,195 @@ export default function Classes() {
         </div>
       </div>
 
-      <div style={s.tableWrap}>
-        <table style={s.table}>
-          <thead>
-            <tr style={s.thead}>
-              {['Photo','Nom','Prénom','Contact','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {elevesClasse.length===0 ? (
-              <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
-            ) : elevesClasse.map(el => (
-              <tr key={el.id} style={s.tr}>
-                <td style={s.td}>
-                  <div style={{position:'relative',width:38,height:38}}>
-                    {el.photo ? (
-                      <img src={el.photo} alt="photo" onClick={() => setPhotoZoom(el.photo)} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
-                    ) : (
-                      <div style={{width:38,height:38,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:'#6366f1',fontWeight:700}}>
-                        {(el.prenom||'?')[0]}
-                      </div>
-                    )}
-                    {isAdmin() && (
-                      <label style={{position:'absolute',bottom:-2,right:-2,width:16,height:16,background:'#6366f1',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'white'}} title="Changer photo">
-                        📷
-                        <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style={{display:'none'}} onChange={async (ev) => {
-                          const file = ev.target.files[0];
-                          if (!file) return;
-                          if (file.size > 2*1024*1024) { alert('Image trop grande (max 2MB)'); return; }
-                          try {
-                            const photoData = await convertirImagePourUpload(file);
-                            await axios.put(API+'/eleves/'+el.id+'/photo', {photo: photoData}, {headers});
-                            const r = await axios.get(API+'/classes/'+detailClasse.id+'/eleves', {headers});
-                            setElevesClasse(r.data);
-                          } catch(err) {
-                            alert('Erreur upload photo: ' + (err.response?.data?.message || err.message || 'fichier non supporte'));
-                          } finally {
-                            ev.target.value = '';
-                          }
-                        }} />
-                      </label>
-                    )}
-                  </div>
-                </td>
-                <td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
-                <td style={s.td}>{el.prenom || '—'}</td>
-                <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>
-                <td style={s.td}><button style={{...s.btnDetail,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
-                <td style={s.td}><button style={{...s.btnDetail,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
-                <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>
+      {classeVueTab === 'eleves' ? (
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr style={s.thead}>
+                {['Photo','Nom','Prénom','Contact','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {elevesClasse.length===0 ? (
+                <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
+              ) : elevesClasse.map(el => (
+                <tr key={el.id} style={s.tr}>
+                  <td style={s.td}>
+                    <div style={{position:'relative',width:38,height:38}}>
+                      {el.photo ? (
+                        <img src={el.photo} alt="photo" onClick={() => setPhotoZoom(el.photo)} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
+                      ) : (
+                        <div style={{width:38,height:38,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:'#6366f1',fontWeight:700}}>
+                          {(el.prenom||'?')[0]}
+                        </div>
+                      )}
+                      {isAdmin() && (
+                        <label style={{position:'absolute',bottom:-2,right:-2,width:16,height:16,background:'#6366f1',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'white'}} title="Changer photo">
+                          📷
+                          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style={{display:'none'}} onChange={async (ev) => {
+                            const file = ev.target.files[0];
+                            if (!file) return;
+                            if (file.size > 2*1024*1024) { alert('Image trop grande (max 2MB)'); return; }
+                            try {
+                              const photoData = await convertirImagePourUpload(file);
+                              await axios.put(API+'/eleves/'+el.id+'/photo', {photo: photoData}, {headers});
+                              const r = await axios.get(API+'/classes/'+detailClasse.id+'/eleves', {headers});
+                              setElevesClasse(r.data);
+                            } catch(err) {
+                              alert('Erreur upload photo: ' + (err.response?.data?.message || err.message || 'fichier non supporte'));
+                            } finally {
+                              ev.target.value = '';
+                            }
+                          }} />
+                        </label>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
+                  <td style={s.td}>{el.prenom || '—'}</td>
+                  <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>
+                  <td style={s.td}><button style={{...s.btnDetail,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                  <td style={s.td}><button style={{...s.btnDetail,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
+                  <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={s.inventoryLayout}>
+          <div style={s.tableWrap}>
+            <table style={s.table}>
+              <thead>
+                <tr style={s.thead}>
+                  <th style={s.th}>Branche</th>
+                </tr>
+              </thead>
+              <tbody>
+                {branchesInventaire.length===0 ? (
+                  <tr><td style={s.empty}>Aucune branche</td></tr>
+                ) : branchesInventaire.map(b => (
+                  <tr
+                    key={b.id}
+                    style={String(brancheInventaireActive?.id)===String(b.id) ? s.trActive : s.tr}
+                    onClick={() => setBrancheInventaireActive(b)}
+                  >
+                    <td style={{...s.td,cursor:'pointer'}}>
+                      <div style={{fontWeight:700}}>{b.nom}</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>{b.niveau || '—'}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={s.tableWrap}>
+            {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
+            {brancheInventaireActive ? (
+              <>
+                <div style={s.invTitle}>Inventaire: {brancheInventaireActive.nom}</div>
+                <form onSubmit={ajouterLigneInventaire} style={s.invForm}>
+                  <input type="date" style={s.inp} value={inventaireForm.date_document} onChange={e => setInventaireForm({...inventaireForm,date_document:e.target.value})} />
+                  <input type="text" style={s.inp} placeholder="Nom du document *" value={inventaireForm.nom_document} onChange={e => setInventaireForm({...inventaireForm,nom_document:e.target.value})} />
+                  <label style={s.invToggle}>
+                    <input type="checkbox" checked={inventaireForm.sans_numero} onChange={e => setInventaireForm({...inventaireForm,sans_numero:e.target.checked})} />
+                    Pas de numéro
+                  </label>
+                  <input type="text" style={s.inp} placeholder="Remarques" value={inventaireForm.remarques} onChange={e => setInventaireForm({...inventaireForm,remarques:e.target.value})} />
+                  <button type="submit" style={s.btnAdd}>+ Ajouter</button>
+                </form>
+
+                <table style={s.table}>
+                  <thead>
+                    <tr style={s.thead}>
+                      {['Date','Nom du document','Numéro','Remarques','VISA','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventaireLoading ? (
+                      <tr><td colSpan="6" style={s.empty}>Chargement...</td></tr>
+                    ) : inventaireRows.length===0 ? (
+                      <tr><td colSpan="6" style={s.empty}>Aucune ligne d’inventaire</td></tr>
+                    ) : (() => {
+                      let compteurNumero = 0;
+                      return inventaireRows.map(l => {
+                        const sansNumero = !!l.sans_numero;
+                        const numeroAffiche = sansNumero ? '—' : String(++compteurNumero);
+                        const isEditing = inventaireEditId === l.id;
+                        return (
+                          <tr
+                            key={l.id}
+                            style={s.tr}
+                            draggable
+                            onDragStart={() => setDragInventaireId(l.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => {
+                              reordonnerInventaire(dragInventaireId, l.id);
+                              setDragInventaireId(null);
+                            }}
+                          >
+                            {isEditing ? (
+                              <>
+                                <td style={s.td}><input type="date" style={s.inp} value={inventaireEditForm.date_document?.substring(0,10) || ''} onChange={e => setInventaireEditForm({...inventaireEditForm,date_document:e.target.value})} /></td>
+                                <td style={s.td}><input type="text" style={s.inp} value={inventaireEditForm.nom_document} onChange={e => setInventaireEditForm({...inventaireEditForm,nom_document:e.target.value})} /></td>
+                                <td style={s.td}>
+                                  <label style={s.invToggle}>
+                                    <input type="checkbox" checked={!!inventaireEditForm.sans_numero} onChange={e => setInventaireEditForm({...inventaireEditForm,sans_numero:e.target.checked})} />
+                                    Pas de numéro
+                                  </label>
+                                </td>
+                                <td style={s.td}><input type="text" style={s.inp} value={inventaireEditForm.remarques || ''} onChange={e => setInventaireEditForm({...inventaireEditForm,remarques:e.target.value})} /></td>
+                                <td style={s.td}>
+                                  <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
+                                </td>
+                                <td style={s.td}>
+                                  <button style={s.btnEdit} onClick={() => sauvegarderEditionInventaire(l.id)}>✅</button>
+                                  <button style={s.btnDel} onClick={() => setInventaireEditId(null)}>✕</button>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td style={s.td}>{l.date_document ? new Date(l.date_document).toLocaleDateString('fr-CH') : '—'}</td>
+                                <td style={{...s.td,fontWeight:700}}>{l.nom_document || '—'}</td>
+                                <td style={s.td}>{numeroAffiche}</td>
+                                <td style={s.td}>{l.remarques || '—'}</td>
+                                <td style={s.td}>
+                                  <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
+                                </td>
+                                <td style={s.td}>
+                                  <button
+                                    style={s.btnEdit}
+                                    onClick={() => {
+                                      setInventaireEditId(l.id);
+                                      setInventaireEditForm({
+                                        date_document: l.date_document ? l.date_document.substring(0,10) : '',
+                                        nom_document: l.nom_document || '',
+                                        sans_numero: !!l.sans_numero,
+                                        remarques: l.remarques || '',
+                                      });
+                                    }}
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button style={s.btnEdit} title="Déplacer" onMouseDown={() => setDragInventaireId(l.id)}>↕️</button>
+                                  <button style={s.btnDel} onClick={() => supprimerLigneInventaire(l.id)}>🗑️</button>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <div style={s.empty}>Sélectionnez une branche</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -931,12 +1211,6 @@ export default function Classes() {
           </div>
           {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>}
         </div>
-      </div>
-
-      <div style={s.statsBar}>
-        <span style={s.statChip}>Total <b>{classes.length}</b></span>
-        <span style={{...s.statChip,background:'#d1fae5',color:'#065f46'}}>Actives <b>{classes.filter(c=>c.actif!==false).length}</b></span>
-        <span style={{...s.statChip,background:'#f1f5f9',color:'#475569'}}>Inactifs <b>{classes.filter(c=>c.actif===false).length}</b></span>
       </div>
 
       {showForm && (
@@ -980,13 +1254,13 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['','Classe','Année','Titulaire','Inventaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['','Classe','Année','Titulaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan="6" style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?6:5} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => (
               <tr key={c.id} style={s.tr}>
                 <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
@@ -996,14 +1270,6 @@ export default function Classes() {
                 </td>
                 <td style={s.td}>{c.annee_scolaire||'—'}</td>
                 <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
-                <td style={s.td}>
-                  <button
-                    style={{...s.btnDetail,background:'#ede9fe',color:'#5b21b6'}}
-                    onClick={() => ouvrirInventaireClasse(c.id)}
-                  >
-                    📦 Ouvrir
-                  </button>
-                </td>
                 <td style={s.td}>
                   <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}
@@ -1024,7 +1290,7 @@ export default function Classes() {
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
@@ -1035,8 +1301,9 @@ const s = {
   filtres:{display:'flex',gap:4},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
   filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},
-  btnAdd:{padding:'8px 16px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  statsBar:{display:'flex',gap:10,marginBottom:20},
+  btnAdd:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnGhost:{background:'white',color:'#475569',border:'1px solid #e2e8f0'},
+  statsBar:{display:'flex',gap:10,marginBottom:12},
   statChip:{padding:'5px 12px',background:'#e0e7ff',color:'#3730a3',borderRadius:99,fontSize:12,fontWeight:500},
   statsRow:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:20},
   statCard:{background:'white',borderRadius:12,padding:'16px 20px',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
@@ -1054,14 +1321,21 @@ const s = {
   inp:{padding:'9px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'},
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
-  btnSave:{padding:'9px 20px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
   tr:{borderBottom:'1px solid #f8fafc'},
+  trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
+  inventoryLayout:{display:'grid',gridTemplateColumns:'320px 1fr',gap:14,alignItems:'start'},
+  invTitle:{fontSize:14,fontWeight:800,color:'#0f172a',padding:'14px 14px 0'},
+  invMsg:{margin:'12px 12px 0',padding:'8px 10px',borderRadius:8,background:'#fee2e2',color:'#991b1b',fontSize:12,fontWeight:700},
+  invForm:{display:'grid',gridTemplateColumns:'140px 1.4fr auto 1fr auto',gap:8,padding:14,alignItems:'center'},
+  invToggle:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',fontWeight:600,whiteSpace:'nowrap'},
+  visaBadge:{display:'inline-flex',alignItems:'center',justifyContent:'center',minWidth:34,height:24,padding:'0 8px',borderRadius:99,background:'#e0e7ff',color:'#3730a3',fontSize:11,fontWeight:800,letterSpacing:'0.04em'},
   badge:{display:'inline-flex',alignItems:'center',padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   badgeInactif:{background:'#f1f5f9',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},

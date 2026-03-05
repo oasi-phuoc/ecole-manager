@@ -114,7 +114,7 @@ export default function Branches() {
                   {['principale','secondaire'].map(t => (
                     <button key={t} type="button"
                       onClick={() => setForm({...form,type_branche:t})}
-                      style={{flex:1,padding:'10px',borderRadius:8,border:'2px solid '+(form.type_branche===t?'#8b5cf6':'#e2e8f0'),background:form.type_branche===t?'#ede9fe':'#f8fafc',color:form.type_branche===t?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,textTransform:'capitalize',transition:'all 0.15s'}}>
+                      style={{flex:1,padding:'10px',borderRadius:8,border:'2px solid '+(form.type_branche===t?'#6366f1':'#e2e8f0'),background:form.type_branche===t?'#e0e7ff':'#f8fafc',color:form.type_branche===t?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,textTransform:'capitalize',transition:'all 0.15s'}}>
                       {t==='principale'?'⭐ Principale':'📎 Secondaire'}
                     </button>
                   ))}
@@ -148,14 +148,14 @@ export default function Branches() {
                     <b style={{color:'#1e293b'}}>{b.nom}</b>
                   </td>
                   <td style={s.td}>
-                    <span style={{background:b.type_branche==='principale'?'#fef3c7':'#f1f5f9',color:b.type_branche==='principale'?'#92400e':'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
-                      {b.type_branche==='principale'?'⭐ Principale':'📎 Secondaire'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
                     {b.niveau
                       ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{b.niveau}</span>
                       : <span style={{color:'#94a3b8'}}>—</span>}
+                  </td>
+                  <td style={s.td}>
+                    <span style={{background:b.type_branche==='principale'?'#fef3c7':'#f1f5f9',color:b.type_branche==='principale'?'#92400e':'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
+                      {b.type_branche==='principale'?'⭐ Principale':'📎 Secondaire'}
+                    </span>
                   </td>
                   <td style={s.td}>
                     <span style={{background:'#f0fdf4',color:'#166534',padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:700}}>
@@ -185,7 +185,7 @@ export default function Branches() {
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:20,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
@@ -194,10 +194,10 @@ const s = {
   searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},
   filtres:{display:'flex',gap:4,flexWrap:'wrap'},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
-  filtrActif:{background:'#8b5cf6',color:'white',border:'1px solid #8b5cf6'},
-  btnAdd:{padding:'8px 16px',background:'#8b5cf6',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},
+  btnAdd:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   statsBar:{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'},
-  statChip:{padding:'5px 12px',background:'#ede9fe',color:'#5b21b6',borderRadius:99,fontSize:12,fontWeight:500},
+  statChip:{padding:'5px 12px',background:'#e0e7ff',color:'#3730a3',borderRadius:99,fontSize:12,fontWeight:500},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},
   modal:{background:'white',padding:32,borderRadius:16,width:460,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
   modalHeader:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24},
@@ -210,7 +210,7 @@ const s = {
   inp:{padding:'9px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'},
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
-  btnSave:{padding:'9px 20px',background:'#8b5cf6',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},

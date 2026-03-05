@@ -376,13 +376,13 @@ export default function Presences() {
     <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>✅ Présences</h2>
       </div>
 
       {/* Onglets */}
-      <div style={{display:'flex',gap:10,marginBottom:20,alignItems:'center'}}>
+      <div style={{display:'flex',gap:10,marginBottom:12,alignItems:'center'}}>
         <div style={{display:'flex',gap:10,alignItems:'center',flex:1}}>
         {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
           <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
@@ -390,7 +390,7 @@ export default function Presences() {
         <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
-        <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#10b981',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
+        <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
           {exportLoading ? 'Export...' : 'Export LORA'}
         </button>
         <div style={{display:'flex',alignItems:'center',gap:6}}>

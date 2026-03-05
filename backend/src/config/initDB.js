@@ -68,10 +68,26 @@ const initDB = async () => {
         date_document DATE NOT NULL DEFAULT CURRENT_DATE,
         nom_document VARCHAR(255) NOT NULL,
         numero_document VARCHAR(100),
+        ordre INTEGER,
+        sans_numero BOOLEAN DEFAULT false,
         remarques TEXT,
         auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+    await pool.query(`ALTER TABLE inventaire_branches ADD COLUMN IF NOT EXISTS ordre INTEGER`);
+    await pool.query(`ALTER TABLE inventaire_branches ADD COLUMN IF NOT EXISTS sans_numero BOOLEAN DEFAULT false`);
+    await pool.query(`
+      WITH ordered AS (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (PARTITION BY classe_id, branche_id ORDER BY created_at ASC, id ASC) AS rn
+        FROM inventaire_branches
+      )
+      UPDATE inventaire_branches ib
+      SET ordre = ordered.rn
+      FROM ordered
+      WHERE ib.id = ordered.id AND ib.ordre IS NULL
     `);
 
     // Table sanctions élèves
