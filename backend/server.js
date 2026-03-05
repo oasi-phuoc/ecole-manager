@@ -26,6 +26,7 @@ app.use('/api/import', require('./src/routes/import'));
 app.use('/api/plan-classe', require('./src/routes/planClasse'));
 app.use('/api/observations', require('./src/routes/observations'));
 app.use('/api/planning', require('./src/routes/planning'));
+app.use('/api/documents-administratifs', require('./src/routes/documentsAdministratifs'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

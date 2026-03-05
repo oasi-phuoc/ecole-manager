@@ -60,6 +60,7 @@ export default function Notes() {
   const [matiereSelectionnee, setMatiereSelectionnee] = useState('');
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [classeObj, setClasseObj] = useState(null);
+  const [ecoleParams, setEcoleParams] = useState({});
   const [matiereObj, setMatiereObj] = useState(null);
   const [rapport, setRapport] = useState(null);
   const [rapportChargement, setRapportChargement] = useState(false);
@@ -79,7 +80,7 @@ export default function Notes() {
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
 
-  useEffect(() => { chargerClasses(); chargerMatieres(); }, []);
+  useEffect(() => { chargerClasses(); chargerMatieres(); chargerParametresEcole(); }, []);
 
   const chargerClasses = async () => {
     try {
@@ -93,6 +94,13 @@ export default function Notes() {
       const res = await axios.get(API + '/emploi-du-temps/matieres', { headers });
       setMatieres(res.data);
     } catch (err) { console.error(err); }
+  };
+
+  const chargerParametresEcole = async () => {
+    try {
+      const res = await axios.get(API + '/parametres/ecole', { headers });
+      setEcoleParams(res.data || {});
+    } catch (err) { setEcoleParams({}); }
   };
 
   const chargerEvaluationsId = async (classeId, matiereId) => {
@@ -626,6 +634,22 @@ export default function Notes() {
 
   if (vue === 'bulletin') {
     const titulaireNom = classeObj ? [classeObj.prof_prenom, classeObj.prof_nom].filter(Boolean).join(' ') || '—' : '—';
+    const articleSelonSexe = (sexe) => (String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du');
+    const niveauClasse = String(classeObj?.niveau || '').toUpperCase();
+    const cleNiveau =
+      niveauClasse.includes('CSC') ? 'CSC' :
+      niveauClasse.includes('CFR') ? 'CFR' :
+      niveauClasse.includes('EPL') ? 'EPL' : '';
+    const responsableNiveauNom =
+      cleNiveau === 'CSC' ? (ecoleParams.responsable_niveau_csc || '') :
+      cleNiveau === 'CFR' ? (ecoleParams.responsable_niveau_cfr || '') :
+      cleNiveau === 'EPL' ? (ecoleParams.responsable_niveau_epl || '') : '';
+    const responsableNiveauSexe =
+      cleNiveau === 'CSC' ? ecoleParams.sexe_responsable_niveau_csc :
+      cleNiveau === 'CFR' ? ecoleParams.sexe_responsable_niveau_cfr :
+      cleNiveau === 'EPL' ? ecoleParams.sexe_responsable_niveau_epl : null;
+    const responsableCoursNom = ecoleParams.responsable_langues_jeunes || '';
+    const responsableCoursSexe = ecoleParams.sexe_responsable_langues_jeunes;
     const bulletinsAImprimer = bulletinMode === 'tous'
       ? bulletins
       : bulletins.filter(b => b.eleve.id === parseInt(eleveSelectionne));
@@ -703,13 +727,12 @@ export default function Notes() {
               <tr style={s.theadRow}>
                 <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
                 {BULLETIN_CRITERES_LABELS.map((label, i) => (
-                  <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'center', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
+                  <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'justify', textJustify: 'inter-word', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
                 ))}
                 <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Absences</th>
-                <th style={{ ...s.th, width: 70, textAlign: 'center' }}>Taux présence BN %</th>
+                <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
                 <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Retards</th>
-                <th style={{ ...s.th, width: 95 }}>Début scolarité</th>
-                <th style={{ ...s.th, width: 120 }}>Remarques</th>
+                <th style={{ ...s.th, width: 120, textAlign: 'justify', textJustify: 'inter-word' }}>Remarques</th>
                 <th style={{ ...s.th, width: 100, textAlign: 'center' }}>Validation</th>
               </tr>
             </thead>
@@ -746,7 +769,6 @@ export default function Notes() {
                     <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.absents ?? '—'}</td>
                     <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
                     <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.retards ?? '—'}</td>
-                    <td style={s.td}>{b.eleve.date_debut_cours ? new Date(b.eleve.date_debut_cours).toLocaleDateString('fr-CH') : '—'}</td>
                     <td style={s.td}>
                       <input type="text"
                         value={bulletinRemarqueEdit[b.eleve.id] !== undefined ? bulletinRemarqueEdit[b.eleve.id] : (cr.remarques || '')}
@@ -778,9 +800,18 @@ export default function Notes() {
           <div ref={printRef}>
             {bulletinsAImprimer.map((bulletin, bi) => {
               const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletin.eleve.id));
+              const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(bulletin.eleve.id)) || {};
               const parMatiere = Object.entries(bulletin.parMatiere || {});
               const principales = parMatiere.filter(([, d]) => Number(d.coefficient || 1) >= 2);
               const secondaires = parMatiere.filter(([, d]) => Number(d.coefficient || 1) < 2);
+              const sourcePrincipales = principales.length ? principales : parMatiere;
+              const sourceSecondaires = secondaires.length ? secondaires : [];
+              const moyPrin = sourcePrincipales.length
+                ? sourcePrincipales.reduce((acc, [, d]) => acc + (parseFloat(d.moyenne) || 0), 0) / sourcePrincipales.length
+                : null;
+              const moySec = sourceSecondaires.length
+                ? sourceSecondaires.reduce((acc, [, d]) => acc + (parseFloat(d.moyenne) || 0), 0) / sourceSecondaires.length
+                : null;
               return (
                 <div key={bulletin.eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < bulletinsAImprimer.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
@@ -811,17 +842,16 @@ export default function Notes() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div>
-                      <div style={{ fontWeight: 700, marginBottom: 6 }}>Branches principales (x2)</div>
                       <table style={s.tbl}>
                         <thead>
                           <tr style={s.theadRow}>
-                            <th style={s.th}>Branche</th>
+                            <th style={s.th}>Branches principales</th>
                             <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
                             <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(principales.length ? principales : parMatiere).map(([nom, d]) => (
+                          {sourcePrincipales.map(([nom, d]) => (
                             <tr key={'p-' + nom} style={s.tr}>
                               <td style={s.td}>{nom}</td>
                               <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
@@ -832,11 +862,10 @@ export default function Notes() {
                       </table>
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, marginBottom: 6 }}>Branches secondaires (x1)</div>
                       <table style={s.tbl}>
                         <thead>
                           <tr style={s.theadRow}>
-                            <th style={s.th}>Branche</th>
+                            <th style={s.th}>Branche secondaires</th>
                             <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
                             <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
                           </tr>
@@ -857,19 +886,31 @@ export default function Notes() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 12 }}>
                     <div style={{ ...s.card, padding: 12 }}>
-                      <div style={{ fontSize: 13, marginBottom: 5 }}>Absences excusées : <b>{st?.excuses ?? 0}</b></div>
-                      <div style={{ fontSize: 13 }}>Absences non excusées : <b>{st?.absents ?? 0}</b></div>
+                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne branches principales : <b>{fmtNote(moyPrin)}</b></div>
                     </div>
                     <div style={{ ...s.card, padding: 12 }}>
-                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne annuelle : <b>{fmtNote(bulletin.moyenneGenerale)}</b></div>
-                      <div style={{ fontSize: 13 }}>Observation : ______________________________</div>
+                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne branches secondaires : <b>{fmtNote(moySec)}</b></div>
                     </div>
                   </div>
 
+                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>Moyenne annuelle : <b>{fmtNote(bulletin.moyenneGenerale)}</b></div>
+                  </div>
+
+                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, marginBottom: 5 }}>Absences excusées : <b>{st?.excuses ?? 0}</b></div>
+                    <div style={{ fontSize: 13 }}>Absences non excusées : <b>{st?.absents ?? 0}</b></div>
+                  </div>
+
+                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Observations</div>
+                    <div style={{ fontSize: 13 }}>{cr.remarques && String(cr.remarques).trim() ? cr.remarques : '—'}</div>
+                  </div>
+
                   <div style={s.signatures}>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du/de la titulaire</div></div>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du/de la coordinatrice</div></div>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature du responsable des cours</div></div>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(classeObj?.prof_sexe)} titulaire</div></div>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableNiveauSexe)} responsable de niveau{responsableNiveauNom ? ` (${responsableNiveauNom})` : ''}</div></div>
+                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableCoursSexe)} responsable des cours{responsableCoursNom ? ` (${responsableCoursNom})` : ''}</div></div>
                   </div>
                 </div>
               );

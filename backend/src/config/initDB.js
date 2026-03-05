@@ -38,6 +38,20 @@ const initDB = async () => {
     // Table documents élèves
     await pool.query(`CREATE TABLE IF NOT EXISTS documents_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);
 
+    // Table documents administratifs
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS documents_administratifs (
+        id SERIAL PRIMARY KEY,
+        designation VARCHAR(255) NOT NULL,
+        nom_fichier VARCHAR(255) NOT NULL,
+        contenu TEXT NOT NULL,
+        taille INTEGER,
+        auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Table sanctions élèves
     await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), created_at TIMESTAMP DEFAULT NOW());`);
 
@@ -83,6 +97,10 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_csc VARCHAR(200)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_cfr VARCHAR(200)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS responsable_niveau_epl VARCHAR(200)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_langues_jeunes VARCHAR(1)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_csc VARCHAR(1)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_cfr VARCHAR(1)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_epl VARCHAR(1)`);
 
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);

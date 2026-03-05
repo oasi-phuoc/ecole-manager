@@ -3,12 +3,12 @@ const pool = require('../config/database');
 const getClasses = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT c.*, u.nom as prof_nom, u.prenom as prof_prenom,
+      SELECT c.*, u.nom as prof_nom, u.prenom as prof_prenom, u.sexe as prof_sexe,
         COUNT(DISTINCT e.id) as nb_eleves
       FROM classes c
       LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id
       LEFT JOIN eleves e ON e.classe_id=c.id
-      GROUP BY c.id, u.nom, u.prenom
+      GROUP BY c.id, u.nom, u.prenom, u.sexe
       ORDER BY c.nom
     `);
     res.json(result.rows);
@@ -18,7 +18,7 @@ const getClasses = async (req, res) => {
 const getClasse = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT c.*, u.nom as prof_nom, u.prenom as prof_prenom
+      SELECT c.*, u.nom as prof_nom, u.prenom as prof_prenom, u.sexe as prof_sexe
       FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id
       WHERE c.id=$1`, [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ message: 'Classe non trouvée' });

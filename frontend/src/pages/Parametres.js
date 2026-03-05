@@ -15,7 +15,8 @@ export default function Parametres() {
   const [ecole, setEcole] = useState({
     nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
-    responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: ''
+    responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: '',
+    sexe_responsable_langues_jeunes: 'M', sexe_responsable_niveau_csc: 'M', sexe_responsable_niveau_cfr: 'M', sexe_responsable_niveau_epl: 'M'
   });
   const [mdp, setMdp] = useState({ ancien: '', nouveau: '', confirmation: '' });
   const [profs, setProfs] = useState([]);
@@ -47,7 +48,16 @@ export default function Parametres() {
   const chargerEcole = async () => {
     try {
       const res = await axios.get(API + '/parametres/ecole', { headers });
-      if (res.data) setEcole(res.data);
+      if (res.data) {
+        setEcole(prev => ({
+          ...prev,
+          ...res.data,
+          sexe_responsable_langues_jeunes: res.data.sexe_responsable_langues_jeunes || 'M',
+          sexe_responsable_niveau_csc: res.data.sexe_responsable_niveau_csc || 'M',
+          sexe_responsable_niveau_cfr: res.data.sexe_responsable_niveau_cfr || 'M',
+          sexe_responsable_niveau_epl: res.data.sexe_responsable_niveau_epl || 'M',
+        }));
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -217,19 +227,51 @@ export default function Parametres() {
                     <input style={styles.input} type="text" value={ecole.nom_ecole || ''} onChange={e => setEcole({ ...ecole, nom_ecole: e.target.value })} />
                   </div>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
-                    <label style={styles.label}>Responsable des cours de langues jeunes</label>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Responsable des cours de langues jeunes</span>
+                      <span style={{ display: 'inline-flex', gap: 4 }}>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_langues_jeunes: 'M' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_langues_jeunes === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_langues_jeunes: 'F' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_langues_jeunes === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
+                      </span>
+                    </label>
                     <input style={styles.input} type="text" value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })} />
                   </div>
                   <div style={styles.formChamp}>
-                    <label style={styles.label}>Responsable de niveau - CSC</label>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Responsable de niveau - CSC</span>
+                      <span style={{ display: 'inline-flex', gap: 4 }}>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_csc: 'M' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_csc: 'F' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
+                      </span>
+                    </label>
                     <input style={styles.input} type="text" value={ecole.responsable_niveau_csc || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_csc: e.target.value })} />
                   </div>
                   <div style={styles.formChamp}>
-                    <label style={styles.label}>Responsable de niveau - CFR</label>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Responsable de niveau - CFR</span>
+                      <span style={{ display: 'inline-flex', gap: 4 }}>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_cfr: 'M' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_cfr: 'F' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
+                      </span>
+                    </label>
                     <input style={styles.input} type="text" value={ecole.responsable_niveau_cfr || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_cfr: e.target.value })} />
                   </div>
                   <div style={styles.formChamp}>
-                    <label style={styles.label}>Responsable de niveau - EPL</label>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Responsable de niveau - EPL</span>
+                      <span style={{ display: 'inline-flex', gap: 4 }}>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_epl: 'M' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
+                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_epl: 'F' })}
+                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
+                      </span>
+                    </label>
                     <input style={styles.input} type="text" value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })} />
                   </div>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
