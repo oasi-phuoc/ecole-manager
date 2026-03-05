@@ -35,9 +35,11 @@ export default function EmploiDuTemps() {
   const [creneaux, setCreneaux] = useState([]);
   const [pools, setPools] = useState([]);
   const [affectations, setAffectations] = useState([]);
+  const [affectationModes, setAffectationModes] = useState({});
   const [classeHoraires, setClasseHoraires] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [dispos, setDispos] = useState({});
+  const [disposAffectations, setDisposAffectations] = useState({});
   const [planningGeneral, setPlanningGeneral] = useState(null);
   const [planningPoolId, setPlanningPoolId] = useState('');
   const [planningProf, setPlanningProf] = useState(null);
@@ -77,6 +79,25 @@ export default function EmploiDuTemps() {
     } catch(err) { console.error(err); }
   };
 
+  const chargerDisposAffectations = async (pool_id = poolAffId) => {
+    try {
+      const url = API + '/planning/general' + (pool_id ? '?pool_id=' + pool_id : '');
+      const r = await axios.get(url, { headers });
+      const map = {};
+      (r.data?.dispos || []).forEach(d => { map[`${d.prof_id}-${d.creneau_id}`] = d.disponible; });
+      setDisposAffectations(map);
+    } catch (err) {
+      console.error(err);
+      setDisposAffectations({});
+    }
+  };
+
+  useEffect(() => {
+    if (onglet === 'affectations' && sousOngletAff === 'profs') {
+      chargerDisposAffectations(poolAffId);
+    }
+  }, [onglet, sousOngletAff, poolAffId]);
+
   const chargerDispos = async (prof_id) => {
     const r = await axios.get(API + '/planning/disponibilites/' + prof_id, { headers });
     const map = {};
@@ -89,6 +110,7 @@ export default function EmploiDuTemps() {
   const sauverDispos = async () => {
     const liste = Object.entries(dispos).map(([creneau_id, disponible]) => ({ creneau_id: parseInt(creneau_id), disponible }));
     await axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers });
+    chargerDisposAffectations(poolAffId);
     alert('Disponibilités sauvegardées !');
   };
 
@@ -136,13 +158,18 @@ export default function EmploiDuTemps() {
   const classeAHoraire = (classe_id, jour, periode) =>
     classeHoraires.some(h => h.classe_id==classe_id && h.jour===jour && h.periode===periode);
 
-  // Bascule simple : Matin ↔ Après-midi (défaut Matin)
+  // Bascule cycle : vide -> Matin -> Après-midi -> vide
   const toggleClasseHoraire = async (classe_id, jour) => {
     if (!isAdmin()) return;
     const actuel = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
-    const nouvellePeriode = actuel?.periode === 'Matin' ? 'Après-midi' : 'Matin';
+    const nouvellePeriode =
+      !actuel?.periode ? 'Matin'
+      : actuel.periode === 'Matin' ? 'Après-midi'
+      : '';
     let nouveaux = classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour));
-    nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
+    if (nouvellePeriode) {
+      nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
+    }
     setClasseHoraires(nouveaux);
     const horairesClasse = nouveaux.filter(h => h.classe_id==classe_id).map(h => ({jour:h.jour, periode:h.periode}));
     await axios.post(API + '/planning/classe-horaires/' + classe_id, { horaires: horairesClasse }, { headers });
@@ -219,6 +246,23 @@ export default function EmploiDuTemps() {
   const poolSelectionne = pools.find(p => p.id == poolAffId);
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
   const classesPool = poolSelectionne ? poolSelectionne.classes : classes;
+  const poolEstCSC = String(poolSelectionne?.niveau || '').toUpperCase() === 'CSC';
+  const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
+  const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
+  const affectationsPool = affectations.filter(a =>
+    classesPoolIds.has(String(a.classe_id)) && profsPoolIds.has(String(a.prof_id))
+  );
+  const suiviClasses = classesPool.map(cl => {
+    const niveauClasse = String(cl.niveau || poolSelectionne?.niveau || '').toUpperCase();
+    const periodesRequises = PERIODES_PAR_NIVEAU[niveauClasse] || 0;
+    const periodesAffectees = affectationsPool.filter(a => String(a.classe_id) === String(cl.id)).length;
+    return { ...cl, periodesRequises, periodesAffectees };
+  });
+  const suiviClassesIncompletes = suiviClasses.filter(c => c.periodesAffectees < c.periodesRequises);
+  const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
+    acc[p.id] = affectationsPool.filter(a => String(a.prof_id) === String(p.id)).length;
+    return acc;
+  }, {});
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
@@ -305,9 +349,9 @@ export default function EmploiDuTemps() {
                             if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
                             const ok = dispos[cr.id] !== false;
                             return (
-                              <td key={jour} style={{...styles.tdDispo, background:ok?'#e8f5e9':'#fce4ec', cursor:isAdmin()?'pointer':'default'}}
+                              <td key={jour} style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default'}}
                                 onClick={() => isAdmin() && toggleDispo(cr.id)}>
-                                <span style={{fontSize:20}}>{ok?'✅':'❌'}</span>
+                                <span style={{fontSize:24, lineHeight:1, color:ok?'#16a34a':'#dc2626'}}>●</span>
                               </td>
                             );
                           })}
@@ -502,7 +546,7 @@ export default function EmploiDuTemps() {
       {onglet === 'affectations' && (
         <div>
           <div style={{display:'flex',gap:8,marginBottom:16}}>
-            {[{id:'classes',label:'🏫 Affectation Classes'},{id:'profs',label:'👨‍🏫 Affectation Profs'}].map(o => (
+            {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'}].map(o => (
               <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
                 onClick={() => setSousOngletAff(o.id)}>
                 {o.label}
@@ -521,13 +565,13 @@ export default function EmploiDuTemps() {
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:12}}>
-              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>☀️ Matin ↔ 🌙 Après-midi</b></div>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>Vide -> Matin -> Après-midi -> Vide</b></div>
               <div style={{overflowX:'auto'}}>
-                <table style={styles.tbl}>
+                <table style={{...styles.tbl, tableLayout:'fixed', minWidth:860}}>
                   <thead>
                     <tr style={styles.theadRow}>
                       <th style={{...styles.th,minWidth:140}}>Classe</th>
-                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',width:140}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -539,15 +583,15 @@ export default function EmploiDuTemps() {
                         {JOURS.map(jour => {
                           const periode = getHoraireJourClasse(cl.id, jour);
                           return (
-                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9'}}>
+                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9',width:140}}>
                               <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={{
-                                padding:'6px 16px', borderRadius:20, fontWeight:700, fontSize:12,
-                                cursor:isAdmin()?'pointer':'default', minWidth:100, transition:'all 0.15s',
+                                padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
+                                cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
                                 border: periode==='Matin' ? '2px solid #3b82f6' : periode==='Après-midi' ? '2px solid #f59e0b' : '2px solid #e2e8f0',
                                 background: periode==='Matin' ? '#dbeafe' : periode==='Après-midi' ? '#fef3c7' : '#f8fafc',
-                                color: periode==='Matin' ? '#1d4ed8' : periode==='Après-midi' ? '#92400e' : '#cbd5e1',
+                                color: periode==='Matin' ? '#1d4ed8' : periode==='Après-midi' ? '#92400e' : '#94a3b8',
                               }}>
-                                {periode==='Matin' ? '☀️ Matin' : periode==='Après-midi' ? '🌙 Après-midi' : '—'}
+                                {periode==='Matin' ? 'Matin' : periode==='Après-midi' ? 'Après-midi' : 'Vide'}
                               </button>
                             </td>
                           );
@@ -562,12 +606,40 @@ export default function EmploiDuTemps() {
 
           {/* AFFECTATION PROFS - profs en entête, classes en lignes par créneau */}
           {sousOngletAff === 'profs' && (
-            <div style={{overflowX:'auto',marginTop:12}}>
+            <div style={{marginTop:12}}>
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#475569',marginBottom:6}}>
+                  Suivi classes (affecté / requis)
+                </div>
+                {suiviClassesIncompletes.length === 0 ? (
+                  <div style={{fontSize:12,color:'#16a34a',fontWeight:700}}>Toutes les classes sont OK</div>
+                ) : (
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                    {suiviClassesIncompletes.map(cl => (
+                      <span key={cl.id} style={{padding:'4px 8px',borderRadius:999,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',fontSize:12,fontWeight:700}}>
+                        {cl.nom} : {cl.periodesAffectees} / {cl.periodesRequises}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{overflowX:'auto'}}>
               <table style={{...styles.tbl,minWidth:200+profsPool.length*140}}>
                 <thead>
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,minWidth:130}}>Créneau</th>
-                    {profsPool.map(p => <th key={p.id} style={styles.th}>{p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span></th>)}
+                    {profsPool.map(p => {
+                      const totalProf = parseInt(p.periodes_semaine) || 0;
+                      const totalAffecte = periodesAffecteesParProf[p.id] || 0;
+                      return (
+                        <th key={p.id} style={styles.th}>
+                          {p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span>
+                          <div style={{fontWeight:700,fontSize:11,marginTop:4,color:'#dbeafe'}}>
+                            {totalAffecte} / {totalProf}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -595,31 +667,74 @@ export default function EmploiDuTemps() {
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectations.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
+                                const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
+                                const modeCle = `${prof.id}-${cr.id}`;
+                                const modeAffectation = affectationModes[modeCle] || 'classe';
+                                const valeurSelect = aff
+                                  ? (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id))
+                                  : '';
                                 return (
-                                  <td key={prof.id} style={{...styles.td,padding:4}}>
-                                    <select style={{...styles.cellSel,background:aff?'#e8f5e9':'#fff'}}
-                                      value={aff?aff.classe_id:''}
+                                  <td key={prof.id} style={{...styles.td,padding:4,background:indispo?'#eeeeee':'#fff'}}>
+                                    <select style={{...styles.cellSel,background:indispo?'#eeeeee':(aff?'#e8f5e9':'#fff')}}
+                                      value={valeurSelect}
                                       onChange={async e => {
-                                        const classe_id = e.target.value;
-                                        if (!classe_id) {
+                                        const valeur = e.target.value;
+                                        if (!valeur) {
                                           const a = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
-                                          if (a) { await axios.delete(API+'/planning/affectations/'+a.id, {headers}); chargerTout(); }
+                                          if (a) { await axios.delete(API+'/planning/affectations/'+a.id, {headers}); }
+                                          setAffectationModes(prev => ({ ...prev, [modeCle]: 'classe' }));
+                                          chargerTout();
                                         } else {
+                                          const estSoutien = valeur.startsWith('soutien:');
+                                          const classe_id = estSoutien ? valeur.split(':')[1] : valeur;
+                                          const ancienne = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
                                           // Vérifier si cette classe est déjà prise ce créneau par un autre prof
                                           const conflit = affectations.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id);
-                                          if (conflit) { alert('⚠️ ' + classe_id + ' est déjà affectée à un autre prof ce créneau !'); return; }
+                                          if (conflit) {
+                                            const profConflit = profsPool.find(p => p.id == conflit.prof_id);
+                                            const nomProfConflit = profConflit ? `${profConflit.nom} ${profConflit.prenom}` : 'un autre professeur';
+                                            const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
+                                            const confirmer = window.confirm(
+                                              `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur ce créneau.\n\nVoulez-vous échanger ces périodes ?`
+                                            );
+                                            if (!confirmer) return;
+
+                                            // Échange: l'ancienne classe du prof courant est transférée au prof en conflit
+                                            if (ancienne && String(ancienne.classe_id) !== String(classe_id)) {
+                                              await axios.post(
+                                                API + '/planning/affectations',
+                                                { prof_id: conflit.prof_id, classe_id: ancienne.classe_id, creneau_id: cr.id },
+                                                { headers }
+                                              );
+                                            }
+
+                                            // Puis on affecte la classe choisie au prof courant
+                                            await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
+                                            setAffectationModes(prev => ({ ...prev, [modeCle]: estSoutien ? 'soutien' : 'classe' }));
+                                            chargerTout();
+                                            return;
+                                          }
                                           // Supprimer ancienne affectation de CE prof pour CE créneau
-                                          const ancienne = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
                                           if (ancienne) await axios.delete(API+'/planning/affectations/'+ancienne.id, {headers});
                                           await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
+                                          setAffectationModes(prev => ({ ...prev, [modeCle]: estSoutien ? 'soutien' : 'classe' }));
                                           chargerTout();
                                         }
                                       }}
                                       disabled={!isAdmin()}>
                                       <option value="">—</option>
                                       <optgroup label="Classes">
-                                        {classesCours.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+                                        {classesCours.map(cl => <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>)}
                                       </optgroup>
+                                      {poolEstCSC && (
+                                        <optgroup label="Soutien">
+                                          {classesCours.map(cl => (
+                                            <option key={`soutien-${cl.id}`} value={`soutien:${cl.id}`}>
+                                              {cl.nom} - Soutien
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      )}
                                       <optgroup label="Spécial">
                                         <option value="titulariat">Titulariat</option>
                                         <option value="atelier">Atelier</option>
@@ -637,6 +752,7 @@ export default function EmploiDuTemps() {
                   })}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
         </div>
