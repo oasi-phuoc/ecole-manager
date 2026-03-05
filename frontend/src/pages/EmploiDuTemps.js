@@ -316,7 +316,6 @@ export default function EmploiDuTemps() {
           {id:'pools', label:'👥 Pools'},
           {id:'disponibilites', label:'✅ Disponibilités'},
           {id:'affectations', label:'📌 Affectations'},
-          {id:'classe', label:'🏫 Planning Classes'},
           {id:'prof', label:'👨‍🏫 Planning Profs'},
           {id:'general', label:'📊 Planning Général'},
         ].map(o => (
@@ -570,7 +569,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{...styles.rowBetween, marginBottom:16}}>
             <div style={{display:'flex',gap:8}}>
-              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'}].map(o => (
+              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
                   onClick={() => setSousOngletAff(o.id)}>
                   {o.label}
@@ -792,92 +791,96 @@ export default function EmploiDuTemps() {
             </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* ===== PLANNING CLASSES ===== */}
-      {onglet === 'classe' && (
-        <div>
-          <div style={styles.card}>
-            <div style={styles.rowBetween}>
-              <h3 style={styles.cardTitre}>Planning par classe</h3>
-              <select style={styles.sel} value={classePlanningPoolId}
-                onChange={e => { setClassePlanningPoolId(e.target.value); if(classePlanningId) chargerPlanningClasse(classePlanningId, e.target.value); }}>
-                <option value="">— Tous les pools —</option>
-                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-              </select>
-            </div>
-            <div style={{...styles.flexWrap,marginTop:12}}>
-              {classesPoolP.map(c => (
-                <button key={c.id} style={{...styles.chip,...(classePlanningId==c.id?styles.chipActif:{})}}
-                  onClick={() => { setClassePlanningId(c.id); chargerPlanningClasse(c.id, classePlanningPoolId); }}>
-                  {c.nom}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {planningClasse && classePlanningId && (
+          {/* AFFECTATION BRANCHES - ancien Planning Classes */}
+          {sousOngletAff === 'branches' && (
             <div>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
-
-
-              {/* Planning semaine */}
-              <div style={{overflowX:'auto'}}>
-                <table style={{...styles.tbl,minWidth:700}}>
-                  <thead>
-                    <tr style={styles.theadRow}>
-                      <th style={{...styles.th,minWidth:130}}>Créneau</th>
-                      {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {['Matin','Après-midi'].map(periode => {
-                      const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi'&&c.periode===periode);
-                      if (!crsBase.length) return null;
-                      return [
-                        <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
-                        ...crsBase.map((crBase,idx) => (
-                          <tr key={crBase.id} style={styles.tr}>
-                            <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
-                              P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
-                            </td>
-                            {JOURS.map(jour => {
-                              const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                              if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
-                              const aff = (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id);
-                              const aCours = classeAHoraire(classePlanningId, jour, periode);
-                              return (
-                                <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
-                                  background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
-                                  {aff ? (
-                                    <div>
-                                      <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
-                                      {isAdmin() ? (
-                                        <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
-                                          value={aff.matiere_id||''}
-                                          onChange={async ev => {
-                                            await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                            chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-                                          }}>
-                                          <option value="">— Branche —</option>
-                                          {(branchesPoolP.length>0?branchesPoolP:matieres).map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                                        </select>
-                                      ) : (
-                                        aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
-                                      )}
-                                    </div>
-                                  ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))
-                      ];
-                    })}
-                  </tbody>
-                </table>
+              <div style={styles.card}>
+                <h3 style={{...styles.cardTitre, marginBottom:12}}>Branches</h3>
+                <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                  <select style={styles.sel} value={classePlanningPoolId}
+                    onChange={e => {
+                      setClassePlanningPoolId(e.target.value);
+                      setClassePlanningId('');
+                      setPlanningClasse(null);
+                    }}>
+                    <option value="">— Tous les pools —</option>
+                    {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                  </select>
+                  <select style={styles.sel} value={classePlanningId || ''}
+                    onChange={e => {
+                      const classeId = e.target.value;
+                      setClassePlanningId(classeId);
+                      if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
+                      else setPlanningClasse(null);
+                    }}>
+                    <option value="">— Sélectionner une classe —</option>
+                    {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
+                </div>
               </div>
+
+              {planningClasse && classePlanningId && (
+                <div>
+                  <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
+
+                  <div style={{overflowX:'auto'}}>
+                    <table style={{...styles.tbl,minWidth:700}}>
+                      <thead>
+                        <tr style={styles.theadRow}>
+                          <th style={{...styles.th,minWidth:130}}>Créneau</th>
+                          {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {['Matin','Après-midi'].map(periode => {
+                          const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi'&&c.periode===periode);
+                          if (!crsBase.length) return null;
+                          return [
+                            <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                            ...crsBase.map((crBase,idx) => (
+                              <tr key={crBase.id} style={styles.tr}>
+                                <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                                  P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                </td>
+                                {JOURS.map(jour => {
+                                  const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
+                                  if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                                  const aff = (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id);
+                                  const aCours = classeAHoraire(classePlanningId, jour, periode);
+                                  return (
+                                    <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
+                                      background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
+                                      {aff ? (
+                                        <div>
+                                          <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
+                                          {isAdmin() ? (
+                                            <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
+                                              value={aff.matiere_id||''}
+                                              onChange={async ev => {
+                                                await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
+                                                chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                                              }}>
+                                              <option value="">— Branche —</option>
+                                              {(branchesPoolP.length>0?branchesPoolP:matieres).map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                            </select>
+                                          ) : (
+                                            aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
+                                          )}
+                                        </div>
+                                      ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))
+                          ];
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
