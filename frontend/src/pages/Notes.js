@@ -268,14 +268,10 @@ export default function Notes() {
   };
   const classeNom = classeObj?.nom || '';
 
-  const ouvrirVueDepuisSelectionClasse = async (mode) => {
-    if (!classeSelectionnee) {
-      alert("Sélectionnez d'abord une classe.");
-      return;
-    }
-    const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
+  const ouvrirVueDepuisSelectionClasse = async (mode, classeIdParam = classeSelectionnee) => {
+    if (!classeIdParam) return;
+    const cl = classes.find(c => String(c.id) === String(classeIdParam));
     if (!cl) {
-      alert('Classe introuvable.');
       return;
     }
     if (mode === 'evaluations') {
@@ -1144,58 +1140,44 @@ export default function Notes() {
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap'}}>
         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
           <button
-            style={{ ...s.btnEdit, background: vueClasseAction === 'evaluations' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'evaluations' ? 'white' : '#4338ca' }}
-            onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations'); }}
+            style={{ ...s.btnTopAction, background: vueClasseAction === 'evaluations' ? '#6366f1' : 'white', color: vueClasseAction === 'evaluations' ? 'white' : '#475569', border: vueClasseAction === 'evaluations' ? 'none' : '1px solid #e2e8f0' }}
+            onClick={() => { setVueClasseAction('evaluations'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('evaluations'); }}
           >
             📝 Évaluations
           </button>
           <button
-            style={{ ...s.btnEdit, background: vueClasseAction === 'generale' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'generale' ? 'white' : '#4338ca' }}
-            onClick={() => { setVueClasseAction('generale'); ouvrirVueDepuisSelectionClasse('generale'); }}
+            style={{ ...s.btnTopAction, background: vueClasseAction === 'generale' ? '#6366f1' : 'white', color: vueClasseAction === 'generale' ? 'white' : '#475569', border: vueClasseAction === 'generale' ? 'none' : '1px solid #e2e8f0' }}
+            onClick={() => { setVueClasseAction('generale'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('generale'); }}
           >
             📊 Vue générale
           </button>
           <button
-            style={{ ...s.btnEdit, background: vueClasseAction === 'bulletin' ? '#6366f1' : '#eef2ff', color: vueClasseAction === 'bulletin' ? 'white' : '#4338ca' }}
-            onClick={() => { setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin'); }}
+            style={{ ...s.btnTopAction, background: vueClasseAction === 'bulletin' ? '#6366f1' : 'white', color: vueClasseAction === 'bulletin' ? 'white' : '#475569', border: vueClasseAction === 'bulletin' ? 'none' : '1px solid #e2e8f0' }}
+            onClick={() => { setVueClasseAction('bulletin'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('bulletin'); }}
           >
             📄 Bulletin
           </button>
-          <select style={{...s.select, minWidth:230}} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+          <select
+            style={{...s.select, minWidth:230, height:35}}
+            value={classeSelectionnee}
+            onChange={e => {
+              const next = e.target.value;
+              setClasseSelectionnee(next);
+              if (!next) { setClasseObj(null); return; }
+              ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
+            }}
+          >
             <option value="">- Sélectionner une classe -</option>
             {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
           </select>
         </div>
       </div>
       <div style={s.tblWrap}>
-      <table style={s.tbl}>
-        <thead>
-          <tr style={s.theadRow}>
-            <th style={s.th}>Classe</th>
-            <th style={s.th}>Niveau</th>
-          </tr>
-        </thead>
-        <tbody>
-          {classes.length === 0 ? (
-            <tr><td colSpan="2" style={s.vide}>Aucune classe disponible</td></tr>
-          ) : classes.map((cl, i) => (
-            <tr
-              key={cl.id}
-              style={{
-                ...s.tr,
-                background: String(classeSelectionnee) === String(cl.id)
-                  ? '#eef2ff'
-                  : (i % 2 === 0 ? 'white' : '#fafbfc'),
-                cursor: 'pointer'
-              }}
-              onClick={() => setClasseSelectionnee(cl.id)}
-            >
-              <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{cl.nom}</td>
-              <td style={s.td}>{cl.niveau || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div style={s.vide}>
+          {classeSelectionnee
+            ? 'Chargement de la vue sélectionnée...'
+            : 'Sélectionnez une classe pour afficher les données.'}
+        </div>
       </div>
     </div>
   );
@@ -1205,6 +1187,7 @@ const s = {
   page: { padding: '24px 28px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
+  btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
   evalInfo: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   select: { padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white', color: '#374151' },
