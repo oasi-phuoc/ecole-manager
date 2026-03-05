@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
 const COULEURS = [
   '#F8B4B4', // rouge pastel
   '#B7E4C7', // vert pastel
@@ -35,7 +36,13 @@ export default function EmploiDuTemps() {
   const [creneaux, setCreneaux] = useState([]);
   const [pools, setPools] = useState([]);
   const [affectations, setAffectations] = useState([]);
-  const [affectationModes, setAffectationModes] = useState({});
+  const [affectationModes, setAffectationModes] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(AFFECTATION_MODES_STORAGE_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  });
   const [classeHoraires, setClasseHoraires] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [dispos, setDispos] = useState({});
@@ -98,6 +105,10 @@ export default function EmploiDuTemps() {
     }
   }, [onglet, sousOngletAff, poolAffId]);
 
+  useEffect(() => {
+    localStorage.setItem(AFFECTATION_MODES_STORAGE_KEY, JSON.stringify(affectationModes));
+  }, [affectationModes]);
+
   const chargerDispos = async (prof_id) => {
     const r = await axios.get(API + '/planning/disponibilites/' + prof_id, { headers });
     const map = {};
@@ -158,18 +169,16 @@ export default function EmploiDuTemps() {
   const classeAHoraire = (classe_id, jour, periode) =>
     classeHoraires.some(h => h.classe_id==classe_id && h.jour===jour && h.periode===periode);
 
-  // Bascule cycle : vide -> Matin -> Après-midi -> vide
+  // Premier clic depuis vide -> Matin, puis alternance Matin <-> Après-midi
   const toggleClasseHoraire = async (classe_id, jour) => {
     if (!isAdmin()) return;
     const actuel = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
     const nouvellePeriode =
       !actuel?.periode ? 'Matin'
       : actuel.periode === 'Matin' ? 'Après-midi'
-      : '';
+      : 'Matin';
     let nouveaux = classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour));
-    if (nouvellePeriode) {
-      nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
-    }
+    nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
     setClasseHoraires(nouveaux);
     const horairesClasse = nouveaux.filter(h => h.classe_id==classe_id).map(h => ({jour:h.jour, periode:h.periode}));
     await axios.post(API + '/planning/classe-horaires/' + classe_id, { horaires: horairesClasse }, { headers });
@@ -178,7 +187,7 @@ export default function EmploiDuTemps() {
 
   const getHoraireJourClasse = (classe_id, jour) => {
     const h = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
-    return h?.periode || 'Matin';
+    return h?.periode || '';
   };
 
   // Affectations
@@ -254,11 +263,25 @@ export default function EmploiDuTemps() {
   );
   const suiviClasses = classesPool.map(cl => {
     const niveauClasse = String(cl.niveau || poolSelectionne?.niveau || '').toUpperCase();
-    const periodesRequises = PERIODES_PAR_NIVEAU[niveauClasse] || 0;
-    const periodesAffectees = affectationsPool.filter(a => String(a.classe_id) === String(cl.id)).length;
-    return { ...cl, periodesRequises, periodesAffectees };
+    const affectationsClasse = affectationsPool.filter(a => String(a.classe_id) === String(cl.id));
+    const periodesNormalesAffectees = affectationsClasse.filter(a => affectationModes[a.id] !== 'soutien').length;
+    const periodesSoutienAffectees = affectationsClasse.filter(a => affectationModes[a.id] === 'soutien').length;
+    const periodesNormalesRequises = niveauClasse === 'CSC' ? 20 : (PERIODES_PAR_NIVEAU[niveauClasse] || 0);
+    const periodesSoutienRequises = niveauClasse === 'CSC' ? 4 : 0;
+    return {
+      ...cl,
+      niveauClasse,
+      periodesNormalesAffectees,
+      periodesSoutienAffectees,
+      periodesNormalesRequises,
+      periodesSoutienRequises
+    };
   });
-  const suiviClassesIncompletes = suiviClasses.filter(c => c.periodesAffectees < c.periodesRequises);
+  const suiviClassesIncompletes = suiviClasses.filter(c =>
+    c.niveauClasse === 'CSC'
+      ? (c.periodesNormalesAffectees < c.periodesNormalesRequises || c.periodesSoutienAffectees < c.periodesSoutienRequises)
+      : (c.periodesNormalesAffectees < c.periodesNormalesRequises)
+  );
   const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
     acc[p.id] = affectationsPool.filter(a => String(a.prof_id) === String(p.id)).length;
     return acc;
@@ -545,17 +568,15 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          <div style={{display:'flex',gap:8,marginBottom:16}}>
-            {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'}].map(o => (
-              <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
-                onClick={() => setSousOngletAff(o.id)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={styles.rowBetween}>
-            <div />
+          <div style={{...styles.rowBetween, marginBottom:16}}>
+            <div style={{display:'flex',gap:8}}>
+              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'}].map(o => (
+                <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
+                  onClick={() => setSousOngletAff(o.id)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
             <select style={styles.sel} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
               <option value="">— Tous —</option>
               {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
@@ -565,25 +586,25 @@ export default function EmploiDuTemps() {
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:12}}>
-              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>Vide -> Matin -> Après-midi -> Vide</b></div>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>Cliquer pour basculer : <b style={{color:'#475569'}}>- (par défaut) puis Matin ↔ Après-midi</b></div>
               <div style={{overflowX:'auto'}}>
-                <table style={{...styles.tbl, tableLayout:'fixed', minWidth:860}}>
+                <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
                   <thead>
                     <tr style={styles.theadRow}>
-                      <th style={{...styles.th,minWidth:140}}>Classe</th>
-                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',width:140}}>{j}</th>)}
+                      <th style={{...styles.th,width:180,minWidth:180,maxWidth:180}}>Classe</th>
+                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',minWidth:140}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {classesPool.map((cl,ri) => (
                       <tr key={cl.id} style={{background:ri%2===0?'white':'#fafbfc'}}>
-                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',borderLeft:'3px solid #1a73e8'}}>
+                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',borderLeft:'3px solid #1a73e8',width:180,minWidth:180,maxWidth:180}}>
                           {cl.nom}
                         </td>
                         {JOURS.map(jour => {
                           const periode = getHoraireJourClasse(cl.id, jour);
                           return (
-                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9',width:140}}>
+                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9',minWidth:140}}>
                               <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={{
                                 padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
                                 cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
@@ -591,7 +612,7 @@ export default function EmploiDuTemps() {
                                 background: periode==='Matin' ? '#dbeafe' : periode==='Après-midi' ? '#fef3c7' : '#f8fafc',
                                 color: periode==='Matin' ? '#1d4ed8' : periode==='Après-midi' ? '#92400e' : '#94a3b8',
                               }}>
-                                {periode==='Matin' ? 'Matin' : periode==='Après-midi' ? 'Après-midi' : 'Vide'}
+                                {periode==='Matin' ? 'Matin' : periode==='Après-midi' ? 'Après-midi' : '-'}
                               </button>
                             </td>
                           );
@@ -614,11 +635,14 @@ export default function EmploiDuTemps() {
                 {suiviClassesIncompletes.length === 0 ? (
                   <div style={{fontSize:12,color:'#16a34a',fontWeight:700}}>Toutes les classes sont OK</div>
                 ) : (
-                  <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
                     {suiviClassesIncompletes.map(cl => (
-                      <span key={cl.id} style={{padding:'4px 8px',borderRadius:999,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',fontSize:12,fontWeight:700}}>
-                        {cl.nom} : {cl.periodesAffectees} / {cl.periodesRequises}
-                      </span>
+                      <div key={cl.id} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',fontSize:12,fontWeight:700}}>
+                        <div>{cl.nom} - Périodes normales : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                        {cl.niveauClasse === 'CSC' && (
+                          <div style={{marginTop:3}}>{cl.nom} - Périodes de soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -634,7 +658,7 @@ export default function EmploiDuTemps() {
                       return (
                         <th key={p.id} style={styles.th}>
                           {p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span>
-                          <div style={{fontWeight:700,fontSize:11,marginTop:4,color:'#dbeafe'}}>
+                          <div style={{fontWeight:700,fontSize:11,marginTop:4,color:'#475569'}}>
                             {totalAffecte} / {totalProf}
                           </div>
                         </th>
@@ -668,8 +692,7 @@ export default function EmploiDuTemps() {
                               {profsPool.map(prof => {
                                 const aff = affectations.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
                                 const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
-                                const modeCle = `${prof.id}-${cr.id}`;
-                                const modeAffectation = affectationModes[modeCle] || 'classe';
+                                const modeAffectation = aff ? (affectationModes[aff.id] || 'classe') : 'classe';
                                 const valeurSelect = aff
                                   ? (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id))
                                   : '';
@@ -681,8 +704,14 @@ export default function EmploiDuTemps() {
                                         const valeur = e.target.value;
                                         if (!valeur) {
                                           const a = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
-                                          if (a) { await axios.delete(API+'/planning/affectations/'+a.id, {headers}); }
-                                          setAffectationModes(prev => ({ ...prev, [modeCle]: 'classe' }));
+                                          if (a) {
+                                            await axios.delete(API+'/planning/affectations/'+a.id, {headers});
+                                            setAffectationModes(prev => {
+                                              const next = { ...prev };
+                                              delete next[a.id];
+                                              return next;
+                                            });
+                                          }
                                           chargerTout();
                                         } else {
                                           const estSoutien = valeur.startsWith('soutien:');
@@ -701,23 +730,31 @@ export default function EmploiDuTemps() {
 
                                             // Échange: l'ancienne classe du prof courant est transférée au prof en conflit
                                             if (ancienne && String(ancienne.classe_id) !== String(classe_id)) {
-                                              await axios.post(
+                                              const repSwap = await axios.post(
                                                 API + '/planning/affectations',
                                                 { prof_id: conflit.prof_id, classe_id: ancienne.classe_id, creneau_id: cr.id },
                                                 { headers }
                                               );
+                                              setAffectationModes(prev => ({ ...prev, [repSwap.data.id]: prev[ancienne.id] || 'classe' }));
                                             }
 
                                             // Puis on affecte la classe choisie au prof courant
-                                            await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
-                                            setAffectationModes(prev => ({ ...prev, [modeCle]: estSoutien ? 'soutien' : 'classe' }));
+                                            const repCourant = await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
+                                            setAffectationModes(prev => ({ ...prev, [repCourant.data.id]: estSoutien ? 'soutien' : 'classe' }));
                                             chargerTout();
                                             return;
                                           }
                                           // Supprimer ancienne affectation de CE prof pour CE créneau
-                                          if (ancienne) await axios.delete(API+'/planning/affectations/'+ancienne.id, {headers});
-                                          await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
-                                          setAffectationModes(prev => ({ ...prev, [modeCle]: estSoutien ? 'soutien' : 'classe' }));
+                                          if (ancienne) {
+                                            await axios.delete(API+'/planning/affectations/'+ancienne.id, {headers});
+                                            setAffectationModes(prev => {
+                                              const next = { ...prev };
+                                              delete next[ancienne.id];
+                                              return next;
+                                            });
+                                          }
+                                          const rep = await axios.post(API+'/planning/affectations', {prof_id:prof.id, classe_id, creneau_id:cr.id}, {headers});
+                                          setAffectationModes(prev => ({ ...prev, [rep.data.id]: estSoutien ? 'soutien' : 'classe' }));
                                           chargerTout();
                                         }
                                       }}
@@ -1013,18 +1050,18 @@ const styles = {
   flexWrap:{display:'flex',flexWrap:'wrap',gap:8},
   chip:{padding:'7px 14px',background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
-  tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'},
-  theadRow:{background:'#6366f1',color:'white'},
-  th:{padding:'11px 12px',textAlign:'left',fontSize:12,fontWeight:600},
-  thA:{padding:'11px 14px',background:'#6366f1',color:'white',fontWeight:600,fontSize:13,textAlign:'center',border:'1px solid #4f46e5'},
-  tr:{borderBottom:'1px solid #f0f0f0'},
-  td:{padding:'8px 12px',fontSize:13},
-  tdPer:{padding:'10px 14px',background:'#f8f9fa',border:'1px solid #e0e0e0',whiteSpace:'nowrap'},
+  tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
+  theadRow:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
+  th:{padding:'10px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
+  thA:{padding:'10px 12px',background:'#f8fafc',color:'#94a3b8',fontWeight:700,fontSize:11,textAlign:'center',border:'1px solid #e2e8f0',textTransform:'uppercase',letterSpacing:'0.05em'},
+  tr:{borderBottom:'1px solid #eef2f7'},
+  td:{padding:'9px 12px',fontSize:13,color:'#334155'},
+  tdPer:{padding:'10px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',whiteSpace:'nowrap'},
   periodeTag:{display:'block',fontSize:11,fontWeight:700,color:'#6366f1',textTransform:'uppercase'},
   periodeNum:{display:'block',fontSize:13,fontWeight:600,color:'#333',marginTop:2},
-  tdDispo:{padding:8,textAlign:'center',border:'1px solid #e0e0e0'},
-  jourBande:{background:'#e0e7ff',padding:'7px 14px',fontWeight:700,fontSize:13,color:'#4338ca'},
-  periodeBande:{background:'#f3f4f6',padding:'5px 14px',fontWeight:600,fontSize:12,color:'#666'},
+  tdDispo:{padding:8,textAlign:'center',border:'1px solid #e2e8f0',background:'#fff'},
+  jourBande:{background:'#f1f5f9',padding:'7px 14px',fontWeight:700,fontSize:12,color:'#475569',textTransform:'uppercase',letterSpacing:'0.04em'},
+  periodeBande:{background:'#f8fafc',padding:'6px 14px',fontWeight:600,fontSize:12,color:'#64748b'},
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
   btnVert:{padding:'10px 18px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600},
   btnAnnuler:{padding:'10px 18px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer'},
