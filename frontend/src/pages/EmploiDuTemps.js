@@ -610,20 +610,49 @@ export default function EmploiDuTemps() {
             <div style={{display:'flex',gap:8}}>
               {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Planning de classe'}].map(o => (
                 <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
-                  onClick={() => setSousOngletAff(o.id)}>
+                  onClick={() => {
+                    setSousOngletAff(o.id);
+                    if (o.id === 'classes' || o.id === 'profs') setPoolAffId('');
+                    if (o.id === 'branches') {
+                      setClassePlanningPoolId('');
+                      setClassePlanningId('');
+                      setPlanningClasse(null);
+                    }
+                  }}>
                   {o.label}
                 </button>
               ))}
+              {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
+                <select style={styles.sel} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
+                  <option value="">— Sélectionner un pool —</option>
+                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
+              )}
+              {sousOngletAff === 'branches' && (
+                <select
+                  style={styles.sel}
+                  value={classePlanningPoolId}
+                  onChange={e => {
+                    setClassePlanningPoolId(e.target.value);
+                    setClassePlanningId('');
+                    setPlanningClasse(null);
+                  }}
+                >
+                  <option value="">— Sélectionner un pool —</option>
+                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
+              )}
             </div>
-            <select style={styles.sel} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
-              <option value="">— Tous —</option>
-              {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-            </select>
           </div>
 
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:12}}>
+              {!poolAffId ? (
+                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                  Sélectionnez d'abord un pool pour afficher les classes.
+                </div>
+              ) : (
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
                   <thead>
@@ -670,12 +699,19 @@ export default function EmploiDuTemps() {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
 
           {/* AFFECTATION PROFS - profs en entête, classes en lignes par créneau */}
           {sousOngletAff === 'profs' && (
             <div style={{marginTop:12}}>
+              {!poolAffId ? (
+                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                  Sélectionnez d'abord un pool pour afficher les professeurs.
+                </div>
+              ) : (
+              <>
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:12,fontWeight:700,color:'#475569',marginBottom:6}}>
                   Suivi classes (affecté / requis)
@@ -683,12 +719,18 @@ export default function EmploiDuTemps() {
                 {suiviClassesIncompletes.length === 0 ? (
                   <div style={{fontSize:12,color:'#16a34a',fontWeight:700}}>Toutes les classes sont OK</div>
                 ) : (
-                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <div style={styles.suiviClassesGrid}>
                     {suiviClassesIncompletes.map(cl => (
-                      <div key={cl.id} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',fontSize:12,fontWeight:700}}>
-                        <div>{cl.nom} - Périodes normales : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                      <div key={cl.id} style={styles.suiviClasseChip}>
+                        <div style={styles.suiviClasseNom}>{cl.nom}</div>
                         {cl.niveauClasse === 'CSC' && (
-                          <div style={{marginTop:3}}>{cl.nom} - Périodes de soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                          <>
+                            <div style={styles.suiviClasseLigne}>Périodes normales : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                            <div style={styles.suiviClasseLigne}>Périodes de soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                          </>
+                        )}
+                        {cl.niveauClasse !== 'CSC' && (
+                          <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
                         )}
                       </div>
                     ))}
@@ -749,6 +791,7 @@ export default function EmploiDuTemps() {
                                     <select style={{...styles.cellSel,background:indispo?'#eeeeee':(aff?'#e8f5e9':'#fff')}}
                                       value={valeurSelect}
                                       onChange={async e => {
+                                        if (indispo) return;
                                         const valeur = e.target.value;
                                         if (!valeur) {
                                           const a = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
@@ -806,7 +849,7 @@ export default function EmploiDuTemps() {
                                           chargerTout();
                                         }
                                       }}
-                                      disabled={!isAdmin()}>
+                                      disabled={!isAdmin() || indispo}>
                                       <option value="">—</option>
                                       <optgroup label="Classes">
                                         {classesCours.map(cl => <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>)}
@@ -838,6 +881,8 @@ export default function EmploiDuTemps() {
                 </tbody>
               </table>
             </div>
+            </>
+            )}
             </div>
           )}
 
@@ -847,27 +892,25 @@ export default function EmploiDuTemps() {
               <div style={styles.card}>
                 <h3 style={{...styles.cardTitre, marginBottom:12}}>Planning de classe</h3>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                  <select style={styles.sel} value={classePlanningPoolId}
-                    onChange={e => {
-                      setClassePlanningPoolId(e.target.value);
-                      setClassePlanningId('');
-                      setPlanningClasse(null);
-                    }}>
-                    <option value="">— Tous les pools —</option>
-                    {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                  </select>
                   <select style={styles.sel} value={classePlanningId || ''}
+                    disabled={!classePlanningPoolId}
                     onChange={e => {
                       const classeId = e.target.value;
                       setClassePlanningId(classeId);
                       if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
                       else setPlanningClasse(null);
                     }}>
-                    <option value="">— Sélectionner une classe —</option>
+                    <option value="">{classePlanningPoolId ? '— Sélectionner une classe —' : '— Sélectionner d’abord un pool —'}</option>
                     {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </div>
               </div>
+
+              {!classePlanningPoolId && (
+                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                  Sélectionnez d'abord un pool pour afficher les classes.
+                </div>
+              )}
 
               {planningClasse && classePlanningId && (
                 <div>
@@ -1100,10 +1143,14 @@ const styles = {
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
   flexWrap:{display:'flex',flexWrap:'wrap',gap:8},
-  chip:{padding:'7px 14px',background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13,display:'grid',gridTemplateColumns:'minmax(110px,1fr) minmax(110px,1fr)',columnGap:12,alignItems:'center',textAlign:'left'},
-  chipNom:{fontWeight:700},
-  chipPrenom:{fontWeight:500},
+  chip:{padding:'9px 14px',width:240,minWidth:240,maxWidth:240,background:'white',border:'2px solid #e0e0e0',borderRadius:20,cursor:'pointer',fontSize:13,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  chipNom:{fontWeight:700,display:'block',lineHeight:1.15},
+  chipPrenom:{fontWeight:500,display:'block',lineHeight:1.15,marginTop:2},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
+  suiviClassesGrid:{display:'flex',flexWrap:'wrap',gap:8},
+  suiviClasseChip:{width:240,minWidth:240,maxWidth:240,padding:'8px 10px',borderRadius:10,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  suiviClasseNom:{fontSize:13,fontWeight:800,lineHeight:1.2},
+  suiviClasseLigne:{fontSize:12,fontWeight:700,lineHeight:1.25,marginTop:2},
   tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
   theadRow:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
