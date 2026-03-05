@@ -317,8 +317,11 @@ export default function EmploiDuTemps() {
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
-  const branchesPoolP = poolClasseP ? poolClasseP.branches : matieres;
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
+  const niveauClassePlanning = String(planningClasse?.classe?.niveau || '').toUpperCase();
+  const matieresPourPlanningClasse = matieres.filter(m =>
+    !niveauClassePlanning || !m.niveau || String(m.niveau).toUpperCase() === niveauClassePlanning
+  );
 
   const niveauPool = String(poolForm.niveau || '').toUpperCase();
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
@@ -581,7 +584,7 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={{marginTop:10}}>
                   <div style={styles.poolLabel}>PROFS</div>
-                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:pool.couleur}}>{p.nom} {p.prenom}</span>)}
+                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827'}}>{p.nom} {p.prenom}</span>)}
                   {pool.profs.length===0&&<span style={styles.aucun}>Aucun</span>}
                 </div>
                 <div style={{marginTop:8}}>
@@ -600,7 +603,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{...styles.rowBetween, marginBottom:16}}>
             <div style={{display:'flex',gap:8}}>
-              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
+              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Planning de classe'}].map(o => (
                 <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
                   onClick={() => setSousOngletAff(o.id)}>
                   {o.label}
@@ -833,11 +836,11 @@ export default function EmploiDuTemps() {
             </div>
           )}
 
-          {/* AFFECTATION BRANCHES - ancien Planning Classes */}
+          {/* AFFECTATION PLANNING CLASSE */}
           {sousOngletAff === 'branches' && (
             <div>
               <div style={styles.card}>
-                <h3 style={{...styles.cardTitre, marginBottom:12}}>Branches</h3>
+                <h3 style={{...styles.cardTitre, marginBottom:12}}>Planning de classe</h3>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
                   <select style={styles.sel} value={classePlanningPoolId}
                     onChange={e => {
@@ -903,7 +906,7 @@ export default function EmploiDuTemps() {
                                                 chargerPlanningClasse(classePlanningId, classePlanningPoolId);
                                               }}>
                                               <option value="">— Branche —</option>
-                                              {(branchesPoolP.length>0?branchesPoolP:matieres).map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                              {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
                                             </select>
                                           ) : (
                                             aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
