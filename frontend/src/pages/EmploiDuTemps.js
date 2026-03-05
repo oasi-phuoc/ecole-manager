@@ -13,7 +13,6 @@ const COULEURS = [
   '#FBCFE8', // rose pastel
   '#BFDBFE', // bleu pastel
   '#DDD6FE', // violet pastel
-  '#FEF3C7', // jaune pastel
 ];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
@@ -108,6 +107,18 @@ export default function EmploiDuTemps() {
     try {
       if (!poolForm.niveau) { alert('Veuillez sélectionner un niveau.'); return; }
       if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
+      if (totalPeriodesRequisesForm < totalPeriodesProfsForm) {
+        const ok = window.confirm(
+          "Les périodes professeurs dépassent les périodes requises. Voulez-vous vraiment poursuivre la sauvegarde ?"
+        );
+        if (!ok) return;
+      } else if (totalPeriodesRequisesForm > totalPeriodesProfsForm) {
+        const manque = totalPeriodesRequisesForm - totalPeriodesProfsForm;
+        const ok = window.confirm(
+          `Il manque ${manque} période(s) professeur par rapport aux périodes requises. Voulez-vous vraiment poursuivre la sauvegarde ?`
+        );
+        if (!ok) return;
+      }
       if (poolEdit) {
         await axios.put(API + '/planning/pools/' + poolEdit.id, poolForm, { headers });
       } else {
@@ -223,8 +234,8 @@ export default function EmploiDuTemps() {
   }, 0);
   const profsSelectionnesForm = profs.filter(p => poolForm.prof_ids.includes(p.id));
   const totalPeriodesProfsForm = profsSelectionnesForm.reduce((sum, p) => sum + (parseInt(p.periodes_semaine) || 0), 0);
-  const periodesEquilibrees = totalPeriodesRequisesForm === totalPeriodesProfsForm;
-  const couleurPeriodes = periodesEquilibrees ? '#16a34a' : '#dc2626';
+  const couleurPeriodesRequises = totalPeriodesProfsForm >= totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
+  const couleurPeriodesProfs = totalPeriodesProfsForm === totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
 
   return (
     <div style={styles.page}>
@@ -323,7 +334,7 @@ export default function EmploiDuTemps() {
             <div style={styles.overlay}>
               <div style={{...styles.modal, width:1000}}>
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
-                <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr',gap:18,alignItems:'start'}}>
+                <div style={{display:'grid',gridTemplateColumns:'minmax(0, 1fr) 250px',gap:18,alignItems:'start'}}>
                   <div style={styles.formGrid}>
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
                       <label style={styles.lbl}>Désignation <span style={{color:'#ef4444'}}>*</span></label>
@@ -337,7 +348,7 @@ export default function EmploiDuTemps() {
                         <option value="CFR">CFR</option>
                         <option value="EPL">EPL</option>
                       </select>
-                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
+                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
                         Périodes requises (classes) : {totalPeriodesRequisesForm}
                       </div>
                     </div>
@@ -349,8 +360,8 @@ export default function EmploiDuTemps() {
                         <option value="Botza">Botza</option>
                         <option value="Creuset">Creuset</option>
                       </select>
-                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodes}}>
-                        Cumul périodes professeurs : {totalPeriodesProfsForm}
+                      <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesProfs}}>
+                        Périodes professeurs : {totalPeriodesProfsForm}
                       </div>
                     </div>
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
@@ -367,8 +378,8 @@ export default function EmploiDuTemps() {
                     {(() => {
                       const niveauSel = poolForm.niveau || '';
                       const siteSel = poolForm.site || '';
-                      const respecteNiveau = (p) => (p.niveau_prefere || '') === niveauSel;
-                      const respecteLieu = (p) => (p.lieu_travail_prefere || '') === siteSel;
+                      const respecteNiveau = (p) => !!niveauSel && (p.niveau_prefere || '') === niveauSel;
+                      const respecteLieu = (p) => !!siteSel && (p.lieu_travail_prefere || '') === siteSel;
                       const blocsProfs = [
                         {
                           label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
@@ -411,12 +422,12 @@ export default function EmploiDuTemps() {
                     })()}
                   </div>
 
-                  <div style={{display:'flex',flexDirection:'column',gap:15}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:15,width:250}}>
                     <div style={styles.fc}>
                       <label style={styles.lbl}>Couleur</label>
-                      <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:6}}>
+                      <div style={{display:'flex',flexWrap:'nowrap',gap:6,marginTop:6}}>
                         {COULEURS.map(c => <div key={c} onClick={() => setPoolForm({...poolForm,couleur:c})}
-                          style={{width:28,height:28,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
+                          style={{width:26,height:26,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
                       </div>
                     </div>
 

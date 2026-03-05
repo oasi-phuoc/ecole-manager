@@ -51,6 +51,18 @@ const creerClasse = async (req, res) => {
   if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
   if (!niveau) return res.status(400).json({ message: 'Le niveau est requis' });
   try {
+    const existe = await pool.query(
+      `SELECT id
+       FROM classes
+       WHERE LOWER(TRIM(nom)) = LOWER(TRIM($1))
+         AND UPPER(TRIM(COALESCE(niveau, ''))) = UPPER(TRIM($2))
+       LIMIT 1`,
+      [nom, niveau]
+    );
+    if (existe.rows.length) {
+      return res.status(409).json({ message: 'Une classe avec le même nom et le même niveau existe déjà' });
+    }
+
     const r = await pool.query(
       'INSERT INTO classes (nom, niveau, annee_scolaire, prof_principal_id) VALUES ($1,$2,$3,$4) RETURNING *',
       [nom, niveau||null, annee_scolaire, prof_principal_id||null]

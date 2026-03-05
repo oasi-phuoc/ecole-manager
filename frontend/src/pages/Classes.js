@@ -44,6 +44,18 @@ export default function Classes() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!classeEdit) {
+        const nomSaisi = (form.nom || '').trim().toLowerCase();
+        const niveauSaisi = (form.niveau || '').trim().toUpperCase();
+        const existeDeja = classes.some(c =>
+          (c.nom || '').trim().toLowerCase() === nomSaisi &&
+          (c.niveau || '').trim().toUpperCase() === niveauSaisi
+        );
+        if (existeDeja) {
+          alert('Cette classe existe déjà avec le même nom et le même niveau.');
+          return;
+        }
+      }
       if (classeEdit) await axios.put(API+'/classes/'+classeEdit.id, form, {headers});
       else await axios.post(API+'/classes', form, {headers});
       setShowForm(false); setClasseEdit(null);
@@ -903,7 +915,15 @@ export default function Classes() {
             <form onSubmit={handleSubmit}>
               <div style={s.grid2}>
                 <div style={s.field}><label style={s.lbl}>Nom de la classe *</label><input style={s.inp} type="text" required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Ex: CSC 03, CFR 10, EPL 05..." /></div>
-                <div style={s.field}><label style={s.lbl}>Niveau *</label><input style={s.inp} type="text" required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})} placeholder="Ex: CSC, CFR, EPL..." /></div>
+                <div style={s.field}>
+                  <label style={s.lbl}>Niveau *</label>
+                  <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
+                    <option value="">-- Choisir --</option>
+                    <option value="CSC">CSC</option>
+                    <option value="CFR">CFR</option>
+                    <option value="EPL">EPL</option>
+                  </select>
+                </div>
                 
                 <div style={s.field}>
                   <label style={s.lbl}>Titulaire</label>
