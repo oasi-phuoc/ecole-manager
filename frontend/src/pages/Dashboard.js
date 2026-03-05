@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
+  const [observationDetail, setObservationDetail] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
@@ -162,7 +163,10 @@ export default function Dashboard() {
               <div style={styles.infoEmpty}>Aucune observation récente</div>
             ) : dashboardInfo.dernieres_observations.map((o, i) => (
               <div key={i} style={styles.infoLine}>
-                <span style={styles.infoLineMain}>{o.eleve_prenom} {o.eleve_nom} • {o.classe || '—'}</span>
+                <div style={styles.infoLineHead}>
+                  <span style={styles.infoLineMain}>{o.eleve_prenom} {o.eleve_nom} • {o.classe || '—'}</span>
+                  <button style={styles.obsDetailBtn} onClick={() => setObservationDetail(o)}>👁 Détail</button>
+                </div>
                 <span style={styles.infoLineSub}>
                   {(o.titre || o.contenu || 'Observation').toString().slice(0, 70)} • {fmtDate(o.created_at)}
                 </span>
@@ -209,6 +213,28 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {observationDetail && (
+        <div style={styles.overlay} onClick={() => setObservationDetail(null)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>👁 Détail de l'observation</h3>
+              <button style={styles.btnClose} onClick={() => setObservationDetail(null)}>✕</button>
+            </div>
+            <div style={styles.detailRow}><b>Élève :</b> {observationDetail.eleve_prenom} {observationDetail.eleve_nom}</div>
+            <div style={styles.detailRow}><b>Classe :</b> {observationDetail.classe || '—'}</div>
+            <div style={styles.detailRow}><b>Date :</b> {fmtDate(observationDetail.created_at)}</div>
+            <div style={styles.detailBloc}>
+              <div style={styles.detailLabel}>Titre</div>
+              <div style={styles.detailText}>{observationDetail.titre || 'Observation'}</div>
+            </div>
+            <div style={styles.detailBloc}>
+              <div style={styles.detailLabel}>Contenu</div>
+              <div style={styles.detailText}>{observationDetail.contenu || '—'}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -248,8 +274,10 @@ const styles = {
   infoSub: { fontSize: 12, color: '#64748b' },
   infoEmpty: { fontSize: 13, color: '#94a3b8', paddingTop: 8 },
   infoLine: { display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 0', borderBottom: '1px dashed #eef2f7' },
+  infoLineHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   infoLineMain: { fontSize: 13, fontWeight: 600, color: '#1f2937' },
   infoLineSub: { fontSize: 12, color: '#64748b' },
+  obsDetailBtn: { padding: '5px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' },
   presenceClassCard: { marginTop: 10, border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#fbfdff' },
   presenceClassHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 13, color: '#0f172a' },
   quickBtn: { padding: '5px 10px', borderRadius: 7, border: '1px solid #1a73e8', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: 11, fontWeight: 700 },
@@ -263,4 +291,13 @@ const styles = {
   moduleLabel: { fontSize: 13, fontWeight: 700, color: '#1e293b' },
   moduleStat: { fontSize: 12, fontWeight: 500 },
   moduleArrow: { position: 'absolute', top: 16, right: 16, fontSize: 16, opacity: 0.4 },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 },
+  modal: { width: 'min(560px, 92vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 18 },
+  modalHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  modalTitle: { margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' },
+  btnClose: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8' },
+  detailRow: { fontSize: 13, color: '#334155', marginBottom: 6 },
+  detailBloc: { marginTop: 10, border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' },
+  detailLabel: { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 },
+  detailText: { fontSize: 13, color: '#1f2937', lineHeight: 1.5, whiteSpace: 'pre-wrap' },
 };

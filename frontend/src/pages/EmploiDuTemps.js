@@ -320,8 +320,13 @@ export default function EmploiDuTemps() {
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
   const niveauClassePlanning = String(planningClasse?.classe?.niveau || '').toUpperCase();
   const matieresPourPlanningClasse = matieres.filter(m =>
-    !niveauClassePlanning || !m.niveau || String(m.niveau).toUpperCase() === niveauClassePlanning
+    niveauClassePlanning && String(m.niveau || '').toUpperCase() === niveauClassePlanning
   );
+  const suiviBranchesClasse = planningClasse ? matieresPourPlanningClasse.map(m => {
+    const affectees = (planningClasse.affectations || []).filter(a => String(a.matiere_id) === String(m.id)).length;
+    const requises = parseInt(m.periodes_semaine) || 0;
+    return { id: m.id, nom: m.nom, affectees, requises };
+  }) : [];
 
   const niveauPool = String(poolForm.niveau || '').toUpperCase();
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
@@ -629,18 +634,34 @@ export default function EmploiDuTemps() {
                 </select>
               )}
               {sousOngletAff === 'branches' && (
-                <select
-                  style={styles.sel}
-                  value={classePlanningPoolId}
-                  onChange={e => {
-                    setClassePlanningPoolId(e.target.value);
-                    setClassePlanningId('');
-                    setPlanningClasse(null);
-                  }}
-                >
-                  <option value="">— Sélectionner un pool —</option>
-                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                </select>
+                <>
+                  <select
+                    style={styles.sel}
+                    value={classePlanningPoolId}
+                    onChange={e => {
+                      setClassePlanningPoolId(e.target.value);
+                      setClassePlanningId('');
+                      setPlanningClasse(null);
+                    }}
+                  >
+                    <option value="">— Sélectionner un pool —</option>
+                    {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                  </select>
+                  <select
+                    style={styles.sel}
+                    value={classePlanningId || ''}
+                    disabled={!classePlanningPoolId}
+                    onChange={e => {
+                      const classeId = e.target.value;
+                      setClassePlanningId(classeId);
+                      if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
+                      else setPlanningClasse(null);
+                    }}
+                  >
+                    <option value="">{classePlanningPoolId ? '— Sélectionner une classe —' : '— Sélectionner d’abord un pool —'}</option>
+                    {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
+                </>
               )}
             </div>
           </div>
@@ -653,6 +674,19 @@ export default function EmploiDuTemps() {
                   Sélectionnez d'abord un pool pour afficher les classes.
                 </div>
               ) : (
+              <>
+              <div style={{marginBottom:12}}>
+                <h3 style={styles.suiviGrandTitre}>Suivi des horaires classes</h3>
+                <div style={styles.suiviJoursGrid}>
+                  {JOURS.map(j => (
+                    <div key={j} style={styles.suiviJourChip}>
+                      <div style={styles.suiviJourNom}>{j}</div>
+                      <div style={styles.suiviJourLigne}>Matin : {resumePeriodesParJour[j].matin}</div>
+                      <div style={styles.suiviJourLigne}>Après-midi : {resumePeriodesParJour[j].apresMidi}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
                   <thead>
@@ -699,6 +733,7 @@ export default function EmploiDuTemps() {
                   </tbody>
                 </table>
               </div>
+              </>
               )}
             </div>
           )}
@@ -713,9 +748,7 @@ export default function EmploiDuTemps() {
               ) : (
               <>
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:700,color:'#475569',marginBottom:6}}>
-                  Suivi classes (affecté / requis)
-                </div>
+                <h3 style={styles.suiviGrandTitre}>Suivi classes</h3>
                 {suiviClassesIncompletes.length === 0 ? (
                   <div style={{fontSize:12,color:'#16a34a',fontWeight:700}}>Toutes les classes sont OK</div>
                 ) : (
@@ -891,18 +924,8 @@ export default function EmploiDuTemps() {
             <div>
               <div style={styles.card}>
                 <h3 style={{...styles.cardTitre, marginBottom:12}}>Planning de classe</h3>
-                <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                  <select style={styles.sel} value={classePlanningId || ''}
-                    disabled={!classePlanningPoolId}
-                    onChange={e => {
-                      const classeId = e.target.value;
-                      setClassePlanningId(classeId);
-                      if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
-                      else setPlanningClasse(null);
-                    }}>
-                    <option value="">{classePlanningPoolId ? '— Sélectionner une classe —' : '— Sélectionner d’abord un pool —'}</option>
-                    {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                  </select>
+                <div style={{fontSize:13,color:'#64748b'}}>
+                  Utilisez les sélections en haut pour choisir le pool et la classe.
                 </div>
               </div>
 
@@ -915,6 +938,24 @@ export default function EmploiDuTemps() {
               {planningClasse && classePlanningId && (
                 <div>
                   <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
+                  <div style={{marginBottom:12}}>
+                    <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
+                    {suiviBranchesClasse.length === 0 ? (
+                      <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
+                    ) : (
+                      <div style={styles.suiviBranchesGrid}>
+                        {suiviBranchesClasse.map(b => {
+                          const ok = b.affectees >= b.requises;
+                          return (
+                            <div key={b.id} style={{...styles.suiviBrancheChip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#166534' : '#991b1b'}}>
+                              <div style={styles.suiviBrancheNom}>{b.nom}</div>
+                              <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <div style={{overflowX:'auto'}}>
                     <table style={{...styles.tbl,minWidth:700}}>
@@ -1147,10 +1188,19 @@ const styles = {
   chipNom:{fontWeight:700,display:'block',lineHeight:1.15},
   chipPrenom:{fontWeight:500,display:'block',lineHeight:1.15,marginTop:2},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
+  suiviGrandTitre:{fontSize:30,fontWeight:900,color:'#0f172a',margin:'0 0 10px'},
+  suiviJoursGrid:{display:'flex',flexWrap:'wrap',gap:8},
+  suiviJourChip:{width:190,minWidth:190,maxWidth:190,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  suiviJourNom:{fontSize:13,fontWeight:800,color:'#334155',lineHeight:1.2},
+  suiviJourLigne:{fontSize:12,fontWeight:700,color:'#475569',lineHeight:1.25,marginTop:2},
   suiviClassesGrid:{display:'flex',flexWrap:'wrap',gap:8},
   suiviClasseChip:{width:240,minWidth:240,maxWidth:240,padding:'8px 10px',borderRadius:10,border:'1px solid #fecaca',background:'#fef2f2',color:'#991b1b',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviClasseNom:{fontSize:13,fontWeight:800,lineHeight:1.2},
   suiviClasseLigne:{fontSize:12,fontWeight:700,lineHeight:1.25,marginTop:2},
+  suiviBranchesGrid:{display:'flex',flexWrap:'wrap',gap:8},
+  suiviBrancheChip:{width:240,minWidth:240,maxWidth:240,padding:'8px 10px',borderRadius:10,border:'1px solid #fecaca',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  suiviBrancheNom:{fontSize:13,fontWeight:800,lineHeight:1.2},
+  suiviBrancheLigne:{fontSize:12,fontWeight:700,lineHeight:1.25,marginTop:2},
   tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
   theadRow:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
