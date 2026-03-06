@@ -766,29 +766,27 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>📄 Bulletin — {classeNom}</h2>
-          <button
-            style={{ ...s.btnImprimer, opacity: bulletinOnglet === 'notes' ? 1 : 0.45, cursor: bulletinOnglet === 'notes' ? 'pointer' : 'not-allowed' }}
-            onClick={() => bulletinOnglet === 'notes' && handleImprimer()}
-          >
-            🖨️ Imprimer
-          </button>
+          {bulletinOnglet === 'notes' && (
+            <button style={s.btnImprimer} onClick={handleImprimer}>
+              🖨️ Imprimer
+            </button>
+          )}
         </div>
         {renderActionsBar('no-print')}
-        <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             {[{ id: 'criteres', label: 'Critères de comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
               <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
                 style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: bulletinOnglet === t.id ? '#6366f1' : '#f1f5f9', color: bulletinOnglet === t.id ? 'white' : '#555' }}>
                 {t.label}
               </button>
             ))}
-          </div>
-          {bulletinOnglet === 'criteres' ? (
-            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-              Tout mettre au vert (10 critères)
-            </button>
-          ) : (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {bulletinOnglet === 'criteres' ? (
+              <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+                Tout mettre au vert (10 critères)
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
                 <button key={m.id} onClick={() => setBulletinMode(m.id)}
                   style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
@@ -801,8 +799,9 @@ export default function Notes() {
                   {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
                 </select>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {bulletinOnglet === 'criteres' && (

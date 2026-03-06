@@ -7,6 +7,11 @@ const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
 const BASE_PERIODES_TAUX = 42;
+const SALLES_FIXES_PAR_LIEU = {
+  creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
+  botza: ['Salle 1', 'Salle 2', 'Salle 3', 'Salle 4'],
+  synecom: ['Salle 11', 'Salle 12', 'Salle 13', 'Salle 21', 'Salle 22', 'Salle 23', 'Salle 24', 'Salle 25', 'Salle 26'],
+};
 const COULEURS = [
   '#F8B4B4', // rouge pastel
   '#B7E4C7', // vert pastel
@@ -27,6 +32,7 @@ const HORAIRES_DEFAUT = [
   {periode:'Après-midi',num:4,debut:'16:05',fin:'16:50'},
 ];
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
+const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('pools');
@@ -337,13 +343,19 @@ export default function EmploiDuTemps() {
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
-  const lieuxTravailOptions = Array.from(
-    new Set(
-      pools
-        .map(p => (p.site || '').trim())
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, 'fr'));
+  const lieuxTravailMap = new Map([
+    ['creuset', 'Creuset'],
+    ['botza', 'Botza'],
+    ['synecom', 'Synecom'],
+  ]);
+  pools
+    .map(p => (p.site || '').trim())
+    .filter(Boolean)
+    .forEach(site => {
+      const key = normaliserLieuTravail(site);
+      if (!lieuxTravailMap.has(key)) lieuxTravailMap.set(key, site);
+    });
+  const lieuxTravailOptions = Array.from(lieuxTravailMap.values()).sort((a, b) => a.localeCompare(b, 'fr'));
   const classesPourSalles = classes
     .map(cl => {
       const poolsClasseLieu = pools.filter(p =>
@@ -366,12 +378,25 @@ export default function EmploiDuTemps() {
     })
     .filter(Boolean)
     .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
-  const sallesDisponiblesLieu = Array.from(
+  const sallesDisponiblesLieuDyn = Array.from(
     new Set(classesPourSalles.flatMap(cl => cl.sallesClasse))
   ).sort((a, b) => a.localeCompare(b, 'fr'));
+  const sallesFixesLieu = SALLES_FIXES_PAR_LIEU[normaliserLieuTravail(sallesLieuTravailId)] || [];
+  const sallesDisponiblesLieu = sallesFixesLieu.length ? sallesFixesLieu : sallesDisponiblesLieuDyn;
   const classesFiltreesSalles = classesPourSalles.filter(cl =>
     !salleSelectionnee || cl.sallesClasse.includes(salleSelectionnee)
   );
+  const classesSallesParCellule = (jour, periode) =>
+    classesFiltreesSalles.filter(cl => classeAHoraire(cl.id, jour, periode));
+  const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
+  const suiviSalles = sallesDisponiblesLieu.map(salle => {
+    const coursSalle = coursEmploiDuTemps.filter(c =>
+      classesPourSallesIds.has(String(c.classe_id)) &&
+      String((c.salle || '').trim()) === String(salle)
+    ).length;
+    const complet = coursSalle > 0;
+    return { salle, coursSalle, complet };
+  });
 
   const niveauPool = String(poolForm.niveau || '').toUpperCase();
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
@@ -656,8 +681,8 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          <div style={{...styles.rowBetween, marginBottom:16}}>
-            <div style={{display:'flex',gap:8}}>
+          <div style={styles.affActionsWrap}>
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
               {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
                   onClick={() => {
@@ -724,7 +749,7 @@ export default function EmploiDuTemps() {
                     disabled={!sallesLieuTravailId}
                     onChange={e => setSalleSelectionnee(e.target.value)}
                   >
-                    <option value="">{sallesLieuTravailId ? '— Toutes les salles —' : '— Sélectionner d’abord un lieu —'}</option>
+                    <option value="">{sallesLieuTravailId ? '- Sélectionner une salle -' : '— Sélectionner d’abord un lieu —'}</option>
                     {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
                   </select>
                 </>
@@ -1012,37 +1037,83 @@ export default function EmploiDuTemps() {
                   Sélectionnez d'abord un lieu de travail pour afficher les classes.
                 </div>
               ) : (
-                <div style={{overflowX:'auto'}}>
-                  <table style={{...styles.tbl,minWidth:760}}>
-                    <thead>
-                      <tr style={styles.theadRow}>
-                        <th style={styles.th}>Classe</th>
-                        <th style={styles.th}>Pool(s)</th>
-                        <th style={{...styles.th, textAlign:'center'}}>Niveau</th>
-                        <th style={{...styles.th, textAlign:'center'}}>Lieu de travail</th>
-                        <th style={styles.th}>Salle(s)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {classesFiltreesSalles.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
-                            Aucune classe trouvée pour cette sélection.
-                          </td>
+                <div>
+                  <div style={{marginBottom:12}}>
+                    <h3 style={styles.suiviGrandTitre}>Suivi des salles</h3>
+                    {suiviSalles.length === 0 ? (
+                      <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune salle configurée pour ce lieu.</div>
+                    ) : (
+                      <div style={styles.suiviBranchesGrid}>
+                        {suiviSalles.map(salle => (
+                          <div
+                            key={salle.salle}
+                            style={{
+                              ...styles.suiviBrancheChip,
+                              borderColor: salle.complet ? '#bbf7d0' : '#fecaca',
+                              background: salle.complet ? '#f0fdf4' : '#fef2f2',
+                              color: salle.complet ? '#166534' : '#991b1b'
+                            }}
+                          >
+                            <div style={styles.suiviBrancheNom}>{salle.salle}</div>
+                            <div style={styles.suiviBrancheLigne}>{salle.complet ? 'Complet' : 'Non complet'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{overflowX:'auto'}}>
+                    <table style={{...styles.tbl,minWidth:760}}>
+                      <thead>
+                        <tr style={styles.theadRow}>
+                          <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
+                          {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                         </tr>
-                      ) : (
-                        classesFiltreesSalles.map((cl, idx) => (
-                          <tr key={cl.id} style={{...styles.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc'}}>
-                            <td style={{...styles.td, fontWeight:800, color:'#0f172a'}}>{cl.nom}</td>
-                            <td style={styles.td}>{cl.poolsClasseLieu.map(p => p.nom).join(', ')}</td>
-                            <td style={{...styles.td, textAlign:'center', fontWeight:700}}>{cl.niveau || '—'}</td>
-                            <td style={{...styles.td, textAlign:'center', fontWeight:700}}>{sallesLieuTravailId}</td>
-                            <td style={styles.td}>{cl.sallesClasse.length ? cl.sallesClasse.join(', ') : '—'}</td>
+                      </thead>
+                      <tbody>
+                        {classesFiltreesSalles.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                              Aucune classe trouvée pour cette sélection.
+                            </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          ['Matin','Après-midi'].map(periode => {
+                            const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
+                            if (!crsBase.length) return null;
+                            return [
+                              <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                              ...crsBase.map((crBase, idx) => (
+                                <tr key={crBase.id} style={styles.tr}>
+                                  <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                                    P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                  </td>
+                                  {JOURS.map(jour => {
+                                    const classesCellule = classesSallesParCellule(jour, periode);
+                                    return (
+                                      <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
+                                        {classesCellule.length === 0 ? (
+                                          <span style={{color:'#94a3b8',fontWeight:600,fontSize:12}}>—</span>
+                                        ) : (
+                                          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                                            {classesCellule.map(cl => (
+                                              <div key={`${jour}-${periode}-${cl.id}`} style={{background:'#eefcf2',border:'1px solid #d1fadf',borderRadius:8,padding:'6px 8px'}}>
+                                                <div style={{fontSize:12,fontWeight:800,color:'#166534'}}>{cl.nom}</div>
+                                                <div style={{fontSize:11,color:'#065f46'}}>{cl.poolsClasseLieu.map(p => p.nom).join(', ')}</div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))
+                            ];
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -1302,6 +1373,7 @@ const styles = {
   onglets:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'},
   onglet:{padding:'8px 16px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   ongletActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
+  affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affTabBtn:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#f1f5f9',color:'#555'},
   affTabBtnActif:{background:'#6366f1',color:'white'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
