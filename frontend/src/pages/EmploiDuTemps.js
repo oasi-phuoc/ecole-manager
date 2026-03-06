@@ -172,15 +172,15 @@ export default function EmploiDuTemps() {
     try {
       if (!poolForm.niveau) { alert('Veuillez sélectionner un niveau.'); return; }
       if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
-      if (totalPeriodesRequisesForm < totalPeriodesProfsForm) {
+      if (totalPeriodesRequisesFormTotal < totalPeriodesProfsForm) {
         const ok = window.confirm(
-          "Les périodes professeurs dépassent les périodes requises. Voulez-vous vraiment poursuivre la sauvegarde ?"
+          "Les périodes professeurs dépassent le total requis (cours + titulariat). Voulez-vous vraiment poursuivre la sauvegarde ?"
         );
         if (!ok) return;
-      } else if (totalPeriodesRequisesForm > totalPeriodesProfsForm) {
-        const manque = totalPeriodesRequisesForm - totalPeriodesProfsForm;
+      } else if (totalPeriodesRequisesFormTotal > totalPeriodesProfsForm) {
+        const manque = totalPeriodesRequisesFormTotal - totalPeriodesProfsForm;
         const ok = window.confirm(
-          `Il manque ${manque} période(s) professeur par rapport aux périodes requises. Voulez-vous vraiment poursuivre la sauvegarde ?`
+          `Il manque ${manque} période(s) professeur par rapport au total requis (cours + titulariat). Voulez-vous vraiment poursuivre la sauvegarde ?`
         );
         if (!ok) return;
       }
@@ -356,13 +356,27 @@ export default function EmploiDuTemps() {
       if (!lieuxTravailMap.has(key)) lieuxTravailMap.set(key, site);
     });
   const lieuxTravailOptions = Array.from(lieuxTravailMap.values()).sort((a, b) => a.localeCompare(b, 'fr'));
-  const classesPourSalles = classes
+  const poolsLieuTravail = pools.filter(p =>
+    normaliserLieuTravail(p.site) === normaliserLieuTravail(sallesLieuTravailId)
+  );
+  const classesPourSallesMap = new Map();
+  poolsLieuTravail.forEach(p => {
+    (p.classes || []).forEach(cl => {
+      const key = String(cl.id);
+      if (!classesPourSallesMap.has(key)) {
+        classesPourSallesMap.set(key, {
+          ...cl,
+          poolsClasseLieu: [p],
+          sallesClasse: [],
+        });
+      } else {
+        const existante = classesPourSallesMap.get(key);
+        existante.poolsClasseLieu.push(p);
+      }
+    });
+  });
+  const classesPourSalles = Array.from(classesPourSallesMap.values())
     .map(cl => {
-      const poolsClasseLieu = pools.filter(p =>
-        String((p.site || '').trim()) === String((sallesLieuTravailId || '').trim()) &&
-        (p.classes || []).some(pc => String(pc.id) === String(cl.id))
-      );
-      if (!poolsClasseLieu.length) return null;
       const sallesClasse = Array.from(
         new Set(
           coursEmploiDuTemps
@@ -372,11 +386,9 @@ export default function EmploiDuTemps() {
       ).sort((a, b) => a.localeCompare(b, 'fr'));
       return {
         ...cl,
-        poolsClasseLieu,
         sallesClasse
       };
     })
-    .filter(Boolean)
     .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
   const sallesDisponiblesLieuDyn = Array.from(
     new Set(classesPourSalles.flatMap(cl => cl.sallesClasse))
@@ -389,21 +401,10 @@ export default function EmploiDuTemps() {
   const normaliserHeureCreneau = (heure) => String(heure || '').slice(0, 5);
   const getCreneauCelluleSalle = (jour, periode, ordre) =>
     creneaux.find(c => c.jour === jour && c.periode === periode && c.ordre === ordre);
-  const getCoursClasseCellule = (classeId, jour, creneau) => {
-    if (!creneau) return null;
-    const debut = normaliserHeureCreneau(creneau.heure_debut);
-    const fin = normaliserHeureCreneau(creneau.heure_fin);
-    return coursEmploiDuTemps.find(c =>
-      String(c.classe_id) === String(classeId) &&
-      c.jour === jour &&
-      normaliserHeureCreneau(c.heure_debut) === debut &&
-      normaliserHeureCreneau(c.heure_fin) === fin
-    ) || null;
-  };
   const getClassesAffectablesSalleCellule = (jour, periode, ordre) => {
     const creneau = getCreneauCelluleSalle(jour, periode, ordre);
     if (!creneau) return [];
-    return classesSallesParCellule(jour, periode).filter(cl => Boolean(getCoursClasseCellule(cl.id, jour, creneau)));
+    return classesSallesParCellule(jour, periode);
   };
   const getClasseAffecteeSalleCellule = (jour, periode, ordre) => {
     if (!salleSelectionnee) return '';
@@ -483,15 +484,17 @@ export default function EmploiDuTemps() {
 
   const niveauPool = String(poolForm.niveau || '').toUpperCase();
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
-  const totalPeriodesRequisesForm = classesSelectionneesForm.reduce((sum, c) => {
+  const totalPeriodesCoursForm = classesSelectionneesForm.reduce((sum, c) => {
     const niv = String(c.niveau || niveauPool || '').toUpperCase();
     const nb = PERIODES_PAR_NIVEAU[niv] || 0;
     return sum + nb;
   }, 0);
+  const totalPeriodesTitulariatForm = classesSelectionneesForm.length;
+  const totalPeriodesRequisesFormTotal = totalPeriodesCoursForm + totalPeriodesTitulariatForm;
   const profsSelectionnesForm = profs.filter(p => poolForm.prof_ids.includes(p.id));
   const totalPeriodesProfsForm = profsSelectionnesForm.reduce((sum, p) => sum + (parseInt(p.periodes_semaine) || 0), 0);
-  const couleurPeriodesRequises = totalPeriodesProfsForm >= totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
-  const couleurPeriodesProfs = totalPeriodesProfsForm === totalPeriodesRequisesForm ? '#16a34a' : '#dc2626';
+  const couleurPeriodesRequises = totalPeriodesProfsForm >= totalPeriodesRequisesFormTotal ? '#16a34a' : '#dc2626';
+  const couleurPeriodesProfs = totalPeriodesProfsForm >= totalPeriodesRequisesFormTotal ? '#16a34a' : '#dc2626';
   const profDispoSelectionne = profs.find(p => String(p.id) === String(profSelectionne));
   const periodesRequisesDispo = profDispoSelectionne ? getPeriodesRequisesPourTaux(profDispoSelectionne) : 0;
   const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
@@ -612,7 +615,13 @@ export default function EmploiDuTemps() {
                         <option value="EPL">EPL</option>
                       </select>
                       <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
-                        Périodes requises (classes) : {totalPeriodesRequisesForm}
+                        Périodes de cours : {totalPeriodesCoursForm}
+                      </div>
+                      <div style={{marginTop:4,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
+                        Périodes de titulariat : {totalPeriodesTitulariatForm}
+                      </div>
+                      <div style={{marginTop:4,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
+                        Total requis : {totalPeriodesRequisesFormTotal}
                       </div>
                     </div>
                     <div style={styles.fc}>
@@ -1133,66 +1142,72 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
-                  <div style={{overflowX:'auto'}}>
-                    <table style={{...styles.tbl,minWidth:760}}>
-                      <thead>
-                        <tr style={styles.theadRow}>
-                          <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
-                          {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classesFiltreesSalles.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
-                              Aucune classe trouvée pour cette sélection.
-                            </td>
+                  {!salleSelectionnee ? (
+                    <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                      Sélectionnez d'abord une salle pour afficher les classes à affecter par créneau.
+                    </div>
+                  ) : (
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{...styles.tbl,minWidth:760}}>
+                        <thead>
+                          <tr style={styles.theadRow}>
+                            <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
+                            {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                           </tr>
-                        ) : (
-                          ['Matin','Après-midi'].map(periode => {
-                            const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
-                            if (!crsBase.length) return null;
-                            return [
-                              <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
-                              ...crsBase.map((crBase, idx) => (
-                                <tr key={crBase.id} style={styles.tr}>
-                                  <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
-                                    P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
-                                  </td>
-                                  {JOURS.map(jour => {
-                                    const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
-                                    const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
-                                    return (
-                                      <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
-                                        <select
-                                          style={{...styles.cellSel, minWidth: 160}}
-                                          value={classeAffectee}
-                                          onChange={e => handleAffectationSalleChange({
-                                            jour,
-                                            periode,
-                                            ordre: crBase.ordre,
-                                            classeId: e.target.value,
-                                          })}
-                                          disabled={!isAdmin() || classesCellule.length === 0}
-                                        >
-                                          <option value="">— Aucune classe —</option>
-                                          {classesCellule.map(cl => (
-                                            <option key={`${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
-                                              {cl.nom}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ))
-                            ];
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {classesFiltreesSalles.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                                Aucune classe trouvée pour cette sélection.
+                              </td>
+                            </tr>
+                          ) : (
+                            ['Matin','Après-midi'].map(periode => {
+                              const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
+                              if (!crsBase.length) return null;
+                              return [
+                                <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                                ...crsBase.map((crBase, idx) => (
+                                  <tr key={crBase.id} style={styles.tr}>
+                                    <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                                      P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                    </td>
+                                    {JOURS.map(jour => {
+                                      const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
+                                      const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
+                                      return (
+                                        <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
+                                          <select
+                                            style={{...styles.cellSel, minWidth: 160}}
+                                            value={classeAffectee}
+                                            onChange={e => handleAffectationSalleChange({
+                                              jour,
+                                              periode,
+                                              ordre: crBase.ordre,
+                                              classeId: e.target.value,
+                                            })}
+                                            disabled={!isAdmin() || classesCellule.length === 0}
+                                          >
+                                            <option value="">— Aucune classe —</option>
+                                            {classesCellule.map(cl => (
+                                              <option key={`${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
+                                              {cl.nom} {cl.poolsClasseLieu?.length ? `(${cl.poolsClasseLieu.map(p => p.nom).join(', ')})` : ''}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))
+                              ];
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
