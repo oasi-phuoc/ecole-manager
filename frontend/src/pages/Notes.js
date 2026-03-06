@@ -783,7 +783,7 @@ export default function Notes() {
             ))}
             {bulletinOnglet === 'criteres' ? (
               <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-                Tout mettre au vert (10 critères)
+                Tout mettre au vert
               </button>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
