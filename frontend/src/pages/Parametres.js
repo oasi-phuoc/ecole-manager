@@ -172,10 +172,11 @@ export default function Parametres() {
     setMsgMailTest('');
     setTestMailLoading(true);
     try {
-      await axios.post(API + '/parametres/mail/test', { email: mailTestTo }, { headers });
+      await axios.post(API + '/parametres/mail/test', { email: mailTestTo }, { headers, timeout: 35000 });
       setMsgMailTest('✅ Email de test envoyé');
     } catch (err) {
-      setMsgMailTest('❌ ' + (err?.response?.data?.message || err.message));
+      const timeout = err?.code === 'ECONNABORTED';
+      setMsgMailTest('❌ ' + (timeout ? "Délai dépassé. Vérifiez SMTP/port/mot de passe d'application puis réessayez." : (err?.response?.data?.message || err.message)));
     } finally {
       setTestMailLoading(false);
     }

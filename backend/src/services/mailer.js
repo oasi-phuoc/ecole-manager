@@ -3,6 +3,7 @@ const pool = require('../config/database');
 
 const DEFAULT_HOST = 'smtp.office365.com';
 const DEFAULT_PORT = 587;
+const SMTP_OPERATION_TIMEOUT_MS = 25000;
 
 async function getMailSettingsRow() {
   const result = await pool.query('SELECT * FROM parametres_mail LIMIT 1');
@@ -55,6 +56,9 @@ async function createTransporterOrThrow() {
       pass: config.appPassword,
     },
     requireTLS: !config.secure,
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
 
   return { transporter, config };
@@ -65,14 +69,18 @@ async function sendEmail({ to, subject, html, text }) {
   const from = config.fromName
     ? `"${String(config.fromName).replace(/"/g, '\\"')}" <${config.fromEmail}>`
     : config.fromEmail;
-
-  return transporter.sendMail({
+  const sendPromise = transporter.sendMail({
     from,
     to,
     subject,
     html,
     text,
   });
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout SMTP. Verifiez l'hote/port et les informations d'authentification.")), SMTP_OPERATION_TIMEOUT_MS);
+  });
+
+  return Promise.race([sendPromise, timeoutPromise]);
 }
 
 module.exports = {
