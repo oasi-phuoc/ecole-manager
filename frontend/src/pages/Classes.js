@@ -1409,6 +1409,7 @@ export default function Classes() {
           <thead>
             <tr style={s.thead}>
               <th style={{...s.th, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}></th>
+              <th style={{...s.th, minWidth:170}}>Classe</th>
               <th style={{...s.th, minWidth:210}}>Titulaire</th>
               <th style={s.th}>Notes</th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
@@ -1417,12 +1418,15 @@ export default function Classes() {
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?5:4} style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?6:5} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
                 <td style={{...s.td, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
+                <td style={{...s.td,minWidth:170}}>
+                  <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
+                </td>
                 <td style={{...s.td, minWidth:210}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
