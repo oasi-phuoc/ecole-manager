@@ -1408,8 +1408,11 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['','Titulaire','Notes','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
-              {isAdmin() && <th style={s.th}>Actions</th>}
+              <th style={{...s.th, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}></th>
+              <th style={{...s.th, minWidth:210}}>Titulaire</th>
+              <th style={s.th}>Notes</th>
+              <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
+              {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -1419,8 +1422,8 @@ export default function Classes() {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
-                <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
-                <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
+                <td style={{...s.td, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
+                <td style={{...s.td, minWidth:210}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {badgesNotes.length === 0 ? (
@@ -1445,12 +1448,12 @@ export default function Classes() {
                     )}
                   </div>
                 </td>
-                <td style={s.td}>
+                <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
                   <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}
                   </button>
                 </td>
-                {isAdmin() && <td style={s.td}>
+                {isAdmin() && <td style={{...s.td, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>
                   <button style={s.btnEdit} onClick={() => handleEdit(c)}>✏️</button>
                   <button style={s.btnDel} onClick={() => handleDelete(c.id)}>🗑️</button>
                 </td>}
