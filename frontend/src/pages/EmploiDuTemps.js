@@ -445,8 +445,8 @@ export default function EmploiDuTemps() {
               {profs.map(p => (
                 <button key={p.id} style={{...styles.chip,...(profSelectionne==p.id?styles.chipActif:{})}}
                   onClick={() => chargerDispos(p.id)}>
-                  <span style={styles.chipNom}>{p.nom}</span>
-                  <span style={styles.chipPrenom}>{p.prenom}</span>
+                  <span style={styles.chipNom}>{p.prenom}</span>
+                  <span style={styles.chipPrenom}>{p.nom}</span>
                 </button>
               ))}
             </div>
