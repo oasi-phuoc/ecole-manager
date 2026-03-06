@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
+const CLASS_COLORS_STORAGE_KEY = 'emploi_du_temps_class_colors';
 const BASE_PERIODES_TAUX = 42;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
@@ -21,6 +22,7 @@ const COULEURS = [
   '#BFDBFE', // bleu pastel
   '#DDD6FE', // violet pastel
 ];
+const COULEURS_PASTEL_CLASSES_SALLES = ['#fee2e2', '#dcfce7', '#fef3c7', '#dbeafe', '#fce7f3', '#e0e7ff', '#fae8ff', '#cffafe', '#fef9c3'];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
   {periode:'Matin',num:2,debut:'09:05',fin:'09:45'},
@@ -46,6 +48,13 @@ export default function EmploiDuTemps() {
   const [affectationModes, setAffectationModes] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(AFFECTATION_MODES_STORAGE_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const [couleursClassesMap, setCouleursClassesMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(CLASS_COLORS_STORAGE_KEY) || '{}');
     } catch {
       return {};
     }
@@ -123,6 +132,26 @@ export default function EmploiDuTemps() {
   useEffect(() => {
     localStorage.setItem(AFFECTATION_MODES_STORAGE_KEY, JSON.stringify(affectationModes));
   }, [affectationModes]);
+
+  useEffect(() => {
+    localStorage.setItem(CLASS_COLORS_STORAGE_KEY, JSON.stringify(couleursClassesMap));
+  }, [couleursClassesMap]);
+
+  useEffect(() => {
+    if (!classes.length) return;
+    setCouleursClassesMap(prev => {
+      const next = { ...prev };
+      let changed = false;
+      classes.forEach(cl => {
+        const id = String(cl.id);
+        if (next[id]) return;
+        const nextIndex = Object.keys(next).length % COULEURS_PASTEL_CLASSES_SALLES.length;
+        next[id] = COULEURS_PASTEL_CLASSES_SALLES[nextIndex];
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [classes]);
 
   useEffect(() => {
     setSalleSelectionnee('');
@@ -576,6 +605,14 @@ export default function EmploiDuTemps() {
     creneaux.map(c => `${c.jour}|${normaliserHeureCreneau(c.heure_debut)}|${normaliserHeureCreneau(c.heure_fin)}`)
   );
   const totalCreneauxTheoriques = creneauxTheoriquesKeys.size;
+  const getCouleurClasse = (classeId) => couleursClassesMap[String(classeId)] || '#ffffff';
+  const getClasseIdDepuisValeurAffectation = (valeur) => {
+    const texte = String(valeur || '');
+    if (!texte) return '';
+    if (texte.startsWith('special:')) return '';
+    if (texte.startsWith('soutien:')) return texte.split(':')[1] || '';
+    return texte;
+  };
   const suiviSalles = sallesDisponiblesLieu.map(salle => {
     const coursSalleFiltres = coursEmploiDuTemps.filter(c =>
       classesPourSallesIds.has(String(c.classe_id)) &&
@@ -1131,9 +1168,13 @@ export default function EmploiDuTemps() {
                                       ? `special:${aff.type_special}`
                                       : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
+                                const classeIdCouleur = getClasseIdDepuisValeurAffectation(valeurSelect);
+                                const couleurSelectProf = indispo
+                                  ? '#e5e7eb'
+                                  : (classeIdCouleur ? getCouleurClasse(classeIdCouleur) : '#ffffff');
                                 return (
                                   <td key={prof.id} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
-                                    <select style={{...styles.cellSel,background:indispo?'#e5e7eb':'#fff'}}
+                                    <select style={{...styles.cellSel,background:couleurSelectProf,color:'#1f2937'}}
                                       value={valeurSelect}
                                       onChange={async e => {
                                         if (indispo) return;
@@ -1340,10 +1381,11 @@ export default function EmploiDuTemps() {
                                     {JOURS.map(jour => {
                                       const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
                                       const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
+                                      const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
                                       return (
                                         <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
                                           <select
-                                            style={{...styles.cellSel, minWidth: 160}}
+                                            style={{...styles.cellSel, minWidth: 160, backgroundColor: couleurClasse, fontWeight: classeAffectee ? 700 : 500, color:'#1f2937'}}
                                             value={classeAffectee}
                                             onChange={e => handleAffectationSalleChange({
                                               jour,

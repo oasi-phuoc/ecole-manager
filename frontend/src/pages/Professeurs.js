@@ -10,6 +10,24 @@ const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Fro
 const MAX_PERIODES = 32;
 const NIVEAUX = ['CSC','CFR','EPL'];
 
+const normaliserBranchesSpecialites = (valeur) => {
+  if (!valeur) return [];
+  if (Array.isArray(valeur)) {
+    return Array.from(new Set(valeur.map(v => String(v).trim()).filter(Boolean)));
+  }
+  const brut = String(valeur).trim();
+  if (!brut) return [];
+  try {
+    const parsed = JSON.parse(brut);
+    if (Array.isArray(parsed)) {
+      return Array.from(new Set(parsed.map(v => String(v).trim()).filter(Boolean)));
+    }
+  } catch {}
+  // Cas texte PostgreSQL (ex: {"1","2"}) ou liste simple "1,2"
+  const nettoye = brut.replace(/^\{|\}$/g, '').replace(/"/g, '');
+  return Array.from(new Set(nettoye.split(',').map(v => String(v).trim()).filter(Boolean)));
+};
+
 export default function Professeurs() {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -136,8 +154,12 @@ export default function Professeurs() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (profEdit) await axios.put(API+'/profs/'+profEdit.id, form, {headers});
-      else await axios.post(API+'/profs', form, {headers});
+      const payload = {
+        ...form,
+        branches_specialites: normaliserBranchesSpecialites(form.branches_specialites),
+      };
+      if (profEdit) await axios.put(API+'/profs/'+profEdit.id, payload, {headers});
+      else await axios.post(API+'/profs', payload, {headers});
       setShowForm(false); setProfEdit(null); resetForm(); chargerProfs();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
@@ -146,7 +168,7 @@ export default function Professeurs() {
 
   const handleEdit = (p) => {
     setProfEdit(p);
-    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',niveau_prefere:p.niveau_prefere||'',branches_specialites:p.branches_specialites||[],lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||''});
+    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||''});
     setShowForm(true);
   };
 
@@ -166,6 +188,19 @@ export default function Professeurs() {
     return matchR && matchS;
   });
   const niveauxPreferesSelectionnes = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
+  const branchesSpecialitesSelectionnees = normaliserBranchesSpecialites(form.branches_specialites);
+
+  useEffect(() => {
+    if (!showForm) return;
+    if (!branchesDisponibles.length) return;
+    const idsAutorises = new Set(branchesDisponibles.flatMap(b => (b.ids || []).map(String)));
+    setForm(prev => {
+      const courantes = normaliserBranchesSpecialites(prev.branches_specialites);
+      const filtrees = courantes.filter(id => idsAutorises.has(String(id)));
+      if (filtrees.length === courantes.length) return prev;
+      return { ...prev, branches_specialites: filtrees };
+    });
+  }, [branchesDisponibles, showForm]);
 
   return (
     <div style={s.page}>
@@ -296,7 +331,7 @@ export default function Professeurs() {
                               onClick={() => {
                                 const curr = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
                                 const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
-                                setForm({...form, niveau_prefere: newNiv.join(','), branches_specialites:[]});
+                                setForm(prev => ({...prev, niveau_prefere: newNiv.join(',')}));
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
                               {n}
@@ -318,19 +353,21 @@ export default function Professeurs() {
                         ) : (
                           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
                             {branchesDisponibles.map(b => {
-                              const selected = (b.ids || []).some(id => (form.branches_specialites||[]).includes(String(id)));
+                              const selected = (b.ids || []).some(id => branchesSpecialitesSelectionnees.includes(String(id)));
                               return (
                                 <button key={b.id} type="button"
                                   title={(b.noms || []).join(' / ')}
                                   onClick={() => {
-                                    const curr = form.branches_specialites||[];
-                                    let newSel;
-                                    if (selected) {
-                                      newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
-                                    } else {
-                                      newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
-                                    }
-                                    setForm({...form,branches_specialites:newSel});
+                                    setForm(prev => {
+                                      const curr = normaliserBranchesSpecialites(prev.branches_specialites);
+                                      let newSel;
+                                      if (selected) {
+                                        newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
+                                      } else {
+                                        newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
+                                      }
+                                      return {...prev, branches_specialites:newSel};
+                                    });
                                   }}
                                   style={{
                                     height: 34,
