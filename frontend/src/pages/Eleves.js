@@ -813,9 +813,17 @@ export default function Eleves() {
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-              {['Photo','Nom','Prénom','Nationalité','Classe','Date naissance','Documents','Sanctions','Observations','Statut','Actions'].map(h => (
-                <th key={h} style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
-              ))}
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62}}>Photo</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Nom</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Prénom</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Nationalité</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Classe</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Date naissance</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:92,minWidth:92,maxWidth:92}}>Sanctions</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:110,minWidth:110,maxWidth:110}}>Observations</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96}}>Documents</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:122,minWidth:122,maxWidth:122}}>Statut</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86}}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -823,7 +831,7 @@ export default function Eleves() {
               <tr><td colSpan="11" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
-                <td style={{padding:'10px 14px'}}>
+                <td style={{padding:'10px 10px',width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>
                   <div style={{position:'relative',width:36,height:36}}>
                     {el.photo
                       ? <img src={el.photo} onClick={() => setPhotoZoom(el.photo)} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
@@ -868,15 +876,15 @@ export default function Eleves() {
                   </select>
                 </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
-                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
-                <td style={{padding:'10px 14px'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁 Détail</button></td>
-                <td style={{padding:'10px 14px'}}>
+                <td style={{padding:'10px 10px',width:92,minWidth:92,maxWidth:92,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
+                <td style={{padding:'10px 10px',width:110,minWidth:110,maxWidth:110,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁 Détail</button></td>
+                <td style={{padding:'10px 10px',width:96,minWidth:96,maxWidth:96,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                <td style={{padding:'10px 10px',width:122,minWidth:122,maxWidth:122,textAlign:'center'}}>
                   <span style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
                     {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
                   </span>
                 </td>
-                <td style={{padding:'10px 14px'}}>
+                <td style={{padding:'10px 10px',width:86,minWidth:86,maxWidth:86,textAlign:'center'}}>
                   {isAdmin() && <>
                     <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7}} onClick={() => handleEdit(el)}>✏️</button>
                     <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7}} onClick={() => handleDelete(el.id)}>🗑️</button>

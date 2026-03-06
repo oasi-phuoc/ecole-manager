@@ -422,8 +422,14 @@ export default function Professeurs() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Nom','Prénom','Email','Téléphone','Naissance','Documents','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
-              {isAdmin() && <th style={s.th}>Actions</th>}
+              <th style={{...s.th, minWidth:170}}>Nom</th>
+              <th style={{...s.th, minWidth:150}}>Prénom</th>
+              <th style={s.th}>Email</th>
+              <th style={s.th}>Téléphone</th>
+              <th style={s.th}>Naissance</th>
+              <th style={{...s.th, width:98, minWidth:98, maxWidth:98, textAlign:'center'}}>Documents</th>
+              <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Statut</th>
+              {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -431,19 +437,19 @@ export default function Professeurs() {
               <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun professeur trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
-                <td style={s.td}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
-                <td style={s.td}>{p.prenom}</td>
+                <td style={{...s.td,minWidth:170}}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
+                <td style={{...s.td,minWidth:150}}>{p.prenom}</td>
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={s.td}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
-                <td style={s.td}>
+                <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
+                <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center'}}>
                   <button style={p.actif!==false?s.badgeActive:s.badgeInactive} onClick={() => toggleStatut(p)}>
                     {p.actif!==false?'✅ Actif':'❌ Inactif'}
                   </button>
                 </td>
                 {isAdmin() && (
-                  <td style={s.td}>
+                  <td style={{...s.td,width:92,minWidth:92,maxWidth:92,textAlign:'center'}}>
                     <button
                       onClick={() => envoyerAccesEmail(p.id)}
                       disabled={emailEnvoi[p.id]==='loading'}
