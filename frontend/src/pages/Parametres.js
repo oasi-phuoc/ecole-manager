@@ -176,7 +176,25 @@ export default function Parametres() {
       setMsgMailTest('✅ Email de test envoyé');
     } catch (err) {
       const timeout = err?.code === 'ECONNABORTED';
-      setMsgMailTest('❌ ' + (timeout ? "Délai dépassé. Vérifiez SMTP/port/mot de passe d'application puis réessayez." : (err?.response?.data?.message || err.message)));
+      if (timeout) {
+        setMsgMailTest("❌ Délai dépassé. Vérifiez SMTP/port/mot de passe d'application puis réessayez.");
+      } else {
+        const data = err?.response?.data || {};
+        const parts = [];
+        parts.push(`❌ ${data.message || err.message || 'Echec envoi test'}`);
+        if (data.code) parts.push(`Code: ${data.code}`);
+        if (data.reponse) parts.push(`Réponse SMTP: ${data.reponse}`);
+        if (data.erreur) parts.push(`Détail: ${data.erreur}`);
+        if (data.hint) parts.push(`Astuce: ${data.hint}`);
+
+        const isOutlookPersonal = /@(outlook\.com|hotmail\.com|live\.[a-z]{2,}|msn\.com)$/i.test(mail.smtp_user || '');
+        const hostLooksOffice365 = String(mail.smtp_host || '').toLowerCase() === 'smtp.office365.com';
+        if (isOutlookPersonal && hostLooksOffice365) {
+          parts.push('Astuce Outlook personnel: essayez "smtp-mail.outlook.com" (port 587, TLS, mot de passe d application).');
+        }
+
+        setMsgMailTest(parts.join('\n'));
+      }
     } finally {
       setTestMailLoading(false);
     }
@@ -460,7 +478,7 @@ export default function Parametres() {
                   </button>
                 </div>
                 {msgMailTest && (
-                  <div style={{ marginTop: 12, fontWeight: 600, color: msgMailTest.startsWith('✅') ? '#166534' : '#b91c1c' }}>
+                  <div style={{ marginTop: 12, fontWeight: 600, color: msgMailTest.startsWith('✅') ? '#166534' : '#b91c1c', whiteSpace: 'pre-line' }}>
                     {msgMailTest}
                   </div>
                 )}

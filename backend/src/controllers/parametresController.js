@@ -165,6 +165,25 @@ const modifierParametresMail = async (req, res) => {
   }
 };
 
+function getMailErrorHint(err) {
+  const code = String(err?.code || '').toUpperCase();
+  const message = String(err?.message || '').toLowerCase();
+
+  if (code === 'EAUTH' || message.includes('authentication unsuccessful') || message.includes('auth')) {
+    return "Authentification refusee. Verifiez l'email SMTP, le mot de passe d'application, et que SMTP AUTH est active sur le compte Microsoft.";
+  }
+
+  if (code === 'ETIMEDOUT' || code === 'ECONNECTION' || message.includes('timeout') || message.includes('connect')) {
+    return 'Connexion SMTP impossible. Verifiez le serveur/port, le pare-feu reseau, et le mode TLS (587 sans SSL implicite ou 465 avec SSL implicite).';
+  }
+
+  if (message.includes('5.7.57') || message.includes('smtp client authentication is disabled')) {
+    return 'SMTP AUTH est desactive cote Microsoft 365. Activez "Authenticated SMTP" au niveau de la boite et du tenant.';
+  }
+
+  return "Consultez le detail de l'erreur SMTP puis verifiez host/port/TLS et les identifiants.";
+}
+
 const envoyerMailTest = async (req, res) => {
   const { email } = req.body || {};
   const destinataire = String(email || '').trim();
@@ -189,7 +208,16 @@ const envoyerMailTest = async (req, res) => {
     });
     res.json({ message: 'Email de test envoye' });
   } catch (err) {
-    res.status(400).json({ message: "Echec de l'envoi du mail de test", erreur: err.message });
+    const smtpCode = err?.code || null;
+    const smtpResponse = err?.response || err?.responseCode || null;
+    const detail = err?.message || 'Erreur SMTP inconnue';
+    res.status(400).json({
+      message: "Echec de l'envoi du mail de test",
+      erreur: detail,
+      code: smtpCode,
+      reponse: smtpResponse,
+      hint: getMailErrorHint(err),
+    });
   }
 };
 
