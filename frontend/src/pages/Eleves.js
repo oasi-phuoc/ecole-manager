@@ -385,31 +385,33 @@ export default function Eleves() {
         <button style={{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'}} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>🎓 Élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-          <div style={{position:'relative'}}>
-            <span style={{position:'absolute',left:10,top:9,fontSize:13}}>🔍</span>
-            <input style={{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200}} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-          </div>
-          <button
-            onClick={() => {
-              if (showFiltreClasseSelect) {
-                setShowFiltreClasseSelect(false);
-                setFiltreClasse('tous');
-              } else {
-                setShowFiltreClasseSelect(true);
-              }
-            }}
-            style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:showFiltreClasseSelect?'#eef2ff':'white',color:showFiltreClasseSelect?'#4338ca':'#475569',cursor:'pointer',fontWeight:600}}
-          >
-            Classe
-          </button>
-          {showFiltreClasseSelect && (
-            <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-              <option value="tous">Toutes les classes</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
-          )}
           <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+        <button
+          onClick={() => {
+            if (showFiltreClasseSelect) {
+              setShowFiltreClasseSelect(false);
+              setFiltreClasse('tous');
+            } else {
+              setShowFiltreClasseSelect(true);
+            }
+          }}
+          style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:showFiltreClasseSelect?'#eef2ff':'white',color:showFiltreClasseSelect?'#4338ca':'#475569',cursor:'pointer',fontWeight:600}}
+        >
+          Classe
+        </button>
+        {showFiltreClasseSelect && (
+          <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
+            <option value="tous">Toutes les classes</option>
+            {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+          </select>
+        )}
+        <div style={{position:'relative'}}>
+          <span style={{position:'absolute',left:10,top:9,fontSize:13}}>🔍</span>
+          <input style={{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200}} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         </div>
       </div>
 

@@ -141,17 +141,17 @@ export default function Professeurs() {
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>👨‍🏫 Professeurs</h2>
-        <div style={s.headerRight}>
-          <div style={s.searchBox}>
-            <span style={s.searchIcon}>🔍</span>
-            <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-          </div>
-          <div style={s.filtres}>
-            {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
-              <button key={f.id} style={{...s.filtrBtn,...(filtreStatut===f.id?s.filtrActif:{})}} onClick={() => setFiltreStatut(f.id)}>{f.label}</button>
-            ))}
-          </div>
-          {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
+        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
+      </div>
+      <div style={s.controlsRow}>
+        <div style={s.filtres}>
+          {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
+            <button key={f.id} style={{...s.filtrBtn,...(filtreStatut===f.id?s.filtrActif:{})}} onClick={() => setFiltreStatut(f.id)}>{f.label}</button>
+          ))}
+        </div>
+        <div style={s.searchBox}>
+          <span style={s.searchIcon}>🔍</span>
+          <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         </div>
       </div>
 
@@ -469,7 +469,7 @@ const s = {
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
-  headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
+  controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},
   searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},

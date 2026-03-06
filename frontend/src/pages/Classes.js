@@ -159,9 +159,9 @@ export default function Classes() {
   });
   const [dragInventaireId, setDragInventaireId] = useState(null);
   const ELEMENTS_SPECIAUX_PLAN = [
-    { id: 'SPECIAL_ENTREE', label: "Porte d'entrée", icon: '🚪' },
-    { id: 'SPECIAL_TABLEAU', label: 'Tableau', icon: '🧾' },
-    { id: 'SPECIAL_PROF', label: 'Professeur', icon: '👨‍🏫' },
+    { id: 'SPECIAL_ENTREE', label: "Porte d'entrée", icon: '🚪', bg: '#fff7ed', text: '#9a3412' },
+    { id: 'SPECIAL_TABLEAU', label: 'Tableau', icon: '🧾', bg: '#ecfeff', text: '#0e7490' },
+    { id: 'SPECIAL_PROF', label: 'Professeur', icon: '👨‍🏫', bg: '#fdf2f8', text: '#be185d' },
   ];
 
   const imprimerObservations = () => {
@@ -312,7 +312,7 @@ export default function Classes() {
                         <td key={col}
                           onDragOver={e => e.preventDefault()}
                           onDrop={() => dropOnCell(row, col)}
-                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:itemId?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':(special?special.bg:'white'),borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
                           {el ? (
                             <div draggable onDragStart={() => setDragEleve(String(el.id))}
                               style={{cursor:'grab',padding:2}}>
@@ -328,7 +328,7 @@ export default function Classes() {
                             </div>
                           ) : special ? (
                             <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:6}}>
-                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:'#e0e7ff',color:'#3730a3',fontSize:10,fontWeight:800,lineHeight:1.2}}>
+                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:special.bg,color:special.text,fontSize:10,fontWeight:800,lineHeight:1.2}}>
                                 {special.icon} {special.label}
                               </div>
                               <button onClick={() => {
@@ -355,11 +355,11 @@ export default function Classes() {
               {elementsSpeciauxNonPlaces.map(sp => (
                 <div key={sp.id} draggable onDragStart={() => setDragEleve(sp.id)}
                   style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#3730a3',flexShrink:0}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:sp.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:sp.text,flexShrink:0}}>
                     {sp.icon}
                   </div>
                   <div>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.icon} {sp.label}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.label}</div>
                   </div>
                 </div>
               ))}
