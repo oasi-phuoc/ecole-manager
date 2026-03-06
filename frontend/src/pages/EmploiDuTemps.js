@@ -63,6 +63,8 @@ export default function EmploiDuTemps() {
   const [classePlanningPoolId, setClassePlanningPoolId] = useState('');
   const [sallesLieuTravailId, setSallesLieuTravailId] = useState('');
   const [salleSelectionnee, setSalleSelectionnee] = useState('');
+  const [modeAffectationRapideClasse, setModeAffectationRapideClasse] = useState(false);
+  const [classeRapideId, setClasseRapideId] = useState('');
   const [remarquesDispo, setRemarquesDispo] = useState('');
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
@@ -124,6 +126,8 @@ export default function EmploiDuTemps() {
 
   useEffect(() => {
     setSalleSelectionnee('');
+    setModeAffectationRapideClasse(false);
+    setClasseRapideId('');
   }, [sallesLieuTravailId]);
 
   const chargerDispos = async (prof_id) => {
@@ -488,6 +492,83 @@ export default function EmploiDuTemps() {
       await chargerTout();
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation de la salle.");
+    }
+  };
+  const handleAffectationRapideClasse = async () => {
+    if (!isAdmin()) return;
+    if (!salleSelectionnee) {
+      alert("Sélectionnez d'abord une salle.");
+      return;
+    }
+    if (!classeRapideId) {
+      alert("Sélectionnez d'abord une classe.");
+      return;
+    }
+
+    const classe = classesPourSalles.find(c => String(c.id) === String(classeRapideId));
+    if (!classe) {
+      alert("La classe sélectionnée n'est pas disponible pour ce lieu de travail.");
+      return;
+    }
+
+    try {
+      const salleCourante = String((salleSelectionnee || '').trim());
+      let modifications = 0;
+      const localCours = [...coursEmploiDuTemps];
+
+      for (const cr of creneaux) {
+        if (!classeAHoraire(classe.id, cr.jour, cr.periode)) continue;
+
+        const debut = normaliserHeureCreneau(cr.heure_debut);
+        const fin = normaliserHeureCreneau(cr.heure_fin);
+        const coursDuCreneau = localCours.filter(c =>
+          c.jour === cr.jour &&
+          normaliserHeureCreneau(c.heure_debut) === debut &&
+          normaliserHeureCreneau(c.heure_fin) === fin
+        );
+
+        const coursSalle = coursDuCreneau.filter(c =>
+          String((c.salle || '').trim()) === salleCourante &&
+          String(c.classe_id) !== String(classe.id)
+        );
+        for (const c of coursSalle) {
+          await updateCoursSalle(c, null);
+          c.salle = null;
+          modifications += 1;
+        }
+
+        const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classe.id));
+        if (!coursClasse) {
+          const rep = await axios.post(API + '/emploi-du-temps', {
+            classe_id: classe.id,
+            matiere_id: null,
+            prof_id: null,
+            jour: cr.jour,
+            heure_debut: cr.heure_debut,
+            heure_fin: cr.heure_fin,
+            salle: salleSelectionnee,
+          }, { headers });
+          if (rep?.data?.cours) localCours.push(rep.data.cours);
+          modifications += 1;
+          continue;
+        }
+
+        const salleCoursClasse = String((coursClasse.salle || '').trim());
+        if (salleCoursClasse !== salleCourante) {
+          await updateCoursSalle(coursClasse, salleSelectionnee);
+          coursClasse.salle = salleSelectionnee;
+          modifications += 1;
+        }
+      }
+
+      if (modifications === 0) {
+        alert("Aucun créneau à mettre à jour pour cette classe.");
+        return;
+      }
+      await chargerTout();
+      alert('Affectation rapide terminée.');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation rapide.");
     }
   };
   const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
@@ -1191,6 +1272,38 @@ export default function EmploiDuTemps() {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+                    <button
+                      type="button"
+                      style={{...styles.affTabBtn, ...(modeAffectationRapideClasse ? styles.affTabBtnActif : {})}}
+                      onClick={() => setModeAffectationRapideClasse(prev => !prev)}
+                    >
+                      Classe
+                    </button>
+                    {modeAffectationRapideClasse && (
+                      <>
+                        <select
+                          style={{...styles.sel, minWidth:260}}
+                          value={classeRapideId}
+                          onChange={e => setClasseRapideId(e.target.value)}
+                          disabled={!sallesLieuTravailId}
+                        >
+                          <option value="">— Sélectionner une classe —</option>
+                          {classesPourSalles.map(cl => (
+                            <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          style={{...styles.btnBleu, opacity: (!isAdmin() || !classeRapideId || !salleSelectionnee) ? 0.65 : 1}}
+                          disabled={!isAdmin() || !classeRapideId || !salleSelectionnee}
+                          onClick={handleAffectationRapideClasse}
+                        >
+                          Affectation rapide
+                        </button>
+                      </>
                     )}
                   </div>
                   {!salleSelectionnee ? (
