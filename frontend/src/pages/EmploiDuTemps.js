@@ -55,6 +55,9 @@ export default function EmploiDuTemps() {
   const [planningClasse, setPlanningClasse] = useState(null);
   const [classePlanningId, setClassePlanningId] = useState('');
   const [classePlanningPoolId, setClassePlanningPoolId] = useState('');
+  const [sallesLieuTravailId, setSallesLieuTravailId] = useState('');
+  const [salleSelectionnee, setSalleSelectionnee] = useState('');
+  const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
   const [poolEdit, setPoolEdit] = useState(null);
@@ -68,7 +71,7 @@ export default function EmploiDuTemps() {
 
   const chargerTout = async () => {
     try {
-      const [p, cl, m, cr, po, af, ch] = await Promise.all([
+      const [p, cl, m, cr, po, af, ch, edt] = await Promise.all([
         axios.get(API + '/profs', { headers }),
         axios.get(API + '/classes', { headers }),
         axios.get(API + '/branches', { headers }),
@@ -76,6 +79,7 @@ export default function EmploiDuTemps() {
         axios.get(API + '/planning/pools', { headers }),
         axios.get(API + '/planning/affectations', { headers }),
         axios.get(API + '/planning/classe-horaires', { headers }),
+        axios.get(API + '/emploi-du-temps', { headers }),
       ]);
       setProfs(p.data.filter(x => x.actif !== false));
       setClasses(cl.data);
@@ -84,6 +88,7 @@ export default function EmploiDuTemps() {
       setPools(po.data);
       setAffectations(af.data);
       setClasseHoraires(ch.data);
+      setCoursEmploiDuTemps(edt.data || []);
     } catch(err) { console.error(err); }
   };
 
@@ -109,6 +114,10 @@ export default function EmploiDuTemps() {
   useEffect(() => {
     localStorage.setItem(AFFECTATION_MODES_STORAGE_KEY, JSON.stringify(affectationModes));
   }, [affectationModes]);
+
+  useEffect(() => {
+    setSalleSelectionnee('');
+  }, [sallesLieuTravailId]);
 
   const chargerDispos = async (prof_id) => {
     const r = await axios.get(API + '/planning/disponibilites/' + prof_id, { headers });
@@ -328,6 +337,41 @@ export default function EmploiDuTemps() {
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
+  const lieuxTravailOptions = Array.from(
+    new Set(
+      pools
+        .map(p => (p.site || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+  const classesPourSalles = classes
+    .map(cl => {
+      const poolsClasseLieu = pools.filter(p =>
+        String((p.site || '').trim()) === String((sallesLieuTravailId || '').trim()) &&
+        (p.classes || []).some(pc => String(pc.id) === String(cl.id))
+      );
+      if (!poolsClasseLieu.length) return null;
+      const sallesClasse = Array.from(
+        new Set(
+          coursEmploiDuTemps
+            .filter(c => String(c.classe_id) === String(cl.id) && (c.salle || '').trim())
+            .map(c => c.salle.trim())
+        )
+      ).sort((a, b) => a.localeCompare(b, 'fr'));
+      return {
+        ...cl,
+        poolsClasseLieu,
+        sallesClasse
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+  const sallesDisponiblesLieu = Array.from(
+    new Set(classesPourSalles.flatMap(cl => cl.sallesClasse))
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+  const classesFiltreesSalles = classesPourSalles.filter(cl =>
+    !salleSelectionnee || cl.sallesClasse.includes(salleSelectionnee)
+  );
 
   const niveauPool = String(poolForm.niveau || '').toUpperCase();
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
@@ -614,8 +658,8 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{...styles.rowBetween, marginBottom:16}}>
             <div style={{display:'flex',gap:8}}>
-              {[{id:'classes',label:'Classes'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
-                <button key={o.id} style={{...styles.onglet,...(sousOngletAff===o.id?styles.ongletActif:{})}}
+              {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
+                <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
                   onClick={() => {
                     setSousOngletAff(o.id);
                     if (o.id === 'classes' || o.id === 'profs') setPoolAffId('');
@@ -661,6 +705,27 @@ export default function EmploiDuTemps() {
                   >
                     <option value="">{classePlanningPoolId ? '— Sélectionner une classe —' : '— Sélectionner d’abord un pool —'}</option>
                     {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
+                </>
+              )}
+              {sousOngletAff === 'salles' && (
+                <>
+                  <select
+                    style={styles.sel}
+                    value={sallesLieuTravailId}
+                    onChange={e => setSallesLieuTravailId(e.target.value)}
+                  >
+                    <option value="">— Sélectionner un lieu de travail —</option>
+                    {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
+                  </select>
+                  <select
+                    style={styles.sel}
+                    value={salleSelectionnee}
+                    disabled={!sallesLieuTravailId}
+                    onChange={e => setSalleSelectionnee(e.target.value)}
+                  >
+                    <option value="">{sallesLieuTravailId ? '— Toutes les salles —' : '— Sélectionner d’abord un lieu —'}</option>
+                    {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
                   </select>
                 </>
               )}
@@ -786,7 +851,7 @@ export default function EmploiDuTemps() {
                       const totalProf = parseInt(p.periodes_semaine) || 0;
                       const totalAffecte = periodesAffecteesParProf[p.id] || 0;
                       return (
-                        <th key={p.id} style={styles.th}>
+                        <th key={p.id} style={{...styles.th, textAlign:'center'}}>
                           {p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{p.prenom}</span>
                           <div style={{fontWeight:700,fontSize:11,marginTop:4,color:'#475569'}}>
                             {totalAffecte} / {totalProf}
@@ -829,7 +894,7 @@ export default function EmploiDuTemps() {
                                       : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
                                 return (
-                                  <td key={prof.id} style={{...styles.td,padding:4,background:indispo?'#eeeeee':'#fff'}}>
+                                  <td key={prof.id} style={{...styles.td,padding:4,background:indispo?'#eeeeee':'#fff',textAlign:'center'}}>
                                     <select style={{...styles.cellSel,background:indispo?'#eeeeee':(aff?'#e8f5e9':'#fff')}}
                                       value={valeurSelect}
                                       onChange={async e => {
@@ -940,6 +1005,49 @@ export default function EmploiDuTemps() {
             </div>
           )}
 
+          {sousOngletAff === 'salles' && (
+            <div style={{marginTop:12}}>
+              {!sallesLieuTravailId ? (
+                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                  Sélectionnez d'abord un lieu de travail pour afficher les classes.
+                </div>
+              ) : (
+                <div style={{overflowX:'auto'}}>
+                  <table style={{...styles.tbl,minWidth:760}}>
+                    <thead>
+                      <tr style={styles.theadRow}>
+                        <th style={styles.th}>Classe</th>
+                        <th style={styles.th}>Pool(s)</th>
+                        <th style={{...styles.th, textAlign:'center'}}>Niveau</th>
+                        <th style={{...styles.th, textAlign:'center'}}>Lieu de travail</th>
+                        <th style={styles.th}>Salle(s)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classesFiltreesSalles.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                            Aucune classe trouvée pour cette sélection.
+                          </td>
+                        </tr>
+                      ) : (
+                        classesFiltreesSalles.map((cl, idx) => (
+                          <tr key={cl.id} style={{...styles.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc'}}>
+                            <td style={{...styles.td, fontWeight:800, color:'#0f172a'}}>{cl.nom}</td>
+                            <td style={styles.td}>{cl.poolsClasseLieu.map(p => p.nom).join(', ')}</td>
+                            <td style={{...styles.td, textAlign:'center', fontWeight:700}}>{cl.niveau || '—'}</td>
+                            <td style={{...styles.td, textAlign:'center', fontWeight:700}}>{sallesLieuTravailId}</td>
+                            <td style={styles.td}>{cl.sallesClasse.length ? cl.sallesClasse.join(', ') : '—'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* AFFECTATION PLANNING CLASSE */}
           {sousOngletAff === 'branches' && (
             <div>
@@ -958,7 +1066,7 @@ export default function EmploiDuTemps() {
                     ) : (
                       <div style={styles.suiviBranchesGrid}>
                         {suiviBranchesClasse.map(b => {
-                          const ok = b.affectees >= b.requises;
+                          const ok = b.affectees === b.requises;
                           return (
                             <div key={b.id} style={{...styles.suiviBrancheChip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#166534' : '#991b1b'}}>
                               <div style={styles.suiviBrancheNom}>{b.nom}</div>
@@ -975,8 +1083,8 @@ export default function EmploiDuTemps() {
                     <table style={{...styles.tbl,minWidth:700}}>
                       <thead>
                         <tr style={styles.theadRow}>
-                          <th style={{...styles.th,minWidth:130}}>Créneau</th>
-                          {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
+                          <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
+                          {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                         </tr>
                       </thead>
                       <tbody>
@@ -1194,6 +1302,8 @@ const styles = {
   onglets:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'},
   onglet:{padding:'8px 16px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   ongletActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
+  affTabBtn:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#f1f5f9',color:'#555'},
+  affTabBtnActif:{background:'#6366f1',color:'white'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
@@ -1202,7 +1312,7 @@ const styles = {
   chipNom:{fontWeight:700,display:'block',lineHeight:1.15},
   chipPrenom:{fontWeight:500,display:'block',lineHeight:1.15,marginTop:2},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
-  suiviGrandTitre:{fontSize:30,fontWeight:900,color:'#0f172a',margin:'0 0 10px'},
+  suiviGrandTitre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:'0 0 10px'},
   suiviJoursGrid:{display:'flex',flexWrap:'wrap',gap:8},
   suiviJourChip:{width:190,minWidth:190,maxWidth:190,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviJourNom:{fontSize:13,fontWeight:800,color:'#334155',lineHeight:1.2},

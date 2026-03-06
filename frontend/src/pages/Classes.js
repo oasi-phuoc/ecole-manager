@@ -159,9 +159,9 @@ export default function Classes() {
   });
   const [dragInventaireId, setDragInventaireId] = useState(null);
   const ELEMENTS_SPECIAUX_PLAN = [
-    { id: 'SPECIAL_ENTREE', label: "Porte d'entrée" },
-    { id: 'SPECIAL_TABLEAU', label: 'Tableau' },
-    { id: 'SPECIAL_PROF', label: 'Professeur' },
+    { id: 'SPECIAL_ENTREE', label: "Porte d'entrée", icon: '🚪' },
+    { id: 'SPECIAL_TABLEAU', label: 'Tableau', icon: '🧾' },
+    { id: 'SPECIAL_PROF', label: 'Professeur', icon: '👨‍🏫' },
   ];
 
   const imprimerObservations = () => {
@@ -251,7 +251,7 @@ export default function Classes() {
             <div style="font-size:10px;font-weight:700;color:#1e293b;margin-top:3px;line-height:1.2">${el.prenom}</div>
             <div style="font-size:9px;color:#475569">${el.nom}</div>
           ` : special ? `
-            <div style="display:inline-block;padding:6px 8px;border-radius:8px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:800;line-height:1.2">${special.label}</div>
+            <div style="display:inline-block;padding:6px 8px;border-radius:8px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:800;line-height:1.2">${special.icon} ${special.label}</div>
           ` : ''}
         </td>`;
       }
@@ -329,7 +329,7 @@ export default function Classes() {
                           ) : special ? (
                             <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:6}}>
                               <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:'#e0e7ff',color:'#3730a3',fontSize:10,fontWeight:800,lineHeight:1.2}}>
-                                {special.label}
+                                {special.icon} {special.label}
                               </div>
                               <button onClick={() => {
                                 const np = {...planPositions}; delete np[key]; setPlanPositions(np);
@@ -356,10 +356,10 @@ export default function Classes() {
                 <div key={sp.id} draggable onDragStart={() => setDragEleve(sp.id)}
                   style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
                   <div style={{width:32,height:32,borderRadius:8,background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#3730a3',flexShrink:0}}>
-                    ⌁
+                    {sp.icon}
                   </div>
                   <div>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.label}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.icon} {sp.label}</div>
                   </div>
                 </div>
               ))}
