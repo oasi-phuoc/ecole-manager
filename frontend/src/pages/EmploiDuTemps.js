@@ -1233,7 +1233,7 @@ export default function EmploiDuTemps() {
                                             <option value="">— Aucune classe —</option>
                                             {classesCellule.map(cl => (
                                               <option key={`${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
-                                              {cl.nom} {cl.poolsClasseLieu?.length ? `(${cl.poolsClasseLieu.map(p => p.nom).join(', ')})` : ''}
+                                              {cl.nom}
                                               </option>
                                             ))}
                                           </select>
