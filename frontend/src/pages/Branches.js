@@ -10,7 +10,7 @@ export default function Branches() {
   const [branches, setBranches] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [brancheEdit, setBrancheEdit] = useState(null);
-  const [form, setForm] = useState({ nom:'', niveau:'', periodes_semaine:'', coefficient:'1', type_branche:'principale' });
+  const [form, setForm] = useState({ nom:'', niveau:'', periodes_semaine:'', coefficient:'1', type_branche:'principale', designation_courte:'', suivi_notes:true });
   const [erreur, setErreur] = useState('');
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
@@ -31,14 +31,22 @@ export default function Branches() {
       if (brancheEdit) await axios.put(API+'/branches/'+brancheEdit.id, form, {headers});
       else await axios.post(API+'/branches', form, {headers});
       setShowForm(false); setBrancheEdit(null);
-      setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale'});
+      setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true});
       chargerBranches();
     } catch(err) { setErreur(err.response?.data?.message||'Erreur serveur'); }
   };
 
   const handleEdit = (b) => {
     setBrancheEdit(b);
-    setForm({nom:b.nom||'',niveau:b.niveau||'',periodes_semaine:b.periodes_semaine||'',coefficient:b.coefficient||'1',type_branche:b.type_branche||'principale'});
+    setForm({
+      nom:b.nom||'',
+      niveau:b.niveau||'',
+      periodes_semaine:b.periodes_semaine||'',
+      coefficient:b.coefficient||'1',
+      type_branche:b.type_branche||'principale',
+      designation_courte:b.designation_courte||'',
+      suivi_notes:b.suivi_notes !== false,
+    });
     setErreur(''); setShowForm(true);
   };
 
@@ -62,7 +70,7 @@ export default function Branches() {
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>📚 Branches</h2>
-        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1'}); setErreur(''); }}>+ Ajouter</button>}
+        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}
       </div>
       <div style={s.controlsRow}>
         <div style={s.filtres}>
@@ -93,6 +101,10 @@ export default function Branches() {
                   <input style={s.inp} type="text" required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Ex: Mathématiques, Français..." />
                 </div>
                 <div style={s.field}>
+                  <label style={s.lbl}>Désignation courte *</label>
+                  <input style={s.inp} type="text" required value={form.designation_courte} onChange={e => setForm({...form,designation_courte:e.target.value})} placeholder="Ex: MATH, FRA" />
+                </div>
+                <div style={s.field}>
                   <label style={s.lbl}>Niveau * <span style={{color:'#9ca3af',fontWeight:400}}>(ex: CSC, CFR, EPL)</span></label>
                   <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
                     <option value="">-- Choisir --</option>
@@ -106,6 +118,25 @@ export default function Branches() {
                 <div style={s.field}>
                   <label style={s.lbl}>Coefficient</label>
                   <input style={s.inp} type="number" min="0.5" max="10" step="0.5" value={form.coefficient} onChange={e => setForm({...form,coefficient:e.target.value})} />
+                </div>
+                <div style={s.field}>
+                  <label style={s.lbl}>Suivi des notes</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({...form, suivi_notes: !form.suivi_notes})}
+                    style={{
+                      padding:'9px 12px',
+                      borderRadius:8,
+                      border:'2px solid '+(form.suivi_notes ? '#16a34a' : '#e2e8f0'),
+                      background: form.suivi_notes ? '#dcfce7' : '#f8fafc',
+                      color: form.suivi_notes ? '#166534' : '#64748b',
+                      cursor:'pointer',
+                      fontWeight:700,
+                      fontSize:13
+                    }}
+                  >
+                    {form.suivi_notes ? 'Oui' : 'Non'}
+                  </button>
                 </div>
               </div>
               <div style={{marginTop:14}}>
@@ -133,19 +164,29 @@ export default function Branches() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Branche','Niveau','Type','Périodes/sem.','Coefficient','Actions'].map(h => (
+              {['Branche','Abrév.','Suivi','Niveau','Type','Périodes/sem.','Coefficient','Actions'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {branchesFiltrees.length===0 ? (
-              <tr><td colSpan="5" style={s.empty}>Aucune branche trouvée</td></tr>
+              <tr><td colSpan="8" style={s.empty}>Aucune branche trouvée</td></tr>
             ) : branchesFiltrees.map((b) => {
               return (
                 <tr key={b.id} style={s.tr}>
                   <td style={s.td}>
                     <b style={{color:'#1e293b'}}>{b.nom}</b>
+                  </td>
+                  <td style={s.td}>
+                    <span style={{background:'#eef2ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
+                      {b.designation_courte || '—'}
+                    </span>
+                  </td>
+                  <td style={s.td}>
+                    <span style={{background:b.suivi_notes!==false?'#dcfce7':'#fee2e2',color:b.suivi_notes!==false?'#166534':'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
+                      {b.suivi_notes!==false ? 'Oui' : 'Non'}
+                    </span>
                   </td>
                   <td style={s.td}>
                     {b.niveau

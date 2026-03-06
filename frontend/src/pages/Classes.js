@@ -8,10 +8,13 @@ const API = 'https://ecole-manager-backend.onrender.com/api';
 export default function Classes() {
   const [classes, setClasses] = useState([]);
   const [profs, setProfs] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [classeEdit, setClasseEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreActif, setFiltreActif] = useState('actif');
+  const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
   const [elevesClasse, setElevesClasse] = useState([]);
@@ -31,14 +34,28 @@ export default function Classes() {
   useEffect(() => { chargerTout(); }, []);
 
   const chargerTout = async () => {
-    const [cl, pr] = await Promise.allSettled([
+    const [cl, pr, br, sn] = await Promise.allSettled([
       axios.get(API+'/classes', {headers}),
       axios.get(API+'/profs', {headers}),
+      axios.get(API+'/branches', {headers}),
+      axios.get(API+'/notes/suivi-classes', {headers}),
     ]);
     if (cl.status === 'fulfilled') setClasses(cl.value.data);
     else console.error('Erreur classes:', cl.reason);
     if (pr.status === 'fulfilled') setProfs(pr.value.data.filter(p => p.actif !== false));
     else console.error('Erreur profs:', pr.reason);
+    if (br.status === 'fulfilled') setBranches(br.value.data || []);
+    else console.error('Erreur branches:', br.reason);
+    if (sn.status === 'fulfilled') {
+      const map = {};
+      (sn.value.data || []).forEach(x => {
+        map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0;
+      });
+      setSuiviNotesClasse(map);
+    } else {
+      console.error('Erreur suivi notes classes:', sn.reason);
+      setSuiviNotesClasse({});
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -642,8 +659,26 @@ export default function Classes() {
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
     const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='inactif'&&c.actif===false);
-    return matchR && matchA;
+    const niveauClasse = String(c.niveau || '').toUpperCase();
+    const matchN = filtreNiveau==='tous' || niveauClasse===filtreNiveau;
+    return matchR && matchA && matchN;
   });
+  const getSuiviNotesBadges = (classe) => {
+    const niveauClasse = String(classe?.niveau || '').toUpperCase();
+    const branchesNiveau = branches.filter(b =>
+      String(b.niveau || '').toUpperCase() === niveauClasse &&
+      b.suivi_notes !== false
+    );
+    return branchesNiveau.map(b => {
+      const nb = suiviNotesClasse[`${classe.id}-${b.id}`] || 0;
+      const designation = (b.designation_courte || b.nom || '').toString().trim();
+      return {
+        id: b.id,
+        label: designation || '—',
+        nb
+      };
+    });
+  };
 
   // Modal zoom photo
   const ModalZoom = () => photoZoom ? (
@@ -1315,17 +1350,20 @@ export default function Classes() {
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>🏫 Classes</h2>
-        <div style={s.headerRight}>
-          <div style={s.searchBox}>
-            <span style={s.searchIcon}>🔍</span>
-            <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-          </div>
-          <div style={s.filtres}>
-            {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactifs'},{id:'tous',label:'Toutes'}].map(f => (
-              <button key={f.id} style={{...s.filtrBtn,...(filtreActif===f.id?s.filtrActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
-            ))}
-          </div>
-          {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>}
+        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>}
+      </div>
+      <div style={s.controlsRow}>
+        <div style={s.filtres}>
+          {[{id:'tous',label:'Toutes'},{id:'CSC',label:'CSC'},{id:'CFR',label:'CFR'},{id:'EPL',label:'EPL'}].map(f => (
+            <button key={f.id} style={{...s.filtrBtn,...(filtreNiveau===f.id?s.filtrActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
+          ))}
+          {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
+            <button key={f.id} style={{...s.filtrBtn,...(filtreActif===f.id?s.filtrActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
+          ))}
+        </div>
+        <div style={s.searchBox}>
+          <span style={s.searchIcon}>🔍</span>
+          <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         </div>
       </div>
 
@@ -1370,21 +1408,43 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['','Classe','Titulaire','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
+              {['','Titulaire','Notes','Statut'].map(h => <th key={h} style={s.th}>{h}</th>)}
               {isAdmin() && <th style={s.th}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?6:5} style={s.empty}>Aucune classe trouvée</td></tr>
-            ) : classesFiltrees.map(c => (
+              <tr><td colSpan={isAdmin()?5:4} style={s.empty}>Aucune classe trouvée</td></tr>
+            ) : classesFiltrees.map(c => {
+              const badgesNotes = getSuiviNotesBadges(c);
+              return (
               <tr key={c.id} style={s.tr}>
                 <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
-                <td style={s.td}>
-                  <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
-                  {c.niveau && <div style={{fontSize:11,color:'#94a3b8'}}>{c.niveau}</div>}
-                </td>
                 <td style={s.td}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
+                <td style={s.td}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                    {badgesNotes.length === 0 ? (
+                      <span style={{color:'#94a3b8'}}>—</span>
+                    ) : (
+                      badgesNotes.map(b => (
+                        <span
+                          key={b.id}
+                          style={{
+                            background: b.nb >= 3 ? '#dcfce7' : '#fee2e2',
+                            color: b.nb >= 3 ? '#166534' : '#991b1b',
+                            padding:'3px 8px',
+                            borderRadius:99,
+                            fontSize:11,
+                            fontWeight:700,
+                            lineHeight:1.2
+                          }}
+                        >
+                          {b.label} {b.nb}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </td>
                 <td style={s.td}>
                   <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}
@@ -1395,7 +1455,8 @@ export default function Classes() {
                   <button style={s.btnDel} onClick={() => handleDelete(c.id)}>🗑️</button>
                 </td>}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -1408,7 +1469,7 @@ const s = {
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
-  headerRight:{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'},
+  controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
   chip:{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:600},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},

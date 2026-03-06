@@ -8,6 +8,7 @@ router.get('/bulletin', c.getBulletin);
 router.get('/bulletin-criteres', c.getBulletinCriteres);
 router.put('/bulletin-criteres/:eleve_id', c.putBulletinCriteres);
 router.get('/rapport', c.getRapportClasse);
+router.get('/suivi-classes', c.getSuiviClasses);
 router.get('/', c.getEvaluations);
 router.post('/', c.creerEvaluation);
 router.put('/:id', c.modifierEvaluation);

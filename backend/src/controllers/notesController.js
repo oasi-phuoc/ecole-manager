@@ -287,4 +287,17 @@ const putBulletinCriteres = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres };
+const getSuiviClasses = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ev.classe_id, ev.matiere_id, COUNT(ev.id)::int as nb_evaluations
+      FROM evaluations ev
+      GROUP BY ev.classe_id, ev.matiere_id
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres, getSuiviClasses };

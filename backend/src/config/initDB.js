@@ -122,6 +122,14 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS niveau VARCHAR(100)`);
     await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS periodes_semaine INTEGER`);
     await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS type_branche VARCHAR(50) DEFAULT 'principale'`);
+    await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS designation_courte VARCHAR(20)`);
+    await pool.query(`ALTER TABLE matieres ADD COLUMN IF NOT EXISTS suivi_notes BOOLEAN DEFAULT true`);
+    await pool.query(`
+      UPDATE matieres
+      SET designation_courte = UPPER(SUBSTRING(COALESCE(nom, '') FROM 1 FOR 6))
+      WHERE designation_courte IS NULL OR TRIM(designation_courte) = ''
+    `);
+    await pool.query(`UPDATE matieres SET suivi_notes = true WHERE suivi_notes IS NULL`);
 
     // Colonnes additionnelles evaluations
     await pool.query(`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS points_max DECIMAL(4,2) DEFAULT 30`);

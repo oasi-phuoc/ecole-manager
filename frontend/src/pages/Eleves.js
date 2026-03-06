@@ -20,7 +20,7 @@ export default function Eleves() {
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [filtreClasse, setFiltreClasse] = useState('tous');
+  const [filtreClasse, setFiltreClasse] = useState('');
   const [showFiltreClasseSelect, setShowFiltreClasseSelect] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -360,7 +360,9 @@ export default function Eleves() {
 
   const elevesFiltres = eleves.filter(el => {
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchC = filtreClasse==='tous' || filtreClasse==='sans_classe' ? (filtreClasse==='sans_classe' ? !el.classe_id : true) : String(el.classe_id)===String(filtreClasse);
+    const matchC = !filtreClasse || filtreClasse==='sans_classe'
+      ? (filtreClasse==='sans_classe' ? !el.classe_id : true)
+      : String(el.classe_id)===String(filtreClasse);
     return matchR && matchC;
   });
 
@@ -394,7 +396,7 @@ export default function Eleves() {
           onClick={() => {
             if (showFiltreClasseSelect) {
               setShowFiltreClasseSelect(false);
-              setFiltreClasse('tous');
+              setFiltreClasse('');
             } else {
               setShowFiltreClasseSelect(true);
             }
@@ -405,7 +407,7 @@ export default function Eleves() {
         </button>
         {showFiltreClasseSelect && (
           <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-            <option value="tous">Toutes les classes</option>
+            <option value="">— Sélectionner une classe —</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
           </select>
         )}
