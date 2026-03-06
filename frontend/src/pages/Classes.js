@@ -1409,8 +1409,8 @@ export default function Classes() {
           <thead>
             <tr style={s.thead}>
               <th style={{...s.th, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}></th>
-              <th style={{...s.th, minWidth:170}}>Classe</th>
-              <th style={{...s.th, minWidth:210}}>Titulaire</th>
+              <th style={{...s.th, width:130, minWidth:130, maxWidth:130}}>Classe</th>
+              <th style={{...s.th, width:220, minWidth:220, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
@@ -1424,10 +1424,10 @@ export default function Classes() {
               return (
               <tr key={c.id} style={s.tr}>
                 <td style={{...s.td, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
-                <td style={{...s.td,minWidth:170}}>
+                <td style={{...s.td, width:130, minWidth:130, maxWidth:130}}>
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                 </td>
-                <td style={{...s.td, minWidth:210}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
+                <td style={{...s.td, width:220, minWidth:220, whiteSpace:'nowrap'}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {badgesNotes.length === 0 ? (

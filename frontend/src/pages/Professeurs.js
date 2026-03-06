@@ -422,8 +422,8 @@ export default function Professeurs() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              <th style={{...s.th, minWidth:170}}>Nom</th>
-              <th style={{...s.th, minWidth:150}}>Prénom</th>
+              <th style={{...s.th, width:170, minWidth:170, whiteSpace:'nowrap'}}>Nom</th>
+              <th style={{...s.th, width:150, minWidth:150, whiteSpace:'nowrap'}}>Prénom</th>
               <th style={s.th}>Email</th>
               <th style={s.th}>Téléphone</th>
               <th style={s.th}>Naissance</th>
@@ -437,8 +437,8 @@ export default function Professeurs() {
               <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun professeur trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
-                <td style={{...s.td,minWidth:170}}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
-                <td style={{...s.td,minWidth:150}}>{p.prenom}</td>
+                <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
+                <td style={{...s.td,width:150,minWidth:150,whiteSpace:'nowrap'}}>{p.prenom}</td>
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
