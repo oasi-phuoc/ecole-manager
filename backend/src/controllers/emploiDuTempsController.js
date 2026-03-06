@@ -32,8 +32,8 @@ const getEmploiDuTemps = async (req, res) => {
         u.nom as prof_nom, u.prenom as prof_prenom, u.id as prof_id
       FROM emploi_du_temps e
       JOIN classes c ON e.classe_id = c.id
-      JOIN matieres m ON e.matiere_id = m.id
-      JOIN utilisateurs u ON e.prof_id = u.id
+      LEFT JOIN matieres m ON e.matiere_id = m.id
+      LEFT JOIN utilisateurs u ON e.prof_id = u.id
     `;
     const params = [];
     if (classe_id) {

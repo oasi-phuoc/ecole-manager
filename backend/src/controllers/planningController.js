@@ -12,6 +12,33 @@ const getDisponibilites = async (req, res) => {
   res.json(r.rows);
 };
 
+const getRemarqueDisponibilites = async (req, res) => {
+  try {
+    const r = await pool.query(
+      "SELECT remarque_disponibilites FROM utilisateurs WHERE id=$1 AND role='prof'",
+      [req.params.prof_id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouvé' });
+    res.json({ remarque: r.rows[0].remarque_disponibilites || '' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const saveRemarqueDisponibilites = async (req, res) => {
+  try {
+    const remarque = typeof req.body?.remarque === 'string' ? req.body.remarque : '';
+    const r = await pool.query(
+      "UPDATE utilisateurs SET remarque_disponibilites=$1 WHERE id=$2 AND role='prof' RETURNING id",
+      [remarque, req.params.prof_id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouvé' });
+    res.json({ message: 'Remarque sauvegardée' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const saveDisponibilites = async (req, res) => {
   const { prof_id } = req.params;
   const { disponibilites } = req.body;
@@ -247,4 +274,26 @@ const getPlanningClasse = async (req, res) => {
   res.json({ classe:classe.rows[0], creneaux:creneaux.rows, affectations:affectations.rows, horaires:horaires.rows, branches });
 };
 
-module.exports = { getCreneaux, getDisponibilites, saveDisponibilites, getPools, createPool, updatePool, deletePool, getClasseHoraires, saveClasseHoraires, getAllClasseHoraires, getAffectations, saveAffectation, deleteAffectation, getPlanningBranches, savePlanningBranche, deletePlanningBranche, getPlanningGeneral, getPlanningProf, getPlanningClasse };
+module.exports = {
+  getCreneaux,
+  getDisponibilites,
+  getRemarqueDisponibilites,
+  saveRemarqueDisponibilites,
+  saveDisponibilites,
+  getPools,
+  createPool,
+  updatePool,
+  deletePool,
+  getClasseHoraires,
+  saveClasseHoraires,
+  getAllClasseHoraires,
+  getAffectations,
+  saveAffectation,
+  deleteAffectation,
+  getPlanningBranches,
+  savePlanningBranche,
+  deletePlanningBranche,
+  getPlanningGeneral,
+  getPlanningProf,
+  getPlanningClasse
+};

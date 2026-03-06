@@ -63,6 +63,7 @@ export default function EmploiDuTemps() {
   const [classePlanningPoolId, setClassePlanningPoolId] = useState('');
   const [sallesLieuTravailId, setSallesLieuTravailId] = useState('');
   const [salleSelectionnee, setSalleSelectionnee] = useState('');
+  const [remarquesDispo, setRemarquesDispo] = useState('');
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
@@ -126,11 +127,15 @@ export default function EmploiDuTemps() {
   }, [sallesLieuTravailId]);
 
   const chargerDispos = async (prof_id) => {
-    const r = await axios.get(API + '/planning/disponibilites/' + prof_id, { headers });
+    const [rDispos, rRemarque] = await Promise.all([
+      axios.get(API + '/planning/disponibilites/' + prof_id, { headers }),
+      axios.get(API + '/planning/disponibilites/' + prof_id + '/remarque', { headers }),
+    ]);
     const map = {};
     creneaux.forEach(c => { map[c.id] = true; });
-    r.data.forEach(d => { map[d.creneau_id] = d.disponible; });
+    rDispos.data.forEach(d => { map[d.creneau_id] = d.disponible; });
     setDispos(map);
+    setRemarquesDispo(rRemarque?.data?.remarque || '');
     setProfSelectionne(prof_id);
   };
 
@@ -145,9 +150,12 @@ export default function EmploiDuTemps() {
       if (!ok) return;
     }
     const liste = Object.entries(dispos).map(([creneau_id, disponible]) => ({ creneau_id: parseInt(creneau_id), disponible }));
-    await axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers });
+    await Promise.all([
+      axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
+      axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
+    ]);
     chargerDisposAffectations(poolAffId);
-    alert('Disponibilités sauvegardées !');
+    alert('Disponibilités et remarque sauvegardées !');
   };
 
   const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
@@ -456,12 +464,22 @@ export default function EmploiDuTemps() {
       if (classeId) {
         const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classeId));
         if (!coursClasse) {
-          alert('Aucun cours trouvé pour cette classe sur ce créneau.');
-          return;
-        }
-        const salleDuCoursClasse = String((coursClasse.salle || '').trim());
-        if (salleDuCoursClasse !== salleCourante) {
-          updates.push(updateCoursSalle(coursClasse, salleSelectionnee));
+          updates.push(
+            axios.post(API + '/emploi-du-temps', {
+              classe_id: classeId,
+              matiere_id: null,
+              prof_id: null,
+              jour,
+              heure_debut: creneau.heure_debut,
+              heure_fin: creneau.heure_fin,
+              salle: salleSelectionnee,
+            }, { headers })
+          );
+        } else {
+          const salleDuCoursClasse = String((coursClasse.salle || '').trim());
+          if (salleDuCoursClasse !== salleCourante) {
+            updates.push(updateCoursSalle(coursClasse, salleSelectionnee));
+          }
         }
       }
 
@@ -527,6 +545,15 @@ export default function EmploiDuTemps() {
         <div>
           <div style={styles.card}>
             <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>Sélectionner un professeur</h3>
+            <div style={{maxWidth: 680, marginBottom: 12}}>
+              <label style={{...styles.lbl, marginBottom: 6}}>Remarques</label>
+              <textarea
+                style={{...styles.inp, minHeight: 82, resize: 'vertical'}}
+                value={remarquesDispo}
+                onChange={e => setRemarquesDispo(e.target.value)}
+                placeholder="Ajouter une remarque..."
+              />
+            </div>
             <div style={{maxWidth: 420}}>
               <select
                 style={{...styles.sel, width: '100%'}}
@@ -536,6 +563,7 @@ export default function EmploiDuTemps() {
                   if (!profId) {
                     setProfSelectionne(null);
                     setDispos({});
+                    setRemarquesDispo('');
                     return;
                   }
                   await chargerDispos(profId);

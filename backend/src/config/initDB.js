@@ -30,6 +30,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS branches_specialites TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS lieu_travail_prefere VARCHAR(100)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_lieu_travail TEXT`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_disponibilites TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS doit_changer_mdp BOOLEAN DEFAULT false`);
 
     // Table documents professeurs

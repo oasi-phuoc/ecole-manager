@@ -80,18 +80,26 @@ export default function Professeurs() {
     }
   };
 
-  const chargerBranchesNiveau = async (niveau) => {
-    if (!niveau) { setBranchesDisponibles([]); return; }
+  const chargerBranchesNiveaux = async (niveaux = []) => {
+    if (!niveaux.length) { setBranchesDisponibles([]); return; }
     try {
-      const token = localStorage.getItem('token');
-      const r = await axios.get(API+'/branches', { headers: { Authorization: 'Bearer ' + token } });
-      setBranchesDisponibles(r.data.filter(b => b.niveau === niveau));
+      const r = await axios.get(API+'/branches', { headers });
+      const branchesFiltrees = r.data
+        .filter(b => niveaux.includes(b.niveau))
+        .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i)
+        .sort((a, b) => String(a.designation_courte || a.nom || '').localeCompare(String(b.designation_courte || b.nom || ''), 'fr'));
+      setBranchesDisponibles(branchesFiltrees);
     } catch(err) { setBranchesDisponibles([]); }
   };
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
 
   useEffect(() => { chargerProfs(); }, []);
+  useEffect(() => {
+    if (!showForm) return;
+    const niveaux = (form.niveau_prefere || '').split(',').filter(Boolean);
+    chargerBranchesNiveaux(niveaux);
+  }, [form.niveau_prefere, showForm]);
 
   const chargerProfs = async () => {
     try { const res = await axios.get(API+'/profs',{headers}); setProfs(res.data); }
@@ -135,6 +143,7 @@ export default function Professeurs() {
     const matchS = filtreStatut==='tous' || (filtreStatut==='actif'&&p.actif!==false) || (filtreStatut==='inactif'&&p.actif===false);
     return matchR && matchS;
   });
+  const niveauxPreferesSelectionnes = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
 
   return (
     <div style={s.page}>
@@ -266,17 +275,6 @@ export default function Professeurs() {
                                 const curr = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
                                 const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
                                 setForm({...form, niveau_prefere: newNiv.join(','), branches_specialites:[]});
-                                if (newNiv.length === 1) chargerBranchesNiveau(newNiv[0]);
-                                else if (newNiv.length > 1) {
-                                  const token = localStorage.getItem('token');
-                                  axios.get(API+'/branches', {headers:{Authorization:'Bearer '+token}})
-                                    .then(r => {
-                                    const raw = r.data.filter(b => newNiv.includes(b.niveau));
-                                    const unique = raw.filter((b,i,arr) => arr.findIndex(x=>x.nom===b.nom)===i);
-                                    setBranchesDisponibles(unique);
-                                  })
-                                  .catch(() => {});
-                                } else setBranchesDisponibles([]);
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
                               {n}
@@ -284,31 +282,53 @@ export default function Professeurs() {
                           );
                         })}
                         <button type="button"
-                          onClick={() => { setForm({...form,niveau_prefere:'',branches_specialites:[]}); setBranchesDisponibles([]); }}
+                          onClick={() => { setForm({...form,niveau_prefere:'',branches_specialites:[]}); }}
                           style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!form.niveau_prefere||form.niveau_prefere==='')?'#94a3b8':'#e2e8f0'),background:(!form.niveau_prefere||form.niveau_prefere==='')?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
                           Aucune préférence
                         </button>
                       </div>
                     </div>
-                    {branchesDisponibles.length > 0 && (
+                    {niveauxPreferesSelectionnes.length > 0 && (
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
-                        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                          {branchesDisponibles.map(b => {
-                            const selected = (form.branches_specialites||[]).includes(String(b.id));
-                            return (
-                              <button key={b.id} type="button"
-                                onClick={() => {
-                                  const curr = form.branches_specialites||[];
-                                  const newSel = selected ? curr.filter(x=>x!==String(b.id)) : [...curr, String(b.id)];
-                                  setForm({...form,branches_specialites:newSel});
-                                }}
-                                style={{padding:'6px 14px',borderRadius:99,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
-                                {b.nom}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {branchesDisponibles.length === 0 ? (
+                          <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
+                        ) : (
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
+                            {branchesDisponibles.map(b => {
+                              const selected = (form.branches_specialites||[]).includes(String(b.id));
+                              const labelBranche = b.designation_courte || b.nom;
+                              return (
+                                <button key={b.id} type="button"
+                                  title={b.nom}
+                                  onClick={() => {
+                                    const curr = form.branches_specialites||[];
+                                    const newSel = selected ? curr.filter(x=>x!==String(b.id)) : [...curr, String(b.id)];
+                                    setForm({...form,branches_specialites:newSel});
+                                  }}
+                                  style={{
+                                    height: 34,
+                                    width: '100%',
+                                    borderRadius: 9,
+                                    border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
+                                    background:selected?'#e0e7ff':'white',
+                                    color:selected?'#3730a3':'#64748b',
+                                    cursor:'pointer',
+                                    fontWeight:700,
+                                    fontSize:12,
+                                    transition:'all 0.15s',
+                                    display:'flex',
+                                    alignItems:'center',
+                                    justifyContent:'center',
+                                    textAlign:'center',
+                                    padding:'0 8px'
+                                  }}>
+                                  {labelBranche}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div style={{display:'flex',flexDirection:'column'}}>
