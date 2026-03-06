@@ -491,12 +491,20 @@ export default function EmploiDuTemps() {
     }
   };
   const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
+  const creneauxTheoriquesKeys = new Set(
+    creneaux.map(c => `${c.jour}|${normaliserHeureCreneau(c.heure_debut)}|${normaliserHeureCreneau(c.heure_fin)}`)
+  );
+  const totalCreneauxTheoriques = creneauxTheoriquesKeys.size;
   const suiviSalles = sallesDisponiblesLieu.map(salle => {
-    const coursSalle = coursEmploiDuTemps.filter(c =>
+    const coursSalleFiltres = coursEmploiDuTemps.filter(c =>
       classesPourSallesIds.has(String(c.classe_id)) &&
       String((c.salle || '').trim()) === String(salle)
-    ).length;
-    const complet = coursSalle > 0;
+    );
+    const creneauxSalleKeys = new Set(
+      coursSalleFiltres.map(c => `${c.jour}|${normaliserHeureCreneau(c.heure_debut)}|${normaliserHeureCreneau(c.heure_fin)}`)
+    );
+    const coursSalle = creneauxSalleKeys.size;
+    const complet = totalCreneauxTheoriques > 0 && coursSalle === totalCreneauxTheoriques;
     return { salle, coursSalle, complet };
   });
 
