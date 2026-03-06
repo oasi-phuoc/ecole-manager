@@ -30,3 +30,17 @@ input, select, textarea, button {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+table thead tr {
+  background: #6366f1 !important;
+}
+
+table thead th {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+  border-color: #6366f1 !important;
+}
+
+table thead th * {
+  color: #ffffff !important;
+}

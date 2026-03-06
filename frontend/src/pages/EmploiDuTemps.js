@@ -785,17 +785,6 @@ export default function EmploiDuTemps() {
                       <th style={{...styles.th,width:180,minWidth:180,maxWidth:180}}>Classe</th>
                       {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',minWidth:140}}>{j}</th>)}
                     </tr>
-                    <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-                      <th style={{...styles.th,width:180,minWidth:180,maxWidth:180,textAlign:'center',fontWeight:600,color:'#94a3b8'}}>Totaux</th>
-                      {JOURS.map(j => (
-                        <th key={`${j}-resume`} style={{...styles.th,textAlign:'center',minWidth:140,padding:'6px 10px'}}>
-                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                            <span style={{fontSize:11,color:'#1d4ed8',fontWeight:700}}>M : {resumePeriodesParJour[j].matin}</span>
-                            <span style={{fontSize:11,color:'#92400e',fontWeight:700}}>A : {resumePeriodesParJour[j].apresMidi}</span>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
                   </thead>
                   <tbody>
                     {classesPool.map((cl,ri) => (
@@ -919,8 +908,8 @@ export default function EmploiDuTemps() {
                                       : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
                                 return (
-                                  <td key={prof.id} style={{...styles.td,padding:4,background:indispo?'#eeeeee':'#fff',textAlign:'center'}}>
-                                    <select style={{...styles.cellSel,background:indispo?'#eeeeee':(aff?'#e8f5e9':'#fff')}}
+                                  <td key={prof.id} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
+                                    <select style={{...styles.cellSel,background:indispo?'#e5e7eb':'#fff'}}
                                       value={valeurSelect}
                                       onChange={async e => {
                                         if (indispo) return;
