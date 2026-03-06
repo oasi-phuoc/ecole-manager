@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
+const { getMailSettingsRow, getMailRuntimeConfig, sendEmail } = require('../services/mailer');
 
 const getProfil = async (req, res) => {
   try {
@@ -80,6 +81,116 @@ const modifierParametresEcole = async (req, res) => {
     }
     res.json({ message: 'Parametres mis a jour' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const getParametresMail = async (req, res) => {
+  try {
+    const row = await getMailSettingsRow();
+    const runtime = await getMailRuntimeConfig();
+    res.json({
+      smtp_active: row ? row.smtp_active === true : false,
+      smtp_host: row?.smtp_host || runtime.host || 'smtp.office365.com',
+      smtp_port: row?.smtp_port || runtime.port || 587,
+      smtp_secure: row ? row.smtp_secure === true : false,
+      smtp_user: row?.smtp_user || runtime.user || '',
+      smtp_from_name: row?.smtp_from_name || runtime.fromName || 'Ecole Manager',
+      smtp_from_email: row?.smtp_from_email || runtime.fromEmail || '',
+      has_app_password: Boolean(row?.smtp_app_password),
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const modifierParametresMail = async (req, res) => {
+  const {
+    smtp_active,
+    smtp_host,
+    smtp_port,
+    smtp_secure,
+    smtp_user,
+    smtp_from_name,
+    smtp_from_email,
+    smtp_app_password,
+  } = req.body || {};
+
+  try {
+    const existe = await getMailSettingsRow();
+    const hostValue = (smtp_host || 'smtp.office365.com').trim();
+    const portValue = Number(smtp_port) || 587;
+    const secureValue = smtp_secure === true;
+    const userValue = (smtp_user || '').trim();
+    const fromNameValue = (smtp_from_name || 'Ecole Manager').trim();
+    const fromEmailValue = (smtp_from_email || userValue).trim();
+    const activeValue = smtp_active === true;
+    const appPasswordValue = typeof smtp_app_password === 'string' ? smtp_app_password.trim() : '';
+
+    if (activeValue && (!userValue || (!appPasswordValue && !existe?.smtp_app_password))) {
+      return res.status(400).json({
+        message: "Pour activer l'envoi d'emails, renseignez l'utilisateur SMTP et le mot de passe d'application.",
+      });
+    }
+
+    if (existe) {
+      await pool.query(
+        `UPDATE parametres_mail
+         SET smtp_active=$1, smtp_host=$2, smtp_port=$3, smtp_secure=$4, smtp_user=$5,
+             smtp_app_password=COALESCE(NULLIF($6,''), smtp_app_password),
+             smtp_from_name=$7, smtp_from_email=$8, updated_at=NOW()
+         WHERE id=$9`,
+        [
+          activeValue,
+          hostValue,
+          portValue,
+          secureValue,
+          userValue,
+          appPasswordValue,
+          fromNameValue,
+          fromEmailValue,
+          existe.id,
+        ]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO parametres_mail
+          (smtp_active, smtp_host, smtp_port, smtp_secure, smtp_user, smtp_app_password, smtp_from_name, smtp_from_email)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [activeValue, hostValue, portValue, secureValue, userValue, appPasswordValue, fromNameValue, fromEmailValue]
+      );
+    }
+
+    res.json({ message: 'Parametres email mis a jour' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const envoyerMailTest = async (req, res) => {
+  const { email } = req.body || {};
+  const destinataire = String(email || '').trim();
+  if (!destinataire) return res.status(400).json({ message: 'Email destinataire manquant' });
+
+  try {
+    await sendEmail({
+      to: destinataire,
+      subject: 'Test configuration email - Ecole Manager',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;background:#f8fafc;border-radius:12px">
+          <h2 style="margin:0 0 10px;color:#6366f1">Configuration email OK</h2>
+          <p style="margin:0 0 10px;color:#111827">
+            Ce message confirme que la configuration SMTP admin fonctionne.
+          </p>
+          <p style="margin:0;color:#6b7280;font-size:12px">
+            Si vous utilisez la double authentification Outlook, gardez un mot de passe d'application actif.
+          </p>
+        </div>
+      `,
+      text: 'Configuration email OK. La configuration SMTP admin fonctionne.',
+    });
+    res.json({ message: 'Email de test envoye' });
+  } catch (err) {
+    res.status(400).json({ message: "Echec de l'envoi du mail de test", erreur: err.message });
+  }
 };
 
 const getProfs = async (req, res) => {
@@ -187,4 +298,18 @@ const resetRentree = async (req, res) => {
   });
 };
 
-module.exports = { getProfil, modifierProfil, modifierMotDePasse, getParametresEcole, modifierParametresEcole, getProfs, modifierPermissions, getClassesProf, resetTout, resetRentree };
+module.exports = {
+  getProfil,
+  modifierProfil,
+  modifierMotDePasse,
+  getParametresEcole,
+  modifierParametresEcole,
+  getParametresMail,
+  modifierParametresMail,
+  envoyerMailTest,
+  getProfs,
+  modifierPermissions,
+  getClassesProf,
+  resetTout,
+  resetRentree,
+};

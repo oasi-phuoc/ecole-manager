@@ -151,6 +151,33 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_cfr VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_epl VARCHAR(1)`);
 
+    // Table configuration email (admin)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS parametres_mail (
+        id SERIAL PRIMARY KEY,
+        smtp_active BOOLEAN DEFAULT false,
+        smtp_host VARCHAR(255),
+        smtp_port INTEGER DEFAULT 587,
+        smtp_secure BOOLEAN DEFAULT false,
+        smtp_user VARCHAR(255),
+        smtp_app_password TEXT,
+        smtp_from_name VARCHAR(255),
+        smtp_from_email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_active BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_host VARCHAR(255)`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_port INTEGER DEFAULT 587`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_secure BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_user VARCHAR(255)`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_app_password TEXT`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_from_name VARCHAR(255)`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS smtp_from_email VARCHAR(255)`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
+    await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS categorie VARCHAR(20)`);

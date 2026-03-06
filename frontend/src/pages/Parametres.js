@@ -26,6 +26,21 @@ export default function Parametres() {
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
   const [msgPerms, setMsgPerms] = useState('');
+  const [mail, setMail] = useState({
+    smtp_active: false,
+    smtp_host: 'smtp.office365.com',
+    smtp_port: 587,
+    smtp_secure: false,
+    smtp_user: '',
+    smtp_from_name: 'Ecole Manager',
+    smtp_from_email: '',
+    smtp_app_password: '',
+    has_app_password: false,
+  });
+  const [mailTestTo, setMailTestTo] = useState('');
+  const [msgMail, setMsgMail] = useState('');
+  const [msgMailTest, setMsgMailTest] = useState('');
+  const [testMailLoading, setTestMailLoading] = useState(false);
   const [resetEtape, setResetEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetMsg, setResetMsg] = useState('');
   const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
@@ -36,7 +51,10 @@ export default function Parametres() {
   const isAdmin = profil.role === 'admin';
 
   useEffect(() => { chargerProfil(); }, []);
-  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); } }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); } }, [isAdmin]);
+  useEffect(() => {
+    if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
+  }, [isAdmin, profil?.email, mailTestTo]);
 
   const chargerProfil = async () => {
     try {
@@ -65,6 +83,20 @@ export default function Parametres() {
     try {
       const res = await axios.get(API + '/parametres/profs', { headers });
       setProfs(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const chargerMail = async () => {
+    try {
+      const res = await axios.get(API + '/parametres/mail', { headers });
+      const data = res.data || {};
+      setMail(prev => ({
+        ...prev,
+        ...data,
+        smtp_port: Number(data.smtp_port || 587),
+        smtp_app_password: '',
+      }));
+      setMailTestTo(data.smtp_from_email || profil.email || '');
     } catch (err) { console.error(err); }
   };
 
@@ -112,6 +144,43 @@ export default function Parametres() {
     } catch (err) { setMsgPerms('error'); }
   };
 
+  const handleSauverMail = async (e) => {
+    e.preventDefault();
+    setMsgMail('');
+    try {
+      await axios.put(API + '/parametres/mail', {
+        smtp_active: mail.smtp_active === true,
+        smtp_host: mail.smtp_host,
+        smtp_port: Number(mail.smtp_port || 587),
+        smtp_secure: mail.smtp_secure === true,
+        smtp_user: mail.smtp_user,
+        smtp_from_name: mail.smtp_from_name,
+        smtp_from_email: mail.smtp_from_email,
+        smtp_app_password: mail.smtp_app_password || '',
+      }, { headers });
+      setMsgMail('success');
+      setMail(prev => ({ ...prev, smtp_app_password: '' }));
+      await chargerMail();
+      setTimeout(() => setMsgMail(''), 3500);
+    } catch (err) {
+      setMsgMail(err?.response?.data?.message || 'error');
+    }
+  };
+
+  const handleTesterMail = async () => {
+    if (!mailTestTo) return setMsgMailTest('Veuillez saisir un email de destination');
+    setMsgMailTest('');
+    setTestMailLoading(true);
+    try {
+      await axios.post(API + '/parametres/mail/test', { email: mailTestTo }, { headers });
+      setMsgMailTest('✅ Email de test envoyé');
+    } catch (err) {
+      setMsgMailTest('❌ ' + (err?.response?.data?.message || err.message));
+    } finally {
+      setTestMailLoading(false);
+    }
+  };
+
   const handleReset = async () => {
     setResetEtape(3);
     try {
@@ -140,11 +209,12 @@ export default function Parametres() {
     { key: 'profil', label: '👤 Mon profil', show: true },
     { key: 'mdp', label: '🔒 Mot de passe', show: true },
     { key: 'ecole', label: '🏫 École', show: isAdmin },
+    { key: 'mail', label: '✉️ Envoi des mails', show: isAdmin },
     { key: 'acces', label: '🔑 Gestion des accès', show: isAdmin },
     { key: 'danger', label: '⚠️ Réinitialisation', show: isAdmin },
   ].filter(o => o.show);
 
-  const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', ecole: '#34a853', acces: '#ff9800', danger: '#dc2626' };
+  const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
 
   return (
     <div style={styles.page}>
@@ -293,6 +363,107 @@ export default function Parametres() {
                 </div>
                 <button type="submit" style={{ ...styles.btnSauver, background: '#34a853', marginTop: '10px' }}>💾 Sauvegarder</button>
               </form>
+            </div>
+          )}
+
+          {onglet === 'mail' && isAdmin && (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitre}>✉️ Envoi des mails (admin)</h3>
+              <p style={{ color: '#64748b', fontSize: 14, marginBottom: 16, lineHeight: 1.6 }}>
+                Pour un compte Outlook avec double authentification, utilisez un <b>mot de passe d'application</b>
+                (et non votre mot de passe normal).
+              </p>
+              {msgMail === 'success' && <div style={styles.msgSuccess}>✅ Configuration email enregistrée</div>}
+              {msgMail && msgMail !== 'success' && <div style={styles.msgError}>❌ {msgMail === 'error' ? "Erreur lors de l'enregistrement" : msgMail}</div>}
+
+              <form onSubmit={handleSauverMail}>
+                <div style={styles.formGrid}>
+                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Activer l'envoi d'emails</span>
+                      <label style={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={mail.smtp_active === true}
+                          onChange={e => setMail({ ...mail, smtp_active: e.target.checked })}
+                        />
+                        <span style={{ ...styles.toggleSlider, background: mail.smtp_active ? '#34a853' : '#ccc' }}>
+                          <span style={{ ...styles.toggleThumb, left: mail.smtp_active ? '22px' : '2px' }} />
+                        </span>
+                      </label>
+                    </label>
+                  </div>
+
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Serveur SMTP</label>
+                    <input style={styles.input} type="text" value={mail.smtp_host || ''} onChange={e => setMail({ ...mail, smtp_host: e.target.value })} placeholder="smtp.office365.com" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Port SMTP</label>
+                    <input style={styles.input} type="number" value={mail.smtp_port || 587} onChange={e => setMail({ ...mail, smtp_port: e.target.value })} placeholder="587" />
+                  </div>
+
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Utilisateur SMTP (email)</label>
+                    <input style={styles.input} type="email" value={mail.smtp_user || ''} onChange={e => setMail({ ...mail, smtp_user: e.target.value })} placeholder="thanh-phuoc.van@admin.vs.ch" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Mot de passe d'application (MFA)</label>
+                    <input
+                      style={styles.input}
+                      type="password"
+                      value={mail.smtp_app_password || ''}
+                      onChange={e => setMail({ ...mail, smtp_app_password: e.target.value })}
+                      placeholder={mail.has_app_password ? 'Laisser vide pour conserver le mot de passe existant' : 'Coller le mot de passe d application'}
+                    />
+                  </div>
+
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Nom expéditeur</label>
+                    <input style={styles.input} type="text" value={mail.smtp_from_name || ''} onChange={e => setMail({ ...mail, smtp_from_name: e.target.value })} placeholder="Ecole Manager" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Email expéditeur</label>
+                    <input style={styles.input} type="email" value={mail.smtp_from_email || ''} onChange={e => setMail({ ...mail, smtp_from_email: e.target.value })} placeholder="thanh-phuoc.van@admin.vs.ch" />
+                  </div>
+
+                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Connexion sécurisée (TLS implicite / port 465)</span>
+                      <label style={styles.toggle}>
+                        <input
+                          type="checkbox"
+                          checked={mail.smtp_secure === true}
+                          onChange={e => setMail({ ...mail, smtp_secure: e.target.checked, smtp_port: e.target.checked ? 465 : 587 })}
+                        />
+                        <span style={{ ...styles.toggleSlider, background: mail.smtp_secure ? '#34a853' : '#ccc' }}>
+                          <span style={{ ...styles.toggleThumb, left: mail.smtp_secure ? '22px' : '2px' }} />
+                        </span>
+                      </label>
+                    </label>
+                  </div>
+                </div>
+
+                <button type="submit" style={{ ...styles.btnSauver, background: '#7c3aed', marginTop: '10px' }}>💾 Sauvegarder la configuration</button>
+              </form>
+
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: 16, color: '#111827' }}>🧪 Tester l'envoi</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'end' }}>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Email destinataire test</label>
+                    <input style={styles.input} type="email" value={mailTestTo} onChange={e => setMailTestTo(e.target.value)} placeholder="votre.email@exemple.ch" />
+                  </div>
+                  <button type="button" style={{ ...styles.btnSauver, background: '#0ea5e9', opacity: testMailLoading ? 0.7 : 1 }} onClick={handleTesterMail} disabled={testMailLoading}>
+                    {testMailLoading ? '⏳ Envoi...' : '📨 Envoyer un test'}
+                  </button>
+                </div>
+                {msgMailTest && (
+                  <div style={{ marginTop: 12, fontWeight: 600, color: msgMailTest.startsWith('✅') ? '#166534' : '#b91c1c' }}>
+                    {msgMailTest}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { sendEmail } = require('../services/mailer');
 
 const CHAMPS = 'id, nom, prenom, email, actif, created_at, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis, niveau_prefere, branches_specialites, lieu_travail_prefere, remarque_lieu_travail';
 
@@ -79,21 +80,8 @@ const envoyerAcces = async (req, res) => {
     const hash = await bcrypt.hash(mdp, 10);
     await pool.query('UPDATE utilisateurs SET mot_de_passe=$1, doit_changer_mdp=true WHERE id=$2', [hash, id]);
 
-    // Envoyer email
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: 'smtp-mail.outlook.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: { ciphers: 'SSLv3' }
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    // Envoyer email (configuration depuis Parametres > Envoi des mails)
+    await sendEmail({
       to: prof.email,
       subject: 'Vos accès École Manager',
       html: `
@@ -108,7 +96,8 @@ const envoyerAcces = async (req, res) => {
           <p style="color:#ef4444;font-weight:bold">⚠️ Vous devrez changer ce mot de passe lors de votre première connexion.</p>
           <p style="color:#94a3b8;font-size:12px">Ce message a été envoyé automatiquement, merci de ne pas y répondre.</p>
         </div>
-      `
+      `,
+      text: `Bonjour ${prof.prenom} ${prof.nom}, vos acces Ecole Manager sont prets. Email: ${prof.email}. Mot de passe temporaire: ${mdp}.`
     });
 
     res.json({ message: 'Email envoyé à ' + prof.email });
