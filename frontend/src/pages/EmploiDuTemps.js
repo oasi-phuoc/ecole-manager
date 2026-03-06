@@ -526,15 +526,28 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={styles.card}>
-            <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>👨‍🏫 Sélectionner un professeur</h3>
-            <div style={{...styles.flexWrap, gap:12, marginTop:8}}>
-              {profs.map(p => (
-                <button key={p.id} style={{...styles.chip,...(profSelectionne==p.id?styles.chipActif:{})}}
-                  onClick={() => chargerDispos(p.id)}>
-                  <span style={styles.chipNom}>{p.prenom}</span>
-                  <span style={styles.chipPrenom}>{p.nom}</span>
-                </button>
-              ))}
+            <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>Sélectionner un professeur</h3>
+            <div style={{maxWidth: 420}}>
+              <select
+                style={{...styles.sel, width: '100%'}}
+                value={profSelectionne || ''}
+                onChange={async e => {
+                  const profId = e.target.value;
+                  if (!profId) {
+                    setProfSelectionne(null);
+                    setDispos({});
+                    return;
+                  }
+                  await chargerDispos(profId);
+                }}
+              >
+                <option value="">— Sélectionner un professeur —</option>
+                {profs.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom} {p.prenom}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
