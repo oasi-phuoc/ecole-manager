@@ -69,7 +69,9 @@ export default function Eleves() {
   const [showSanctions, setShowSanctions] = useState(false);
   const [sanctionsEleve, setSanctionsEleve] = useState(null);
   const [eleveSanctions, setEleveSanctions] = useState([]);
+  const [sanctionsObservations, setSanctionsObservations] = useState([]);
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
+  const [editSanction, setEditSanction] = useState(null);
   const [pendingCell, setPendingCell] = useState(null);
   const [showObs, setShowObs] = useState(false);
   const [obsEleve, setObsEleve] = useState(null);
@@ -218,21 +220,35 @@ export default function Eleves() {
   };
 
   const ouvrirSanctions = async (el) => {
-    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null);
-    try { const r = await axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}); setEleveSanctions(r.data); }
-    catch(err) { setEleveSanctions([]); }
+    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null); setEditSanction(null);
+    try {
+      const [sanctionsRes, obsRes] = await Promise.all([
+        axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}),
+        axios.get(API+'/observations/eleve/'+el.id, {headers}),
+      ]);
+      setEleveSanctions(sanctionsRes.data || []);
+      setSanctionsObservations(obsRes.data || []);
+    } catch(err) {
+      setEleveSanctions([]);
+      setSanctionsObservations([]);
+    }
     setSanctionsLoading(false);
   };
 
   const confirmerSanction = async () => {
     if (!pendingCell) return;
+    if (!pendingCell.observation_ref) {
+      alert("Veuillez sélectionner une référence d'observation.");
+      return;
+    }
     try {
       await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle,
         infraction: pendingCell.infraction,
         niveau: pendingCell.niveau,
         date_sanction: pendingCell.date_sanction || null,
-        prof_nom: pendingCell.prof_nom || null
+        prof_nom: pendingCell.prof_nom || null,
+        observation_ref: pendingCell.observation_ref || null,
       }, {headers});
       const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data); setPendingCell(null);
@@ -243,6 +259,22 @@ export default function Eleves() {
     if (!window.confirm('Retirer cette sanction ?')) return;
     await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
+  };
+
+  const sauvegarderEditionSanction = async () => {
+    if (!editSanction) return;
+    try {
+      await axios.put(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
+        date_sanction: editSanction.date_sanction || null,
+        prof_nom: editSanction.prof_nom || null,
+        observation_ref: editSanction.observation_ref || null,
+      }, {headers});
+      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      setEleveSanctions(r.data || []);
+      setEditSanction(null);
+    } catch(err) {
+      alert('Erreur: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   const ouvrirObservations = async (el) => {
@@ -640,6 +672,18 @@ export default function Eleves() {
                                       <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
                                         📅 {pendingCell.date_sanction ? new Date(pendingCell.date_sanction+'T00:00:00').toLocaleDateString('fr-CH') : ''}
                                       </div>
+                                      <select
+                                        value={pendingCell.observation_ref || ''}
+                                        onChange={e => setPendingCell(prev => ({ ...prev, observation_ref: e.target.value }))}
+                                        style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                      >
+                                        <option value="">Réf. observation</option>
+                                        {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                          <option key={o.id} value={o.reference_obs}>
+                                            {o.reference_obs}
+                                          </option>
+                                        ))}
+                                      </select>
                                       <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
                                         👤 {pendingCell.prof_nom}
                                       </div>
@@ -649,18 +693,78 @@ export default function Eleves() {
                                       </div>
                                     </div>
                                   ) : sanction ? (
-                                    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                                      <span style={{fontSize:16}}>✅</span>
-                                      <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}</span>
-                                      <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
-                                      {isAdmin() && <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0}} title="Retirer">🗑️</button>}
-                                    </div>
+                                    editSanction && editSanction.id === sanction.id ? (
+                                      <div style={{display:'flex',flexDirection:'column',gap:3,textAlign:'left'}}>
+                                        <input
+                                          type="date"
+                                          value={editSanction.date_sanction || ''}
+                                          onChange={e => setEditSanction(prev => ({...prev, date_sanction: e.target.value}))}
+                                          style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                        />
+                                        <select
+                                          value={editSanction.observation_ref || ''}
+                                          onChange={e => setEditSanction(prev => ({...prev, observation_ref: e.target.value}))}
+                                          style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                        >
+                                          <option value="">Réf. observation</option>
+                                          {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                            <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
+                                          ))}
+                                        </select>
+                                        <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
+                                          👤 {editSanction.prof_nom || ''}
+                                        </div>
+                                        <div style={{display:'flex',gap:4}}>
+                                          <button onClick={sauvegarderEditionSanction} style={{flex:1,padding:'3px 0',background:'#10b981',color:'white',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:600}}>✓ OK</button>
+                                          <button onClick={() => setEditSanction(null)} style={{flex:1,padding:'3px 0',background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:4,cursor:'pointer',fontSize:11}}>✕</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:6}}>
+                                        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:2}}>
+                                          <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>
+                                            {sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}
+                                            {sanction.observation_ref ? ' · ' : ''}
+                                            {sanction.observation_ref ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const obs = sanctionsObservations.find(o => o.reference_obs === sanction.observation_ref);
+                                                  if (!obs) return alert('Observation introuvable.');
+                                                  alert(`${obs.reference_obs || ''}\n\nTitre: ${obs.titre || ''}\n\nRemarque: ${obs.contenu || ''}\n\nMesure: ${obs.mesure_prise || '—'}`);
+                                                }}
+                                                style={{background:'none',border:'none',padding:0,margin:0,color:'#1d4ed8',cursor:'pointer',fontSize:9,fontWeight:700,textDecoration:'underline'}}
+                                              >
+                                                {sanction.observation_ref}
+                                              </button>
+                                            ) : null}
+                                          </span>
+                                          <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
+                                        </div>
+                                        {isAdmin() && (
+                                          <div style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
+                                            <button onClick={() => setEditSanction({
+                                              id: sanction.id,
+                                              date_sanction: sanction.date_sanction ? String(sanction.date_sanction).substring(0,10) : '',
+                                              observation_ref: sanction.observation_ref || '',
+                                              prof_nom: sanction.prof_nom || ''
+                                            })} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#475569',padding:0,lineHeight:1}} title="Modifier">✏️</button>
+                                            <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0,lineHeight:1}} title="Retirer">🗑️</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
                                   ) : (
                                     isAdmin() ? (
                                       <button onClick={() => {
+                                        const refs = sanctionsObservations.filter(o => o.reference_obs);
+                                        if (refs.length === 0) {
+                                          alert("Aucune observation avec référence n'est disponible pour cet élève.");
+                                          return;
+                                        }
                                         const today = new Date().toISOString().split('T')[0];
                                         const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom});
+                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0].reference_obs});
                                       }}
                                       style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
                                     ) : (
@@ -780,7 +884,10 @@ export default function Eleves() {
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                       <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
+                        <span style={{fontSize:11,color:'#94a3b8'}}>
+                          {new Date(obs.created_at).toLocaleDateString('fr-CH')}
+                          {obs.reference_obs ? ` · ${obs.reference_obs}` : ''}
+                        </span>
                         {peutModifier && <>
                           <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Modifier">✏️</button>
                           <button onClick={async () => {

@@ -91,7 +91,8 @@ const initDB = async () => {
     `);
 
     // Table sanctions élèves
-    await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), created_at TIMESTAMP DEFAULT NOW());`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS sanctions_eleves (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, echelle INTEGER NOT NULL, infraction VARCHAR(100) NOT NULL, niveau VARCHAR(100) NOT NULL, date_sanction DATE, prof_nom VARCHAR(200), observation_ref VARCHAR(50), created_at TIMESTAMP DEFAULT NOW());`);
+    await pool.query(`ALTER TABLE sanctions_eleves ADD COLUMN IF NOT EXISTS observation_ref VARCHAR(50)`);
 
     // Tables planning
     await pool.query(`CREATE TABLE IF NOT EXISTS creneaux (id SERIAL PRIMARY KEY, jour VARCHAR(20), heure_debut TIME, heure_fin TIME, periode VARCHAR(50), ordre INTEGER);`);
@@ -106,7 +107,8 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS planning_branches (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, UNIQUE(classe_id, matiere_id, pool_id));`);
 
     // Table observations élèves
-    await pool.query(`CREATE TABLE IF NOT EXISTS observations (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, titre VARCHAR(200), contenu TEXT, mesure_prise TEXT, intervention_responsable BOOLEAN DEFAULT false, demande_entretien BOOLEAN DEFAULT false, auteur_id INTEGER REFERENCES utilisateurs(id), created_at TIMESTAMP DEFAULT NOW());`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS observations (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, reference_obs VARCHAR(50), titre VARCHAR(200), contenu TEXT, mesure_prise TEXT, intervention_responsable BOOLEAN DEFAULT false, demande_entretien BOOLEAN DEFAULT false, auteur_id INTEGER REFERENCES utilisateurs(id), created_at TIMESTAMP DEFAULT NOW());`);
+    await pool.query(`ALTER TABLE observations ADD COLUMN IF NOT EXISTS reference_obs VARCHAR(50)`);
 
     // Table plan de classe
     await pool.query(`CREATE TABLE IF NOT EXISTS plan_classe (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE UNIQUE, positions TEXT, updated_at TIMESTAMP);`);

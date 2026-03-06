@@ -42,6 +42,7 @@ router.delete('/:id/documents/:docId', autoriser('admin'), c.supprimerDocumentEl
 
 router.get('/:id/sanctions', c.getSanctionsEleve);
 router.post('/:id/sanctions', autoriser('admin'), c.ajouterSanction);
+router.put('/:id/sanctions/:sanctionId', autoriser('admin'), c.modifierSanction);
 router.delete('/:id/sanctions/:sanctionId', autoriser('admin'), c.supprimerSanction);
 
 module.exports = router;

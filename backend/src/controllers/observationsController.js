@@ -16,9 +16,29 @@ const getObservations = async (req, res) => {
 const creerObservation = async (req, res) => {
   const { titre, contenu, mesure_prise, intervention_responsable, demande_entretien } = req.body;
   try {
+    const classeRes = await pool.query(`
+      SELECT c.id as classe_id, c.nom as classe_nom
+      FROM eleves e
+      LEFT JOIN classes c ON c.id = e.classe_id
+      WHERE e.id = $1
+    `, [req.params.eleve_id]);
+    const classeId = classeRes.rows[0]?.classe_id || null;
+    const classeNom = classeRes.rows[0]?.classe_nom || 'CLASSE';
+    const prefix = String(classeNom).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'CLASSE';
+    let referenceObs = `${prefix}-RA-1`;
+    if (classeId) {
+      const seqRes = await pool.query(`
+        SELECT COUNT(*)::int AS nb
+        FROM observations o
+        JOIN eleves e ON e.id = o.eleve_id
+        WHERE e.classe_id = $1
+      `, [classeId]);
+      const nextNum = (seqRes.rows[0]?.nb || 0) + 1;
+      referenceObs = `${prefix}-RA-${nextNum}`;
+    }
     const r = await pool.query(
-      'INSERT INTO observations (eleve_id, titre, contenu, mesure_prise, intervention_responsable, demande_entretien, auteur_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [req.params.eleve_id, titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.user.id]
+      'INSERT INTO observations (eleve_id, reference_obs, titre, contenu, mesure_prise, intervention_responsable, demande_entretien, auteur_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+      [req.params.eleve_id, referenceObs, titre, contenu, mesure_prise||null, intervention_responsable||false, demande_entretien||false, req.user.id]
     );
     res.status(201).json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

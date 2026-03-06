@@ -232,7 +232,7 @@ const supprimerDocumentEleve = async (req, res) => {
 const getSanctionsEleve = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, echelle, infraction, niveau, date_sanction, prof_nom, created_at FROM sanctions_eleves WHERE eleve_id=$1 ORDER BY echelle, infraction, niveau',
+      'SELECT id, echelle, infraction, niveau, date_sanction, prof_nom, observation_ref, created_at FROM sanctions_eleves WHERE eleve_id=$1 ORDER BY echelle, infraction, niveau',
       [req.params.id]
     );
     res.json(result.rows);
@@ -240,7 +240,7 @@ const getSanctionsEleve = async (req, res) => {
 };
 
 const ajouterSanction = async (req, res) => {
-  const { echelle, infraction, niveau, date_sanction, prof_nom } = req.body;
+  const { echelle, infraction, niveau, date_sanction, prof_nom, observation_ref } = req.body;
   try {
     const exists = await pool.query(
       'SELECT id FROM sanctions_eleves WHERE eleve_id=$1 AND echelle=$2 AND infraction=$3 AND niveau=$4',
@@ -248,10 +248,22 @@ const ajouterSanction = async (req, res) => {
     );
     if (exists.rows.length > 0) return res.status(409).json({ message: 'Sanction déjà enregistrée' });
     const result = await pool.query(
-      'INSERT INTO sanctions_eleves (eleve_id, echelle, infraction, niveau, date_sanction, prof_nom) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [req.params.id, echelle, infraction, niveau, date_sanction || null, prof_nom || null]
+      'INSERT INTO sanctions_eleves (eleve_id, echelle, infraction, niveau, date_sanction, prof_nom, observation_ref) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [req.params.id, echelle, infraction, niveau, date_sanction || null, prof_nom || null, observation_ref || null]
     );
     res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const modifierSanction = async (req, res) => {
+  const { date_sanction, prof_nom, observation_ref } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE sanctions_eleves SET date_sanction=$1, prof_nom=$2, observation_ref=$3 WHERE id=$4 AND eleve_id=$5 RETURNING *',
+      [date_sanction || null, prof_nom || null, observation_ref || null, req.params.sanctionId, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ message: 'Sanction non trouvée' });
+    res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
@@ -262,4 +274,4 @@ const supprimerSanction = async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
-module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve, updatePhoto, getElevesOASI, getDocumentsEleve, uploadDocumentEleve, telechargerDocumentEleve, supprimerDocumentEleve, getSanctionsEleve, ajouterSanction, supprimerSanction };
+module.exports = { getEleves, getEleve, creerEleve, modifierEleve, supprimerEleve, updatePhoto, getElevesOASI, getDocumentsEleve, uploadDocumentEleve, telechargerDocumentEleve, supprimerDocumentEleve, getSanctionsEleve, ajouterSanction, modifierSanction, supprimerSanction };
