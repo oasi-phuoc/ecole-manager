@@ -383,11 +383,94 @@ export default function EmploiDuTemps() {
   ).sort((a, b) => a.localeCompare(b, 'fr'));
   const sallesFixesLieu = SALLES_FIXES_PAR_LIEU[normaliserLieuTravail(sallesLieuTravailId)] || [];
   const sallesDisponiblesLieu = sallesFixesLieu.length ? sallesFixesLieu : sallesDisponiblesLieuDyn;
-  const classesFiltreesSalles = classesPourSalles.filter(cl =>
-    !salleSelectionnee || cl.sallesClasse.includes(salleSelectionnee)
-  );
+  const classesFiltreesSalles = salleSelectionnee ? classesPourSalles : [];
   const classesSallesParCellule = (jour, periode) =>
     classesFiltreesSalles.filter(cl => classeAHoraire(cl.id, jour, periode));
+  const normaliserHeureCreneau = (heure) => String(heure || '').slice(0, 5);
+  const getCreneauCelluleSalle = (jour, periode, ordre) =>
+    creneaux.find(c => c.jour === jour && c.periode === periode && c.ordre === ordre);
+  const getCoursClasseCellule = (classeId, jour, creneau) => {
+    if (!creneau) return null;
+    const debut = normaliserHeureCreneau(creneau.heure_debut);
+    const fin = normaliserHeureCreneau(creneau.heure_fin);
+    return coursEmploiDuTemps.find(c =>
+      String(c.classe_id) === String(classeId) &&
+      c.jour === jour &&
+      normaliserHeureCreneau(c.heure_debut) === debut &&
+      normaliserHeureCreneau(c.heure_fin) === fin
+    ) || null;
+  };
+  const getClassesAffectablesSalleCellule = (jour, periode, ordre) => {
+    const creneau = getCreneauCelluleSalle(jour, periode, ordre);
+    if (!creneau) return [];
+    return classesSallesParCellule(jour, periode).filter(cl => Boolean(getCoursClasseCellule(cl.id, jour, creneau)));
+  };
+  const getClasseAffecteeSalleCellule = (jour, periode, ordre) => {
+    if (!salleSelectionnee) return '';
+    const creneau = getCreneauCelluleSalle(jour, periode, ordre);
+    if (!creneau) return '';
+    const debut = normaliserHeureCreneau(creneau.heure_debut);
+    const fin = normaliserHeureCreneau(creneau.heure_fin);
+    const cours = coursEmploiDuTemps.find(c =>
+      c.jour === jour &&
+      normaliserHeureCreneau(c.heure_debut) === debut &&
+      normaliserHeureCreneau(c.heure_fin) === fin &&
+      String((c.salle || '').trim()) === String((salleSelectionnee || '').trim())
+    );
+    return cours ? String(cours.classe_id) : '';
+  };
+  const updateCoursSalle = async (cours, nouvelleSalle) => {
+    await axios.put(API + '/emploi-du-temps/' + cours.id, {
+      classe_id: cours.classe_id,
+      matiere_id: cours.matiere_id,
+      prof_id: cours.prof_id,
+      jour: cours.jour,
+      heure_debut: cours.heure_debut,
+      heure_fin: cours.heure_fin,
+      salle: nouvelleSalle || null,
+    }, { headers });
+  };
+  const handleAffectationSalleChange = async ({ jour, periode, ordre, classeId }) => {
+    if (!isAdmin() || !salleSelectionnee) return;
+    const creneau = getCreneauCelluleSalle(jour, periode, ordre);
+    if (!creneau) return;
+    try {
+      const debut = normaliserHeureCreneau(creneau.heure_debut);
+      const fin = normaliserHeureCreneau(creneau.heure_fin);
+      const coursDuCreneau = coursEmploiDuTemps.filter(c =>
+        c.jour === jour &&
+        normaliserHeureCreneau(c.heure_debut) === debut &&
+        normaliserHeureCreneau(c.heure_fin) === fin
+      );
+      const updates = [];
+      const salleCourante = String((salleSelectionnee || '').trim());
+
+      coursDuCreneau.forEach(c => {
+        const salleDuCours = String((c.salle || '').trim());
+        if (salleDuCours === salleCourante && String(c.classe_id) !== String(classeId || '')) {
+          updates.push(updateCoursSalle(c, null));
+        }
+      });
+
+      if (classeId) {
+        const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classeId));
+        if (!coursClasse) {
+          alert('Aucun cours trouvé pour cette classe sur ce créneau.');
+          return;
+        }
+        const salleDuCoursClasse = String((coursClasse.salle || '').trim());
+        if (salleDuCoursClasse !== salleCourante) {
+          updates.push(updateCoursSalle(coursClasse, salleSelectionnee));
+        }
+      }
+
+      if (updates.length === 0) return;
+      await Promise.all(updates);
+      await chargerTout();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation de la salle.");
+    }
+  };
   const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
   const suiviSalles = sallesDisponiblesLieu.map(salle => {
     const coursSalle = coursEmploiDuTemps.filter(c =>
@@ -1077,21 +1160,28 @@ export default function EmploiDuTemps() {
                                     P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                                   </td>
                                   {JOURS.map(jour => {
-                                    const classesCellule = classesSallesParCellule(jour, periode);
+                                    const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
+                                    const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
                                     return (
                                       <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
-                                        {classesCellule.length === 0 ? (
-                                          <span style={{color:'#94a3b8',fontWeight:600,fontSize:12}}>—</span>
-                                        ) : (
-                                          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                                            {classesCellule.map(cl => (
-                                              <div key={`${jour}-${periode}-${cl.id}`} style={{background:'#eefcf2',border:'1px solid #d1fadf',borderRadius:8,padding:'6px 8px'}}>
-                                                <div style={{fontSize:12,fontWeight:800,color:'#166534'}}>{cl.nom}</div>
-                                                <div style={{fontSize:11,color:'#065f46'}}>{cl.poolsClasseLieu.map(p => p.nom).join(', ')}</div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
+                                        <select
+                                          style={{...styles.cellSel, minWidth: 160}}
+                                          value={classeAffectee}
+                                          onChange={e => handleAffectationSalleChange({
+                                            jour,
+                                            periode,
+                                            ordre: crBase.ordre,
+                                            classeId: e.target.value,
+                                          })}
+                                          disabled={!isAdmin() || classesCellule.length === 0}
+                                        >
+                                          <option value="">— Aucune classe —</option>
+                                          {classesCellule.map(cl => (
+                                            <option key={`${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
+                                              {cl.nom}
+                                            </option>
+                                          ))}
+                                        </select>
                                       </td>
                                     );
                                   })}
