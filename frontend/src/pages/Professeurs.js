@@ -86,9 +86,31 @@ export default function Professeurs() {
       const r = await axios.get(API+'/branches', { headers });
       const branchesFiltrees = r.data
         .filter(b => niveaux.includes(b.niveau))
-        .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i)
-        .sort((a, b) => String(a.designation_courte || a.nom || '').localeCompare(String(b.designation_courte || b.nom || ''), 'fr'));
-      setBranchesDisponibles(branchesFiltrees);
+        .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i);
+
+      // Regrouper les branches par désignation courte pour éviter les doublons (ex: FR sur plusieurs niveaux)
+      const branchesParCode = new Map();
+      branchesFiltrees.forEach((b) => {
+        const code = String(b.designation_courte || b.nom || '').trim().toUpperCase();
+        if (!code) return;
+        if (!branchesParCode.has(code)) {
+          branchesParCode.set(code, {
+            id: code,
+            label: code,
+            noms: [String(b.nom || '').trim()].filter(Boolean),
+            ids: [String(b.id)],
+          });
+          return;
+        }
+        const existant = branchesParCode.get(code);
+        existant.ids.push(String(b.id));
+        const nom = String(b.nom || '').trim();
+        if (nom && !existant.noms.includes(nom)) existant.noms.push(nom);
+      });
+
+      const options = Array.from(branchesParCode.values())
+        .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+      setBranchesDisponibles(options);
     } catch(err) { setBranchesDisponibles([]); }
   };
   const token = localStorage.getItem('token');
@@ -296,14 +318,18 @@ export default function Professeurs() {
                         ) : (
                           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
                             {branchesDisponibles.map(b => {
-                              const selected = (form.branches_specialites||[]).includes(String(b.id));
-                              const labelBranche = b.designation_courte || b.nom;
+                              const selected = (b.ids || []).some(id => (form.branches_specialites||[]).includes(String(id)));
                               return (
                                 <button key={b.id} type="button"
-                                  title={b.nom}
+                                  title={(b.noms || []).join(' / ')}
                                   onClick={() => {
                                     const curr = form.branches_specialites||[];
-                                    const newSel = selected ? curr.filter(x=>x!==String(b.id)) : [...curr, String(b.id)];
+                                    let newSel;
+                                    if (selected) {
+                                      newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
+                                    } else {
+                                      newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
+                                    }
                                     setForm({...form,branches_specialites:newSel});
                                   }}
                                   style={{
@@ -323,7 +349,7 @@ export default function Professeurs() {
                                     textAlign:'center',
                                     padding:'0 8px'
                                   }}>
-                                  {labelBranche}
+                                  {b.label}
                                 </button>
                               );
                             })}

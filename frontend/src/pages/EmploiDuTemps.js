@@ -544,19 +544,10 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={styles.card}>
-            <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>Sélectionner un professeur</h3>
-            <div style={{maxWidth: 680, marginBottom: 12}}>
-              <label style={{...styles.lbl, marginBottom: 6}}>Remarques</label>
-              <textarea
-                style={{...styles.inp, minHeight: 82, resize: 'vertical'}}
-                value={remarquesDispo}
-                onChange={e => setRemarquesDispo(e.target.value)}
-                placeholder="Ajouter une remarque..."
-              />
-            </div>
-            <div style={{maxWidth: 420}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
+              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
               <select
-                style={{...styles.sel, width: '100%'}}
+                style={{...styles.sel, width: 360, maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
@@ -591,38 +582,49 @@ export default function EmploiDuTemps() {
                 {isAdmin() && <button style={styles.btnBleu} onClick={sauverDispos}>💾 Sauvegarder</button>}
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
-                <table style={{...styles.tbl, tableLayout:'fixed', minWidth:860}}>
-                  <thead>
-                    <tr>
-                      <th style={{...styles.thA, width:160, minWidth:160, maxWidth:160}}>Période</th>
-                      {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {['Matin','Après-midi'].map(periode => {
-                      const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
-                      return crsLundi.map((crBase, idx) => (
-                        <tr key={crBase.id}>
-                          <td style={{...styles.tdPer, width:160, minWidth:160, maxWidth:160}}>
-                            <span style={styles.periodeTag}>{periode}</span>
-                            <span style={styles.periodeNum}>Période {idx+1}</span>
-                          </td>
-                          {JOURS.map(jour => {
-                            const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
-                            if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
-                            const ok = dispos[cr.id] !== false;
-                            return (
-                              <td key={jour} style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default'}}
-                                onClick={() => isAdmin() && toggleDispo(cr.id)}>
-                                <span style={{fontSize:24, lineHeight:1, color:ok?'#16a34a':'#dc2626'}}>●</span>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ));
-                    })}
-                  </tbody>
-                </table>
+                <div style={{minWidth:860, width:'100%'}}>
+                  <div style={{marginBottom:12}}>
+                    <label style={{...styles.lbl, marginBottom: 6}}>Remarques</label>
+                    <textarea
+                      style={{...styles.inp, width:'100%', minHeight:82, resize:'vertical'}}
+                      value={remarquesDispo}
+                      onChange={e => setRemarquesDispo(e.target.value)}
+                      placeholder="Ajouter une remarque..."
+                    />
+                  </div>
+                  <table style={{...styles.tbl, tableLayout:'fixed', width:'100%'}}>
+                    <thead>
+                      <tr>
+                        <th style={{...styles.thA, width:160, minWidth:160, maxWidth:160}}>Période</th>
+                        {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {['Matin','Après-midi'].map(periode => {
+                        const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
+                        return crsLundi.map((crBase, idx) => (
+                          <tr key={crBase.id}>
+                            <td style={{...styles.tdPer, width:160, minWidth:160, maxWidth:160}}>
+                              <span style={styles.periodeTag}>{periode}</span>
+                              <span style={styles.periodeNum}>Période {idx+1}</span>
+                            </td>
+                            {JOURS.map(jour => {
+                              const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
+                              if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
+                              const ok = dispos[cr.id] !== false;
+                              return (
+                                <td key={jour} style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default'}}
+                                  onClick={() => isAdmin() && toggleDispo(cr.id)}>
+                                  <span style={{fontSize:24, lineHeight:1, color:ok?'#16a34a':'#dc2626'}}>●</span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ));
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
