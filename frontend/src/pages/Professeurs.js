@@ -429,7 +429,7 @@ export default function Professeurs() {
               <th style={s.th}>Naissance</th>
               <th style={{...s.th, width:98, minWidth:98, maxWidth:98, textAlign:'center'}}>Documents</th>
               <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Statut</th>
-              {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
+              {isAdmin() && <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -449,7 +449,7 @@ export default function Professeurs() {
                   </button>
                 </td>
                 {isAdmin() && (
-                  <td style={{...s.td,width:92,minWidth:92,maxWidth:92,textAlign:'center'}}>
+                  <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center',whiteSpace:'nowrap'}}>
                     <button
                       onClick={() => envoyerAccesEmail(p.id)}
                       disabled={emailEnvoi[p.id]==='loading'}
