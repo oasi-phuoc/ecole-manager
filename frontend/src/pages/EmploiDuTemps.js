@@ -633,10 +633,10 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={styles.card}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
               <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
               <select
-                style={{...styles.sel, width: 360, maxWidth:'100%'}}
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
@@ -1274,7 +1274,7 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
                     <button
                       type="button"
                       style={{...styles.affTabBtn, ...(modeAffectationRapideClasse ? styles.affTabBtnActif : {})}}
@@ -1285,7 +1285,7 @@ export default function EmploiDuTemps() {
                     {modeAffectationRapideClasse && (
                       <>
                         <select
-                          style={{...styles.sel, minWidth:260}}
+                          style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
                           value={classeRapideId}
                           onChange={e => setClasseRapideId(e.target.value)}
                           disabled={!sallesLieuTravailId}
