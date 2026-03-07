@@ -23,6 +23,7 @@ const COULEURS = [
 ];
 const COULEURS_CLASSES_DISPONIBLES = [
   '#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12',
+  '#f59e0b', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#a855f7', '#d946ef', '#ec4899',
   '#fecaca', '#fed7aa', '#fef3c7', '#d9f99d', '#bbf7d0', '#a7f3d0', '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8'
 ];
 const HORAIRES_DEFAUT = [
@@ -634,10 +635,11 @@ export default function EmploiDuTemps() {
   );
   const totalCreneauxTheoriques = creneauxTheoriquesKeys.size;
   const getCouleurClasse = (classeId) => {
-    const id = String(classeId);
-    if (couleursClassesMap[id]) return couleursClassesMap[id];
+    const id = String(classeId || '').trim();
+    if (!id) return '#ffffff';
     const indexClasse = classes.findIndex(c => String(c.id) === id);
-    if (indexClasse < 0) return COULEURS_CLASSES_DISPONIBLES[0];
+    if (indexClasse < 0) return '#ffffff';
+    if (couleursClassesMap[id]) return couleursClassesMap[id];
     return COULEURS_CLASSES_DISPONIBLES[indexClasse % COULEURS_CLASSES_DISPONIBLES.length];
   };
   const sauverCouleurClasse = async (classeId, couleur) => {
@@ -717,6 +719,229 @@ export default function EmploiDuTemps() {
   const periodesRequisesDispo = profDispoSelectionne ? getPeriodesRequisesPourTaux(profDispoSelectionne) : 0;
   const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
   const couleurCompteurDispo = periodesSelectionneesDispo < periodesRequisesDispo ? '#dc2626' : '#16a34a';
+  const escapeHtml = (val) => String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  const baseCreneauxPeriode = (liste, periode) =>
+    (liste || [])
+      .filter(c => c.jour === 'Lundi' && c.periode === periode)
+      .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+  const withPrintLayout = (titre, contenu) => `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(titre)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 16px; color: #111827; }
+          h1 { margin: 0 0 12px; font-size: 20px; }
+          h2 { margin: 18px 0 8px; font-size: 16px; }
+          table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; }
+          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: top; }
+          th { background: #f3f4f6; }
+          .creneau { text-align: left; white-space: nowrap; background: #f9fafb; font-weight: 700; }
+          .periode { background: #eef2ff; font-weight: 700; text-align: left; }
+          .section { page-break-inside: avoid; margin-bottom: 12px; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(titre)}</h1>
+        ${contenu}
+      </body>
+    </html>
+  `;
+  const buildPlanningTableHtml = ({ creneauxListe, getCellText }) => {
+    const lignes = [];
+    ['Matin', 'Après-midi'].forEach((periode) => {
+      const base = baseCreneauxPeriode(creneauxListe, periode);
+      if (!base.length) return;
+      lignes.push(`<tr><td class="periode" colspan="6">${escapeHtml(periode)}</td></tr>`);
+      base.forEach((crBase, idx) => {
+        const cellules = JOURS.map((jour) => {
+          const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
+          const val = cr ? getCellText(cr, jour, periode) : '';
+          return `<td>${escapeHtml(val)}</td>`;
+        }).join('');
+        lignes.push(
+          `<tr><td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+        );
+      });
+    });
+    return `
+      <table>
+        <thead>
+          <tr><th>Créneau</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
+        </thead>
+        <tbody>${lignes.join('')}</tbody>
+      </table>
+    `;
+  };
+  const openPrintWindow = (titre, contenu) => {
+    const popup = window.open('', '_blank');
+    if (!popup) {
+      alert("Impossible d'ouvrir la fenêtre d'impression. Autorisez les popups.");
+      return;
+    }
+    popup.document.open();
+    popup.document.write(withPrintLayout(titre, contenu));
+    popup.document.close();
+    popup.focus();
+    setTimeout(() => popup.print(), 250);
+  };
+  const imprimerPlanningSelection = async () => {
+    try {
+      if (sousOngletPlanning === 'classes') {
+        if (!classePlanningId || !planningClasse) return alert('Sélectionnez d’abord une classe.');
+        const titre = `Planning classe — ${planningClasse?.classe?.nom || ''}`;
+        const table = buildPlanningTableHtml({
+          creneauxListe: planningClasse.creneaux || [],
+          getCellText: (cr) => {
+            const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
+            if (!aff) return 'à affecter';
+            return aff.matiere_nom ? `${aff.prof_nom} — ${aff.matiere_nom}` : aff.prof_nom;
+          }
+        });
+        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+      }
+      if (sousOngletPlanning === 'professeurs') {
+        if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
+        const titre = `Planning professeur — ${planningProf?.prof?.nom || ''} ${planningProf?.prof?.prenom || ''}`.trim();
+        const table = buildPlanningTableHtml({
+          creneauxListe: planningProf.creneaux || [],
+          getCellText: (cr) => {
+            const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
+            if (aff) return aff.matiere_nom ? `${aff.classe_nom} — ${aff.matiere_nom}` : aff.classe_nom;
+            const dispo = (planningProf.dispos || []).find(d => d.creneau_id === cr.id);
+            if (dispo && !dispo.disponible) return 'Indisponible';
+            return '';
+          }
+        });
+        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+      }
+      if (sousOngletPlanning === 'salle') {
+        if (!sallesLieuTravailId || !salleSelectionnee) return alert('Sélectionnez d’abord un lieu de travail et une salle.');
+        const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
+        const titre = `Planning salle — ${salleSelectionnee}`;
+        const table = buildPlanningTableHtml({
+          creneauxListe: creneaux || [],
+          getCellText: (cr) => {
+            const cours = (coursEmploiDuTemps || []).find(c =>
+              c.jour === cr.jour &&
+              normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut) &&
+              normaliserHeureCreneau(c.heure_fin) === normaliserHeureCreneau(cr.heure_fin) &&
+              String((c.salle || '').trim()) === String((salleSelectionnee || '').trim()) &&
+              idsClassesLieu.has(String(c.classe_id))
+            );
+            if (!cours) return '';
+            const cl = classes.find(x => String(x.id) === String(cours.classe_id));
+            return cl?.nom || '';
+          }
+        });
+        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+      }
+      const poolId = planningPoolId || '';
+      const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
+      const rep = await axios.get(url, { headers });
+      const data = rep.data;
+      const titre = `Planning général${poolId ? ' — pool sélectionné' : ''}`;
+      const table = buildPlanningTableHtml({
+        creneauxListe: data?.creneaux || [],
+        getCellText: (cr) => {
+          const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
+          if (!affectes.length) return '';
+          return affectes.map(a => a.matiere_nom ? `${a.prof_nom} — ${a.classe_nom} — ${a.matiere_nom}` : `${a.prof_nom} — ${a.classe_nom}`).join(' | ');
+        }
+      });
+      return openPrintWindow(titre, `<div class="section">${table}</div>`);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'impression.");
+    }
+  };
+  const imprimerPlanningTout = async () => {
+    try {
+      if (sousOngletPlanning === 'classes') {
+        if (!classesToutesTriees.length) return alert('Aucune classe à imprimer.');
+        const reps = await Promise.all(
+          classesToutesTriees.map(cl => axios.get(API + '/planning/classe/' + cl.id, { headers }))
+        );
+        const sections = reps.map((rep) => {
+          const data = rep.data;
+          const nomClasse = data?.classe?.nom || '';
+          const table = buildPlanningTableHtml({
+            creneauxListe: data?.creneaux || [],
+            getCellText: (cr) => {
+              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
+              if (!aff) return 'à affecter';
+              return aff.matiere_nom ? `${aff.prof_nom} — ${aff.matiere_nom}` : aff.prof_nom;
+            }
+          });
+          return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}</h2>${table}</div>`;
+        }).join('');
+        return openPrintWindow('Planning classes — toutes les classes', sections);
+      }
+      if (sousOngletPlanning === 'professeurs') {
+        if (!profs.length) return alert('Aucun professeur à imprimer.');
+        const reps = await Promise.all(
+          profs.map(p => axios.get(API + '/planning/prof/' + p.id, { headers }))
+        );
+        const sections = reps.map((rep) => {
+          const data = rep.data;
+          const nom = `${data?.prof?.nom || ''} ${data?.prof?.prenom || ''}`.trim();
+          const table = buildPlanningTableHtml({
+            creneauxListe: data?.creneaux || [],
+            getCellText: (cr) => {
+              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
+              if (aff) return aff.matiere_nom ? `${aff.classe_nom} — ${aff.matiere_nom}` : aff.classe_nom;
+              const dispo = (data?.dispos || []).find(d => d.creneau_id === cr.id);
+              if (dispo && !dispo.disponible) return 'Indisponible';
+              return '';
+            }
+          });
+          return `<div class="section"><h2>Professeur : ${escapeHtml(nom)}</h2>${table}</div>`;
+        }).join('');
+        return openPrintWindow('Planning professeurs — tous les professeurs', sections);
+      }
+      if (sousOngletPlanning === 'salle') {
+        if (!sallesLieuTravailId) return alert('Sélectionnez d’abord un lieu de travail.');
+        if (!sallesDisponiblesLieu.length) return alert('Aucune salle disponible pour ce lieu.');
+        const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
+        const sections = sallesDisponiblesLieu.map((salle) => {
+          const table = buildPlanningTableHtml({
+            creneauxListe: creneaux || [],
+            getCellText: (cr) => {
+              const cours = (coursEmploiDuTemps || []).find(c =>
+                c.jour === cr.jour &&
+                normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut) &&
+                normaliserHeureCreneau(c.heure_fin) === normaliserHeureCreneau(cr.heure_fin) &&
+                String((c.salle || '').trim()) === String((salle || '').trim()) &&
+                idsClassesLieu.has(String(c.classe_id))
+              );
+              if (!cours) return '';
+              const cl = classes.find(x => String(x.id) === String(cours.classe_id));
+              return cl?.nom || '';
+            }
+          });
+          return `<div class="section"><h2>Salle : ${escapeHtml(salle)}</h2>${table}</div>`;
+        }).join('');
+        return openPrintWindow(`Planning salles — ${sallesLieuTravailId}`, sections);
+      }
+      const rep = await axios.get(API + '/planning/general', { headers });
+      const data = rep.data;
+      const table = buildPlanningTableHtml({
+        creneauxListe: data?.creneaux || [],
+        getCellText: (cr) => {
+          const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
+          if (!affectes.length) return '';
+          return affectes.map(a => a.matiere_nom ? `${a.prof_nom} — ${a.classe_nom} — ${a.matiere_nom}` : `${a.prof_nom} — ${a.classe_nom}`).join(' | ');
+        }
+      });
+      return openPrintWindow('Planning général — complet', `<div class="section">${table}</div>`);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'impression globale.");
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -744,7 +969,7 @@ export default function EmploiDuTemps() {
 
       {onglet === 'plannings' && (
         <div style={{...styles.affActionsWrap, marginBottom:12}}>
-          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',width:'100%'}}>
             {[
               {id:'classes', label:'Classes'},
               {id:'salle', label:'Salle'},
@@ -783,6 +1008,22 @@ export default function EmploiDuTemps() {
                 </select>
               </>
             )}
+            <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center'}}>
+              <button
+                type="button"
+                style={{...styles.btnRetour, fontWeight:700}}
+                onClick={imprimerPlanningSelection}
+              >
+                🖨️ Imprimer sélection
+              </button>
+              <button
+                type="button"
+                style={{...styles.btnRetour, fontWeight:700}}
+                onClick={imprimerPlanningTout}
+              >
+                🖨️ Tout imprimer
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1069,12 +1310,6 @@ export default function EmploiDuTemps() {
                 <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
                   onClick={() => {
                     setSousOngletAff(o.id);
-                    if (o.id === 'classes' || o.id === 'profs') setPoolAffId('');
-                    if (o.id === 'branches') {
-                      setClassePlanningPoolId('');
-                      setClassePlanningId('');
-                      setPlanningClasse(null);
-                    }
                   }}>
                   {o.label}
                 </button>
@@ -1683,19 +1918,7 @@ export default function EmploiDuTemps() {
                                       {aff ? (
                                         <div>
                                           <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
-                                          {isAdmin() ? (
-                                            <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
-                                              value={aff.matiere_id||''}
-                                              onChange={async ev => {
-                                                await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                                chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-                                              }}>
-                                              <option value="">— Branche —</option>
-                                              {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                                            </select>
-                                          ) : (
-                                            aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
-                                          )}
+                                          {aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>}
                                         </div>
                                       ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
                                     </td>
@@ -1723,32 +1946,9 @@ export default function EmploiDuTemps() {
             </div>
           ) : (
             <div>
-              <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi des salles</h3>
-                {suiviSalles.length === 0 ? (
-                  <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune salle configurée pour ce lieu.</div>
-                ) : (
-                  <div style={styles.suiviBranchesGrid}>
-                    {suiviSalles.map(salle => (
-                      <div
-                        key={`planning-only-${salle.salle}`}
-                        style={{
-                          ...styles.suiviBrancheChip,
-                          borderColor: salle.complet ? '#bbf7d0' : '#fecaca',
-                          background: salle.complet ? '#f0fdf4' : '#fef2f2',
-                          color: salle.complet ? '#166534' : '#991b1b'
-                        }}
-                      >
-                        <div style={styles.suiviBrancheNom}>{salle.salle}</div>
-                        <div style={styles.suiviBrancheLigne}>{salle.complet ? 'Complet' : 'Non complet'}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
               {!salleSelectionnee ? (
                 <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
-                  Sélectionnez d'abord une salle pour afficher les classes à affecter par créneau.
+                  Sélectionnez d'abord une salle pour afficher son planning.
                 </div>
               ) : (
                 <div style={{overflowX:'auto'}}>
@@ -1778,29 +1978,25 @@ export default function EmploiDuTemps() {
                                   P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
-                                  const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
                                   const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
                                   const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
+                                  const classeNom = classes.find(cl => String(cl.id) === String(classeAffectee))?.nom || '';
                                   return (
                                     <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
-                                      <select
-                                        style={{...styles.cellSel, minWidth: 160, backgroundColor: couleurClasse, fontWeight: classeAffectee ? 700 : 500, color:'#1f2937', textAlign:'center', textAlignLast:'center'}}
-                                        value={classeAffectee}
-                                        onChange={e => handleAffectationSalleChange({
-                                          jour,
-                                          periode,
-                                          ordre: crBase.ordre,
-                                          classeId: e.target.value,
-                                        })}
-                                        disabled={!isAdmin() || classesCellule.length === 0}
-                                      >
-                                        <option value="">— Aucune classe —</option>
-                                        {classesCellule.map(cl => (
-                                          <option key={`planning-only-opt-${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
-                                            {cl.nom}
-                                          </option>
-                                        ))}
-                                      </select>
+                                      <div style={{
+                                        ...styles.cellSel,
+                                        minWidth:160,
+                                        backgroundColor: couleurClasse,
+                                        fontWeight: classeNom ? 700 : 500,
+                                        color:'#1f2937',
+                                        textAlign:'center',
+                                        display:'flex',
+                                        alignItems:'center',
+                                        justifyContent:'center',
+                                        minHeight:30
+                                      }}>
+                                        {classeNom || '—'}
+                                      </div>
                                     </td>
                                   );
                                 })}
@@ -1922,47 +2118,6 @@ export default function EmploiDuTemps() {
 
           {planningClasse && classePlanningId && (
             <div>
-              <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi des préférences</h3>
-                {suiviPreferencesBranches.length === 0 ? (
-                  <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
-                ) : (
-                  <div style={styles.suiviPrefsGrid}>
-                    {suiviPreferencesBranches.map((item) => (
-                      <div key={`classe-tab-${item.profId}`} style={styles.suiviPrefCard}>
-                        <div style={styles.suiviPrefNom}>{item.nom}</div>
-                        {item.branchesPrefs.length === 0 ? (
-                          <div style={styles.suiviPrefLigne}>Aucune préférence de branche</div>
-                        ) : (
-                          <div style={styles.suiviPrefTags}>
-                            {item.branchesPrefs.map((b, idx) => (
-                              <span key={`classe-tab-${item.profId}-${idx}`} style={styles.suiviPrefTag}>{b}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
-                {suiviBranchesClasse.length === 0 ? (
-                  <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
-                ) : (
-                  <div style={styles.suiviBranchesGrid}>
-                    {suiviBranchesClasse.map(b => {
-                      const ok = b.affectees === b.requises;
-                      return (
-                        <div key={`classe-tab-branch-${b.id}`} style={{...styles.suiviBrancheChip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#166534' : '#991b1b'}}>
-                          <div style={styles.suiviBrancheNom}>{b.nom}</div>
-                          <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
               <div style={{overflowX:'auto'}}>
@@ -1995,19 +2150,7 @@ export default function EmploiDuTemps() {
                                   {aff ? (
                                     <div>
                                       <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
-                                      {isAdmin() ? (
-                                        <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
-                                          value={aff.matiere_id||''}
-                                          onChange={async ev => {
-                                            await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                            chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-                                          }}>
-                                          <option value="">— Branche —</option>
-                                          {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                                        </select>
-                                      ) : (
-                                        aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
-                                      )}
+                                      {aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>}
                                     </div>
                                   ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
                                 </td>
@@ -2087,17 +2230,7 @@ export default function EmploiDuTemps() {
                               <td key={p.id} style={{...styles.td,textAlign:'center',fontSize:11,
                                 background:aff?'#e8f5e9':indispo?'#eeeeee':'#fff'}}>
                                 {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>
-                                {isAdmin() ? (
-                                  <select style={{...styles.cellSel,marginTop:3,fontSize:11}}
-                                    value={aff.matiere_id||''}
-                                    onChange={async ev => {
-                                      await axios.post(API+'/planning/affectations',{prof_id:profPlanningId,classe_id:aff.classe_id,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                      chargerPlanningProf(profPlanningId);
-                                    }}>
-                                    <option value="">— Branche —</option>
-                                    {matieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                                  </select>
-                                ) : aff.matiere_nom ? <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div> : null}
+                                {aff.matiere_nom ? <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div> : null}
                               </> : ''}
                               </td>
                             );
