@@ -1922,7 +1922,19 @@ export default function EmploiDuTemps() {
                                       {aff ? (
                                         <div>
                                           <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
-                                          {aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>}
+                                          {isAdmin() ? (
+                                            <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
+                                              value={aff.matiere_id||''}
+                                              onChange={async ev => {
+                                                await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
+                                                chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                                              }}>
+                                              <option value="">— Branche —</option>
+                                              {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                            </select>
+                                          ) : (
+                                            aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
+                                          )}
                                         </div>
                                       ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
                                     </td>
