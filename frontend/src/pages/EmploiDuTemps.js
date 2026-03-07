@@ -21,7 +21,10 @@ const COULEURS = [
   '#BFDBFE', // bleu pastel
   '#DDD6FE', // violet pastel
 ];
-const COULEURS_CLASSES_DISPONIBLES = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12'];
+const COULEURS_CLASSES_DISPONIBLES = [
+  '#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12',
+  '#fecaca', '#fed7aa', '#fef3c7', '#d9f99d', '#bbf7d0', '#a7f3d0', '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8'
+];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
   {periode:'Matin',num:2,debut:'09:05',fin:'09:45'},
@@ -49,6 +52,7 @@ const normaliserIdsPrefBranches = (valeur) => {
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('pools');
+  const [sousOngletPlanning, setSousOngletPlanning] = useState('professeurs');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [profs, setProfs] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -639,13 +643,39 @@ export default function EmploiDuTemps() {
   const sauverCouleurClasse = async (classeId, couleur) => {
     if (!isAdmin()) return;
     try {
-      const rep = await axios.post(API + '/planning/classe-couleurs', {
-        classe_id: classeId,
-        couleur
-      }, { headers });
-      const id = String(rep?.data?.classe_id || classeId);
-      const couleurVal = rep?.data?.couleur || couleur;
-      setCouleursClassesMap(prev => ({ ...prev, [id]: couleurVal }));
+      const classeIdStr = String(classeId);
+      const couleurActuelle = getCouleurClasse(classeIdStr);
+      const classeConflit = classes.find(cl =>
+        String(cl.id) !== classeIdStr &&
+        String(getCouleurClasse(cl.id)).toLowerCase() === String(couleur).toLowerCase()
+      );
+
+      const updates = [];
+      if (classeConflit) {
+        updates.push(
+          axios.post(API + '/planning/classe-couleurs', {
+            classe_id: classeConflit.id,
+            couleur: couleurActuelle
+          }, { headers })
+        );
+      }
+      updates.push(
+        axios.post(API + '/planning/classe-couleurs', {
+          classe_id: classeId,
+          couleur
+        }, { headers })
+      );
+      const responses = await Promise.all(updates);
+
+      setCouleursClassesMap(prev => {
+        const next = { ...prev };
+        responses.forEach((rep) => {
+          const id = String(rep?.data?.classe_id || '');
+          const couleurVal = rep?.data?.couleur;
+          if (id && couleurVal) next[id] = couleurVal;
+        });
+        return next;
+      });
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'enregistrement de la couleur.");
     }
@@ -700,16 +730,62 @@ export default function EmploiDuTemps() {
           {id:'pools', label:'👥 Pools'},
           {id:'disponibilites', label:'✅ Disponibilités'},
           {id:'affectations', label:'📌 Affectations'},
-          {id:'prof', label:'👨‍🏫 Planning professeurs'},
-          {id:'classe', label:'🏫 Planning Classes'},
-          {id:'general', label:'📊 Planning Général'},
+          {id:'plannings', label:'📊 Plannings'},
         ].map(o => (
           <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
-            onClick={() => { setOnglet(o.id); if(o.id==='general') chargerPlanningGeneral(''); }}>
+            onClick={() => {
+              setOnglet(o.id);
+              if (o.id === 'plannings' && sousOngletPlanning === 'general') chargerPlanningGeneral(planningPoolId || '');
+            }}>
             {o.label}
           </button>
         ))}
       </div>
+
+      {onglet === 'plannings' && (
+        <div style={{...styles.affActionsWrap, marginBottom:12}}>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            {[
+              {id:'classes', label:'Classes'},
+              {id:'salle', label:'Salle'},
+              {id:'professeurs', label:'Professeurs'},
+              {id:'general', label:'Général'},
+            ].map(o => (
+              <button
+                key={o.id}
+                style={{...styles.affTabBtn,...(sousOngletPlanning===o.id?styles.affTabBtnActif:{})}}
+                onClick={() => {
+                  setSousOngletPlanning(o.id);
+                  if (o.id === 'general') chargerPlanningGeneral(planningPoolId || '');
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+            {sousOngletPlanning === 'salle' && (
+              <>
+                <select
+                  style={styles.sel}
+                  value={sallesLieuTravailId}
+                  onChange={e => setSallesLieuTravailId(e.target.value)}
+                >
+                  <option value="">— Sélectionner un lieu de travail —</option>
+                  {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
+                </select>
+                <select
+                  style={styles.sel}
+                  value={salleSelectionnee}
+                  disabled={!sallesLieuTravailId}
+                  onChange={e => setSalleSelectionnee(e.target.value)}
+                >
+                  <option value="">{sallesLieuTravailId ? '- Sélectionner une salle -' : '— Sélectionner d’abord un lieu —'}</option>
+                  {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
+                </select>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
@@ -1639,8 +1715,111 @@ export default function EmploiDuTemps() {
         </div>
       )}
 
+      {(onglet === 'plannings' && sousOngletPlanning === 'salle') && (
+        <div>
+          {!sallesLieuTravailId ? (
+            <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+              Sélectionnez d'abord un lieu de travail pour afficher les classes.
+            </div>
+          ) : (
+            <div>
+              <div style={{marginBottom:12}}>
+                <h3 style={styles.suiviGrandTitre}>Suivi des salles</h3>
+                {suiviSalles.length === 0 ? (
+                  <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune salle configurée pour ce lieu.</div>
+                ) : (
+                  <div style={styles.suiviBranchesGrid}>
+                    {suiviSalles.map(salle => (
+                      <div
+                        key={`planning-only-${salle.salle}`}
+                        style={{
+                          ...styles.suiviBrancheChip,
+                          borderColor: salle.complet ? '#bbf7d0' : '#fecaca',
+                          background: salle.complet ? '#f0fdf4' : '#fef2f2',
+                          color: salle.complet ? '#166534' : '#991b1b'
+                        }}
+                      >
+                        <div style={styles.suiviBrancheNom}>{salle.salle}</div>
+                        <div style={styles.suiviBrancheLigne}>{salle.complet ? 'Complet' : 'Non complet'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {!salleSelectionnee ? (
+                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                  Sélectionnez d'abord une salle pour afficher les classes à affecter par créneau.
+                </div>
+              ) : (
+                <div style={{overflowX:'auto'}}>
+                  <table style={{...styles.tbl,minWidth:760}}>
+                    <thead>
+                      <tr style={styles.theadRow}>
+                        <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
+                        {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classesFiltreesSalles.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                            Aucune classe trouvée pour cette sélection.
+                          </td>
+                        </tr>
+                      ) : (
+                        ['Matin','Après-midi'].map(periode => {
+                          const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
+                          if (!crsBase.length) return null;
+                          return [
+                            <tr key={`planning-only-${periode}`}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                            ...crsBase.map((crBase, idx) => (
+                              <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
+                                <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                                  P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                </td>
+                                {JOURS.map(jour => {
+                                  const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
+                                  const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
+                                  const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
+                                  return (
+                                    <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
+                                      <select
+                                        style={{...styles.cellSel, minWidth: 160, backgroundColor: couleurClasse, fontWeight: classeAffectee ? 700 : 500, color:'#1f2937', textAlign:'center', textAlignLast:'center'}}
+                                        value={classeAffectee}
+                                        onChange={e => handleAffectationSalleChange({
+                                          jour,
+                                          periode,
+                                          ordre: crBase.ordre,
+                                          classeId: e.target.value,
+                                        })}
+                                        disabled={!isAdmin() || classesCellule.length === 0}
+                                      >
+                                        <option value="">— Aucune classe —</option>
+                                        {classesCellule.map(cl => (
+                                          <option key={`planning-only-opt-${jour}-${periode}-${cl.id}`} value={String(cl.id)}>
+                                            {cl.nom}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))
+                          ];
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ===== PLANNING PROFS ===== */}
-      {onglet === 'prof' && (
+      {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
         <div>
           <div style={{...styles.card,marginBottom:16}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
@@ -1713,7 +1892,7 @@ export default function EmploiDuTemps() {
       )}
 
       {/* ===== PLANNING CLASSES ===== */}
-      {onglet === 'classe' && (
+      {(onglet === 'classe' || (onglet === 'plannings' && sousOngletPlanning === 'classes')) && (
         <div>
           <div style={{...styles.card, marginBottom:16}}>
             <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
@@ -1847,7 +2026,7 @@ export default function EmploiDuTemps() {
       )}
 
       {/* ===== PLANNING GÉNÉRAL ===== */}
-      {onglet === 'general' && (
+      {(onglet === 'general' || (onglet === 'plannings' && sousOngletPlanning === 'general')) && (
         <div>
           <div style={styles.rowBetween}>
             <h3 style={styles.cardTitre}>Planning général</h3>
