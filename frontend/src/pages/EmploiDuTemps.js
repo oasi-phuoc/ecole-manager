@@ -729,12 +729,15 @@ export default function EmploiDuTemps() {
     (liste || [])
       .filter(c => c.jour === 'Lundi' && c.periode === periode)
       .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
-  const withPrintLayout = (titre, contenu) => `
+  const withPrintLayout = (titre, contenu, options = {}) => {
+    const paysage = !!options.paysage;
+    return `
     <html>
       <head>
         <meta charset="utf-8" />
         <title>${escapeHtml(titre)}</title>
         <style>
+          @page { size: ${paysage ? 'A4 landscape' : 'A4 portrait'}; margin: 10mm; }
           body { font-family: Arial, sans-serif; margin: 16px; color: #111827; }
           h1 { margin: 0 0 12px; font-size: 20px; }
           h2 { margin: 18px 0 8px; font-size: 16px; }
@@ -752,6 +755,7 @@ export default function EmploiDuTemps() {
       </body>
     </html>
   `;
+  };
   const buildPlanningTableHtml = ({ creneauxListe, getCellText }) => {
     const lignes = [];
     ['Matin', 'Après-midi'].forEach((periode) => {
@@ -778,14 +782,14 @@ export default function EmploiDuTemps() {
       </table>
     `;
   };
-  const openPrintWindow = (titre, contenu) => {
+  const openPrintWindow = (titre, contenu, options = {}) => {
     const popup = window.open('', '_blank');
     if (!popup) {
       alert("Impossible d'ouvrir la fenêtre d'impression. Autorisez les popups.");
       return;
     }
     popup.document.open();
-    popup.document.write(withPrintLayout(titre, contenu));
+    popup.document.write(withPrintLayout(titre, contenu, options));
     popup.document.close();
     popup.focus();
     setTimeout(() => popup.print(), 250);
@@ -803,7 +807,7 @@ export default function EmploiDuTemps() {
             return aff.matiere_nom ? `${aff.prof_nom} — ${aff.matiere_nom}` : aff.prof_nom;
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
@@ -818,12 +822,12 @@ export default function EmploiDuTemps() {
             return '';
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId || !salleSelectionnee) return alert('Sélectionnez d’abord un lieu de travail et une salle.');
         const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
-        const titre = `Planning salle — ${salleSelectionnee}`;
+        const titre = `Planning salles — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
           getCellText: (cr) => {
@@ -839,7 +843,7 @@ export default function EmploiDuTemps() {
             return cl?.nom || '';
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`);
+        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       const poolId = planningPoolId || '';
       const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
@@ -879,7 +883,7 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}</h2>${table}</div>`;
         }).join('');
-        return openPrintWindow('Planning classes — toutes les classes', sections);
+        return openPrintWindow('Planning classes — toutes les classes', sections, { paysage: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profs.length) return alert('Aucun professeur à imprimer.');
@@ -901,7 +905,7 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section"><h2>Professeur : ${escapeHtml(nom)}</h2>${table}</div>`;
         }).join('');
-        return openPrintWindow('Planning professeurs — tous les professeurs', sections);
+        return openPrintWindow('Planning professeurs — tous les professeurs', sections, { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId) return alert('Sélectionnez d’abord un lieu de travail.');
@@ -925,7 +929,7 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section"><h2>Salle : ${escapeHtml(salle)}</h2>${table}</div>`;
         }).join('');
-        return openPrintWindow(`Planning salles — ${sallesLieuTravailId}`, sections);
+        return openPrintWindow(`Planning salles — ${sallesLieuTravailId}`, sections, { paysage: true });
       }
       const rep = await axios.get(API + '/planning/general', { headers });
       const data = rep.data;
@@ -972,7 +976,7 @@ export default function EmploiDuTemps() {
           <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',width:'100%'}}>
             {[
               {id:'classes', label:'Classes'},
-              {id:'salle', label:'Salle'},
+              {id:'salle', label:'Salles'},
               {id:'professeurs', label:'Professeurs'},
               {id:'general', label:'Général'},
             ].map(o => (
