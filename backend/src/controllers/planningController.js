@@ -55,7 +55,7 @@ const getPools = async (req, res) => {
   const pools = await pool.query('SELECT id, nom, site, couleur, horaires, niveau FROM pools ORDER BY nom');
   const result = [];
   for (const p of pools.rows) {
-    const profs = await pool.query('SELECT u.id, u.nom, u.prenom, u.taux_activite, u.periodes_semaine, u.niveau_prefere, u.lieu_travail_prefere FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1', [p.id]);
+    const profs = await pool.query('SELECT u.id, u.nom, u.prenom, u.taux_activite, u.periodes_semaine, u.niveau_prefere, u.lieu_travail_prefere, u.branches_specialites FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1', [p.id]);
     const classes = await pool.query('SELECT c.id, c.nom, c.niveau FROM classes c JOIN pool_classes pc ON pc.classe_id=c.id WHERE pc.pool_id=$1', [p.id]);
     const branches = await pool.query('SELECT m.id, m.nom, m.periodes_semaine FROM matieres m JOIN pool_branches pb ON pb.matiere_id=m.id WHERE pb.pool_id=$1', [p.id]);
     result.push({ ...p, profs: profs.rows, classes: classes.rows, branches: branches.rows });
@@ -129,6 +129,31 @@ const saveClasseHoraires = async (req, res) => {
 const getAllClasseHoraires = async (req, res) => {
   const r = await pool.query('SELECT * FROM classe_horaires');
   res.json(r.rows);
+};
+
+const getClasseCouleurs = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT classe_id, couleur FROM classe_couleurs');
+    res.json(r.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const saveClasseCouleur = async (req, res) => {
+  const { classe_id, couleur } = req.body || {};
+  if (!classe_id || !couleur) return res.status(400).json({ message: 'classe_id et couleur requis' });
+  try {
+    const r = await pool.query(`
+      INSERT INTO classe_couleurs (classe_id, couleur, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (classe_id) DO UPDATE SET couleur=$2, updated_at=NOW()
+      RETURNING classe_id, couleur
+    `, [classe_id, couleur]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 const getAffectations = async (req, res) => {
@@ -287,6 +312,8 @@ module.exports = {
   getClasseHoraires,
   saveClasseHoraires,
   getAllClasseHoraires,
+  getClasseCouleurs,
+  saveClasseCouleur,
   getAffectations,
   saveAffectation,
   deleteAffectation,

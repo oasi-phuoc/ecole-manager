@@ -16,6 +16,8 @@ router.delete('/pools/:id', autoriser('admin'), c.deletePool);
 router.get('/classe-horaires', c.getAllClasseHoraires);
 router.get('/classe-horaires/:classe_id', c.getClasseHoraires);
 router.post('/classe-horaires/:classe_id', c.saveClasseHoraires);
+router.get('/classe-couleurs', c.getClasseCouleurs);
+router.post('/classe-couleurs', autoriser('admin'), c.saveClasseCouleur);
 router.get('/affectations', c.getAffectations);
 router.post('/affectations', autoriser('admin'), c.saveAffectation);
 router.delete('/affectations/:id', autoriser('admin'), c.deleteAffectation);

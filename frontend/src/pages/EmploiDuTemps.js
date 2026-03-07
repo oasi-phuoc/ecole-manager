@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
-const CLASS_COLORS_STORAGE_KEY = 'emploi_du_temps_class_colors';
 const BASE_PERIODES_TAUX = 42;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
@@ -22,7 +21,7 @@ const COULEURS = [
   '#BFDBFE', // bleu pastel
   '#DDD6FE', // violet pastel
 ];
-const COULEURS_PASTEL_CLASSES_SALLES = ['#fee2e2', '#dcfce7', '#fef3c7', '#dbeafe', '#fce7f3', '#e0e7ff', '#fae8ff', '#cffafe', '#fef9c3'];
+const COULEURS_CLASSES_DISPONIBLES = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12'];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
   {periode:'Matin',num:2,debut:'09:05',fin:'09:45'},
@@ -35,6 +34,18 @@ const HORAIRES_DEFAUT = [
 ];
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
+const normaliserIdsPrefBranches = (valeur) => {
+  if (!valeur) return [];
+  if (Array.isArray(valeur)) return valeur.map(v => String(v).trim()).filter(Boolean);
+  const brut = String(valeur).trim();
+  if (!brut) return [];
+  try {
+    const parsed = JSON.parse(brut);
+    if (Array.isArray(parsed)) return parsed.map(v => String(v).trim()).filter(Boolean);
+  } catch {}
+  const nettoye = brut.replace(/^\{|\}$/g, '').replace(/"/g, '');
+  return nettoye.split(',').map(v => String(v).trim()).filter(Boolean);
+};
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('pools');
@@ -52,13 +63,8 @@ export default function EmploiDuTemps() {
       return {};
     }
   });
-  const [couleursClassesMap, setCouleursClassesMap] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CLASS_COLORS_STORAGE_KEY) || '{}');
-    } catch {
-      return {};
-    }
-  });
+  const [couleursClassesMap, setCouleursClassesMap] = useState({});
+  const [classeCouleurEditionId, setClasseCouleurEditionId] = useState('');
   const [classeHoraires, setClasseHoraires] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [dispos, setDispos] = useState({});
@@ -74,6 +80,7 @@ export default function EmploiDuTemps() {
   const [salleSelectionnee, setSalleSelectionnee] = useState('');
   const [modeAffectationRapideClasse, setModeAffectationRapideClasse] = useState(false);
   const [classeRapideId, setClasseRapideId] = useState('');
+  const [classeRapideId2, setClasseRapideId2] = useState('');
   const [remarquesDispo, setRemarquesDispo] = useState('');
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
@@ -89,7 +96,7 @@ export default function EmploiDuTemps() {
 
   const chargerTout = async () => {
     try {
-      const [p, cl, m, cr, po, af, ch, edt] = await Promise.all([
+      const [p, cl, m, cr, po, af, ch, edt, cc] = await Promise.all([
         axios.get(API + '/profs', { headers }),
         axios.get(API + '/classes', { headers }),
         axios.get(API + '/branches', { headers }),
@@ -98,6 +105,7 @@ export default function EmploiDuTemps() {
         axios.get(API + '/planning/affectations', { headers }),
         axios.get(API + '/planning/classe-horaires', { headers }),
         axios.get(API + '/emploi-du-temps', { headers }),
+        axios.get(API + '/planning/classe-couleurs', { headers }),
       ]);
       setProfs(p.data.filter(x => x.actif !== false));
       setClasses(cl.data);
@@ -107,6 +115,11 @@ export default function EmploiDuTemps() {
       setAffectations(af.data);
       setClasseHoraires(ch.data);
       setCoursEmploiDuTemps(edt.data || []);
+      const couleursMap = (cc.data || []).reduce((acc, row) => {
+        acc[String(row.classe_id)] = row.couleur;
+        return acc;
+      }, {});
+      setCouleursClassesMap(couleursMap);
     } catch(err) { console.error(err); }
   };
 
@@ -133,30 +146,12 @@ export default function EmploiDuTemps() {
     localStorage.setItem(AFFECTATION_MODES_STORAGE_KEY, JSON.stringify(affectationModes));
   }, [affectationModes]);
 
-  useEffect(() => {
-    localStorage.setItem(CLASS_COLORS_STORAGE_KEY, JSON.stringify(couleursClassesMap));
-  }, [couleursClassesMap]);
-
-  useEffect(() => {
-    if (!classes.length) return;
-    setCouleursClassesMap(prev => {
-      const next = { ...prev };
-      let changed = false;
-      classes.forEach(cl => {
-        const id = String(cl.id);
-        if (next[id]) return;
-        const nextIndex = Object.keys(next).length % COULEURS_PASTEL_CLASSES_SALLES.length;
-        next[id] = COULEURS_PASTEL_CLASSES_SALLES[nextIndex];
-        changed = true;
-      });
-      return changed ? next : prev;
-    });
-  }, [classes]);
 
   useEffect(() => {
     setSalleSelectionnee('');
     setModeAffectationRapideClasse(false);
     setClasseRapideId('');
+    setClasseRapideId2('');
   }, [sallesLieuTravailId]);
 
   const chargerDispos = async (prof_id) => {
@@ -384,6 +379,26 @@ export default function EmploiDuTemps() {
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
+  const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
+  const profsAffectesClasse = planningClasse ? Array.from(new Set(
+    (planningClasse.affectations || [])
+      .map(a => a.prof_id)
+      .filter(Boolean)
+      .map(id => String(id))
+  )) : [];
+  const suiviPreferencesBranches = profsAffectesClasse.map((profId) => {
+    const prof = (profsPoolP || []).find(p => String(p.id) === String(profId)) || (profs || []).find(p => String(p.id) === String(profId));
+    const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites);
+    const branchesPrefs = idsPrefs
+      .map(id => matieresParId.get(String(id)))
+      .filter(Boolean)
+      .map(m => m.designation_courte || m.nom);
+    return {
+      profId: String(profId),
+      nom: prof ? `${prof.nom} ${prof.prenom}` : `Prof ${profId}`,
+      branchesPrefs
+    };
+  });
   const lieuxTravailMap = new Map([
     ['creuset', 'Creuset'],
     ['botza', 'Botza'],
@@ -529,24 +544,33 @@ export default function EmploiDuTemps() {
       alert("Sélectionnez d'abord une salle.");
       return;
     }
-    if (!classeRapideId) {
-      alert("Sélectionnez d'abord une classe.");
+    const classesIdsSelectionnees = [classeRapideId, classeRapideId2].filter(Boolean);
+    if (classesIdsSelectionnees.length === 0) {
+      alert("Sélectionnez au moins une classe.");
       return;
     }
 
-    const classe = classesPourSalles.find(c => String(c.id) === String(classeRapideId));
-    if (!classe) {
-      alert("La classe sélectionnée n'est pas disponible pour ce lieu de travail.");
+    const classesIdsUniques = Array.from(new Set(classesIdsSelectionnees.map(String)));
+    const classesSelectionnees = classesIdsUniques
+      .map(id => classesPourSalles.find(c => String(c.id) === String(id)))
+      .filter(Boolean);
+
+    if (classesSelectionnees.length !== classesIdsUniques.length) {
+      alert("Une des classes sélectionnées n'est pas disponible pour ce lieu de travail.");
       return;
     }
 
     try {
       const salleCourante = String((salleSelectionnee || '').trim());
       let modifications = 0;
+      let conflitsPriorite = 0;
       const localCours = [...coursEmploiDuTemps];
 
       for (const cr of creneaux) {
-        if (!classeAHoraire(classe.id, cr.jour, cr.periode)) continue;
+        const classesEligibles = classesSelectionnees.filter(cl => classeAHoraire(cl.id, cr.jour, cr.periode));
+        if (!classesEligibles.length) continue;
+        if (classesEligibles.length > 1) conflitsPriorite += 1;
+        const classe = classesEligibles[0]; // priorite a la 1ere liste
 
         const debut = normaliserHeureCreneau(cr.heure_debut);
         const fin = normaliserHeureCreneau(cr.heure_fin);
@@ -591,11 +615,10 @@ export default function EmploiDuTemps() {
       }
 
       if (modifications === 0) {
-        alert("Aucun créneau à mettre à jour pour cette classe.");
+        alert("Aucun créneau à mettre à jour pour la/les classe(s) sélectionnée(s).");
         return;
       }
       await chargerTout();
-      alert('Affectation rapide terminée.');
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation rapide.");
     }
@@ -605,7 +628,27 @@ export default function EmploiDuTemps() {
     creneaux.map(c => `${c.jour}|${normaliserHeureCreneau(c.heure_debut)}|${normaliserHeureCreneau(c.heure_fin)}`)
   );
   const totalCreneauxTheoriques = creneauxTheoriquesKeys.size;
-  const getCouleurClasse = (classeId) => couleursClassesMap[String(classeId)] || '#ffffff';
+  const getCouleurClasse = (classeId) => {
+    const id = String(classeId);
+    if (couleursClassesMap[id]) return couleursClassesMap[id];
+    const indexClasse = classes.findIndex(c => String(c.id) === id);
+    if (indexClasse < 0) return COULEURS_CLASSES_DISPONIBLES[0];
+    return COULEURS_CLASSES_DISPONIBLES[indexClasse % COULEURS_CLASSES_DISPONIBLES.length];
+  };
+  const sauverCouleurClasse = async (classeId, couleur) => {
+    if (!isAdmin()) return;
+    try {
+      const rep = await axios.post(API + '/planning/classe-couleurs', {
+        classe_id: classeId,
+        couleur
+      }, { headers });
+      const id = String(rep?.data?.classe_id || classeId);
+      const couleurVal = rep?.data?.couleur || couleur;
+      setCouleursClassesMap(prev => ({ ...prev, [id]: couleurVal }));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'enregistrement de la couleur.");
+    }
+  };
   const getClasseIdDepuisValeurAffectation = (valeur) => {
     const texte = String(valeur || '');
     if (!texte) return '';
@@ -1039,6 +1082,47 @@ export default function EmploiDuTemps() {
                   ))}
                 </div>
               </div>
+              <div style={{marginBottom:12}}>
+                <h3 style={{...styles.suiviGrandTitre, fontSize:18}}>Couleurs des classes</h3>
+                <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
+                  {classesPool.map(cl => {
+                    const selected = String(classeCouleurEditionId) === String(cl.id);
+                    return (
+                      <button
+                        key={`color-class-${cl.id}`}
+                        type="button"
+                        onClick={() => setClasseCouleurEditionId(selected ? '' : String(cl.id))}
+                        style={{
+                          ...styles.colorClassChip,
+                          background: getCouleurClasse(cl.id),
+                          border: selected ? '3px solid #111827' : '2px solid #ffffff',
+                          boxShadow: selected ? '0 0 0 2px #cbd5e1' : 'none'
+                        }}
+                      >
+                        {cl.nom}
+                      </button>
+                    );
+                  })}
+                </div>
+                {classeCouleurEditionId && (
+                  <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                    <span style={{fontSize:12,fontWeight:700,color:'#475569'}}>Choisir la couleur :</span>
+                    {COULEURS_CLASSES_DISPONIBLES.map(c => (
+                      <button
+                        key={`palette-${c}`}
+                        type="button"
+                        onClick={() => sauverCouleurClasse(classeCouleurEditionId, c)}
+                        style={{
+                          ...styles.colorPaletteBtn,
+                          background:c,
+                          border: getCouleurClasse(classeCouleurEditionId) === c ? '3px solid #111827' : '2px solid #ffffff'
+                        }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
                   <thead>
@@ -1169,12 +1253,15 @@ export default function EmploiDuTemps() {
                                       : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
                                 const classeIdCouleur = getClasseIdDepuisValeurAffectation(valeurSelect);
+                                const estSpecialSelectionne = String(valeurSelect || '').startsWith('special:');
                                 const couleurSelectProf = indispo
                                   ? '#e5e7eb'
-                                  : (classeIdCouleur ? getCouleurClasse(classeIdCouleur) : '#ffffff');
+                                  : (estSpecialSelectionne ? '#111111' : (classeIdCouleur ? getCouleurClasse(classeIdCouleur) : '#ffffff'));
+                                const couleurTexteSelectProf = indispo ? '#6b7280' : (estSpecialSelectionne ? '#ffffff' : '#1f2937');
+                                const poidsTexteSelectProf = estSpecialSelectionne ? 700 : 500;
                                 return (
                                   <td key={prof.id} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
-                                    <select style={{...styles.cellSel,background:couleurSelectProf,color:'#1f2937'}}
+                                    <select style={{...styles.cellSel,background:couleurSelectProf,color:couleurTexteSelectProf,fontWeight:poidsTexteSelectProf}}
                                       value={valeurSelect}
                                       onChange={async e => {
                                         if (indispo) return;
@@ -1331,15 +1418,30 @@ export default function EmploiDuTemps() {
                           onChange={e => setClasseRapideId(e.target.value)}
                           disabled={!sallesLieuTravailId}
                         >
-                          <option value="">— Sélectionner une classe —</option>
-                          {classesPourSalles.map(cl => (
+                          <option value="">— Sélectionner classe 1 —</option>
+                          {classesPourSalles
+                          .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
+                          .map(cl => (
                             <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
+                          ))}
+                        </select>
+                        <select
+                          style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
+                          value={classeRapideId2}
+                          onChange={e => setClasseRapideId2(e.target.value)}
+                          disabled={!sallesLieuTravailId}
+                        >
+                          <option value="">— Sélectionner classe 2 (optionnel) —</option>
+                          {classesPourSalles
+                          .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
+                          .map(cl => (
+                            <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
                           ))}
                         </select>
                         <button
                           type="button"
-                          style={{...styles.btnBleu, opacity: (!isAdmin() || !classeRapideId || !salleSelectionnee) ? 0.65 : 1}}
-                          disabled={!isAdmin() || !classeRapideId || !salleSelectionnee}
+                          style={{...styles.btnBleu, opacity: (!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee) ? 0.65 : 1}}
+                          disabled={!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee}
                           onClick={handleAffectationRapideClasse}
                         >
                           Affectation rapide
@@ -1385,7 +1487,7 @@ export default function EmploiDuTemps() {
                                       return (
                                         <td key={jour} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
                                           <select
-                                            style={{...styles.cellSel, minWidth: 160, backgroundColor: couleurClasse, fontWeight: classeAffectee ? 700 : 500, color:'#1f2937'}}
+                                            style={{...styles.cellSel, minWidth: 160, backgroundColor: couleurClasse, fontWeight: classeAffectee ? 700 : 500, color:'#1f2937', textAlign:'center', textAlignLast:'center'}}
                                             value={classeAffectee}
                                             onChange={e => handleAffectationSalleChange({
                                               jour,
@@ -1430,6 +1532,29 @@ export default function EmploiDuTemps() {
 
               {planningClasse && classePlanningId && (
                 <div>
+                  <div style={{marginBottom:12}}>
+                    <h3 style={styles.suiviGrandTitre}>Suivi des préférences</h3>
+                    {suiviPreferencesBranches.length === 0 ? (
+                      <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
+                    ) : (
+                      <div style={styles.suiviPrefsGrid}>
+                        {suiviPreferencesBranches.map((item) => (
+                          <div key={item.profId} style={styles.suiviPrefCard}>
+                            <div style={styles.suiviPrefNom}>{item.nom}</div>
+                            {item.branchesPrefs.length === 0 ? (
+                              <div style={styles.suiviPrefLigne}>Aucune préférence de branche</div>
+                            ) : (
+                              <div style={styles.suiviPrefTags}>
+                                {item.branchesPrefs.map((b, idx) => (
+                                  <span key={`${item.profId}-${idx}`} style={styles.suiviPrefTag}>{b}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div style={{marginBottom:12}}>
                     <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
                     {suiviBranchesClasse.length === 0 ? (
@@ -1697,6 +1822,14 @@ const styles = {
   suiviBrancheChip:{width:240,minWidth:240,maxWidth:240,padding:'8px 10px',borderRadius:10,border:'1px solid #fecaca',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviBrancheNom:{fontSize:13,fontWeight:800,lineHeight:1.2},
   suiviBrancheLigne:{fontSize:12,fontWeight:700,lineHeight:1.25,marginTop:2},
+  suiviPrefsGrid:{display:'flex',flexWrap:'wrap',gap:8},
+  suiviPrefCard:{width:300,minWidth:300,maxWidth:300,padding:'10px 12px',borderRadius:10,border:'1px solid #dbeafe',background:'#f8fbff'},
+  suiviPrefNom:{fontSize:13,fontWeight:800,color:'#1e3a8a',marginBottom:6},
+  suiviPrefLigne:{fontSize:12,fontWeight:600,color:'#64748b'},
+  suiviPrefTags:{display:'flex',flexWrap:'wrap',gap:6},
+  suiviPrefTag:{display:'inline-block',padding:'3px 8px',borderRadius:999,border:'1px solid #c7d2fe',background:'#eef2ff',color:'#3730a3',fontSize:11,fontWeight:700},
+  colorClassChip:{padding:'8px 12px',borderRadius:18,cursor:'pointer',fontWeight:800,fontSize:12,color:'#111827',minWidth:100},
+  colorPaletteBtn:{width:24,height:24,borderRadius:'50%',cursor:'pointer'},
   tbl:{width:'100%',borderCollapse:'collapse',background:'white',borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'},
   theadRow:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 12px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
