@@ -369,6 +369,7 @@ export default function EmploiDuTemps() {
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
+  const classesToutesTriees = [...classes].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
   const niveauPoolPlanning = String(poolClasseP?.niveau || '').toUpperCase();
   const matieresPourPlanningClasse = matieres.filter(m =>
@@ -699,7 +700,8 @@ export default function EmploiDuTemps() {
           {id:'pools', label:'👥 Pools'},
           {id:'disponibilites', label:'✅ Disponibilités'},
           {id:'affectations', label:'📌 Affectations'},
-          {id:'prof', label:'👨‍🏫 Planning Profs'},
+          {id:'prof', label:'👨‍🏫 Planning professeurs'},
+          {id:'classe', label:'🏫 Planning Classes'},
           {id:'general', label:'📊 Planning Général'},
         ].map(o => (
           <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
@@ -1641,25 +1643,36 @@ export default function EmploiDuTemps() {
       {onglet === 'prof' && (
         <div>
           <div style={{...styles.card,marginBottom:16}}>
-            <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:20}}>👨‍🏫 Sélectionner un professeur</h3>
-            <div style={{...styles.flexWrap, gap:12, marginTop:8}}>
-              {profs.map(p => (
-                <button key={p.id} style={{...styles.chip,...(profPlanningId==p.id?styles.chipActif:{})}}
-                  onClick={() => { setProfPlanningId(p.id); chargerPlanningProf(p.id); }}>
-                  {p.nom} {p.prenom}
-                </button>
-              ))}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
+              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
+              <select
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                value={profPlanningId || ''}
+                onChange={e => {
+                  const id = e.target.value;
+                  setProfPlanningId(id);
+                  if (id) chargerPlanningProf(id);
+                  else setPlanningProf(null);
+                }}
+              >
+                <option value="">— Sélectionner un professeur —</option>
+                {profs.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom} {p.prenom}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.nom} {planningProf.prof?.prenom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
-              <table style={{...styles.tbl,minWidth:700}}>
+              <table style={{...styles.tbl,minWidth:970,tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,minWidth:130}}>Créneau</th>
-                    {JOURS.map(j => <th key={j} style={styles.th}>{j}</th>)}
+                    <th style={{...styles.th,width:120,minWidth:120,maxWidth:120}}>Créneau</th>
+                    {JOURS.map(j => <th key={j} style={{...styles.th,width:170,minWidth:170,maxWidth:170,textAlign:'center'}}>{j}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -1670,17 +1683,17 @@ export default function EmploiDuTemps() {
                       <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                       ...crsBase.map((crBase,idx) => (
                         <tr key={crBase.id} style={styles.tr}>
-                          <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                          <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:120,minWidth:120,maxWidth:120}}>
                             P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                           </td>
                           {JOURS.map(jour => {
                             const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:170,minWidth:170,maxWidth:170}}></td>;
                             const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
                             const indispo = dispo && !dispo.disponible;
                             return (
-                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
+                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:170,minWidth:170,maxWidth:170,
                                 background:aff?'#e8f5e9':indispo?'#eeeeee':'#fff'}}>
                                 {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</span></>}</>:
                                  indispo?'':
@@ -1694,6 +1707,140 @@ export default function EmploiDuTemps() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== PLANNING CLASSES ===== */}
+      {onglet === 'classe' && (
+        <div>
+          <div style={{...styles.card, marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner une classe :</h3>
+              <select
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                value={classePlanningId || ''}
+                onChange={e => {
+                  const classeId = e.target.value;
+                  setClassePlanningId(classeId);
+                  if (classeId) {
+                    const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
+                    const poolId = poolTrouve ? String(poolTrouve.id) : '';
+                    setClassePlanningPoolId(poolId);
+                    chargerPlanningClasse(classeId, poolId);
+                  } else {
+                    setClassePlanningPoolId('');
+                    setPlanningClasse(null);
+                  }
+                }}
+              >
+                <option value="">— Sélectionner une classe —</option>
+                {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {planningClasse && classePlanningId && (
+            <div>
+              <div style={{marginBottom:12}}>
+                <h3 style={styles.suiviGrandTitre}>Suivi des préférences</h3>
+                {suiviPreferencesBranches.length === 0 ? (
+                  <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
+                ) : (
+                  <div style={styles.suiviPrefsGrid}>
+                    {suiviPreferencesBranches.map((item) => (
+                      <div key={`classe-tab-${item.profId}`} style={styles.suiviPrefCard}>
+                        <div style={styles.suiviPrefNom}>{item.nom}</div>
+                        {item.branchesPrefs.length === 0 ? (
+                          <div style={styles.suiviPrefLigne}>Aucune préférence de branche</div>
+                        ) : (
+                          <div style={styles.suiviPrefTags}>
+                            {item.branchesPrefs.map((b, idx) => (
+                              <span key={`classe-tab-${item.profId}-${idx}`} style={styles.suiviPrefTag}>{b}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{marginBottom:12}}>
+                <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
+                {suiviBranchesClasse.length === 0 ? (
+                  <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
+                ) : (
+                  <div style={styles.suiviBranchesGrid}>
+                    {suiviBranchesClasse.map(b => {
+                      const ok = b.affectees === b.requises;
+                      return (
+                        <div key={`classe-tab-branch-${b.id}`} style={{...styles.suiviBrancheChip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#166534' : '#991b1b'}}>
+                          <div style={styles.suiviBrancheNom}>{b.nom}</div>
+                          <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
+
+              <div style={{overflowX:'auto'}}>
+                <table style={{...styles.tbl,minWidth:700}}>
+                  <thead>
+                    <tr style={styles.theadRow}>
+                      <th style={{...styles.th,minWidth:130,textAlign:'center'}}>Créneau</th>
+                      {JOURS.map(j => <th key={`classe-tab-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Matin','Après-midi'].map(periode => {
+                      const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi'&&c.periode===periode);
+                      if (!crsBase.length) return null;
+                      return [
+                        <tr key={`classe-tab-${periode}`}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
+                        ...crsBase.map((crBase,idx) => (
+                          <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
+                            <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                              P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                            </td>
+                            {JOURS.map(jour => {
+                              const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
+                              if (!cr) return <td key={`classe-tab-${jour}`} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                              const aff = (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id);
+                              const aCours = classeAHoraire(classePlanningId, jour, periode);
+                              return (
+                                <td key={`classe-tab-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,
+                                  background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
+                                  {aff ? (
+                                    <div>
+                                      <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
+                                      {isAdmin() ? (
+                                        <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
+                                          value={aff.matiere_id||''}
+                                          onChange={async ev => {
+                                            await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
+                                            chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                                          }}>
+                                          <option value="">— Branche —</option>
+                                          {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                        </select>
+                                      ) : (
+                                        aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
+                                      )}
+                                    </div>
+                                  ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      ];
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
