@@ -108,6 +108,7 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS planning_branches (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, UNIQUE(classe_id, matiere_id, pool_id));`);
     await pool.query(`CREATE TABLE IF NOT EXISTS classe_couleurs (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE UNIQUE, couleur VARCHAR(20) NOT NULL, updated_at TIMESTAMP DEFAULT NOW());`);
     await pool.query(`CREATE TABLE IF NOT EXISTS prof_couleurs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE UNIQUE, couleur VARCHAR(20) NOT NULL, updated_at TIMESTAMP DEFAULT NOW());`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS branche_couleurs (id SERIAL PRIMARY KEY, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE UNIQUE, couleur VARCHAR(20) NOT NULL, updated_at TIMESTAMP DEFAULT NOW());`);
 
     // Table observations élèves
     await pool.query(`CREATE TABLE IF NOT EXISTS observations (id SERIAL PRIMARY KEY, eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE, reference_obs VARCHAR(50), titre VARCHAR(200), contenu TEXT, mesure_prise TEXT, intervention_responsable BOOLEAN DEFAULT false, demande_entretien BOOLEAN DEFAULT false, auteur_id INTEGER REFERENCES utilisateurs(id), created_at TIMESTAMP DEFAULT NOW());`);

@@ -181,6 +181,31 @@ const saveProfCouleur = async (req, res) => {
   }
 };
 
+const getBrancheCouleurs = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT matiere_id, couleur FROM branche_couleurs');
+    res.json(r.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const saveBrancheCouleur = async (req, res) => {
+  const { matiere_id, couleur } = req.body || {};
+  if (!matiere_id || !couleur) return res.status(400).json({ message: 'matiere_id et couleur requis' });
+  try {
+    const r = await pool.query(`
+      INSERT INTO branche_couleurs (matiere_id, couleur, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (matiere_id) DO UPDATE SET couleur=$2, updated_at=NOW()
+      RETURNING matiere_id, couleur
+    `, [matiere_id, couleur]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getAffectations = async (req, res) => {
   const r = await pool.query(`
     SELECT a.*, u.nom||' '||u.prenom as prof_nom,
@@ -341,6 +366,8 @@ module.exports = {
   saveClasseCouleur,
   getProfCouleurs,
   saveProfCouleur,
+  getBrancheCouleurs,
+  saveBrancheCouleur,
   getAffectations,
   saveAffectation,
   deleteAffectation,

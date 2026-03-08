@@ -20,6 +20,8 @@ router.get('/classe-couleurs', c.getClasseCouleurs);
 router.post('/classe-couleurs', autoriser('admin'), c.saveClasseCouleur);
 router.get('/prof-couleurs', c.getProfCouleurs);
 router.post('/prof-couleurs', autoriser('admin'), c.saveProfCouleur);
+router.get('/branche-couleurs', c.getBrancheCouleurs);
+router.post('/branche-couleurs', autoriser('admin'), c.saveBrancheCouleur);
 router.get('/affectations', c.getAffectations);
 router.post('/affectations', autoriser('admin'), c.saveAffectation);
 router.delete('/affectations/:id', autoriser('admin'), c.deleteAffectation);
