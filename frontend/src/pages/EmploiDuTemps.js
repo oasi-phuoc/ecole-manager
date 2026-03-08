@@ -61,6 +61,10 @@ export default function EmploiDuTemps() {
   const [creneaux, setCreneaux] = useState([]);
   const [pools, setPools] = useState([]);
   const [affectations, setAffectations] = useState([]);
+  const [affectationsDraft, setAffectationsDraft] = useState([]);
+  const [hasAffectationsUnsaved, setHasAffectationsUnsaved] = useState(false);
+  const [branchesMatiereDraftMap, setBranchesMatiereDraftMap] = useState({});
+  const [hasBranchesUnsaved, setHasBranchesUnsaved] = useState(false);
   const [affectationModes, setAffectationModes] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(AFFECTATION_MODES_STORAGE_KEY) || '{}');
@@ -121,6 +125,7 @@ export default function EmploiDuTemps() {
       setCreneaux(cr.data);
       setPools(po.data);
       setAffectations(af.data);
+      setAffectationsDraft(af.data || []);
       setClasseHoraires(ch.data);
       setCoursEmploiDuTemps(edt.data || []);
       const couleursMap = (cc.data || []).reduce((acc, row) => {
@@ -133,6 +138,9 @@ export default function EmploiDuTemps() {
         return acc;
       }, {});
       setCouleursProfsMap(couleursProfs);
+      setHasAffectationsUnsaved(false);
+      setBranchesMatiereDraftMap({});
+      setHasBranchesUnsaved(false);
     } catch(err) { console.error(err); }
   };
 
@@ -339,7 +347,8 @@ export default function EmploiDuTemps() {
   const poolEstCSC = String(poolSelectionne?.niveau || '').toUpperCase() === 'CSC';
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
-  const affectationsPool = affectations.filter(a =>
+  const affectationsPourProfs = hasAffectationsUnsaved ? affectationsDraft : affectations;
+  const affectationsPool = affectationsPourProfs.filter(a =>
     profsPoolIds.has(String(a.prof_id)) &&
     (classesPoolIds.has(String(a.classe_id)) || !!a.type_special)
   );
@@ -766,6 +775,122 @@ export default function EmploiDuTemps() {
     const luminance = (0.299 * r) + (0.587 * g) + (0.114 * b);
     return luminance < 150 ? '#ffffff' : '#111827';
   };
+  const confirmerQuitterSansSauvegarder = () => {
+    if (sousOngletAff === 'profs' && hasAffectationsUnsaved) {
+      return window.confirm("Des changements dans Affectations > Professeurs ne sont pas sauvegardés. Quitter sans sauvegarder ?");
+    }
+    if (sousOngletAff === 'branches' && hasBranchesUnsaved) {
+      return window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Quitter sans sauvegarder ?");
+    }
+    return true;
+  };
+  const abandonnerAffectationsNonSauvegardees = () => {
+    setAffectationsDraft(affectations || []);
+    setHasAffectationsUnsaved(false);
+  };
+  const abandonnerBranchesNonSauvegardees = () => {
+    setBranchesMatiereDraftMap({});
+    setHasBranchesUnsaved(false);
+  };
+  const abandonnerChangementsAffectationsCourants = () => {
+    if (sousOngletAff === 'profs' && hasAffectationsUnsaved) {
+      abandonnerAffectationsNonSauvegardees();
+    }
+    if (sousOngletAff === 'branches' && hasBranchesUnsaved) {
+      abandonnerBranchesNonSauvegardees();
+    }
+  };
+  const sauvegarderAffectationsProfs = async () => {
+    if (!hasAffectationsUnsaved) {
+      alert('Aucun changement à sauvegarder.');
+      return;
+    }
+    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation professeurs ?");
+    if (!confirmer) return;
+    try {
+      const keyFor = (a) => `${String(a.prof_id)}|${String(a.creneau_id)}`;
+      const origMap = new Map((affectations || []).map(a => [keyFor(a), a]));
+      const draftMap = new Map((affectationsDraft || []).map(a => [keyFor(a), a]));
+      const keys = new Set([...origMap.keys(), ...draftMap.keys()]);
+      const deletes = [];
+      const upserts = [];
+
+      keys.forEach((k) => {
+        const orig = origMap.get(k);
+        const draft = draftMap.get(k);
+        if (orig && !draft) {
+          deletes.push(orig.id);
+          return;
+        }
+        if (!orig && draft) {
+          upserts.push(draft);
+          return;
+        }
+        if (orig && draft) {
+          const changedClasse = String(orig.classe_id || '') !== String(draft.classe_id || '');
+          const changedMatiere = String(orig.matiere_id || '') !== String(draft.matiere_id || '');
+          const changedSpecial = String(orig.type_special || '') !== String(draft.type_special || '');
+          if (changedClasse || changedMatiere || changedSpecial) {
+            deletes.push(orig.id);
+            upserts.push(draft);
+          }
+        }
+      });
+
+      for (const id of deletes) {
+        await axios.delete(API + '/planning/affectations/' + id, { headers });
+      }
+      for (const a of upserts) {
+        await axios.post(API + '/planning/affectations', {
+          prof_id: a.prof_id,
+          classe_id: a.classe_id || null,
+          matiere_id: a.matiere_id || null,
+          creneau_id: a.creneau_id,
+          type_special: a.type_special || null,
+        }, { headers });
+      }
+      await chargerTout();
+      alert('Changements sauvegardés.');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des affectations professeurs.");
+    }
+  };
+  const sauvegarderAffectationsBranches = async () => {
+    if (!hasBranchesUnsaved) {
+      alert('Aucun changement à sauvegarder.');
+      return;
+    }
+    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation des branches ?");
+    if (!confirmer) return;
+    if (!classePlanningId || !planningClasse) {
+      alert("Sélectionnez d'abord une classe.");
+      return;
+    }
+    try {
+      const affects = planningClasse.affectations || [];
+      for (const aff of affects) {
+        const key = String(aff.id);
+        if (!Object.prototype.hasOwnProperty.call(branchesMatiereDraftMap, key)) continue;
+        const nouvelleMatiere = branchesMatiereDraftMap[key] || null;
+        const actuelle = aff.matiere_id || null;
+        if (String(actuelle || '') === String(nouvelleMatiere || '')) continue;
+        await axios.post(API + '/planning/affectations', {
+          prof_id: aff.prof_id,
+          classe_id: classePlanningId,
+          matiere_id: nouvelleMatiere,
+          creneau_id: aff.creneau_id,
+          type_special: aff.type_special || null,
+        }, { headers });
+      }
+      await chargerTout();
+      await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+      setBranchesMatiereDraftMap({});
+      setHasBranchesUnsaved(false);
+      alert('Changements sauvegardés.');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des branches.");
+    }
+  };
   const getClasseIdDepuisValeurAffectation = (valeur) => {
     const texte = String(valeur || '');
     if (!texte) return '';
@@ -803,7 +928,7 @@ export default function EmploiDuTemps() {
   const periodesRequisesDispo = profDispoSelectionne ? getPeriodesRequisesPourTaux(profDispoSelectionne) : 0;
   const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
   const couleurCompteurDispo = periodesSelectionneesDispo < periodesRequisesDispo ? '#dc2626' : '#16a34a';
-  const LARGEUR_COLONNE_CRENEAU = 112;
+  const LARGEUR_COLONNE_CRENEAU = 128;
   const escapeHtml = (val) => String(val ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -1054,6 +1179,10 @@ export default function EmploiDuTemps() {
         ].map(o => (
           <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
             onClick={() => {
+              if (onglet === 'affectations' && o.id !== 'affectations' && !confirmerQuitterSansSauvegarder()) return;
+              if (onglet === 'affectations' && o.id !== 'affectations') {
+                abandonnerChangementsAffectationsCourants();
+              }
               setOnglet(o.id);
               if (o.id === 'plannings' && sousOngletPlanning === 'general') chargerPlanningGeneral(planningPoolId || '');
             }}>
@@ -1404,14 +1533,32 @@ export default function EmploiDuTemps() {
               {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
                   onClick={async () => {
+                    if (sousOngletAff !== o.id && !confirmerQuitterSansSauvegarder()) return;
+                    if (sousOngletAff !== o.id) {
+                      abandonnerChangementsAffectationsCourants();
+                    }
                     setSousOngletAff(o.id);
                     if (o.id === 'profs') {
                       await chargerTout();
+                    }
+                    if (o.id === 'branches' && classePlanningId) {
+                      await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
                     }
                   }}>
                   {o.label}
                 </button>
               ))}
+              <button
+                type="button"
+                style={{...styles.btnRetour, marginLeft:'auto', fontWeight:700}}
+                onClick={() => {
+                  if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
+                  if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
+                  alert("Aucun changement à sauvegarder pour ce sous-onglet.");
+                }}
+              >
+                💾 Sauvegarder
+              </button>
               {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
                 <select style={styles.sel} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
                   <option value="">— Sélectionner un pool —</option>
@@ -1424,6 +1571,8 @@ export default function EmploiDuTemps() {
                     style={styles.sel}
                     value={classePlanningPoolId}
                     onChange={e => {
+                      if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                      if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
                       setClassePlanningPoolId(e.target.value);
                       setClassePlanningId('');
                       setPlanningClasse(null);
@@ -1438,6 +1587,8 @@ export default function EmploiDuTemps() {
                     disabled={!classePlanningPoolId}
                     onChange={e => {
                       const classeId = e.target.value;
+                      if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
+                      if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
                       setClassePlanningId(classeId);
                       if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
                       else setPlanningClasse(null);
@@ -1482,18 +1633,6 @@ export default function EmploiDuTemps() {
               ) : (
               <>
               <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi des horaires classes</h3>
-                <div style={styles.suiviJoursGrid}>
-                  {JOURS.map(j => (
-                    <div key={j} style={styles.suiviJourChip}>
-                      <div style={styles.suiviJourNom}>{j}</div>
-                      <div style={styles.suiviJourLigne}>Matin : {resumePeriodesParJour[j].matin}</div>
-                      <div style={styles.suiviJourLigne}>Après-midi : {resumePeriodesParJour[j].apresMidi}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{marginBottom:12}}>
                 <h3 style={{...styles.suiviGrandTitre, fontSize:18}}>Couleurs des classes</h3>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
                   {classesPool.map(cl => {
@@ -1533,6 +1672,18 @@ export default function EmploiDuTemps() {
                     ))}
                   </div>
                 )}
+              </div>
+              <div style={{marginBottom:12}}>
+                <h3 style={styles.suiviGrandTitre}>Suivi des horaires classes</h3>
+                <div style={styles.suiviJoursGrid}>
+                  {JOURS.map(j => (
+                    <div key={j} style={styles.suiviJourChip}>
+                      <div style={styles.suiviJourNom}>{j}</div>
+                      <div style={styles.suiviJourLigne}>Matin : {resumePeriodesParJour[j].matin}</div>
+                      <div style={styles.suiviJourLigne}>Après-midi : {resumePeriodesParJour[j].apresMidi}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
@@ -1701,7 +1852,7 @@ export default function EmploiDuTemps() {
                                 Période {idx+1}
                               </td>
                               {profsPool.map(prof => {
-                                const aff = affectations.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
+                                const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
                                 const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
                                 const classeAffecteeVisible = aff && aff.classe_id
                                   ? classesCours.some(cl => String(cl.id) === String(aff.classe_id))
@@ -1724,29 +1875,29 @@ export default function EmploiDuTemps() {
                                   <td key={prof.id} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
                                     <select style={{...styles.cellSel,background:couleurSelectProf,color:couleurTexteSelectProf,fontWeight:poidsTexteSelectProf}}
                                       value={valeurSelect}
-                                      onChange={async e => {
+                                      onChange={e => {
                                         if (indispo) return;
                                         const valeur = e.target.value;
+                                        const draftId = () => `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                                         if (!valeur) {
-                                          const a = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
-                                          if (a) {
-                                            await axios.delete(API+'/planning/affectations/'+a.id, {headers});
-                                            setAffectationModes(prev => {
-                                              const next = { ...prev };
-                                              delete next[a.id];
-                                              return next;
-                                            });
-                                          }
-                                          chargerTout();
+                                          const a = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
+                                          if (!a) return;
+                                          setAffectationsDraft(prev => prev.filter(x => !(x.prof_id==prof.id && x.creneau_id==cr.id)));
+                                          setAffectationModes(prev => {
+                                            const next = { ...prev };
+                                            delete next[a.id];
+                                            return next;
+                                          });
+                                          setHasAffectationsUnsaved(true);
                                         } else {
                                           const estSpecial = valeur.startsWith('special:');
                                           const estSoutien = valeur.startsWith('soutien:');
                                           const typeSpecial = estSpecial ? valeur.split(':')[1] : null;
                                           const classe_id = estSoutien ? valeur.split(':')[1] : (estSpecial ? null : valeur);
-                                          const ancienne = affectations.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
+                                          const ancienne = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
                                           // Vérifier si cette classe est déjà prise ce créneau par un autre prof
                                           const conflit = !estSpecial
-                                            ? affectations.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
+                                            ? affectationsDraft.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
                                             : null;
                                           if (conflit) {
                                             const profConflit = profsPool.find(p => p.id == conflit.prof_id);
@@ -1757,42 +1908,74 @@ export default function EmploiDuTemps() {
                                             );
                                             if (!confirmer) return;
 
-                                            // Échange: l'ancienne classe du prof courant est transférée au prof en conflit
-                                            if (ancienne && String(ancienne.classe_id) !== String(classe_id)) {
-                                              const repSwap = await axios.post(
-                                                API + '/planning/affectations',
-                                                { prof_id: conflit.prof_id, classe_id: ancienne.classe_id, creneau_id: cr.id, type_special: ancienne.type_special || null },
-                                                { headers }
-                                              );
-                                              setAffectationModes(prev => ({ ...prev, [repSwap.data.id]: prev[ancienne.id] || (ancienne.type_special ? 'special' : 'classe') }));
-                                            }
-
-                                            // Puis on affecte la classe choisie au prof courant
-                                            const repCourant = await axios.post(
-                                              API+'/planning/affectations',
-                                              {prof_id:prof.id, classe_id, creneau_id:cr.id, type_special: typeSpecial},
-                                              {headers}
-                                            );
-                                            setAffectationModes(prev => ({ ...prev, [repCourant.data.id]: estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe') }));
-                                            chargerTout();
+                                            setAffectationsDraft(prev => {
+                                              const next = prev.map(a => ({ ...a }));
+                                              const idxConflit = next.findIndex(x => x.id === conflit.id);
+                                              const idxAncienne = ancienne ? next.findIndex(x => x.id === ancienne.id) : -1;
+                                              if (idxConflit >= 0) {
+                                                if (ancienne && String(ancienne.classe_id || '') !== String(classe_id || '')) {
+                                                  next[idxConflit].classe_id = ancienne.classe_id || null;
+                                                  next[idxConflit].type_special = ancienne.type_special || null;
+                                                  next[idxConflit].matiere_id = ancienne.matiere_id || null;
+                                                } else {
+                                                  next.splice(idxConflit, 1);
+                                                }
+                                              }
+                                              if (idxAncienne >= 0) {
+                                                next[idxAncienne].classe_id = estSpecial ? null : classe_id;
+                                                next[idxAncienne].type_special = typeSpecial;
+                                                if (estSpecial || estSoutien || String(ancienne.classe_id || '') !== String(classe_id || '')) {
+                                                  next[idxAncienne].matiere_id = null;
+                                                }
+                                              } else {
+                                                next.push({
+                                                  id: draftId(),
+                                                  prof_id: prof.id,
+                                                  classe_id: estSpecial ? null : classe_id,
+                                                  matiere_id: null,
+                                                  creneau_id: cr.id,
+                                                  type_special: typeSpecial,
+                                                });
+                                              }
+                                              return next;
+                                            });
+                                            setAffectationModes(prev => {
+                                              const next = { ...prev };
+                                              if (ancienne) next[ancienne.id] = estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe');
+                                              return next;
+                                            });
+                                            setHasAffectationsUnsaved(true);
                                             return;
                                           }
                                           // Supprimer ancienne affectation de CE prof pour CE créneau
-                                          if (ancienne) {
-                                            await axios.delete(API+'/planning/affectations/'+ancienne.id, {headers});
-                                            setAffectationModes(prev => {
-                                              const next = { ...prev };
-                                              delete next[ancienne.id];
-                                              return next;
-                                            });
-                                          }
-                                          const rep = await axios.post(
-                                            API+'/planning/affectations',
-                                            {prof_id:prof.id, classe_id, creneau_id:cr.id, type_special: typeSpecial},
-                                            {headers}
-                                          );
-                                          setAffectationModes(prev => ({ ...prev, [rep.data.id]: estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe') }));
-                                          chargerTout();
+                                          setAffectationsDraft(prev => {
+                                            const next = prev.map(a => ({ ...a }));
+                                            const idxAncienne = next.findIndex(x => ancienne && x.id === ancienne.id);
+                                            if (idxAncienne >= 0) {
+                                              next[idxAncienne].classe_id = estSpecial ? null : classe_id;
+                                              next[idxAncienne].type_special = typeSpecial;
+                                              if (estSpecial || estSoutien || String(ancienne.classe_id || '') !== String(classe_id || '')) {
+                                                next[idxAncienne].matiere_id = null;
+                                              }
+                                            } else {
+                                              next.push({
+                                                id: draftId(),
+                                                prof_id: prof.id,
+                                                classe_id: estSpecial ? null : classe_id,
+                                                matiere_id: null,
+                                                creneau_id: cr.id,
+                                                type_special: typeSpecial,
+                                              });
+                                            }
+                                            return next;
+                                          });
+                                          setAffectationModes(prev => {
+                                            const next = { ...prev };
+                                            const key = ancienne?.id || '';
+                                            if (key) next[key] = estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe');
+                                            return next;
+                                          });
+                                          setHasAffectationsUnsaved(true);
                                         }
                                       }}
                                       disabled={!isAdmin() || indispo}>
@@ -2068,18 +2251,24 @@ export default function EmploiDuTemps() {
                                   if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
                                   const aff = (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id);
                                   const aCours = classeAHoraire(classePlanningId, jour, periode);
+                                  const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
+                                  const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                                   return (
                                     <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
-                                      background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
+                                      background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
+                                      color: aff ? couleurTexteProf : undefined}}>
                                       {aff ? (
                                         <div>
-                                          <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
+                                          <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
                                           {isAdmin() ? (
                                             <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
-                                              value={aff.matiere_id||''}
-                                              onChange={async ev => {
-                                                await axios.post(API+'/planning/affectations',{prof_id:aff.prof_id,classe_id:classePlanningId,matiere_id:ev.target.value||null,creneau_id:cr.id},{headers});
-                                                chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                                              value={Object.prototype.hasOwnProperty.call(branchesMatiereDraftMap, String(aff.id))
+                                                ? (branchesMatiereDraftMap[String(aff.id)] || '')
+                                                : (aff.matiere_id||'')}
+                                              onChange={ev => {
+                                                const valeur = ev.target.value || '';
+                                                setBranchesMatiereDraftMap(prev => ({ ...prev, [String(aff.id)]: valeur }));
+                                                setHasBranchesUnsaved(true);
                                               }}>
                                               <option value="">— Branche —</option>
                                               {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
@@ -2088,7 +2277,7 @@ export default function EmploiDuTemps() {
                                             aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
                                           )}
                                         </div>
-                                      ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
+                                      ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>A affecter un professeur</span> : ''}
                                     </td>
                                   );
                                 })}
