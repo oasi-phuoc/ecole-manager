@@ -1444,6 +1444,57 @@ export default function EmploiDuTemps() {
                 {o.label}
               </button>
             ))}
+            {sousOngletPlanning === 'classes' && (
+              <select
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                value={classePlanningId || ''}
+                onChange={e => {
+                  const classeId = e.target.value;
+                  setClassePlanningId(classeId);
+                  if (classeId) {
+                    const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
+                    const poolId = poolTrouve ? String(poolTrouve.id) : '';
+                    setClassePlanningPoolId(poolId);
+                    chargerPlanningClasse(classeId, poolId);
+                  } else {
+                    setClassePlanningPoolId('');
+                    setPlanningClasse(null);
+                  }
+                }}
+              >
+                <option value="">— Sélectionner une classe —</option>
+                {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              </select>
+            )}
+            {sousOngletPlanning === 'professeurs' && (
+              <select
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                value={profPlanningId || ''}
+                onChange={e => {
+                  const id = e.target.value;
+                  setProfPlanningId(id);
+                  if (id) chargerPlanningProf(id);
+                  else setPlanningProf(null);
+                }}
+              >
+                <option value="">— Sélectionner un professeur —</option>
+                {profs.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.prenom} {p.nom}
+                  </option>
+                ))}
+              </select>
+            )}
+            {sousOngletPlanning === 'general' && (
+              <select
+                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                value={planningPoolId}
+                onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}
+              >
+                <option value="">Sélectionner un pool</option>
+                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+              </select>
+            )}
             {sousOngletPlanning === 'salle' && (
               <>
                 <select
@@ -2695,29 +2746,6 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING PROFS ===== */}
       {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
         <div>
-          <div style={{...styles.card,marginBottom:16}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
-              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
-              <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
-                value={profPlanningId || ''}
-                onChange={e => {
-                  const id = e.target.value;
-                  setProfPlanningId(id);
-                  if (id) chargerPlanningProf(id);
-                  else setPlanningProf(null);
-                }}
-              >
-                <option value="">— Sélectionner un professeur —</option>
-                {profs.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.prenom} {p.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
@@ -2772,32 +2800,6 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING CLASSES ===== */}
       {(onglet === 'classe' || (onglet === 'plannings' && sousOngletPlanning === 'classes')) && (
         <div>
-          <div style={{...styles.card, marginBottom:16}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner une classe :</h3>
-              <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
-                value={classePlanningId || ''}
-                onChange={e => {
-                  const classeId = e.target.value;
-                  setClassePlanningId(classeId);
-                  if (classeId) {
-                    const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
-                    const poolId = poolTrouve ? String(poolTrouve.id) : '';
-                    setClassePlanningPoolId(poolId);
-                    chargerPlanningClasse(classeId, poolId);
-                  } else {
-                    setClassePlanningPoolId('');
-                    setPlanningClasse(null);
-                  }
-                }}
-              >
-                <option value="">— Sélectionner une classe —</option>
-                {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              </select>
-            </div>
-          </div>
-
           {planningClasse && classePlanningId && (
             <div>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
@@ -2857,22 +2859,21 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING GÉNÉRAL ===== */}
       {(onglet === 'general' || (onglet === 'plannings' && sousOngletPlanning === 'general')) && (
         <div>
-          <div style={styles.rowBetween}>
-            <h3 style={styles.cardTitre}>Planning général</h3>
-            <select style={styles.sel} value={planningPoolId}
-              onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
-              <option value="">Tous les professeurs</option>
-              {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-            </select>
-          </div>
-
           {planningGeneral && (
             <div>
               {/* Tableau titulaires des classes */}
               <div style={{...styles.card, marginBottom:16}}>
                 <h4 style={{margin:'0 0 12px',fontSize:14,fontWeight:700,color:'#555'}}>🏫 Classes et titulaires</h4>
                 <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
-                  {(planningGeneral.titulaires||[]).filter(t=>t.classe_nom).map((t,i) => (
+                  {(planningGeneral.titulaires||[])
+                    .filter(t=>t.classe_nom)
+                    .filter(t => {
+                      if (!planningPoolId) return true;
+                      const poolSel = pools.find(p => String(p.id) === String(planningPoolId));
+                      const ids = new Set((poolSel?.classes || []).map(c => String(c.id)));
+                      return ids.has(String(t.classe_id));
+                    })
+                    .map((t,i) => (
                     <div key={i} style={{background:'#f8f9fa',borderRadius:10,padding:'10px 16px',border:'1px solid #e0e0e0',minWidth:160}}>
                       <div style={{fontWeight:700,fontSize:14,color:'#1a73e8'}}>{t.classe_nom}</div>
                       <div style={{fontSize:12,color:'#555',marginTop:4}}>{t.prof_nom || <span style={{color:'#bbb'}}>Pas de titulaire</span>}</div>
@@ -2884,6 +2885,7 @@ export default function EmploiDuTemps() {
           )}
           {planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
+              <h3 style={{...styles.cardTitre, marginBottom:12}}>Planning général</h3>
               <table style={{...styles.tbl,minWidth:200+planningGeneral.profs.length*120}}>
                 <thead>
                   <tr style={styles.theadRow}>
