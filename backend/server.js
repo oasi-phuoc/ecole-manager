@@ -39,6 +39,7 @@ initDB();
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/eleves', require('./src/routes/eleves'));
 app.use('/api/profs', require('./src/routes/profs'));
+app.use('/api/employes-administratifs', require('./src/routes/employesAdministratifs'));
 app.use('/api/classes', require('./src/routes/classes'));
 app.use('/api/branches', require('./src/routes/branches'));
 app.use('/api/emploi-du-temps', require('./src/routes/emploiDuTemps'));

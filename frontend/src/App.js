@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Eleves from './pages/Eleves';
+import EmployesAdministratifs from './pages/EmployesAdministratifs';
 import Professeurs from './pages/Professeurs';
 import Classes from './pages/Classes';
 import Branches from './pages/Branches';
@@ -29,6 +30,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/eleves" element={<PrivateRoute><Eleves /></PrivateRoute>} />
+        <Route path="/employes-administratifs" element={<PrivateRoute><EmployesAdministratifs /></PrivateRoute>} />
         <Route path="/professeurs" element={<PrivateRoute><Professeurs /></PrivateRoute>} />
         <Route path="/classes" element={<PrivateRoute><Classes /></PrivateRoute>} />
         <Route path="/branches" element={<PrivateRoute><Branches /></PrivateRoute>} />

@@ -28,7 +28,14 @@ const normaliserBranchesSpecialites = (valeur) => {
   return Array.from(new Set(nettoye.split(',').map(v => String(v).trim()).filter(Boolean)));
 };
 
-export default function Professeurs() {
+export default function Professeurs({
+  apiBase = '/profs',
+  titre = '👨‍🏫 Professeurs',
+  nomEntite = 'professeur',
+  hidePreferences = false,
+  hidePeriodesSemaine = false,
+  hidePreferencesLieu = false,
+} = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
@@ -43,13 +50,14 @@ export default function Professeurs() {
   const [docsLoading, setDocsLoading] = useState(false);
   const [uploadForm, setUploadForm] = useState({ type: 'CV' });
   const navigate = useNavigate();
+  const apiUrl = API + apiBase;
 
   const ouvrirDocuments = async (prof) => {
     setDocsProf(prof);
     setShowDocs(true);
     setDocsLoading(true);
     try {
-      const r = await axios.get(API+'/profs/'+prof.id+'/documents', {headers});
+      const r = await axios.get(apiUrl + '/' + prof.id + '/documents', {headers});
       setProfDocs(r.data);
     } catch(err) { setProfDocs([]); }
     setDocsLoading(false);
@@ -60,10 +68,10 @@ export default function Professeurs() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        await axios.post(API+'/profs/'+docsProf.id+'/documents', {
+        await axios.post(apiUrl + '/' + docsProf.id + '/documents', {
           nom: file.name, type, contenu: e.target.result, taille: file.size
         }, {headers});
-        const r = await axios.get(API+'/profs/'+docsProf.id+'/documents', {headers});
+        const r = await axios.get(apiUrl + '/' + docsProf.id + '/documents', {headers});
         setProfDocs(r.data);
       } catch(err) { alert('Erreur upload: '+err.message); }
     };
@@ -72,7 +80,7 @@ export default function Professeurs() {
 
   const telechargerDocument = async (doc) => {
     try {
-      const r = await axios.get(API+'/profs/'+docsProf.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const r = await axios.get(apiUrl + '/' + docsProf.id + '/documents/' + doc.id + '/telecharger', {headers});
       const a = document.createElement('a');
       a.href = r.data.contenu;
       a.download = r.data.nom;
@@ -82,14 +90,14 @@ export default function Professeurs() {
 
   const supprimerDocument = async (docId) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await axios.delete(API+'/profs/'+docsProf.id+'/documents/'+docId, {headers});
+    await axios.delete(apiUrl + '/' + docsProf.id + '/documents/' + docId, {headers});
     setProfDocs(prev => prev.filter(d => d.id !== docId));
   };
 
   const envoyerAccesEmail = async (profId) => {
     setEmailEnvoi(prev => ({...prev, [profId]: 'loading'}));
     try {
-      await axios.post(API+'/profs/'+profId+'/envoyer-acces', {}, {headers});
+      await axios.post(apiUrl + '/' + profId + '/envoyer-acces', {}, {headers});
       setEmailEnvoi(prev => ({...prev, [profId]: 'ok'}));
       setTimeout(() => setEmailEnvoi(prev => ({...prev, [profId]: null})), 4000);
     } catch(err) {
@@ -145,12 +153,13 @@ export default function Professeurs() {
   useEffect(() => { chargerProfs(); }, []);
   useEffect(() => {
     if (!showForm) return;
+    if (hidePreferences) return;
     const niveaux = (form.niveau_prefere || '').split(',').filter(Boolean);
     chargerBranchesNiveaux(niveaux);
-  }, [form.niveau_prefere, showForm]);
+  }, [form.niveau_prefere, showForm, hidePreferences]);
 
   const chargerProfs = async () => {
-    try { const res = await axios.get(API+'/profs',{headers}); setProfs(res.data); }
+    try { const res = await axios.get(apiUrl,{headers}); setProfs(res.data); }
     catch(err) { console.error(err); }
   };
 
@@ -166,8 +175,17 @@ export default function Professeurs() {
         ...form,
         branches_specialites: normaliserBranchesSpecialites(form.branches_specialites),
       };
-      if (profEdit) await axios.put(API+'/profs/'+profEdit.id, payload, {headers});
-      else await axios.post(API+'/profs', payload, {headers});
+      if (hidePeriodesSemaine) payload.periodes_semaine = null;
+      if (hidePreferences) {
+        payload.niveau_prefere = null;
+        payload.branches_specialites = [];
+      }
+      if (hidePreferencesLieu) {
+        payload.lieu_travail_prefere = null;
+        payload.remarque_lieu_travail = null;
+      }
+      if (profEdit) await axios.put(apiUrl + '/' + profEdit.id, payload, {headers});
+      else await axios.post(apiUrl, payload, {headers});
       setShowForm(false); setProfEdit(null); resetForm(); chargerProfs();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
@@ -181,12 +199,12 @@ export default function Professeurs() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Supprimer ce professeur ?')) { await axios.delete(API+'/profs/'+id,{headers}); chargerProfs(); }
+    if (window.confirm('Supprimer ce ' + nomEntite + ' ?')) { await axios.delete(apiUrl + '/' + id,{headers}); chargerProfs(); }
   };
 
   const toggleStatut = async (p) => {
     if (!isAdmin()) return;
-    await axios.put(API+'/profs/'+p.id, {...p, actif:!p.actif}, {headers});
+    await axios.put(apiUrl + '/' + p.id, {...p, actif:!p.actif}, {headers});
     chargerProfs();
   };
 
@@ -199,6 +217,7 @@ export default function Professeurs() {
   const branchesSpecialitesSelectionnees = normaliserBranchesSpecialites(form.branches_specialites);
 
   useEffect(() => {
+    if (hidePreferences) return;
     if (!showForm) return;
     if (!branchesDisponibles.length) return;
     const idsAutorises = new Set(branchesDisponibles.flatMap(b => (b.ids || []).map(String)));
@@ -208,13 +227,13 @@ export default function Professeurs() {
       if (filtrees.length === courantes.length) return prev;
       return { ...prev, branches_specialites: filtrees };
     });
-  }, [branchesDisponibles, showForm]);
+  }, [branchesDisponibles, showForm, hidePreferences]);
 
   return (
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.title}>👨‍🏫 Professeurs</h2>
+        <h2 style={s.title}>{titre}</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
       </div>
       <div style={s.controlsRow}>
@@ -233,7 +252,7 @@ export default function Professeurs() {
         <div style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>{profEdit?'Modifier':'Ajouter'} un professeur</h3>
+              <h3 style={s.modalTitle}>{profEdit?'Modifier':'Ajouter'} un {nomEntite}</h3>
               <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -302,36 +321,36 @@ export default function Professeurs() {
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div style={{display:'grid',gridTemplateColumns:hidePeriodesSemaine ? '1fr' : '1fr 1fr',gap:10}}>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
                         <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
                       </div>
-                      <div style={{display:'flex',flexDirection:'column'}}>
+                      {!hidePeriodesSemaine && <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine <span style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>(100% = 32)</span></label>
                         <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
-                      </div>
+                      </div>}
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
                         <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
                           <option value="">-- Choisir --</option>
-                          {['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'].map(c=><option key={c} value={c}>{c}</option>)}
+                          {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
                         <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
                           <option value="">-- Choisir --</option>
-                          {['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'].map(p=><option key={p} value={p}>{p}</option>)}
+                          {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
                         </select>
                       </div>
                     </div>
-                    <div style={{display:'flex',flexDirection:'column'}}>
+                    {!hidePreferences && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveau(x) préféré(s)</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {['CSC','CFR','EPL'].map(n => {
+                        {NIVEAUX.map(n => {
                           const niveaux = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
                           const selected = niveaux.includes(n);
                           return (
@@ -352,8 +371,8 @@ export default function Professeurs() {
                           Aucune préférence
                         </button>
                       </div>
-                    </div>
-                    {niveauxPreferesSelectionnes.length > 0 && (
+                    </div>}
+                    {!hidePreferences && niveauxPreferesSelectionnes.length > 0 && (
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
                         {branchesDisponibles.length === 0 ? (
@@ -406,7 +425,7 @@ export default function Professeurs() {
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques</label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
                     </div>
-                    <div style={{display:'flex',flexDirection:'column'}}>
+                    {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieu(x) de travail préféré(s)</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                         {['BOTZA','SYNECOM','CREUSET'].map(l => {
@@ -430,11 +449,11 @@ export default function Professeurs() {
                           Aucune préférence
                         </button>
                       </div>
-                    </div>
-                    <div style={{display:'flex',flexDirection:'column'}}>
+                    </div>}
+                    {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques lieu de travail</label>
                       <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
-                    </div>
+                    </div>}
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
                       <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
@@ -482,7 +501,7 @@ export default function Professeurs() {
               {docsLoading ? (
                 <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
               ) : profDocs.length === 0 ? (
-                <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour ce professeur</div>
+                <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour ce {nomEntite}</div>
               ) : profDocs.map(doc => (
                 <div key={doc.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,border:'1px solid #e2e8f0',marginBottom:8,background:'#f8fafc'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -525,7 +544,7 @@ export default function Professeurs() {
           </thead>
           <tbody>
             {profsFiltres.length===0 ? (
-              <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun professeur trouvé</td></tr>
+              <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
                 <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
