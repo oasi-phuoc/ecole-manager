@@ -445,7 +445,7 @@ export default function EmploiDuTemps() {
     }, 0);
     return {
       profId: String(profId),
-      nom: prof ? `${prof.nom} ${prof.prenom}` : `Prof ${profId}`,
+      nom: prof ? `${prof.prenom} ${prof.nom}` : `Prof ${profId}`,
       branchesPrefs,
       compteAutres
     };
@@ -1164,7 +1164,7 @@ export default function EmploiDuTemps() {
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
-        const titre = `Planning professeur — ${planningProf?.prof?.nom || ''} ${planningProf?.prof?.prenom || ''}`.trim();
+        const titre = `Planning professeur — ${planningProf?.prof?.prenom || ''} ${planningProf?.prof?.nom || ''}`.trim();
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
           getCellText: (cr) => {
@@ -1245,7 +1245,7 @@ export default function EmploiDuTemps() {
         );
         const sections = reps.map((rep) => {
           const data = rep.data;
-          const nom = `${data?.prof?.nom || ''} ${data?.prof?.prenom || ''}`.trim();
+          const nom = `${data?.prof?.prenom || ''} ${data?.prof?.nom || ''}`.trim();
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
             getCellText: (cr) => {
@@ -1412,7 +1412,7 @@ export default function EmploiDuTemps() {
                 <option value="">— Sélectionner un professeur —</option>
                 {profs.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.nom} {p.prenom}
+                    {p.prenom} {p.nom}
                   </option>
                 ))}
               </select>
@@ -1423,7 +1423,7 @@ export default function EmploiDuTemps() {
             <div style={styles.card}>
               <div style={styles.rowBetween}>
                 <h3 style={styles.cardTitre}>
-                  {profDispoSelectionne?.nom} {profDispoSelectionne?.prenom}
+                  {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
                   <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
                     {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
                   </span>
@@ -1574,7 +1574,7 @@ export default function EmploiDuTemps() {
                                 {bloc.items.map(p => (
                                   <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:'#111827'}}>
                                     <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
-                                    {p.nom} {p.prenom}
+                                    {p.prenom} {p.nom}
                                     {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
                                   </label>
                                 ))}
@@ -1648,7 +1648,7 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={{marginTop:10}}>
                   <div style={styles.poolLabel}>PROFS</div>
-                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827'}}>{p.nom} {p.prenom}</span>)}
+                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827'}}>{p.prenom} {p.nom}</span>)}
                   {pool.profs.length===0&&<span style={styles.aucun}>Aucun</span>}
                 </div>
                 <div style={{marginTop:8}}>
@@ -1666,7 +1666,7 @@ export default function EmploiDuTemps() {
       {onglet === 'affectations' && (
         <div>
           <div style={styles.affActionsWrap}>
-            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            <div style={styles.affActionsLeft}>
               {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
                   onClick={async () => {
@@ -1754,19 +1754,19 @@ export default function EmploiDuTemps() {
                   </select>
                 </>
               )}
-              <button
-                type="button"
-                style={styles.btnSauvegarderAff}
-                onClick={() => {
-                  if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
-                  if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
-                  if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
-                  alert("Aucun changement à sauvegarder pour ce sous-onglet.");
-                }}
-              >
-                💾 Sauvegarder
-              </button>
             </div>
+            <button
+              type="button"
+              style={styles.btnSauvegarderAff}
+              onClick={() => {
+                if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
+                if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
+                if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
+                alert("Aucun changement à sauvegarder pour ce sous-onglet.");
+              }}
+            >
+              💾 Sauvegarder
+            </button>
           </div>
 
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
@@ -1900,7 +1900,7 @@ export default function EmploiDuTemps() {
                           boxShadow: selected ? '0 0 0 2px #cbd5e1' : 'none'
                         }}
                       >
-                        {p.nom} {p.prenom}
+                        {p.prenom} {p.nom}
                       </button>
                     );
                   })}
@@ -2047,7 +2047,7 @@ export default function EmploiDuTemps() {
                                             : null;
                                           if (conflit) {
                                             const profConflit = profsPool.find(p => p.id == conflit.prof_id);
-                                            const nomProfConflit = profConflit ? `${profConflit.nom} ${profConflit.prenom}` : 'un autre professeur';
+                                            const nomProfConflit = profConflit ? `${profConflit.prenom} ${profConflit.nom}` : 'un autre professeur';
                                             const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
                                             const confirmer = window.confirm(
                                               `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur ce créneau.\n\nVoulez-vous échanger ces périodes ?`
@@ -2306,7 +2306,8 @@ export default function EmploiDuTemps() {
                                                 background: '#f1f5f9',
                                                 color: '#334155',
                                                 fontWeight: 600,
-                                                cursor: 'default'
+                                                cursor: 'default',
+                                                textAlign: 'center'
                                               }}
                                             />
                                           )}
@@ -2596,7 +2597,7 @@ export default function EmploiDuTemps() {
                 <option value="">— Sélectionner un professeur —</option>
                 {profs.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.nom} {p.prenom}
+                    {p.prenom} {p.nom}
                   </option>
                 ))}
               </select>
@@ -2605,7 +2606,7 @@ export default function EmploiDuTemps() {
 
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.nom} {planningProf.prof?.prenom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
               <table style={{...styles.tbl,minWidth:970,tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
@@ -2768,7 +2769,7 @@ export default function EmploiDuTemps() {
                     {planningGeneral.profs.map(p => {
                       const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
                       return <th key={p.id} style={styles.th}>
-                        {p.nom} {p.prenom}
+                        {p.prenom} {p.nom}
                         {tits.length>0 && <div style={{fontSize:10,fontWeight:400,color:'#c8e6c9',marginTop:2}}>{tits.map(t=>t.classe_nom).join(', ')}</div>}
                       </th>;
                     })}
@@ -2821,9 +2822,10 @@ const styles = {
   onglet:{padding:'8px 16px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   ongletActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
+  affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
   affTabBtn:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#f1f5f9',color:'#555'},
   affTabBtnActif:{background:'#6366f1',color:'white'},
-  btnSauvegarderAff:{marginLeft:'auto',padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff'},
+  btnSauvegarderAff:{marginLeft:'auto',padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},

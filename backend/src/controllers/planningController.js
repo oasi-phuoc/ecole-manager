@@ -208,7 +208,7 @@ const saveBrancheCouleur = async (req, res) => {
 
 const getAffectations = async (req, res) => {
   const r = await pool.query(`
-    SELECT a.*, u.nom||' '||u.prenom as prof_nom,
+    SELECT a.*, u.prenom||' '||u.nom as prof_nom,
       COALESCE(c.nom, CASE
         WHEN a.type_special='titulariat' THEN 'Titulariat'
         WHEN a.type_special='atelier' THEN 'Atelier'
@@ -294,7 +294,7 @@ const getPlanningGeneral = async (req, res) => {
     LEFT JOIN matieres m ON m.id=a.matiere_id
   `);
   const dispos = await pool.query('SELECT prof_id,creneau_id,disponible FROM disponibilites');
-  const titulaires = await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.nom||' '||u.prenom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
+  const titulaires = await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
   res.json({ profs:profs.rows, creneaux:creneaux.rows, affectations:affectations.rows, dispos:dispos.rows, titulaires:titulaires.rows });
 };
 
@@ -324,10 +324,10 @@ const getPlanningProf = async (req, res) => {
 const getPlanningClasse = async (req, res) => {
   const { classe_id } = req.params;
   const { pool_id } = req.query;
-  const classe = await pool.query(`SELECT c.id, c.nom, u.nom||' '||u.prenom as titulaire_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id WHERE c.id=$1`, [classe_id]);
+  const classe = await pool.query(`SELECT c.id, c.nom, u.prenom||' '||u.nom as titulaire_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id WHERE c.id=$1`, [classe_id]);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
   const affectations = await pool.query(`
-    SELECT a.id, a.creneau_id, a.prof_id, a.matiere_id, u.nom||' '||u.prenom as prof_nom, m.nom as matiere_nom
+    SELECT a.id, a.creneau_id, a.prof_id, a.matiere_id, u.prenom||' '||u.nom as prof_nom, m.nom as matiere_nom
     FROM affectations a
     JOIN utilisateurs u ON u.id=a.prof_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
@@ -338,7 +338,7 @@ const getPlanningClasse = async (req, res) => {
   if (pool_id) {
     const pb = await pool.query(`
       SELECT pb.prof_id, pb.matiere_id, m.nom as matiere_nom, m.periodes_semaine,
-        u.nom||' '||u.prenom as prof_nom
+        u.prenom||' '||u.nom as prof_nom
       FROM planning_branches pb
       JOIN matieres m ON m.id=pb.matiere_id
       LEFT JOIN utilisateurs u ON u.id=pb.prof_id

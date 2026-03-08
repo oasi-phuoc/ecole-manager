@@ -209,7 +209,11 @@ export default function Professeurs({
   };
 
   const profsFiltres = profs.filter(p => {
-    const matchR = (p.nom+' '+p.prenom+' '+p.email).toLowerCase().includes(recherche.toLowerCase());
+    const matchR = (
+      (p.prenom+' '+p.nom+' '+p.email+' '+p.nom+' '+p.prenom)
+        .toLowerCase()
+        .includes(recherche.toLowerCase())
+    );
     const matchS = filtreStatut==='tous' || (filtreStatut==='actif'&&p.actif!==false) || (filtreStatut==='inactif'&&p.actif===false);
     return matchR && matchS;
   });

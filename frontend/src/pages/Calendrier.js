@@ -87,7 +87,7 @@ export default function Calendrier() {
     try {
       const prof1 = profs.find(p => String(p.id)===String(formRetenue.prof1_id));
       const prof2 = profs.find(p => String(p.id)===String(formRetenue.prof2_id));
-      const profsNoms = [prof1,prof2].filter(Boolean).map(p=>p.nom+' '+p.prenom).join(' & ');
+      const profsNoms = [prof1,prof2].filter(Boolean).map(p=>p.prenom+' '+p.nom).join(' & ');
       const data = { titre: formRetenue.titre, description: profsNoms||null, date_debut: formRetenue.date_debut, date_fin: formRetenue.date_debut, heure_debut: formRetenue.heure_debut, heure_fin: formRetenue.heure_fin||null, categorie: 'retenue', couleur: '#dc2626', type: 'Autre' };
       if (retenueEdit) await axios.put(API+'/calendrier/'+retenueEdit.id, data, {headers});
       else await axios.post(API+'/calendrier', data, {headers});
@@ -298,11 +298,11 @@ export default function Calendrier() {
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                     <select style={s.inp} value={formRetenue.prof1_id} onChange={e => setFormRetenue({...formRetenue,prof1_id:e.target.value,prof2_id:e.target.value===formRetenue.prof2_id?'':formRetenue.prof2_id})}>
                       <option value="">-- Prof 1 --</option>
-                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof2_id)}>{p.nom} {p.prenom}</option>)}
+                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof2_id)}>{p.prenom} {p.nom}</option>)}
                     </select>
                     <select style={s.inp} value={formRetenue.prof2_id} onChange={e => setFormRetenue({...formRetenue,prof2_id:e.target.value})}>
                       <option value="">-- Prof 2 --</option>
-                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof1_id)}>{p.nom} {p.prenom}</option>)}
+                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof1_id)}>{p.prenom} {p.nom}</option>)}
                     </select>
                   </div>
                 </div>

@@ -126,7 +126,7 @@ export default function TCF() {
               const p = profMap[id];
               return (
                 <tr key={id}>
-                  <td style={styles.tdProf}>{p ? `${p.nom} ${p.prenom}` : `Prof #${id}`}</td>
+                  <td style={styles.tdProf}>{p ? `${p.prenom} ${p.nom}` : `Prof #${id}`}</td>
                   {JOURS.map(j => (
                     <React.Fragment key={id + '-' + j}>
                       <td style={styles.tdCell}>
@@ -226,7 +226,7 @@ export default function TCF() {
                                   disabled={blocked}
                                   onChange={() => toggleProf(siteKey, p.id)}
                                 />
-                                <span>{p.nom} {p.prenom}</span>
+                                <span>{p.prenom} {p.nom}</span>
                               </label>
                             );
                           })}
