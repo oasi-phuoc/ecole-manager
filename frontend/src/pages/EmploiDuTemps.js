@@ -2,6 +2,9 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -1177,6 +1180,309 @@ export default function EmploiDuTemps() {
     popup.focus();
     setTimeout(() => popup.print(), 250);
   };
+  const nomFichierPdf = (titre) => {
+    const brut = String(titre || 'planning')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s-]/g, ' ')
+      .trim()
+      .replace(/\s+/g, '_');
+    return `${brut || 'planning'}.pdf`;
+  };
+  const enregistrerPdfBlob = async (blob, suggestedName) => {
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'PDF',
+          accept: { 'application/pdf': ['.pdf'] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = suggestedName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const enregistrerExcelBlob = async (blob, suggestedName) => {
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'Excel',
+          accept: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+          }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = suggestedName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const toSheetName = (raw, usedNames) => {
+    const base = String(raw || 'Feuille')
+      .replace(/[\\/*?:[\]]/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 31) || 'Feuille';
+    let name = base;
+    let i = 2;
+    while (usedNames.has(name)) {
+      const suffix = ` (${i})`;
+      name = `${base.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+      i += 1;
+    }
+    usedNames.add(name);
+    return name;
+  };
+  const buildPlanningAoA = ({ creneauxListe, getCellText }) => {
+    const aoa = [];
+    aoa.push(['Créneau', ...JOURS]);
+    ['Matin', 'Après-midi'].forEach((periode) => {
+      const base = baseCreneauxPeriode(creneauxListe, periode);
+      if (!base.length) return;
+      aoa.push([periode, '', '', '', '', '']);
+      base.forEach((crBase, idx) => {
+        const row = [`P${idx + 1} — ${crBase.heure_debut}–${crBase.heure_fin}`];
+        JOURS.forEach((jour) => {
+          const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
+          row.push(cr ? (getCellText(cr, jour, periode) || '') : '');
+        });
+        aoa.push(row);
+      });
+    });
+    return aoa;
+  };
+  const exporterSelectionEnPdf = async (titre, contenu, options = {}) => {
+    const html = withPrintLayout(titre, contenu, options);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = options.paysage ? '1400px' : '1000px';
+    iframe.style.height = '2000px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+
+    try {
+      await new Promise((resolve, reject) => {
+        iframe.onload = () => resolve(true);
+        iframe.onerror = () => reject(new Error("Impossible de préparer l'aperçu PDF."));
+      });
+      await new Promise(resolve => setTimeout(resolve, 120));
+      const doc = iframe.contentDocument;
+      if (!doc?.body) throw new Error("Le document PDF n'a pas pu être généré.");
+      const canvas = await html2canvas(doc.body, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        windowWidth: Math.max(doc.body.scrollWidth, doc.documentElement?.scrollWidth || 0),
+        windowHeight: Math.max(doc.body.scrollHeight, doc.documentElement?.scrollHeight || 0),
+      });
+      const orientation = options.paysage ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      const blob = pdf.output('blob');
+      await enregistrerPdfBlob(blob, nomFichierPdf(titre));
+    } finally {
+      iframe.remove();
+    }
+  };
+  const exporterSectionsEnPdf = async (titre, sectionsHtml, options = {}) => {
+    const contenu = Array.isArray(sectionsHtml) ? sectionsHtml.join('') : String(sectionsHtml || '');
+    const html = withPrintLayout(titre, contenu, options);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = options.paysage ? '1400px' : '1000px';
+    iframe.style.height = '2000px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+
+    try {
+      await new Promise((resolve, reject) => {
+        iframe.onload = () => resolve(true);
+        iframe.onerror = () => reject(new Error("Impossible de préparer l'export PDF."));
+      });
+      await new Promise(resolve => setTimeout(resolve, 120));
+      const doc = iframe.contentDocument;
+      if (!doc?.body) throw new Error("Le document PDF n'a pas pu être généré.");
+      const blocks = Array.from(doc.querySelectorAll('.section'));
+      if (!blocks.length) throw new Error('Aucune section à exporter.');
+
+      const orientation = options.paysage ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const maxW = pageWidth - (margin * 2);
+      const maxH = pageHeight - (margin * 2);
+
+      for (let i = 0; i < blocks.length; i += 1) {
+        const canvas = await html2canvas(blocks[i], {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          windowWidth: Math.max(doc.body.scrollWidth, doc.documentElement?.scrollWidth || 0),
+          windowHeight: Math.max(doc.body.scrollHeight, doc.documentElement?.scrollHeight || 0),
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const ratioW = maxW / canvas.width;
+        const ratioH = maxH / canvas.height;
+        const ratio = Math.min(ratioW, ratioH);
+        const w = canvas.width * ratio;
+        const h = canvas.height * ratio;
+        const x = (pageWidth - w) / 2;
+        const y = margin;
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', x, y, w, h);
+      }
+
+      const blob = pdf.output('blob');
+      await enregistrerPdfBlob(blob, nomFichierPdf(titre));
+    } finally {
+      iframe.remove();
+    }
+  };
+  const exporterPlanningToutExcel = async () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const usedNames = new Set();
+      if (sousOngletPlanning === 'classes') {
+        if (!classesToutesTriees.length) return alert('Aucune classe à exporter.');
+        const reps = await Promise.all(
+          classesToutesTriees.map(cl => axios.get(API + '/planning/classe/' + cl.id, { headers }))
+        );
+        reps.forEach((rep) => {
+          const data = rep.data;
+          const aoa = buildPlanningAoA({
+            creneauxListe: data?.creneaux || [],
+            getCellText: (cr) => {
+              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
+              if (!aff) return 'Aucun professeur affecté';
+              return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
+            }
+          });
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          XLSX.utils.book_append_sheet(wb, ws, toSheetName(data?.classe?.nom || 'Classe', usedNames));
+        });
+      } else if (sousOngletPlanning === 'professeurs') {
+        if (!profs.length) return alert('Aucun professeur à exporter.');
+        const reps = await Promise.all(
+          profs.map(p => axios.get(API + '/planning/prof/' + p.id, { headers }))
+        );
+        reps.forEach((rep) => {
+          const data = rep.data;
+          const aoa = buildPlanningAoA({
+            creneauxListe: data?.creneaux || [],
+            getCellText: (cr) => {
+              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
+              if (aff) return aff.matiere_nom ? `${aff.classe_nom}\n${aff.matiere_nom}` : aff.classe_nom;
+              const dispo = (data?.dispos || []).find(d => d.creneau_id === cr.id);
+              if (dispo && !dispo.disponible) return 'Indisponible';
+              return '';
+            }
+          });
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          const nom = `${data?.prof?.prenom || ''} ${data?.prof?.nom || ''}`.trim() || 'Professeur';
+          XLSX.utils.book_append_sheet(wb, ws, toSheetName(nom, usedNames));
+        });
+      } else if (sousOngletPlanning === 'salle') {
+        if (!sallesLieuTravailId) return alert('Sélectionnez d’abord un lieu de travail.');
+        if (!sallesDisponiblesLieu.length) return alert('Aucune salle disponible pour ce lieu.');
+        const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
+        sallesDisponiblesLieu.forEach((salle) => {
+          const aoa = buildPlanningAoA({
+            creneauxListe: creneaux || [],
+            getCellText: (cr) => {
+              const cours = (coursEmploiDuTemps || []).find(c =>
+                c.jour === cr.jour &&
+                normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut) &&
+                normaliserHeureCreneau(c.heure_fin) === normaliserHeureCreneau(cr.heure_fin) &&
+                String((c.salle || '').trim()) === String((salle || '').trim()) &&
+                idsClassesLieu.has(String(c.classe_id))
+              );
+              if (!cours) return '';
+              const cl = classes.find(x => String(x.id) === String(cours.classe_id));
+              if (!cl) return '';
+              const aff = (affectations || []).find(a =>
+                String(a.classe_id) === String(cl.id) &&
+                String(a.creneau_id) === String(cr.id)
+              );
+              return `${cl.nom}\n${aff?.prof_nom || 'Aucun professeur affecté'}`;
+            }
+          });
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          XLSX.utils.book_append_sheet(wb, ws, toSheetName(salle, usedNames));
+        });
+      } else {
+        const poolId = planningPoolId || '';
+        const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
+        const rep = await axios.get(url, { headers });
+        const data = rep.data;
+        const aoa = buildPlanningAoA({
+          creneauxListe: data?.creneaux || [],
+          getCellText: (cr) => {
+            const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
+            if (!affectes.length) return '';
+            if (affectes.length === 1) {
+              const a = affectes[0];
+              return `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`;
+            }
+            return affectes
+              .map(a => `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
+              .join('\n\n');
+          }
+        });
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const nomFeuille = poolId
+          ? (pools.find(p => String(p.id) === String(poolId))?.nom || 'General')
+          : 'General';
+        XLSX.utils.book_append_sheet(wb, ws, toSheetName(nomFeuille, usedNames));
+      }
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const nomSousOnglet = sousOngletPlanning === 'salle' ? 'salles' : sousOngletPlanning;
+      await enregistrerExcelBlob(blob, nomFichierPdf(`export_${nomSousOnglet}`).replace(/\.pdf$/i, '.xlsx'));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'export Excel.");
+    }
+  };
   const imprimerPlanningSelection = async () => {
     try {
       if (sousOngletPlanning === 'classes') {
@@ -1190,7 +1496,7 @@ export default function EmploiDuTemps() {
             return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return exporterSelectionEnPdf(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
@@ -1212,7 +1518,7 @@ export default function EmploiDuTemps() {
             return { text: '' };
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return exporterSelectionEnPdf(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId || !salleSelectionnee) return alert('Sélectionnez d’abord un lieu de travail et une salle.');
@@ -1243,7 +1549,7 @@ export default function EmploiDuTemps() {
             };
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return exporterSelectionEnPdf(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       const poolId = planningPoolId || '';
       const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
@@ -1271,7 +1577,7 @@ export default function EmploiDuTemps() {
           };
         }
       });
-      return openPrintWindow(titre, `<div class="section">${table}</div>`);
+      return exporterSelectionEnPdf(titre, `<div class="section">${table}</div>`);
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression.");
     }
@@ -1295,8 +1601,8 @@ export default function EmploiDuTemps() {
             }
           });
           return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}</h2>${table}</div>`;
-        }).join('');
-        return openPrintWindow('Planning classes — toutes les classes', sections, { paysage: true });
+        });
+        return exporterSectionsEnPdf('Planning classes — toutes les classes', sections, { paysage: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profs.length) return alert('Aucun professeur à imprimer.');
@@ -1324,8 +1630,8 @@ export default function EmploiDuTemps() {
             }
           });
           return `<div class="section"><h2>Professeur : ${escapeHtml(nom)}</h2>${table}</div>`;
-        }).join('');
-        return openPrintWindow('Planning professeurs — tous les professeurs', sections, { paysage: true });
+        });
+        return exporterSectionsEnPdf('Planning professeurs — tous les professeurs', sections, { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId) return alert('Sélectionnez d’abord un lieu de travail.');
@@ -1358,8 +1664,8 @@ export default function EmploiDuTemps() {
             }
           });
           return `<div class="section"><h2>Salle : ${escapeHtml(salle)}</h2>${table}</div>`;
-        }).join('');
-        return openPrintWindow(`Planning salles — ${sallesLieuTravailId}`, sections, { paysage: true });
+        });
+        return exporterSectionsEnPdf(`Planning salles — ${sallesLieuTravailId}`, sections, { paysage: true });
       }
       const rep = await axios.get(API + '/planning/general', { headers });
       const data = rep.data;
@@ -1384,7 +1690,7 @@ export default function EmploiDuTemps() {
           };
         }
       });
-      return openPrintWindow('Planning général — complet', `<div class="section">${table}</div>`);
+      return exporterSectionsEnPdf('Planning général — complet', [`<div class="section">${table}</div>`]);
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression globale.");
     }
@@ -1473,6 +1779,13 @@ export default function EmploiDuTemps() {
                 onClick={imprimerPlanningTout}
               >
                 🖨️ Tout imprimer
+              </button>
+              <button
+                type="button"
+                style={{...styles.btnRetour, fontWeight:700}}
+                onClick={exporterPlanningToutExcel}
+              >
+                📗 Export Excel
               </button>
             </div>
           </div>
