@@ -407,14 +407,25 @@ export default function EmploiDuTemps() {
   const matieresPourPlanningClasse = matieres.filter(m =>
     niveauPoolPlanning && String(m.niveau || '').toUpperCase() === niveauPoolPlanning
   );
+  const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
+  const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
+    const key = String(a.id);
+    if (!Object.prototype.hasOwnProperty.call(branchesMatiereDraftMap, key)) return a;
+    const matiereIdDraft = branchesMatiereDraftMap[key] || null;
+    const matiereDraft = matiereIdDraft ? matieresParId.get(String(matiereIdDraft)) : null;
+    return {
+      ...a,
+      matiere_id: matiereIdDraft,
+      matiere_nom: matiereDraft?.nom || null
+    };
+  });
   const suiviBranchesClasse = planningClasse ? matieresPourPlanningClasse.map(m => {
-    const affectees = (planningClasse.affectations || []).filter(a => String(a.matiere_id) === String(m.id)).length;
+    const affectees = planningClasseAffectations.filter(a => String(a.matiere_id) === String(m.id)).length;
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
-  const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const profsAffectesClasse = planningClasse ? Array.from(new Set(
-    (planningClasse.affectations || [])
+    planningClasseAffectations
       .map(a => a.prof_id)
       .filter(Boolean)
       .map(id => String(id))
@@ -422,7 +433,7 @@ export default function EmploiDuTemps() {
   const suiviPreferencesBranches = profsAffectesClasse.map((profId) => {
     const prof = (profsPoolP || []).find(p => String(p.id) === String(profId)) || (profs || []).find(p => String(p.id) === String(profId));
     const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites);
-    const affectationsProf = (planningClasse?.affectations || []).filter(a => String(a.prof_id) === String(profId));
+    const affectationsProf = planningClasseAffectations.filter(a => String(a.prof_id) === String(profId));
     const compteurParBranche = affectationsProf.reduce((acc, a) => {
       if (!a?.matiere_id) return acc;
       const key = String(a.matiere_id);
@@ -1066,12 +1077,23 @@ export default function EmploiDuTemps() {
   const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
   const couleurCompteurDispo = periodesSelectionneesDispo < periodesRequisesDispo ? '#dc2626' : '#16a34a';
   const LARGEUR_COLONNE_CRENEAU = 128;
+  const STYLE_COLONNE_CRENEAU = {
+    width: LARGEUR_COLONNE_CRENEAU,
+    minWidth: LARGEUR_COLONNE_CRENEAU,
+    maxWidth: LARGEUR_COLONNE_CRENEAU
+  };
+  const LARGEUR_COLONNE_JOUR = `calc((100% - ${LARGEUR_COLONNE_CRENEAU}px) / ${JOURS.length})`;
   const escapeHtml = (val) => String(val ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+  const toPrintColor = (val) => {
+    const c = String(val || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
+    return '';
+  };
   const baseCreneauxPeriode = (liste, periode) =>
     (liste || [])
       .filter(c => c.jour === 'Lundi' && c.periode === periode)
@@ -1109,7 +1131,7 @@ export default function EmploiDuTemps() {
     </html>
   `;
   };
-  const buildPlanningTableHtml = ({ creneauxListe, getCellText }) => {
+  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData }) => {
     const lignes = [];
     ['Matin', 'Après-midi'].forEach((periode) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
@@ -1118,8 +1140,16 @@ export default function EmploiDuTemps() {
       base.forEach((crBase, idx) => {
         const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          const val = cr ? getCellText(cr, jour, periode) : '';
-          return `<td>${escapeHtml(val)}</td>`;
+          const raw = cr
+            ? (getCellData ? getCellData(cr, jour, periode) : { text: getCellText(cr, jour, periode) })
+            : { text: '' };
+          const texte = escapeHtml(raw?.text || '').replace(/\n/g, '<br/>');
+          const bg = toPrintColor(raw?.bg);
+          const fg = toPrintColor(raw?.color);
+          const style = (bg || fg)
+            ? ` style="${bg ? `background:${bg};` : ''}${fg ? `color:${fg};` : ''}"`
+            : '';
+          return `<td${style}>${texte}</td>`;
         }).join('');
         lignes.push(
           `<tr><td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
@@ -1156,8 +1186,8 @@ export default function EmploiDuTemps() {
           creneauxListe: planningClasse.creneaux || [],
           getCellText: (cr) => {
             const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
-            if (!aff) return 'à affecter';
-            return aff.matiere_nom ? `${aff.prof_nom} — ${aff.matiere_nom}` : aff.prof_nom;
+            if (!aff) return 'A affecter un professeur';
+            return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
           }
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
@@ -1167,12 +1197,19 @@ export default function EmploiDuTemps() {
         const titre = `Planning professeur — ${planningProf?.prof?.prenom || ''} ${planningProf?.prof?.nom || ''}`.trim();
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
-          getCellText: (cr) => {
+          getCellData: (cr) => {
             const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
-            if (aff) return aff.matiere_nom ? `${aff.classe_nom} — ${aff.matiere_nom}` : aff.classe_nom;
+            if (aff) {
+              const bg = getCouleurBranche(aff.matiere_id);
+              return {
+                text: aff.matiere_nom ? `${aff.classe_nom}\n${aff.matiere_nom}` : aff.classe_nom,
+                bg,
+                color: getCouleurTexteSurFond(bg)
+              };
+            }
             const dispo = (planningProf.dispos || []).find(d => d.creneau_id === cr.id);
-            if (dispo && !dispo.disponible) return 'Indisponible';
-            return '';
+            if (dispo && !dispo.disponible) return { text: 'Indisponible' };
+            return { text: '' };
           }
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
@@ -1183,7 +1220,7 @@ export default function EmploiDuTemps() {
         const titre = `Planning salles — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
-          getCellText: (cr) => {
+          getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
               normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut) &&
@@ -1191,9 +1228,19 @@ export default function EmploiDuTemps() {
               String((c.salle || '').trim()) === String((salleSelectionnee || '').trim()) &&
               idsClassesLieu.has(String(c.classe_id))
             );
-            if (!cours) return '';
+            if (!cours) return { text: '' };
             const cl = classes.find(x => String(x.id) === String(cours.classe_id));
-            return cl?.nom || '';
+            if (!cl) return { text: '' };
+            const aff = (affectations || []).find(a =>
+              String(a.classe_id) === String(cl.id) &&
+              String(a.creneau_id) === String(cr.id)
+            );
+            const bg = getCouleurClasse(cl.id);
+            return {
+              text: `${cl.nom}\n${aff?.prof_nom || 'Aucun professeur affecté'}`,
+              bg,
+              color: getCouleurTexteSurFond(bg)
+            };
           }
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
@@ -1205,10 +1252,23 @@ export default function EmploiDuTemps() {
       const titre = `Planning général${poolId ? ' — pool sélectionné' : ''}`;
       const table = buildPlanningTableHtml({
         creneauxListe: data?.creneaux || [],
-        getCellText: (cr) => {
+        getCellData: (cr) => {
           const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
-          if (!affectes.length) return '';
-          return affectes.map(a => a.matiere_nom ? `${a.prof_nom} — ${a.classe_nom} — ${a.matiere_nom}` : `${a.prof_nom} — ${a.classe_nom}`).join(' | ');
+          if (!affectes.length) return { text: '' };
+          if (affectes.length === 1) {
+            const a = affectes[0];
+            const bg = getCouleurBranche(a.matiere_id);
+            return {
+              text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
+              bg,
+              color: getCouleurTexteSurFond(bg)
+            };
+          }
+          return {
+            text: affectes
+              .map(a => `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
+              .join('\n\n')
+          };
         }
       });
       return openPrintWindow(titre, `<div class="section">${table}</div>`);
@@ -1230,8 +1290,8 @@ export default function EmploiDuTemps() {
             creneauxListe: data?.creneaux || [],
             getCellText: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (!aff) return 'à affecter';
-              return aff.matiere_nom ? `${aff.prof_nom} — ${aff.matiere_nom}` : aff.prof_nom;
+              if (!aff) return 'A affecter un professeur';
+              return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
             }
           });
           return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}</h2>${table}</div>`;
@@ -1248,12 +1308,19 @@ export default function EmploiDuTemps() {
           const nom = `${data?.prof?.prenom || ''} ${data?.prof?.nom || ''}`.trim();
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
-            getCellText: (cr) => {
+            getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (aff) return aff.matiere_nom ? `${aff.classe_nom} — ${aff.matiere_nom}` : aff.classe_nom;
+              if (aff) {
+                const bg = getCouleurBranche(aff.matiere_id);
+                return {
+                  text: aff.matiere_nom ? `${aff.classe_nom}\n${aff.matiere_nom}` : aff.classe_nom,
+                  bg,
+                  color: getCouleurTexteSurFond(bg)
+                };
+              }
               const dispo = (data?.dispos || []).find(d => d.creneau_id === cr.id);
-              if (dispo && !dispo.disponible) return 'Indisponible';
-              return '';
+              if (dispo && !dispo.disponible) return { text: 'Indisponible' };
+              return { text: '' };
             }
           });
           return `<div class="section"><h2>Professeur : ${escapeHtml(nom)}</h2>${table}</div>`;
@@ -1267,7 +1334,7 @@ export default function EmploiDuTemps() {
         const sections = sallesDisponiblesLieu.map((salle) => {
           const table = buildPlanningTableHtml({
             creneauxListe: creneaux || [],
-            getCellText: (cr) => {
+            getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
                 c.jour === cr.jour &&
                 normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut) &&
@@ -1275,9 +1342,19 @@ export default function EmploiDuTemps() {
                 String((c.salle || '').trim()) === String((salle || '').trim()) &&
                 idsClassesLieu.has(String(c.classe_id))
               );
-              if (!cours) return '';
+              if (!cours) return { text: '' };
               const cl = classes.find(x => String(x.id) === String(cours.classe_id));
-              return cl?.nom || '';
+              if (!cl) return { text: '' };
+              const aff = (affectations || []).find(a =>
+                String(a.classe_id) === String(cl.id) &&
+                String(a.creneau_id) === String(cr.id)
+              );
+              const bg = getCouleurClasse(cl.id);
+              return {
+                text: `${cl.nom}\n${aff?.prof_nom || 'Aucun professeur affecté'}`,
+                bg,
+                color: getCouleurTexteSurFond(bg)
+              };
             }
           });
           return `<div class="section"><h2>Salle : ${escapeHtml(salle)}</h2>${table}</div>`;
@@ -1288,10 +1365,23 @@ export default function EmploiDuTemps() {
       const data = rep.data;
       const table = buildPlanningTableHtml({
         creneauxListe: data?.creneaux || [],
-        getCellText: (cr) => {
+        getCellData: (cr) => {
           const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
-          if (!affectes.length) return '';
-          return affectes.map(a => a.matiere_nom ? `${a.prof_nom} — ${a.classe_nom} — ${a.matiere_nom}` : `${a.prof_nom} — ${a.classe_nom}`).join(' | ');
+          if (!affectes.length) return { text: '' };
+          if (affectes.length === 1) {
+            const a = affectes[0];
+            const bg = getCouleurBranche(a.matiere_id);
+            return {
+              text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
+              bg,
+              color: getCouleurTexteSurFond(bg)
+            };
+          }
+          return {
+            text: affectes
+              .map(a => `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
+              .join('\n\n')
+          };
         }
       });
       return openPrintWindow('Planning général — complet', `<div class="section">${table}</div>`);
@@ -2457,7 +2547,7 @@ export default function EmploiDuTemps() {
                                   const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
                                   if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
                                   const aCours = classeAHorairePlanning(jour, periode);
-                                  const aff = aCours ? (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id) : null;
+                                  const aff = aCours ? planningClasseAffectations.find(a=>a.creneau_id===cr.id) : null;
                                   const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                                   const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                                   return (
@@ -2519,7 +2609,7 @@ export default function EmploiDuTemps() {
                   <table style={{...styles.tbl,minWidth:760}}>
                     <thead>
                       <tr style={styles.theadRow}>
-                        <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
                         {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                       </tr>
                     </thead>
@@ -2538,11 +2628,12 @@ export default function EmploiDuTemps() {
                             <tr key={`planning-only-${periode}`}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                             ...crsBase.map((crBase, idx) => (
                               <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
-                                <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                                   P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
                                   const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
+                                  const profAffecte = getProfAffecteSalleCellule(jour, periode, crBase.ordre, classeAffectee);
                                   const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
                                   const classeNom = classes.find(cl => String(cl.id) === String(classeAffectee))?.nom || '';
                                   return (
@@ -2561,6 +2652,20 @@ export default function EmploiDuTemps() {
                                       }}>
                                         {classeNom || '—'}
                                       </div>
+                                      {classeNom && (
+                                        <div style={{
+                                          ...styles.cellSel,
+                                          marginTop: 6,
+                                          minWidth: 160,
+                                          background: '#f1f5f9',
+                                          color: '#334155',
+                                          fontWeight: 600,
+                                          textAlign: 'center',
+                                          cursor: 'default'
+                                        }}>
+                                          {profAffecte || 'Aucun professeur affecté'}
+                                        </div>
+                                      )}
                                     </td>
                                   );
                                 })}
@@ -2607,11 +2712,11 @@ export default function EmploiDuTemps() {
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
-              <table style={{...styles.tbl,minWidth:970,tableLayout:'fixed'}}>
+              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Créneau</th>
-                    {JOURS.map(j => <th key={j} style={{...styles.th,width:170,minWidth:170,maxWidth:170,textAlign:'center'}}>{j}</th>)}
+                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU}}>Créneau</th>
+                    {JOURS.map(j => <th key={j} style={{...styles.th,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center'}}>{j}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -2622,19 +2727,22 @@ export default function EmploiDuTemps() {
                       <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                       ...crsBase.map((crBase,idx) => (
                         <tr key={crBase.id} style={styles.tr}>
-                          <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                             P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                           </td>
                           {JOURS.map(jour => {
                             const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:170,minWidth:170,maxWidth:170}}></td>;
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                             const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
                             const indispo = dispo && !dispo.disponible;
+                            const couleurFondBranche = aff ? getCouleurBranche(aff.matiere_id) : '#ffffff';
+                            const couleurTexteBranche = aff ? getCouleurTexteSurFond(couleurFondBranche) : '#111827';
                             return (
-                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:170,minWidth:170,maxWidth:170,
-                                background:aff?'#e8f5e9':indispo?'#eeeeee':'#fff'}}>
-                                {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</span></>}</>:
+                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
+                                background:aff?couleurFondBranche:indispo?'#eeeeee':'#fff',
+                                color: aff ? couleurTexteBranche : undefined}}>
+                                {aff?<><b style={{color:couleurTexteBranche}}>{aff.classe_nom}</b>{aff.matiere_nom&&<><br/><span style={{color:couleurTexteBranche,fontSize:11}}>{aff.matiere_nom}</span></>}</>:
                                  indispo?'':
                                  <span style={{color:'#ddd',fontSize:11}}>libre</span>}
                               </td>
@@ -2685,11 +2793,11 @@ export default function EmploiDuTemps() {
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
               <div style={{overflowX:'auto'}}>
-                <table style={{...styles.tbl,minWidth:700}}>
+                <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
                   <thead>
                     <tr style={styles.theadRow}>
                       <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
-                      {JOURS.map(j => <th key={`classe-tab-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                      {JOURS.map(j => <th key={`classe-tab-${j}`} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -2705,18 +2813,22 @@ export default function EmploiDuTemps() {
                             </td>
                             {JOURS.map(jour => {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                              if (!cr) return <td key={`classe-tab-${jour}`} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                              if (!cr) return <td key={`classe-tab-${jour}`} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                               const aCours = classeAHorairePlanning(jour, periode);
                               const aff = aCours ? (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id) : null;
+                              const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
+                              const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
                                 <td key={`classe-tab-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,
-                                  background:aff?'#e8f5e9':aCours?'#fff':'#f5f5f5'}}>
+                                  width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
+                                  background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
+                                  color: aff ? couleurTexteProf : undefined}}>
                                   {aff ? (
                                     <div>
-                                      <b style={{color:'#2e7d32',fontSize:12}}>{aff.prof_nom}</b>
-                                      {aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>}
+                                      <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
+                                      {aff.matiere_nom && <div style={{color:couleurTexteProf,fontSize:11}}>{aff.matiere_nom}</div>}
                                     </div>
-                                  ) : aCours ? <span style={{color:'#f57c00',fontSize:11}}>à affecter</span> : ''}
+                                  ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>A affecter un professeur</span> : ''}
                                 </td>
                               );
                             })}
