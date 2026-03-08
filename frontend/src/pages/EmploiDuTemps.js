@@ -2531,11 +2531,11 @@ export default function EmploiDuTemps() {
                   <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
 
                   <div style={{overflowX:'auto'}}>
-                    <table style={{...styles.tbl,minWidth:700}}>
+                    <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                       <thead>
                         <tr style={styles.theadRow}>
-                          <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
-                          {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                          <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                          {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                         </tr>
                       </thead>
                       <tbody>
@@ -2546,18 +2546,18 @@ export default function EmploiDuTemps() {
                             <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                             ...crsBase.map((crBase,idx) => (
                               <tr key={crBase.id} style={styles.tr}>
-                                <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                                   P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
                                   const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                                  if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5'}}></td>;
+                                  if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                                   const aCours = classeAHorairePlanning(jour, periode);
                                   const aff = aCours ? planningClasseAffectations.find(a=>a.creneau_id===cr.id) : null;
                                   const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                                   const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                                   return (
-                                    <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,
+                                    <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                       background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
                                       color: aff ? couleurTexteProf : undefined}}>
                                       {aff ? (
