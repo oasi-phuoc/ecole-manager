@@ -1186,7 +1186,7 @@ export default function EmploiDuTemps() {
           creneauxListe: planningClasse.creneaux || [],
           getCellText: (cr) => {
             const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
-            if (!aff) return 'A affecter un professeur';
+            if (!aff) return 'Aucun professeur affecté';
             return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
           }
         });
@@ -1290,7 +1290,7 @@ export default function EmploiDuTemps() {
             creneauxListe: data?.creneaux || [],
             getCellText: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (!aff) return 'A affecter un professeur';
+              if (!aff) return 'Aucun professeur affecté';
               return aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom;
             }
           });
@@ -2558,7 +2558,7 @@ export default function EmploiDuTemps() {
                                         <div>
                                           <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
                                           {isAdmin() ? (
-                                            <select style={{...styles.cellSel,marginTop:4,fontSize:11}}
+                                            <select style={{...styles.cellSel,marginTop:4,fontSize:11,textAlign:'center',textAlignLast:'center'}}
                                               value={Object.prototype.hasOwnProperty.call(branchesMatiereDraftMap, String(aff.id))
                                                 ? (branchesMatiereDraftMap[String(aff.id)] || '')
                                                 : (aff.matiere_id||'')}
@@ -2566,6 +2566,9 @@ export default function EmploiDuTemps() {
                                                 const valeur = ev.target.value || '';
                                                 setBranchesMatiereDraftMap(prev => ({ ...prev, [String(aff.id)]: valeur }));
                                                 setHasBranchesUnsaved(true);
+                                                // Force un rerender immédiat pour refléter le suivi des branches
+                                                // (comptes/préférences) sans attendre la sauvegarde.
+                                                setPlanningClasse(prev => (prev ? { ...prev } : prev));
                                               }}>
                                               <option value="">— Branche —</option>
                                               {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
@@ -2574,7 +2577,7 @@ export default function EmploiDuTemps() {
                                             aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
                                           )}
                                         </div>
-                                      ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>A affecter un professeur</span> : ''}
+                                      ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>Aucun professeur affecté</span> : ''}
                                     </td>
                                   );
                                 })}
@@ -2828,7 +2831,7 @@ export default function EmploiDuTemps() {
                                       <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
                                       {aff.matiere_nom && <div style={{color:couleurTexteProf,fontSize:11}}>{aff.matiere_nom}</div>}
                                     </div>
-                                  ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>A affecter un professeur</span> : ''}
+                                  ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>Aucun professeur affecté</span> : ''}
                                 </td>
                               );
                             })}
