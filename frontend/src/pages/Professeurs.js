@@ -104,6 +104,14 @@ export default function Professeurs() {
       const r = await axios.get(API+'/branches', { headers });
       const branchesFiltrees = r.data
         .filter(b => niveaux.includes(b.niveau))
+        .filter((b) => {
+          const code = String(b.designation_courte || '').trim().toUpperCase();
+          const nom = String(b.nom || '').trim().toLowerCase();
+          // Demande métier: ne pas proposer AI (Accompagnement individuelle) en spécialité prof.
+          if (code === 'AI') return false;
+          if (nom.includes('accompagnement individuelle')) return false;
+          return true;
+        })
         .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i);
 
       // Regrouper les branches par désignation courte pour éviter les doublons (ex: FR sur plusieurs niveaux)

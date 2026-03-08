@@ -156,6 +156,31 @@ const saveClasseCouleur = async (req, res) => {
   }
 };
 
+const getProfCouleurs = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT prof_id, couleur FROM prof_couleurs');
+    res.json(r.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const saveProfCouleur = async (req, res) => {
+  const { prof_id, couleur } = req.body || {};
+  if (!prof_id || !couleur) return res.status(400).json({ message: 'prof_id et couleur requis' });
+  try {
+    const r = await pool.query(`
+      INSERT INTO prof_couleurs (prof_id, couleur, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (prof_id) DO UPDATE SET couleur=$2, updated_at=NOW()
+      RETURNING prof_id, couleur
+    `, [prof_id, couleur]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getAffectations = async (req, res) => {
   const r = await pool.query(`
     SELECT a.*, u.nom||' '||u.prenom as prof_nom,
@@ -314,6 +339,8 @@ module.exports = {
   getAllClasseHoraires,
   getClasseCouleurs,
   saveClasseCouleur,
+  getProfCouleurs,
+  saveProfCouleur,
   getAffectations,
   saveAffectation,
   deleteAffectation,
