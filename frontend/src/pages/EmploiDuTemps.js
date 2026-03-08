@@ -77,6 +77,8 @@ export default function EmploiDuTemps() {
   const [couleursProfsMap, setCouleursProfsMap] = useState({});
   const [profCouleurEditionId, setProfCouleurEditionId] = useState('');
   const [classeHoraires, setClasseHoraires] = useState([]);
+  const [classeHorairesSaved, setClasseHorairesSaved] = useState([]);
+  const [hasClassesUnsaved, setHasClassesUnsaved] = useState(false);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [dispos, setDispos] = useState({});
   const [disposAffectations, setDisposAffectations] = useState({});
@@ -127,6 +129,7 @@ export default function EmploiDuTemps() {
       setAffectations(af.data);
       setAffectationsDraft(af.data || []);
       setClasseHoraires(ch.data);
+      setClasseHorairesSaved(ch.data || []);
       setCoursEmploiDuTemps(edt.data || []);
       const couleursMap = (cc.data || []).reduce((acc, row) => {
         acc[String(row.classe_id)] = row.couleur;
@@ -141,6 +144,7 @@ export default function EmploiDuTemps() {
       setHasAffectationsUnsaved(false);
       setBranchesMatiereDraftMap({});
       setHasBranchesUnsaved(false);
+      setHasClassesUnsaved(false);
     } catch(err) { console.error(err); }
   };
 
@@ -269,9 +273,7 @@ export default function EmploiDuTemps() {
     let nouveaux = classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour));
     nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
     setClasseHoraires(nouveaux);
-    const horairesClasse = nouveaux.filter(h => h.classe_id==classe_id).map(h => ({jour:h.jour, periode:h.periode}));
-    await axios.post(API + '/planning/classe-horaires/' + classe_id, { horaires: horairesClasse }, { headers });
-    chargerTout();
+    setHasClassesUnsaved(true);
   };
 
   const getHoraireJourClasse = (classe_id, jour) => {
@@ -776,6 +778,9 @@ export default function EmploiDuTemps() {
     return luminance < 150 ? '#ffffff' : '#111827';
   };
   const confirmerQuitterSansSauvegarder = () => {
+    if (sousOngletAff === 'classes' && hasClassesUnsaved) {
+      return window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Quitter sans sauvegarder ?");
+    }
     if (sousOngletAff === 'profs' && hasAffectationsUnsaved) {
       return window.confirm("Des changements dans Affectations > Professeurs ne sont pas sauvegardés. Quitter sans sauvegarder ?");
     }
@@ -788,11 +793,18 @@ export default function EmploiDuTemps() {
     setAffectationsDraft(affectations || []);
     setHasAffectationsUnsaved(false);
   };
+  const abandonnerClassesNonSauvegardees = () => {
+    setClasseHoraires(classeHorairesSaved || []);
+    setHasClassesUnsaved(false);
+  };
   const abandonnerBranchesNonSauvegardees = () => {
     setBranchesMatiereDraftMap({});
     setHasBranchesUnsaved(false);
   };
   const abandonnerChangementsAffectationsCourants = () => {
+    if (sousOngletAff === 'classes' && hasClassesUnsaved) {
+      abandonnerClassesNonSauvegardees();
+    }
     if (sousOngletAff === 'profs' && hasAffectationsUnsaved) {
       abandonnerAffectationsNonSauvegardees();
     }
@@ -889,6 +901,40 @@ export default function EmploiDuTemps() {
       alert('Changements sauvegardés.');
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des branches.");
+    }
+  };
+  const sauvegarderAffectationsClasses = async () => {
+    if (!hasClassesUnsaved) {
+      alert('Aucun changement à sauvegarder.');
+      return;
+    }
+    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation des classes ?");
+    if (!confirmer) return;
+    try {
+      const byClass = (liste) => {
+        const map = new Map();
+        (liste || []).forEach((h) => {
+          const id = String(h.classe_id);
+          if (!map.has(id)) map.set(id, []);
+          map.get(id).push({ jour: h.jour, periode: h.periode });
+        });
+        return map;
+      };
+      const savedMap = byClass(classeHorairesSaved);
+      const draftMap = byClass(classeHoraires);
+      const allIds = new Set([...savedMap.keys(), ...draftMap.keys()]);
+      for (const classeId of allIds) {
+        const saved = (savedMap.get(classeId) || []).map(x => `${x.jour}|${x.periode}`).sort().join(',');
+        const draft = (draftMap.get(classeId) || []).map(x => `${x.jour}|${x.periode}`).sort().join(',');
+        if (saved === draft) continue;
+        await axios.post(API + '/planning/classe-horaires/' + classeId, {
+          horaires: draftMap.get(classeId) || []
+        }, { headers });
+      }
+      await chargerTout();
+      alert('Changements sauvegardés.');
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des classes.");
     }
   };
   const getClasseIdDepuisValeurAffectation = (valeur) => {
@@ -1552,6 +1598,7 @@ export default function EmploiDuTemps() {
                 type="button"
                 style={{...styles.btnRetour, marginLeft:'auto', fontWeight:700}}
                 onClick={() => {
+                  if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
                   if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
                   if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
                   alert("Aucun changement à sauvegarder pour ce sous-onglet.");
@@ -1560,7 +1607,15 @@ export default function EmploiDuTemps() {
                 💾 Sauvegarder
               </button>
               {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
-                <select style={styles.sel} value={poolAffId} onChange={e => setPoolAffId(e.target.value)}>
+                <select
+                  style={styles.sel}
+                  value={poolAffId}
+                  onChange={e => {
+                    if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                    if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
+                    setPoolAffId(e.target.value);
+                  }}
+                >
                   <option value="">— Sélectionner un pool —</option>
                   {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
                 </select>
