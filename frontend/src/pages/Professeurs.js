@@ -35,6 +35,7 @@ export default function Professeurs({
   hidePreferences = false,
   hidePeriodesSemaine = false,
   hidePreferencesLieu = false,
+  hideRemarque = false,
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -425,10 +426,10 @@ export default function Professeurs({
                         )}
                       </div>
                     )}
-                    <div style={{display:'flex',flexDirection:'column'}}>
+                    {!hideRemarque && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques</label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
-                    </div>
+                    </div>}
                     {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieu(x) de travail préféré(s)</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>

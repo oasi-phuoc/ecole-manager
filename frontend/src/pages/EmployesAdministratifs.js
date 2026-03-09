@@ -10,6 +10,7 @@ export default function EmployesAdministratifs() {
       hidePreferences={true}
       hidePeriodesSemaine={true}
       hidePreferencesLieu={true}
+      hideRemarque={true}
     />
   );
 }
