@@ -824,6 +824,13 @@ export default function EmploiDuTemps() {
     const nomOk = String(aff.matiere_nom || '').trim() !== '';
     return idOk || nomOk;
   };
+  const getLibelleTypeSpecial = (typeSpecial) => {
+    const t = String(typeSpecial || '').trim().toLowerCase();
+    if (t === 'titulariat') return 'Titulariat';
+    if (t === 'atelier') return 'Atelier';
+    if (t === 'autre') return 'Autre';
+    return t;
+  };
   const sauverCouleurBranche = async (matiereId, couleur) => {
     if (!isAdmin()) return;
     try {
@@ -1288,7 +1295,14 @@ export default function EmploiDuTemps() {
           if (!affectes.length) return { text: '' };
           if (affectes.length === 1) {
             const a = affectes[0];
-            const bg = getCouleurBranche(a.matiere_id);
+            if (a.type_special) {
+              return {
+                text: `${a.prof_nom}\n${getLibelleTypeSpecial(a.type_special)}`,
+                bg: '#000000',
+                color: '#ffffff'
+              };
+            }
+            const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
             return {
               text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
               bg,
@@ -1410,7 +1424,14 @@ export default function EmploiDuTemps() {
           if (!affectes.length) return { text: '' };
           if (affectes.length === 1) {
             const a = affectes[0];
-            const bg = getCouleurBranche(a.matiere_id);
+            if (a.type_special) {
+              return {
+                text: `${a.prof_nom}\n${getLibelleTypeSpecial(a.type_special)}`,
+                bg: '#000000',
+                color: '#ffffff'
+              };
+            }
+            const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
             return {
               text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
               bg,
@@ -2879,7 +2900,7 @@ export default function EmploiDuTemps() {
                       return [
                         <tr key={`classe-tab-${periode}`}>
                           <td style={{...styles.periodeBandeCreneau, width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>{periode}</td>
-                          <td colSpan={JOURS.length} style={styles.periodeBandeSpacer}></td>
+                          {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeJour}>{periode}</td>)}
                         </tr>,
                         ...crsBase.map((crBase,idx) => (
                           <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
@@ -2991,11 +3012,18 @@ export default function EmploiDuTemps() {
                             const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
                             const dispo = planningGeneral.dispos.find(d=>d.prof_id===p.id&&d.creneau_id===cr.id);
                             const indispo = dispo&&!dispo.disponible;
+                            const estSpecial = !!aff?.type_special;
+                            const couleurFond = aff
+                              ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
+                              : (indispo ? '#eeeeee' : '#fff');
+                            const couleurTexte = aff
+                              ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
+                              : '#111827';
                             return (
                               <td key={p.id} style={{...styles.td,textAlign:'center',fontSize:11,
-                                background:aff?'#e8f5e9':indispo?'#eeeeee':'#fff'}}>
-                                {aff?<><b style={{color:'#2e7d32'}}>{aff.classe_nom}</b>
-                                {aff.matiere_nom ? <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div> : null}
+                                background:couleurFond,color:couleurTexte}}>
+                                {aff?<><b style={{color:couleurTexte}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
+                                {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontSize:11}}>{aff.matiere_nom}</div> : null)}
                               </> : ''}
                               </td>
                             );
@@ -3074,8 +3102,8 @@ const styles = {
   jourBande:{background:'#f1f5f9',padding:'7px 14px',fontWeight:700,fontSize:12,color:'#475569',textTransform:'uppercase',letterSpacing:'0.04em'},
   periodeBandeCreneau:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
   periodeBandeJour:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
-  periodeBandeSpacer:{background:'#ffffff',border:'1px solid #e2e8f0',padding:'6px 10px'},
-  periodeBande:{background:'#f8fafc',padding:'6px 14px',fontWeight:600,fontSize:12,color:'#64748b'},
+  periodeBandeSpacer:{background:'#000000',color:'#ffffff',border:'1px solid #111111',padding:'6px 10px',fontWeight:800,fontSize:12,textAlign:'center'},
+  periodeBande:{background:'#000000',padding:'6px 14px',fontWeight:800,fontSize:12,color:'#ffffff',textAlign:'center',textTransform:'uppercase',letterSpacing:'0.04em'},
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
