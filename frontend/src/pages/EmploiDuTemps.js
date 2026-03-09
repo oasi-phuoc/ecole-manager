@@ -1138,9 +1138,11 @@ export default function EmploiDuTemps() {
           }
           h1 { margin: 0 0 12px; font-size: 20px; }
           h2 { margin: 18px 0 8px; font-size: 16px; }
-          table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; }
-          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: top; }
+          table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; table-layout: fixed; }
+          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f3f4f6; }
+          col.creneau-col { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; }
+          col.day-col { width: auto; }
           .creneau { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; text-align: left; white-space: nowrap; background: #f9fafb; font-weight: 700; }
           .periode { background: #000000; color: #ffffff; font-weight: 700; text-align: left; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; }
@@ -1187,6 +1189,10 @@ export default function EmploiDuTemps() {
     });
     return `
       <table>
+        <colgroup>
+          <col class="creneau-col" />
+          ${JOURS.map(() => '<col class="day-col" />').join('')}
+        </colgroup>
         <thead>
           <tr><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Créneau</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
         </thead>
@@ -2358,7 +2364,7 @@ export default function EmploiDuTemps() {
                       lignesJour.push(
                         <tr key={jour+'_sep'}>
                           <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}>
-                            <div style={{height: 10}} />
+                            <div style={{height: 30}} />
                           </td>
                         </tr>
                       );
@@ -2752,7 +2758,7 @@ export default function EmploiDuTemps() {
                           return [
                             <tr key={`planning-only-${periode}`}>
                               <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
-                              {JOURS.map(j => <td key={`planning-only-band-${periode}-${j}`} style={styles.periodeBandeJour}>{periode}</td>)}
+                              {JOURS.map(j => <td key={`planning-only-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                             </tr>,
                             ...crsBase.map((crBase, idx) => (
                               <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
@@ -2831,7 +2837,7 @@ export default function EmploiDuTemps() {
                     return [
                       <tr key={periode}>
                         <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
-                        {JOURS.map(j => <td key={`prof-band-${periode}-${j}`} style={styles.periodeBandeJour}>{periode}</td>)}
+                        {JOURS.map(j => <td key={`prof-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                       </tr>,
                       ...crsBase.map((crBase,idx) => (
                         <tr key={crBase.id} style={styles.tr}>
@@ -2890,7 +2896,7 @@ export default function EmploiDuTemps() {
                       return [
                         <tr key={`classe-tab-${periode}`}>
                           <td style={{...styles.periodeBandeCreneau, width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>{periode}</td>
-                          {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeJour}>{periode}</td>)}
+                          {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                         </tr>,
                         ...crsBase.map((crBase,idx) => (
                           <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
