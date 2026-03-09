@@ -1147,12 +1147,18 @@ export default function EmploiDuTemps() {
     </html>
   `;
   };
-  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData }) => {
+  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, repeatPeriodeOnDays = false }) => {
     const lignes = [];
     ['Matin', 'Après-midi'].forEach((periode) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
       if (!base.length) return;
-      lignes.push(`<tr><td class="periode" colspan="6">${escapeHtml(periode)}</td></tr>`);
+      if (repeatPeriodeOnDays) {
+        lignes.push(
+          `<tr><td class="periode creneau">${escapeHtml(periode)}</td>${JOURS.map(() => `<td class="periode">${escapeHtml(periode)}</td>`).join('')}</tr>`
+        );
+      } else {
+        lignes.push(`<tr><td class="periode" colspan="6">${escapeHtml(periode)}</td></tr>`);
+      }
       base.forEach((crBase, idx) => {
         const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
@@ -1200,6 +1206,7 @@ export default function EmploiDuTemps() {
         const titre = `Planning classe — ${planningClasse?.classe?.nom || ''}`;
         const table = buildPlanningTableHtml({
           creneauxListe: planningClasse.creneaux || [],
+          repeatPeriodeOnDays: true,
           getCellData: (cr) => {
             const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
             if (!aff) return { text: 'Aucun professeur affecté' };
@@ -1218,6 +1225,7 @@ export default function EmploiDuTemps() {
         const titre = `Planning professeur — ${planningProf?.prof?.prenom || ''} ${planningProf?.prof?.nom || ''}`.trim();
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
+          repeatPeriodeOnDays: true,
           getCellData: (cr) => {
             const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
             if (hasBrancheAffectee(aff)) {
@@ -1241,6 +1249,7 @@ export default function EmploiDuTemps() {
         const titre = `Planning salles — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
+          repeatPeriodeOnDays: true,
           getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
@@ -1273,6 +1282,7 @@ export default function EmploiDuTemps() {
       const titre = `Planning général${poolId ? ' — pool sélectionné' : ''}`;
       const table = buildPlanningTableHtml({
         creneauxListe: data?.creneaux || [],
+        repeatPeriodeOnDays: true,
         getCellData: (cr) => {
           const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
           if (!affectes.length) return { text: '' };
@@ -1309,6 +1319,7 @@ export default function EmploiDuTemps() {
           const nomClasse = data?.classe?.nom || '';
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
+            repeatPeriodeOnDays: true,
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
               if (!aff) return { text: 'Aucun professeur affecté' };
@@ -1334,6 +1345,7 @@ export default function EmploiDuTemps() {
           const nom = `${data?.prof?.prenom || ''} ${data?.prof?.nom || ''}`.trim();
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
+            repeatPeriodeOnDays: true,
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
               if (hasBrancheAffectee(aff)) {
@@ -1360,6 +1372,7 @@ export default function EmploiDuTemps() {
         const sections = sallesDisponiblesLieu.map((salle) => {
           const table = buildPlanningTableHtml({
             creneauxListe: creneaux || [],
+            repeatPeriodeOnDays: true,
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
                 c.jour === cr.jour &&
@@ -1391,6 +1404,7 @@ export default function EmploiDuTemps() {
       const data = rep.data;
       const table = buildPlanningTableHtml({
         creneauxListe: data?.creneaux || [],
+        repeatPeriodeOnDays: true,
         getCellData: (cr) => {
           const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
           if (!affectes.length) return { text: '' };
@@ -1539,14 +1553,14 @@ export default function EmploiDuTemps() {
             <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center'}}>
               <button
                 type="button"
-                style={{...styles.btnRetour, fontWeight:700}}
+                style={styles.btnImprimer}
                 onClick={imprimerPlanningSelection}
               >
                 🖨️ Imprimer sélection
               </button>
               <button
                 type="button"
-                style={{...styles.btnRetour, fontWeight:700}}
+                style={styles.btnImprimer}
                 onClick={imprimerPlanningTout}
               >
                 🖨️ Tout imprimer
@@ -2769,27 +2783,25 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING PROFS ===== */}
       {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
         <div>
-          <div style={{...styles.card,marginBottom:16}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
-              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
-              <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
-                value={profPlanningId || ''}
-                onChange={e => {
-                  const id = e.target.value;
-                  setProfPlanningId(id);
-                  if (id) chargerPlanningProf(id);
-                  else setPlanningProf(null);
-                }}
-              >
-                <option value="">— Sélectionner un professeur —</option>
-                {profsTriesPrenomNom.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.prenom} {p.nom}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div style={styles.rowBetween}>
+            <h3 style={styles.cardTitre}>Planning professeurs</h3>
+            <select
+              style={styles.sel}
+              value={profPlanningId || ''}
+              onChange={e => {
+                const id = e.target.value;
+                setProfPlanningId(id);
+                if (id) chargerPlanningProf(id);
+                else setPlanningProf(null);
+              }}
+            >
+              <option value="">— Sélectionner un professeur —</option>
+              {profsTriesPrenomNom.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.prenom} {p.nom}
+                </option>
+              ))}
+            </select>
           </div>
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
@@ -2867,7 +2879,7 @@ export default function EmploiDuTemps() {
                       return [
                         <tr key={`classe-tab-${periode}`}>
                           <td style={{...styles.periodeBandeCreneau, width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>{periode}</td>
-                          {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeJour}>{periode}</td>)}
+                          <td colSpan={JOURS.length} style={styles.periodeBandeSpacer}></td>
                         </tr>,
                         ...crsBase.map((crBase,idx) => (
                           <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
@@ -3006,6 +3018,7 @@ const styles = {
   page:{padding:20,background:'#f8fafc',minHeight:'100vh'},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:12},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
+  btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
   onglets:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'},
   onglet:{padding:'8px 16px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
@@ -3061,6 +3074,7 @@ const styles = {
   jourBande:{background:'#f1f5f9',padding:'7px 14px',fontWeight:700,fontSize:12,color:'#475569',textTransform:'uppercase',letterSpacing:'0.04em'},
   periodeBandeCreneau:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
   periodeBandeJour:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
+  periodeBandeSpacer:{background:'#ffffff',border:'1px solid #e2e8f0',padding:'6px 10px'},
   periodeBande:{background:'#f8fafc',padding:'6px 14px',fontWeight:600,fontSize:12,color:'#64748b'},
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
