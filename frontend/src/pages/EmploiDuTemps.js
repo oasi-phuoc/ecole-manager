@@ -2354,10 +2354,12 @@ export default function EmploiDuTemps() {
                         ];
                       })
                     ];
-                    if (['Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].includes(jour)) {
+                    if (jour !== 'Vendredi') {
                       lignesJour.push(
                         <tr key={jour+'_sep'}>
-                          <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}></td>
+                          <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}>
+                            <div style={{height: 10}} />
+                          </td>
                         </tr>
                       );
                     }
@@ -3083,7 +3085,7 @@ const styles = {
   periodeBandeJour:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
   periodeBandeSpacer:{background:'#000000',color:'#ffffff',border:'1px solid #111111',padding:'6px 10px',fontWeight:800,fontSize:12,textAlign:'center'},
   periodeBande:{background:'#000000',padding:'6px 14px',fontWeight:800,fontSize:12,color:'#ffffff',textAlign:'center',textTransform:'uppercase',letterSpacing:'0.04em'},
-  separateurJourBlanc:{background:'#ffffff',height:10,padding:0,border:'none'},
+  separateurJourBlanc:{background:'#ffffff',padding:0,border:'none',lineHeight:0},
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
