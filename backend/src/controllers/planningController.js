@@ -247,6 +247,38 @@ const deleteAffectation = async (req, res) => {
   res.json({ message: 'Supprimé' });
 };
 
+const saveClasseTitulaire = async (req, res) => {
+  const classeId = Number(req.body?.classe_id);
+  const profBrut = req.body?.prof_id;
+  const profId = (profBrut === null || profBrut === undefined || String(profBrut).trim() === '')
+    ? null
+    : Number(profBrut);
+
+  if (!Number.isInteger(classeId)) {
+    return res.status(400).json({ message: 'classe_id invalide' });
+  }
+  if (profId !== null && !Number.isInteger(profId)) {
+    return res.status(400).json({ message: 'prof_id invalide' });
+  }
+
+  try {
+    const classe = await pool.query('SELECT id FROM classes WHERE id=$1', [classeId]);
+    if (!classe.rows.length) {
+      return res.status(404).json({ message: 'Classe introuvable' });
+    }
+    if (profId !== null) {
+      const prof = await pool.query("SELECT id FROM utilisateurs WHERE id=$1 AND role='prof'", [profId]);
+      if (!prof.rows.length) {
+        return res.status(404).json({ message: 'Professeur introuvable' });
+      }
+    }
+    await pool.query('UPDATE classes SET prof_principal_id=$1 WHERE id=$2', [profId, classeId]);
+    res.json({ message: 'Titulaire mis à jour' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getPlanningBranches = async (req, res) => {
   const { pool_id } = req.query;
   let q = 'SELECT * FROM planning_branches WHERE 1=1';
@@ -371,6 +403,7 @@ module.exports = {
   getAffectations,
   saveAffectation,
   deleteAffectation,
+  saveClasseTitulaire,
   getPlanningBranches,
   savePlanningBranche,
   deletePlanningBranche,

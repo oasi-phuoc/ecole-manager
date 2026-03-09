@@ -63,6 +63,7 @@ export default function EmploiDuTemps() {
   const [affectations, setAffectations] = useState([]);
   const [affectationsDraft, setAffectationsDraft] = useState([]);
   const [hasAffectationsUnsaved, setHasAffectationsUnsaved] = useState(false);
+  const [titulariatsDraftByProf, setTitulariatsDraftByProf] = useState({});
   const [branchesMatiereDraftMap, setBranchesMatiereDraftMap] = useState({});
   const [hasBranchesUnsaved, setHasBranchesUnsaved] = useState(false);
   const [affectationModes, setAffectationModes] = useState(() => {
@@ -354,6 +355,8 @@ export default function EmploiDuTemps() {
   const poolSelectionne = pools.find(p => p.id == poolAffId);
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
   const classesPool = poolSelectionne ? poolSelectionne.classes : classes;
+  const classesParId = new Map(classes.map(c => [String(c.id), c]));
+  const classesPoolTriees = [...classesPool].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
   const poolEstCSC = String(poolSelectionne?.niveau || '').toUpperCase() === 'CSC';
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
@@ -398,6 +401,19 @@ export default function EmploiDuTemps() {
     acc[jour] = { matin, apresMidi };
     return acc;
   }, {});
+
+  useEffect(() => {
+    if (sousOngletAff !== 'profs') return;
+    const init = {};
+    classesPool.forEach((cl) => {
+      const classeComplete = classesParId.get(String(cl.id));
+      const profId = classeComplete?.prof_principal_id;
+      if (profId && profsPoolIds.has(String(profId)) && !init[String(profId)]) {
+        init[String(profId)] = String(cl.id);
+      }
+    });
+    setTitulariatsDraftByProf(init);
+  }, [sousOngletAff, poolAffId, classes, pools, profs]);
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
@@ -885,6 +901,15 @@ export default function EmploiDuTemps() {
   };
   const abandonnerAffectationsNonSauvegardees = () => {
     setAffectationsDraft(affectations || []);
+    const init = {};
+    classesPool.forEach((cl) => {
+      const classeComplete = classesParId.get(String(cl.id));
+      const profId = classeComplete?.prof_principal_id;
+      if (profId && profsPoolIds.has(String(profId)) && !init[String(profId)]) {
+        init[String(profId)] = String(cl.id);
+      }
+    });
+    setTitulariatsDraftByProf(init);
     setHasAffectationsUnsaved(false);
   };
   const abandonnerClassesNonSauvegardees = () => {
@@ -943,6 +968,34 @@ export default function EmploiDuTemps() {
         }
       });
 
+      const currentTitulaireByClasse = {};
+      classesPool.forEach((cl) => {
+        const classeComplete = classesParId.get(String(cl.id));
+        currentTitulaireByClasse[String(cl.id)] = classeComplete?.prof_principal_id
+          ? String(classeComplete.prof_principal_id)
+          : '';
+      });
+      const desiredTitulaireByClasse = {};
+      classesPool.forEach((cl) => { desiredTitulaireByClasse[String(cl.id)] = ''; });
+      Object.entries(titulariatsDraftByProf || {}).forEach(([profId, classeId]) => {
+        if (!classeId) return;
+        if (!Object.prototype.hasOwnProperty.call(desiredTitulaireByClasse, String(classeId))) return;
+        desiredTitulaireByClasse[String(classeId)] = String(profId);
+      });
+      const updatesTitulaires = classesPool
+        .map(cl => String(cl.id))
+        .filter(classeId => String(currentTitulaireByClasse[classeId] || '') !== String(desiredTitulaireByClasse[classeId] || ''))
+        .map(classeId => ({
+          classe_id: Number(classeId),
+          prof_id: desiredTitulaireByClasse[classeId] ? Number(desiredTitulaireByClasse[classeId]) : null
+        }));
+
+      if (!deletes.length && !upserts.length && !updatesTitulaires.length) {
+        alert('Aucun changement à sauvegarder.');
+        setHasAffectationsUnsaved(false);
+        return;
+      }
+
       for (const id of deletes) {
         await axios.delete(API + '/planning/affectations/' + id, { headers });
       }
@@ -954,6 +1007,9 @@ export default function EmploiDuTemps() {
           creneau_id: a.creneau_id,
           type_special: a.type_special || null,
         }, { headers });
+      }
+      for (const t of updatesTitulaires) {
+        await axios.post(API + '/planning/titulaires', t, { headers });
       }
       await chargerTout();
       alert('Changements sauvegardés.');
@@ -2183,6 +2239,52 @@ export default function EmploiDuTemps() {
                   </tr>
                 </thead>
                 <tbody>
+                  <tr style={styles.tr}>
+                    <td style={{...styles.td,background:'#f8f9fa',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                      Titulariat
+                    </td>
+                    {profsPool.map(prof => {
+                      const selectedClasseId = String(titulariatsDraftByProf[String(prof.id)] || '');
+                      const classesDejaAttribueesAuxAutres = new Set(
+                        Object.entries(titulariatsDraftByProf || {})
+                          .filter(([profId, classeId]) => String(profId) !== String(prof.id) && classeId)
+                          .map(([, classeId]) => String(classeId))
+                      );
+                      const options = classesPoolTriees.filter(cl =>
+                        !classesDejaAttribueesAuxAutres.has(String(cl.id)) || String(cl.id) === selectedClasseId
+                      );
+                      return (
+                        <td key={`titulariat-${prof.id}`} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
+                          <select
+                            style={styles.cellSel}
+                            value={selectedClasseId}
+                            onChange={e => {
+                              const classeId = String(e.target.value || '');
+                              setTitulariatsDraftByProf(prev => {
+                                const next = { ...prev };
+                                Object.keys(next).forEach((pid) => {
+                                  if (String(pid) !== String(prof.id) && String(next[pid] || '') === classeId) {
+                                    next[pid] = '';
+                                  }
+                                });
+                                next[String(prof.id)] = classeId;
+                                return next;
+                              });
+                              setHasAffectationsUnsaved(true);
+                            }}
+                            disabled={!isAdmin()}
+                          >
+                            <option value="">—</option>
+                            {options.map(cl => (
+                              <option key={`titulariat-option-${prof.id}-${cl.id}`} value={String(cl.id)}>
+                                {cl.nom}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      );
+                    })}
+                  </tr>
                   {JOURS.map(jour => {
                     const crs = creneaux.filter(c => c.jour===jour);
                     if (!crs.length) return null;
@@ -2203,7 +2305,7 @@ export default function EmploiDuTemps() {
                           ...crsPer.map((cr, idx) => (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                P{idx+1}
+                                P{idx+1} — {cr.heure_debut}–{cr.heure_fin}
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);

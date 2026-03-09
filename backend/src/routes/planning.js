@@ -25,6 +25,7 @@ router.post('/branche-couleurs', autoriser('admin'), c.saveBrancheCouleur);
 router.get('/affectations', c.getAffectations);
 router.post('/affectations', autoriser('admin'), c.saveAffectation);
 router.delete('/affectations/:id', autoriser('admin'), c.deleteAffectation);
+router.post('/titulaires', autoriser('admin'), c.saveClasseTitulaire);
 router.get('/planning-branches', c.getPlanningBranches);
 router.post('/planning-branches', autoriser('admin'), c.savePlanningBranche);
 router.delete('/planning-branches', autoriser('admin'), c.deletePlanningBranche);
