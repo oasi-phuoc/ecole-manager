@@ -1533,7 +1533,7 @@ export default function EmploiDuTemps() {
                 }}
               >
                 <option value="">— Sélectionner un professeur —</option>
-                {profs.map(p => (
+                {profsTriesPrenomNom.map(p => (
                   <option key={p.id} value={p.id}>
                     {p.prenom} {p.nom}
                   </option>
@@ -2180,7 +2180,7 @@ export default function EmploiDuTemps() {
                   {JOURS.map(jour => {
                     const crs = creneaux.filter(c => c.jour===jour);
                     if (!crs.length) return null;
-                    return [
+                    const lignesJour = [
                       <tr key={jour+'_h'}><td colSpan={profsPool.length+1} style={styles.jourBande}>{jour}</td></tr>,
                       ...['Matin','Après-midi'].map(per => {
                         const crsPer = crs.filter(c=>c.periode===per);
@@ -2197,7 +2197,7 @@ export default function EmploiDuTemps() {
                           ...crsPer.map((cr, idx) => (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                Période {idx+1}
+                                P{idx+1}
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
@@ -2354,6 +2354,14 @@ export default function EmploiDuTemps() {
                         ];
                       })
                     ];
+                    if (['Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].includes(jour)) {
+                      lignesJour.push(
+                        <tr key={jour+'_sep'}>
+                          <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}></td>
+                        </tr>
+                      );
+                    }
+                    return lignesJour;
                   })}
                 </tbody>
               </table>
@@ -2804,26 +2812,6 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING PROFS ===== */}
       {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
         <div>
-          <div style={styles.rowBetween}>
-            <h3 style={styles.cardTitre}>Planning professeurs</h3>
-            <select
-              style={styles.sel}
-              value={profPlanningId || ''}
-              onChange={e => {
-                const id = e.target.value;
-                setProfPlanningId(id);
-                if (id) chargerPlanningProf(id);
-                else setPlanningProf(null);
-              }}
-            >
-              <option value="">— Sélectionner un professeur —</option>
-              {profsTriesPrenomNom.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.prenom} {p.nom}
-                </option>
-              ))}
-            </select>
-          </div>
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
@@ -2854,16 +2842,16 @@ export default function EmploiDuTemps() {
                             const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
                             const indispo = dispo && !dispo.disponible;
-                            const affBranche = hasBrancheAffectee(aff);
+                            const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
+                            const affBranche = classeAffectee && hasBrancheAffectee(aff);
                             const couleurFondBranche = affBranche ? getCouleurBranche(aff.matiere_id) : '#ffffff';
                             const couleurTexteBranche = affBranche ? getCouleurTexteSurFond(couleurFondBranche) : '#111827';
                             return (
                               <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:affBranche?couleurFondBranche:indispo?'#eeeeee':'#fff',
+                                background:affBranche?couleurFondBranche:(!classeAffectee || indispo)?'#eeeeee':'#fff',
                                 color: affBranche ? couleurTexteBranche : undefined}}>
                                 {affBranche?<><b style={{color:couleurTexteBranche}}>{aff.classe_nom}</b><br/><span style={{color:couleurTexteBranche,fontSize:11}}>{aff.matiere_nom}</span></>:
-                                 indispo?'':
-                                 <span style={{color:'#ddd',fontSize:11}}>libre</span>}
+                                 ''}
                               </td>
                             );
                           })}
@@ -2943,15 +2931,6 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING GÉNÉRAL ===== */}
       {(onglet === 'general' || (onglet === 'plannings' && sousOngletPlanning === 'general')) && (
         <div>
-          <div style={styles.rowBetween}>
-            <h3 style={styles.cardTitre}>Planning général</h3>
-            <select style={styles.sel} value={planningPoolId}
-              onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
-              <option value="">Tous les professeurs</option>
-              {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-            </select>
-          </div>
-
           {!planningPoolId && (
             <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
               Sélectionnez d'abord un pool pour afficher le planning général.
@@ -3104,6 +3083,7 @@ const styles = {
   periodeBandeJour:{background:'#000000',color:'#ffffff',padding:'6px 10px',fontWeight:800,fontSize:12,textTransform:'uppercase',letterSpacing:'0.04em',textAlign:'center',border:'1px solid #111111'},
   periodeBandeSpacer:{background:'#000000',color:'#ffffff',border:'1px solid #111111',padding:'6px 10px',fontWeight:800,fontSize:12,textAlign:'center'},
   periodeBande:{background:'#000000',padding:'6px 14px',fontWeight:800,fontSize:12,color:'#ffffff',textAlign:'center',textTransform:'uppercase',letterSpacing:'0.04em'},
+  separateurJourBlanc:{background:'#ffffff',height:10,padding:0,border:'none'},
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},

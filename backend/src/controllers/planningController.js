@@ -281,7 +281,7 @@ const getPlanningGeneral = async (req, res) => {
   const profs = await pool.query(profsQ, profsP);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
   const affectations = await pool.query(`
-    SELECT a.prof_id, a.creneau_id, a.matiere_id,
+    SELECT a.prof_id, a.creneau_id, a.matiere_id, a.classe_id, a.type_special,
       COALESCE(c.nom, CASE
         WHEN a.type_special='titulariat' THEN 'Titulariat'
         WHEN a.type_special='atelier' THEN 'Atelier'
