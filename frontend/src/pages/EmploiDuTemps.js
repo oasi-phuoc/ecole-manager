@@ -711,7 +711,7 @@ export default function EmploiDuTemps() {
       }
 
       if (modifications === 0) {
-        alert("Aucun créneau à mettre à jour pour la/les classe(s) sélectionnée(s).");
+        alert("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).");
         return;
       }
       await chargerTout();
@@ -1260,7 +1260,7 @@ export default function EmploiDuTemps() {
           ${JOURS.map(() => '<col class="day-col" />').join('')}
         </colgroup>
         <thead>
-          <tr><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Créneau</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
+          <tr><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
         </thead>
         <tbody>${lignes.join('')}</tbody>
       </table>
@@ -1893,7 +1893,7 @@ export default function EmploiDuTemps() {
                     </div>
 
                     <div style={styles.fc}>
-                      <label style={styles.lbl}>Créneaux horaires</label>
+                      <label style={styles.lbl}>Horaires</label>
                       <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8}}>
                         {['Matin','Après-midi'].map(per => (
                           <div key={per} style={{background:'#f8f9fa',borderRadius:8,padding:12}}>
@@ -1914,9 +1914,23 @@ export default function EmploiDuTemps() {
                                 {idx === 1 && (
                                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,background:'#e5e7eb',borderRadius:6,padding:'4px 6px'}}>
                                     <span style={{fontSize:12,width:60,color:'#374151',fontWeight:700}}>Pause</span>
-                                    <input readOnly style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}} value={PAUSES_PAR_PERIODE[per].debut} />
+                                    <input
+                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}}
+                                      value={PAUSES_PAR_PERIODE[per].debut}
+                                      onChange={e => {
+                                        PAUSES_PAR_PERIODE[per] = { ...PAUSES_PAR_PERIODE[per], debut: e.target.value };
+                                        setPoolForm(prev => ({ ...prev }));
+                                      }}
+                                    />
                                     <span style={{fontSize:11,color:'#6b7280'}}>→</span>
-                                    <input readOnly style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}} value={PAUSES_PAR_PERIODE[per].fin} />
+                                    <input
+                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}}
+                                      value={PAUSES_PAR_PERIODE[per].fin}
+                                      onChange={e => {
+                                        PAUSES_PAR_PERIODE[per] = { ...PAUSES_PAR_PERIODE[per], fin: e.target.value };
+                                        setPoolForm(prev => ({ ...prev }));
+                                      }}
+                                    />
                                   </div>
                                 )}
                               </React.Fragment>
@@ -1965,41 +1979,6 @@ export default function EmploiDuTemps() {
                   <div style={styles.poolLabel}>CLASSES</div>
                   {pool.classes.map(c => <span key={c.id} style={{...styles.badge,background:'#e8f0fe',color:'#1a73e8'}}>{c.nom}</span>)}
                   {pool.classes.length===0&&<span style={styles.aucun}>Aucune</span>}
-                </div>
-                <div style={{marginTop:10}}>
-                  <div style={styles.poolLabel}>HORAIRES</div>
-                  <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-                    <tbody>
-                      {['Matin','Après-midi'].map(per => {
-                        const horairesPeriode = (pool.horaires && pool.horaires.length === 8 ? pool.horaires : HORAIRES_DEFAUT)
-                          .filter(h => h.periode === per)
-                          .sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
-                        return (
-                          <React.Fragment key={`pool-horaires-${pool.id}-${per}`}>
-                            <tr>
-                              <td colSpan={3} style={{background:'#f8fafc',padding:'6px 8px',fontWeight:700,color:'#475569',border:'1px solid #e2e8f0'}}>{per}</td>
-                            </tr>
-                            {horairesPeriode.map((h, idx) => (
-                              <React.Fragment key={`pool-h-${pool.id}-${per}-${h.num || idx}`}>
-                                <tr>
-                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#64748b'}}>P{idx + 1}</td>
-                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0'}}>{h.debut}</td>
-                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0'}}>{h.fin}</td>
-                                </tr>
-                                {idx === 1 && (
-                                  <tr>
-                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',fontWeight:700,background:'#e5e7eb'}}>Pause</td>
-                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',background:'#e5e7eb'}}>{PAUSES_PAR_PERIODE[per].debut}</td>
-                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',background:'#e5e7eb'}}>{PAUSES_PAR_PERIODE[per].fin}</td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             ))}
@@ -2216,7 +2195,7 @@ export default function EmploiDuTemps() {
             </div>
           )}
 
-          {/* AFFECTATION PROFS - profs en entête, classes en lignes par créneau */}
+          {/* AFFECTATION PROFS - profs en entête, classes en lignes par horaire */}
           {sousOngletAff === 'profs' && (
             <div style={{marginTop:12}}>
               {!poolAffId ? (
@@ -2302,7 +2281,7 @@ export default function EmploiDuTemps() {
               <table style={{...styles.tbl,minWidth:200+profsPool.length*140}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Créneau</th>
+                    <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Horaire</th>
                     {profsPool.map(p => {
                       const totalProf = parseInt(p.periodes_semaine) || 0;
                       const totalAffecte = periodesAffecteesParProf[p.id] || 0;
@@ -2432,7 +2411,7 @@ export default function EmploiDuTemps() {
                                           const typeSpecial = estSpecial ? valeur.split(':')[1] : null;
                                           const classe_id = estSoutien ? valeur.split(':')[1] : (estSpecial ? null : valeur);
                                           const ancienne = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
-                                          // Vérifier si cette classe est déjà prise ce créneau par un autre prof
+                                          // Vérifier si cette classe est déjà prise sur ce horaire par un autre prof
                                           const conflit = !estSpecial
                                             ? affectationsDraft.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
                                             : null;
@@ -2441,7 +2420,7 @@ export default function EmploiDuTemps() {
                                             const nomProfConflit = profConflit ? `${profConflit.prenom} ${profConflit.nom}` : 'un autre professeur';
                                             const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
                                             const confirmer = window.confirm(
-                                              `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur ce créneau.\n\nVoulez-vous échanger ces périodes ?`
+                                              `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur cet horaire.\n\nVoulez-vous échanger ces périodes ?`
                                             );
                                             if (!confirmer) return;
 
@@ -2484,7 +2463,7 @@ export default function EmploiDuTemps() {
                                             setHasAffectationsUnsaved(true);
                                             return;
                                           }
-                                          // Supprimer ancienne affectation de CE prof pour CE créneau
+                                          // Supprimer ancienne affectation de CE prof pour CE horaire
                                           setAffectationsDraft(prev => {
                                             const next = prev.map(a => ({ ...a }));
                                             const idxAncienne = next.findIndex(x => ancienne && x.id === ancienne.id);
@@ -2642,14 +2621,14 @@ export default function EmploiDuTemps() {
                   </div>
                   {!salleSelectionnee ? (
                     <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
-                      Sélectionnez d'abord une salle pour afficher les classes à affecter par créneau.
+                      Sélectionnez d'abord une salle pour afficher les classes à affecter par horaire.
                     </div>
                   ) : (
                     <div style={{overflowX:'auto'}}>
                       <table style={{...styles.tbl,minWidth:760}}>
                         <thead>
                           <tr style={styles.theadRow}>
-                            <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                            <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                             {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                           </tr>
                         </thead>
@@ -2839,7 +2818,7 @@ export default function EmploiDuTemps() {
                     <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                       <thead>
                         <tr style={styles.theadRow}>
-                          <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                          <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                           {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                         </tr>
                       </thead>
@@ -2923,7 +2902,7 @@ export default function EmploiDuTemps() {
                   <table style={{...styles.tbl,minWidth:760}}>
                     <thead>
                       <tr style={styles.theadRow}>
-                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                         {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                       </tr>
                     </thead>
@@ -3020,7 +2999,7 @@ export default function EmploiDuTemps() {
               <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU}}>Créneau</th>
+                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU}}>Horaire</th>
                     {JOURS.map(j => <th key={j} style={{...styles.th,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center'}}>{j}</th>)}
                   </tr>
                 </thead>
@@ -3088,33 +3067,40 @@ export default function EmploiDuTemps() {
                 <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
                   <thead>
                     <tr style={styles.theadRow}>
-                      <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Créneau</th>
+                      <th style={{...styles.th,width:46,minWidth:46,maxWidth:46,textAlign:'center'}}></th>
+                      <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                       {JOURS.map(j => <th key={`classe-tab-${j}`} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
-                    {['Matin','Après-midi'].map(periode => {
-                      const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi'&&c.periode===periode);
-                      if (!crsBase.length) return null;
-                      return [
-                        <tr key={`classe-tab-${periode}`}>
-                          <td style={{...styles.periodeBandeCreneau, width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>{periode}</td>
-                          {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
-                        </tr>,
-                        ...crsBase.flatMap((crBase,idx) => [
-                          <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
+                    {(() => {
+                      const renderPeriodeRows = (periode) => {
+                        const crsBase = (planningClasse.creneaux || []).filter(c => c.jour === 'Lundi' && c.periode === periode);
+                        if (!crsBase.length) return [];
+                        return crsBase.flatMap((crBase, idx) => [
+                          <tr key={`classe-tab-${periode}-${crBase.id}`} style={styles.tr}>
+                            {idx === 0 && (
+                              <td
+                                rowSpan={5}
+                                style={{...styles.td,width:46,minWidth:46,maxWidth:46,textAlign:'center',verticalAlign:'middle',background:'#f8fafc'}}
+                              >
+                                <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap'}}>
+                                  {periode}
+                                </span>
+                              </td>
+                            )}
                             <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
                               P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                             </td>
                             {JOURS.map(jour => {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                              if (!cr) return <td key={`classe-tab-${jour}`} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
+                              if (!cr) return <td key={`classe-tab-${periode}-${jour}`} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                               const aCours = classeAHorairePlanning(jour, periode);
                               const aff = aCours ? (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id) : null;
                               const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
-                                <td key={`classe-tab-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,
+                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                   background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
                                   color: aff ? couleurTexteProf : undefined}}>
@@ -3127,19 +3113,26 @@ export default function EmploiDuTemps() {
                                 </td>
                               );
                             })}
-                          </tr>
-                          ,
+                          </tr>,
                           ...(idx === 1 ? [(
                             <tr key={`classe-pause-${periode}`}>
-                              <td style={{...styles.td,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                              <td style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
                                 Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
                               </td>
-                              {JOURS.map(j => <td key={`classe-pause-${periode}-${j}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>)}
+                              {JOURS.map(j => <td key={`classe-pause-${periode}-${j}`} style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center'}}>Pause</td>)}
                             </tr>
                           )] : [])
-                        ])
+                        ]);
+                      };
+                      return [
+                        ...renderPeriodeRows('Matin'),
+                        <tr key="classe-separation-matin-apresmidi">
+                          <td style={{...styles.td,width:46,minWidth:46,maxWidth:46,background:'#ffffff'}}></td>
+                          <td colSpan={6} style={{...styles.td,height:42,background:'#ffffff'}}></td>
+                        </tr>,
+                        ...renderPeriodeRows('Après-midi'),
                       ];
-                    })}
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -3186,7 +3179,7 @@ export default function EmploiDuTemps() {
               <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:240+planningGeneral.profs.length*120}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:150,minWidth:150,maxWidth:150,textAlign:'center'}}>Créneau</th>
+                    <th style={{...styles.th,width:150,minWidth:150,maxWidth:150,textAlign:'center'}}>Horaire</th>
                     {planningGeneral.profs.map(p => {
                       const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
                       return <th key={p.id} style={{...styles.th,textAlign:'center'}}>
