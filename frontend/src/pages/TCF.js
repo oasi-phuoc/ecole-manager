@@ -55,6 +55,8 @@ export default function TCF() {
   const [siteNames, setSiteNames] = useState({ site1: 'Site 1', site2: 'Site 2' });
   const [siteLevels, setSiteLevels] = useState({ site1: [], site2: [] });
   const [selectedBySite, setSelectedBySite] = useState({ site1: [], site2: [] });
+  const [siteOrder, setSiteOrder] = useState(['site1', 'site2']);
+  const [siteCounter, setSiteCounter] = useState(2);
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [poolDirty, setPoolDirty] = useState(false);
@@ -108,6 +110,17 @@ export default function TCF() {
 
       try {
         const poolState = JSON.parse(localStorage.getItem('tcf_pool_state') || '{}');
+        const savedOrder = Array.isArray(poolState?.siteOrder) && poolState.siteOrder.length
+          ? poolState.siteOrder
+          : Object.keys(poolState?.siteNames || {});
+        if (savedOrder.length) {
+          setSiteOrder(savedOrder);
+          const maxSuffix = savedOrder.reduce((acc, key) => {
+            const n = Number(String(key).replace('site', ''));
+            return Number.isFinite(n) ? Math.max(acc, n) : acc;
+          }, 0);
+          setSiteCounter(maxSuffix || 2);
+        }
         if (poolState?.siteNames) setSiteNames(poolState.siteNames);
         if (poolState?.siteLevels) setSiteLevels(poolState.siteLevels);
         if (poolState?.selectedBySite) setSelectedBySite(poolState.selectedBySite);
@@ -209,18 +222,18 @@ export default function TCF() {
 
   const estBloqueDansAutreSite = (siteKey, profId) => {
     if (splitByProf[profId]) return false;
-    const autre = siteKey === 'site1' ? 'site2' : 'site1';
-    return selectedBySite[autre].includes(profId);
+    return siteOrder.some(k => k !== siteKey && (selectedBySite[k] || []).includes(profId));
   };
 
   const toggleProfSite = (siteKey, profId) => {
     if (estBloqueDansAutreSite(siteKey, profId)) return;
     setPoolDirty(true);
     setSelectedBySite(prev => {
-      const deja = prev[siteKey].includes(profId);
+      const cur = prev[siteKey] || [];
+      const deja = cur.includes(profId);
       return {
         ...prev,
-        [siteKey]: deja ? prev[siteKey].filter(id => id !== profId) : [...prev[siteKey], profId],
+        [siteKey]: deja ? cur.filter(id => id !== profId) : [...cur, profId],
       };
     });
   };
@@ -229,8 +242,19 @@ export default function TCF() {
     setPoolDirty(true);
     setSplitByProf(prev => {
       const next = { ...prev, [profId]: !prev[profId] };
-      if (!next[profId] && selectedBySite.site1.includes(profId) && selectedBySite.site2.includes(profId)) {
-        setSelectedBySite(s => ({ ...s, site2: s.site2.filter(id => id !== profId) }));
+      if (!next[profId]) {
+        const sitesAvecProf = siteOrder.filter(k => (selectedBySite[k] || []).includes(profId));
+        if (sitesAvecProf.length > 1) {
+          const keep = sitesAvecProf[0];
+          setSelectedBySite(s => {
+            const updated = { ...s };
+            for (const k of sitesAvecProf) {
+              if (k === keep) continue;
+              updated[k] = (updated[k] || []).filter(id => id !== profId);
+            }
+            return updated;
+          });
+        }
       }
       return next;
     });
@@ -245,6 +269,48 @@ export default function TCF() {
         ...prev,
         [siteKey]: has ? current.filter(x => x !== level) : [...current, level],
       };
+    });
+  };
+
+  const ajouterSite = () => {
+    setPoolDirty(true);
+    const next = siteCounter + 1;
+    const key = `site${next}`;
+    setSiteCounter(next);
+    setSiteOrder(prev => [...prev, key]);
+    setSiteNames(prev => ({ ...prev, [key]: `Site ${next}` }));
+    setSiteLevels(prev => ({ ...prev, [key]: [] }));
+    setSelectedBySite(prev => ({ ...prev, [key]: [] }));
+  };
+
+  const supprimerSite = (siteKey) => {
+    if (siteOrder.length <= 1) {
+      alert('Au moins un site est requis.');
+      return;
+    }
+    setPoolDirty(true);
+    setSiteOrder(prev => prev.filter(k => k !== siteKey));
+    setSiteNames(prev => {
+      const next = { ...prev };
+      delete next[siteKey];
+      return next;
+    });
+    setSiteLevels(prev => {
+      const next = { ...prev };
+      delete next[siteKey];
+      return next;
+    });
+    setSelectedBySite(prev => {
+      const next = { ...prev };
+      delete next[siteKey];
+      return next;
+    });
+    setPoolCellOverrides(prev => {
+      const next = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (!k.startsWith(`${siteKey}::`)) next[k] = v;
+      }
+      return next;
     });
   };
 
@@ -449,6 +515,13 @@ export default function TCF() {
             );
           })}
         </div>
+        <button
+          type="button"
+          onClick={() => supprimerSite(siteKey)}
+          style={styles.btnRemoveSite}
+        >
+          Supprimer ce site
+        </button>
       </div>
 
       <div style={styles.sectionTitle}>Liste des professeurs séparée par niveau des pools</div>
@@ -758,7 +831,7 @@ export default function TCF() {
   };
 
   const handleSavePool = () => {
-    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides }));
+    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteOrder, siteCounter, siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides }));
     setPoolDirty(false);
     afficherSaveMsg('pool');
   };
@@ -840,9 +913,11 @@ export default function TCF() {
 
       {onglet === 'pool' && (
         <div style={styles.card}>
+          <div style={styles.poolActionsRow}>
+            <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>+ Ajouter un site</button>
+          </div>
           <div style={styles.siteStack}>
-            {renderSelectionSite('site1', 'Site 1')}
-            {renderSelectionSite('site2', 'Site 2')}
+            {siteOrder.map((siteKey, idx) => renderSelectionSite(siteKey, `Site ${idx + 1}`))}
           </div>
         </div>
       )}
@@ -866,18 +941,14 @@ export default function TCF() {
           <h3 style={styles.cardTitle}>Affectation</h3>
           <div style={styles.affectationSiteLevelsBox}>
             <div style={styles.affectationSiteLevelsTitle}>Niveaux définis depuis Pool</div>
-            <div style={styles.affectationSiteLevelsRow}>
-              <span style={styles.affectationSiteLevelsLabel}>{siteNames.site1 || 'Site 1'}:</span>
-              <span style={styles.affectationSiteLevelsValue}>
-                {(siteLevels.site1 || []).length ? siteLevels.site1.join(', ') : 'Aucun niveau sélectionné'}
-              </span>
-            </div>
-            <div style={styles.affectationSiteLevelsRow}>
-              <span style={styles.affectationSiteLevelsLabel}>{siteNames.site2 || 'Site 2'}:</span>
-              <span style={styles.affectationSiteLevelsValue}>
-                {(siteLevels.site2 || []).length ? siteLevels.site2.join(', ') : 'Aucun niveau sélectionné'}
-              </span>
-            </div>
+            {siteOrder.map((siteKey, idx) => (
+              <div key={`aff-site-${siteKey}`} style={styles.affectationSiteLevelsRow}>
+                <span style={styles.affectationSiteLevelsLabel}>{siteNames[siteKey] || `Site ${idx + 1}`}:</span>
+                <span style={styles.affectationSiteLevelsValue}>
+                  {(siteLevels[siteKey] || []).length ? siteLevels[siteKey].join(', ') : 'Aucun niveau sélectionné'}
+                </span>
+              </div>
+            ))}
           </div>
           {sousOngletAffectation === 'classes' && (
             <div style={styles.empty}>Sous-onglet Classes prêt. Le bouton Sauvegarder reste dans la barre principale, aligné à droite.</div>
@@ -928,6 +999,8 @@ const styles = {
   affectationSiteLevelsValue: { fontSize: 12, color: '#1e293b' },
 
   siteStack: { display: 'flex', flexDirection: 'column', gap: 14 },
+  poolActionsRow: { display: 'flex', justifyContent: 'flex-end', marginBottom: 10 },
+  btnAddSite: { padding: '7px 12px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
   siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
@@ -935,6 +1008,7 @@ const styles = {
   siteLevelsWrap: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   levelBtn: { padding: '6px 10px', borderRadius: 999, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   levelBtnActif: { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
+  btnRemoveSite: { marginLeft: 'auto', padding: '6px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 12 },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
   niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
