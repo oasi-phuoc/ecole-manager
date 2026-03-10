@@ -1190,13 +1190,15 @@ export default function EmploiDuTemps() {
       .filter(c => c.jour === 'Lundi' && c.periode === periode)
       .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
   const withPrintLayout = (titre, contenu, options = {}) => {
+    const pageSize = options?.paysage ? 'A4 landscape' : 'A4 portrait';
+    const compactClasses = !!options?.compactClasses;
     return `
     <html>
       <head>
         <meta charset="utf-8" />
         <title>${escapeHtml(titre)}</title>
         <style>
-          @page { margin: 20mm; }
+          @page { size: ${pageSize}; margin: 20mm; }
           body { font-family: Arial, sans-serif; margin: 16px; color: #111827; }
           @media print {
             * {
@@ -1215,6 +1217,15 @@ export default function EmploiDuTemps() {
           .periode { background: #000000; color: #ffffff; font-weight: 700; text-align: left; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; }
           .section:last-child { page-break-after: auto; }
+          .section { break-inside: avoid; break-after: page; }
+          .section:last-child { break-after: auto; }
+          ${compactClasses ? `
+          h1 { margin-bottom: 8px; font-size: 18px; }
+          h2 { margin: 10px 0 6px; font-size: 14px; }
+          table { margin: 4px 0 10px; }
+          th, td { padding: 4px; font-size: 10px; line-height: 1.15; }
+          .creneau { font-size: 10px; }
+          ` : ''}
         </style>
       </head>
       <body>
@@ -1359,7 +1370,7 @@ export default function EmploiDuTemps() {
           affectationsListe: planningClasseAffectations || [],
           horairesListe: planningClasse.horaires || [],
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
@@ -1475,7 +1486,7 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}${titulaireClasse ? ` — Titulaire : ${escapeHtml(titulaireClasse)}` : ''}</h2>${table}</div>`;
         });
-        return openPrintWindow('Planning classes — toutes les classes', sections.join(''), { paysage: true });
+        return openPrintWindow('Planning classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profs.length) return alert('Aucun professeur à imprimer.');
