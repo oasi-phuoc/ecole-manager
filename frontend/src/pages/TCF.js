@@ -53,6 +53,7 @@ export default function TCF() {
   const [chargement, setChargement] = useState(true);
 
   const [siteNames, setSiteNames] = useState({ site1: 'Site 1', site2: 'Site 2' });
+  const [siteLevels, setSiteLevels] = useState({ site1: [], site2: [] });
   const [selectedBySite, setSelectedBySite] = useState({ site1: [], site2: [] });
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
@@ -71,6 +72,7 @@ export default function TCF() {
   const [statSens, setStatSens] = useState('fort');
   const [statSession, setStatSession] = useState('');
   const [statSeuil, setStatSeuil] = useState('60');
+  const [sousOngletAffectation, setSousOngletAffectation] = useState('classes');
 
   useEffect(() => {
     const charger = async () => {
@@ -107,6 +109,7 @@ export default function TCF() {
       try {
         const poolState = JSON.parse(localStorage.getItem('tcf_pool_state') || '{}');
         if (poolState?.siteNames) setSiteNames(poolState.siteNames);
+        if (poolState?.siteLevels) setSiteLevels(poolState.siteLevels);
         if (poolState?.selectedBySite) setSelectedBySite(poolState.selectedBySite);
         if (poolState?.splitByProf) setSplitByProf(poolState.splitByProf);
         if (poolState?.poolCellOverrides) setPoolCellOverrides(poolState.poolCellOverrides);
@@ -186,6 +189,15 @@ export default function TCF() {
     return byLevel;
   }, [pools, profs, profMap]);
 
+  const niveauxDisponibles = useMemo(() => {
+    const set = new Set(niveaux);
+    for (const p of pools) {
+      const n = normaliserNiveau(p.niveau);
+      if (n) set.add(n);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [niveaux, pools]);
+
   const elevesNiveau = useMemo(() => {
     if (!resultatNiveau) return [];
     const cls = classes.filter(c => normaliserNiveau(c.niveau) === resultatNiveau);
@@ -221,6 +233,18 @@ export default function TCF() {
         setSelectedBySite(s => ({ ...s, site2: s.site2.filter(id => id !== profId) }));
       }
       return next;
+    });
+  };
+
+  const toggleSiteLevel = (siteKey, level) => {
+    setPoolDirty(true);
+    setSiteLevels(prev => {
+      const current = prev[siteKey] || [];
+      const has = current.includes(level);
+      return {
+        ...prev,
+        [siteKey]: has ? current.filter(x => x !== level) : [...current, level],
+      };
     });
   };
 
@@ -410,6 +434,21 @@ export default function TCF() {
           style={styles.siteInput}
           placeholder="Nom du site"
         />
+        <div style={styles.siteLevelsWrap}>
+          {niveauxDisponibles.map(level => {
+            const actif = (siteLevels[siteKey] || []).includes(level);
+            return (
+              <button
+                key={`${siteKey}-${level}`}
+                type="button"
+                onClick={() => toggleSiteLevel(siteKey, level)}
+                style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}) }}
+              >
+                {level}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div style={styles.sectionTitle}>Liste des professeurs séparée par niveau des pools</div>
@@ -719,7 +758,7 @@ export default function TCF() {
   };
 
   const handleSavePool = () => {
-    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
+    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides }));
     setPoolDirty(false);
     afficherSaveMsg('pool');
   };
@@ -810,8 +849,42 @@ export default function TCF() {
 
       {onglet === 'affectation' && (
         <div style={styles.card}>
+          <div style={styles.subTabsRow}>
+            <button
+              onClick={() => setSousOngletAffectation('classes')}
+              style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'classes' ? styles.subTabBtnActif : {}) }}
+            >
+              Classes
+            </button>
+            <button
+              onClick={() => setSousOngletAffectation('roles')}
+              style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'roles' ? styles.subTabBtnActif : {}) }}
+            >
+              Rôles
+            </button>
+          </div>
           <h3 style={styles.cardTitle}>Affectation</h3>
-          <div style={styles.empty}>Utilisez l’onglet Pool pour gérer les affectations hebdomadaires.</div>
+          <div style={styles.affectationSiteLevelsBox}>
+            <div style={styles.affectationSiteLevelsTitle}>Niveaux définis depuis Pool</div>
+            <div style={styles.affectationSiteLevelsRow}>
+              <span style={styles.affectationSiteLevelsLabel}>{siteNames.site1 || 'Site 1'}:</span>
+              <span style={styles.affectationSiteLevelsValue}>
+                {(siteLevels.site1 || []).length ? siteLevels.site1.join(', ') : 'Aucun niveau sélectionné'}
+              </span>
+            </div>
+            <div style={styles.affectationSiteLevelsRow}>
+              <span style={styles.affectationSiteLevelsLabel}>{siteNames.site2 || 'Site 2'}:</span>
+              <span style={styles.affectationSiteLevelsValue}>
+                {(siteLevels.site2 || []).length ? siteLevels.site2.join(', ') : 'Aucun niveau sélectionné'}
+              </span>
+            </div>
+          </div>
+          {sousOngletAffectation === 'classes' && (
+            <div style={styles.empty}>Sous-onglet Classes prêt. Le bouton Sauvegarder reste dans la barre principale, aligné à droite.</div>
+          )}
+          {sousOngletAffectation === 'roles' && (
+            <div style={styles.empty}>Sous-onglet Rôles prêt. Le bouton Sauvegarder reste dans la barre principale, aligné à droite.</div>
+          )}
         </div>
       )}
 
@@ -848,12 +921,20 @@ const styles = {
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
+  affectationSiteLevelsBox: { border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', padding: 10, marginBottom: 10 },
+  affectationSiteLevelsTitle: { fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 },
+  affectationSiteLevelsRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
+  affectationSiteLevelsLabel: { fontSize: 12, fontWeight: 700, color: '#475569' },
+  affectationSiteLevelsValue: { fontSize: 12, color: '#1e293b' },
 
   siteStack: { display: 'flex', flexDirection: 'column', gap: 14 },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
-  siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 },
+  siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
   siteInput: { width: 260, maxWidth: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b' },
+  siteLevelsWrap: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  levelBtn: { padding: '6px 10px', borderRadius: 999, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+  levelBtnActif: { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
   niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
