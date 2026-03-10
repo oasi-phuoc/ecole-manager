@@ -56,9 +56,9 @@ const normaliserIdsPrefBranches = (valeur) => {
 };
 
 export default function EmploiDuTemps() {
-  const clonePausesParPeriode = (source) => ({
-    Matin: { ...source.Matin },
-    'Après-midi': { ...source['Après-midi'] },
+  const clonePausesParPeriode = (source = PAUSES_PAR_PERIODE_DEFAUT) => ({
+    Matin: { ...(source?.Matin || PAUSES_PAR_PERIODE_DEFAUT.Matin) },
+    'Après-midi': { ...(source?.['Après-midi'] || PAUSES_PAR_PERIODE_DEFAUT['Après-midi']) },
   });
   const [onglet, setOnglet] = useState('pools');
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
@@ -270,9 +270,10 @@ export default function EmploiDuTemps() {
         await axios.post(API + '/planning/pools', poolForm, { headers });
       }
       setPausesParPeriode(clonePausesParPeriode(pausesParPeriodeForm));
-      setShowPoolForm(false); setPoolEdit(null);
+      setShowPoolForm(false);
+      setPoolEdit(null);
       setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
-      chargerTout();
+      await chargerTout();
     } catch(err) { alert(err.response?.data?.message || err.message); }
   };
 
@@ -1819,7 +1820,7 @@ export default function EmploiDuTemps() {
                     </div>
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
                       <label style={styles.lbl}>Classes</label>
-                      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))',gap:8,marginTop:6}}>
+                      <div style={{display:'grid',gridTemplateColumns:'repeat(6, minmax(0, 1fr))',gap:8,marginTop:6}}>
                         {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
                           <label
                             key={c.id}
