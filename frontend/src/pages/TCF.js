@@ -425,14 +425,14 @@ export default function TCF() {
         <div style={styles.tableWrap}>
           <table style={styles.tablePool}>
             <colgroup>
-              <col style={{ width: 280, minWidth: 280, maxWidth: 280 }} />
+              <col style={{ width: 245, minWidth: 245, maxWidth: 245 }} />
               {JOURS.flatMap(j => MOMENTS.map(m => (
                 <col key={`${j}-${m.id}`} style={{ width: 'auto' }} />
               )))}
             </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={styles.thLeft} rowSpan={2}>Professeur</th>
+                <th style={styles.thProfPool} rowSpan={2}>Professeur</th>
                 {JOURS.map(j => <th key={j} style={styles.thCenter} colSpan={2}>{j}</th>)}
               </tr>
               <tr style={styles.thead}>
@@ -446,7 +446,7 @@ export default function TCF() {
                 const p = profMap[id];
                 return (
                   <tr key={id}>
-                    <td style={styles.tdLeft}>{p ? `${p.prenom} ${p.nom}` : `Prof #${id}`}</td>
+                    <td style={styles.tdProfPool}>{p ? `${p.prenom} ${p.nom}` : `Prof #${id}`}</td>
                     {JOURS.map(j => MOMENTS.map(m => {
                       const statut = statutCellule(siteKey, id, j, m.id);
                       const showR = statut === 'rouge';
@@ -457,19 +457,21 @@ export default function TCF() {
                           style={styles.tdCenterCell}
                           onClick={() => cycleCellule(siteKey, id, j, m.id)}
                         >
-                          {renderPastille(statut)}
-                          {showR && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleRCellule(siteKey, id, j, m.id);
-                              }}
-                              style={{ ...styles.rBtn, ...(rActif ? styles.rBtnActif : {}) }}
-                            >
-                              R
-                            </button>
-                          )}
+                          <div style={styles.cellStatusWrap}>
+                            {renderPastille(statut)}
+                            {showR && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRCellule(siteKey, id, j, m.id);
+                                }}
+                                style={{ ...styles.rBtn, ...(rActif ? styles.rBtnActif : {}) }}
+                              >
+                                R
+                              </button>
+                            )}
+                          </div>
                         </td>
                       );
                     }))}
@@ -1043,16 +1045,18 @@ const styles = {
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
   thead: { background: '#f8fafc' },
   thLeft: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left' },
+  thProfPool: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' },
   thCenter: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center' },
   tdLeft: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b' },
+  tdProfPool: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 12px', fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdCenter: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', textAlign: 'center' },
   tdCenterCell: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 6px', fontSize: 13, color: '#1e293b', textAlign: 'center', cursor: 'pointer' },
+  cellStatusWrap: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 18 },
   tdCountLabel: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#334155', background: '#f8fafc' },
   tdCountValue: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#1e293b', textAlign: 'center', background: '#f8fafc' },
   tdCenterRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'center', fontWeight: 700 },
   dot: { width: 18, height: 18, borderRadius: '50%', display: 'inline-block' },
   rBtn: {
-    marginLeft: 6,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
