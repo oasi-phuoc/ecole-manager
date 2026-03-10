@@ -56,7 +56,10 @@ export default function TCF() {
   const [selectedBySite, setSelectedBySite] = useState({ site1: [], site2: [] });
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
-  const [saveMsg, setSaveMsg] = useState('');
+  const [poolDirty, setPoolDirty] = useState(false);
+  const [affectationDirty, setAffectationDirty] = useState(false);
+  const [resultatDirty, setResultatDirty] = useState(false);
+  const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', affectation: '', resultat: '' });
 
   const [resultatNiveau, setResultatNiveau] = useState('');
   const [resultatMatiere, setResultatMatiere] = useState('francais');
@@ -143,14 +146,6 @@ export default function TCF() {
     if (!resultatNiveau && niveaux.length) setResultatNiveau(niveaux[0]);
   }, [niveaux, resultatNiveau]);
 
-  useEffect(() => {
-    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
-  }, [siteNames, selectedBySite, splitByProf, poolCellOverrides]);
-
-  useEffect(() => {
-    localStorage.setItem('tcf_resultats_scores', JSON.stringify(scores));
-  }, [scores]);
-
   const profsParNiveauPool = useMemo(() => {
     const byLevel = {};
     const seen = {};
@@ -208,6 +203,7 @@ export default function TCF() {
 
   const toggleProfSite = (siteKey, profId) => {
     if (estBloqueDansAutreSite(siteKey, profId)) return;
+    setPoolDirty(true);
     setSelectedBySite(prev => {
       const deja = prev[siteKey].includes(profId);
       return {
@@ -218,6 +214,7 @@ export default function TCF() {
   };
 
   const toggleSplitProf = (profId) => {
+    setPoolDirty(true);
     setSplitByProf(prev => {
       const next = { ...prev, [profId]: !prev[profId] };
       if (!next[profId] && selectedBySite.site1.includes(profId) && selectedBySite.site2.includes(profId)) {
@@ -261,6 +258,7 @@ export default function TCF() {
   };
 
   const cycleCellule = (siteKey, profId, jour, momentId) => {
+    setPoolDirty(true);
     const key = cleCellulePool(siteKey, profId, jour, momentId);
     const courant = statutCellule(siteKey, profId, jour, momentId);
     const suivant = cycleStatut(courant);
@@ -278,6 +276,7 @@ export default function TCF() {
     const key = cleCellulePool(siteKey, profId, jour, momentId);
     const statut = statutCellule(siteKey, profId, jour, momentId);
     if (statut !== 'rouge') return;
+    setPoolDirty(true);
     setPoolCellOverrides(prev => ({
       ...prev,
       [key]: {
@@ -292,6 +291,7 @@ export default function TCF() {
   const getScore = (matiere, session, eleveId) => scores[scoreKey(matiere, session, eleveId)] || {};
   const setScore = (matiere, session, eleveId, field, value) => {
     const valeur = value === '' ? '' : String(clampNote(value));
+    setResultatDirty(true);
     setScores(prev => {
       const key = scoreKey(matiere, session, eleveId);
       const cur = prev[key] || {};
@@ -403,7 +403,10 @@ export default function TCF() {
         <span style={styles.siteTitle}>{siteLabel} - </span>
         <input
           value={siteNames[siteKey]}
-          onChange={e => setSiteNames(prev => ({ ...prev, [siteKey]: e.target.value }))}
+          onChange={e => {
+            setPoolDirty(true);
+            setSiteNames(prev => ({ ...prev, [siteKey]: e.target.value }));
+          }}
           style={styles.siteInput}
           placeholder="Nom du site"
         />
@@ -454,6 +457,12 @@ export default function TCF() {
 
     return (
       <div style={styles.card}>
+        <div style={styles.tabSaveRow}>
+          <button onClick={handleSaveResultat} style={styles.btnSave}>
+            Sauvegarder Résultat
+          </button>
+          {saveMsgByTab.resultat && <span style={styles.saveMsg}>{saveMsgByTab.resultat}</span>}
+        </div>
         <div style={styles.subTabsRow}>
           {niveaux.map(n => (
             <button
@@ -708,6 +717,47 @@ export default function TCF() {
     );
   };
 
+  const afficherSaveMsg = (tab, msg = 'Sauvegarde effectuée.') => {
+    setSaveMsgByTab(prev => ({ ...prev, [tab]: msg }));
+    setTimeout(() => {
+      setSaveMsgByTab(prev => ({ ...prev, [tab]: '' }));
+    }, 2000);
+  };
+
+  const handleSavePool = () => {
+    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
+    setPoolDirty(false);
+    afficherSaveMsg('pool');
+  };
+
+  const handleSaveAffectation = () => {
+    localStorage.setItem('tcf_affectation_state', JSON.stringify({ updatedAt: new Date().toISOString() }));
+    setAffectationDirty(false);
+    afficherSaveMsg('affectation');
+  };
+
+  const handleSaveResultat = () => {
+    localStorage.setItem('tcf_resultats_scores', JSON.stringify(scores));
+    setResultatDirty(false);
+    afficherSaveMsg('resultat');
+  };
+
+  const tabHasUnsaved = (tab) => {
+    if (tab === 'pool') return poolDirty;
+    if (tab === 'affectation') return affectationDirty;
+    if (tab === 'resultat') return resultatDirty;
+    return false;
+  };
+
+  const handleTabChange = (nextTab) => {
+    if (nextTab === onglet) return;
+    if (tabHasUnsaved(onglet)) {
+      const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cet onglet sans sauvegarder ?');
+      if (!ok) return;
+    }
+    setOnglet(nextTab);
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -725,7 +775,7 @@ export default function TCF() {
         ].map(t => (
           <button
             key={t.id}
-            onClick={() => setOnglet(t.id)}
+            onClick={() => handleTabChange(t.id)}
             style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}
           >
             {t.label}
@@ -740,23 +790,20 @@ export default function TCF() {
             {renderSelectionSite('site2', 'Site 2')}
           </div>
           <div style={{ marginTop: 14 }}>
-            <button
-              onClick={() => {
-                localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
-                setSaveMsg('Sauvegarde effectuée.');
-                setTimeout(() => setSaveMsg(''), 2000);
-              }}
-              style={styles.btnSave}
-            >
-              Sauvegarder
-            </button>
-            {saveMsg && <span style={styles.saveMsg}>{saveMsg}</span>}
+            <button onClick={handleSavePool} style={styles.btnSave}>Sauvegarder Pool</button>
+            {saveMsgByTab.pool && <span style={styles.saveMsg}>{saveMsgByTab.pool}</span>}
           </div>
         </div>
       )}
 
       {onglet === 'affectation' && (
         <div style={styles.card}>
+          <div style={styles.tabSaveRow}>
+            <button onClick={handleSaveAffectation} style={styles.btnSave}>
+              Sauvegarder Affectation
+            </button>
+            {saveMsgByTab.affectation && <span style={styles.saveMsg}>{saveMsgByTab.affectation}</span>}
+          </div>
           <h3 style={styles.cardTitle}>Affectation</h3>
           <div style={styles.empty}>Utilisez l’onglet Pool pour gérer les affectations hebdomadaires.</div>
         </div>
@@ -786,9 +833,10 @@ const styles = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
-  tabsRow: { display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' },
+  tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 },
   tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569' },
   tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
+  tabSaveRow: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 10 },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
