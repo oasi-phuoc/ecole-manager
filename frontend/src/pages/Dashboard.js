@@ -48,7 +48,7 @@ export default function Dashboard() {
   const isAdmin = user?.role === 'admin';
 
   const modules = [
-    { icon: '🧑‍💼', label: 'Employés administratifs', path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: true },
+    { icon: '🧑', label: 'Employés administratifs', path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: true },
     { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: null, statLabel: '', admin: true },
     { icon: '🎓', label: 'Élèves', path: '/eleves', color: '#f59e0b', bg: '#fef3c7', stat: null, statLabel: '', admin: false },
     { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
