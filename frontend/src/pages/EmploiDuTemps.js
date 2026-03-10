@@ -1274,6 +1274,66 @@ export default function EmploiDuTemps() {
       </table>
     `;
   };
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe }) => {
+    const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
+    const renderPeriodeRows = (periode) => {
+      const base = baseCreneauxPeriode(creneauxListe, periode);
+      if (!base.length) return '';
+      const rows = [];
+      base.forEach((crBase, idx) => {
+        const cellulesJours = JOURS.map((jour) => {
+          const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
+          if (!cr) return `<td style="background:#f5f5f5;"></td>`;
+          const aCours = horairesSet.has(`${jour}|${periode}`);
+          const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
+          const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f5f5f5');
+          const fg = aff ? toPrintColor(getCouleurTexteSurFond(bg)) : '#111827';
+          const contenu = aff
+            ? `<b style="color:${fg};font-size:12px;">${escapeHtml(aff.prof_nom || '')}</b>${aff.matiere_nom ? `<div style="color:${fg};font-size:11px;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
+            : (aCours ? '<span style="color:#dc2626;font-size:11px;font-weight:700;">Aucun professeur affecté</span>' : '');
+          return `<td style="background:${bg};color:${fg};">${contenu}</td>`;
+        }).join('');
+        rows.push(
+          `<tr>
+            ${idx === 0 ? `<td rowspan="5" style="width:46px;min-width:46px;max-width:46px;padding:0;overflow:hidden;border-right:1px solid #e5e7eb;background:#f8fafc;vertical-align:middle;text-align:center;"><div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;"><span style="display:inline-block;transform:rotate(-90deg);font-weight:700;color:#334155;white-space:nowrap;line-height:1;">${escapeHtml(periode)}</span></div></td>` : ''}
+            <td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
+            ${cellulesJours}
+          </tr>`
+        );
+        if (idx === 1) {
+          const pause = pausesParPeriode[periode];
+          rows.push(
+            `<tr><td style="background:#000000;color:#ffffff;font-weight:700;white-space:nowrap;text-align:left;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;">PAUSE</td></tr>`
+          );
+        }
+      });
+      return rows.join('');
+    };
+    return `
+      <table>
+        <colgroup>
+          <col style="width:46px;min-width:46px;max-width:46px;" />
+          <col class="creneau-col" />
+          ${JOURS.map(() => '<col class="day-col" />').join('')}
+        </colgroup>
+        <thead>
+          <tr>
+            <th style="width:46px;min-width:46px;max-width:46px;"></th>
+            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>
+            ${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${renderPeriodeRows('Matin')}
+          <tr>
+            <td style="background:#ffffff;padding:0;border-right:1px solid #e5e7eb;"></td>
+            <td colspan="6" style="height:42px;background:#ffffff;"></td>
+          </tr>
+          ${renderPeriodeRows('Après-midi')}
+        </tbody>
+      </table>
+    `;
+  };
   const openPrintWindow = (titre, contenu, options = {}) => {
     const popup = window.open('', '_blank');
     if (!popup) {
@@ -1291,20 +1351,10 @@ export default function EmploiDuTemps() {
       if (sousOngletPlanning === 'classes') {
         if (!classePlanningId || !planningClasse) return alert('Sélectionnez d’abord une classe.');
         const titre = `Planning classe — ${planningClasse?.classe?.nom || ''}`;
-        const table = buildPlanningTableHtml({
+        const table = buildPlanningClassesPrintTableHtml({
           creneauxListe: planningClasse.creneaux || [],
-          repeatPeriodeOnDays: true,
-          showPauseRows: true,
-          getCellData: (cr) => {
-            const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
-            if (!aff) return { text: '', bg: '#e5e7eb' };
-            const bg = getCouleurProf(aff.prof_id);
-            return {
-              text: aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom,
-              bg,
-              color: getCouleurTexteSurFond(bg)
-            };
-          }
+          affectationsListe: planningClasseAffectations || [],
+          horairesListe: planningClasse.horaires || [],
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
@@ -1414,20 +1464,10 @@ export default function EmploiDuTemps() {
         const sections = reps.map((rep) => {
           const data = rep.data;
           const nomClasse = data?.classe?.nom || '';
-          const table = buildPlanningTableHtml({
+          const table = buildPlanningClassesPrintTableHtml({
             creneauxListe: data?.creneaux || [],
-            repeatPeriodeOnDays: true,
-            showPauseRows: true,
-            getCellData: (cr) => {
-              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (!aff) return { text: '', bg: '#e5e7eb' };
-              const bg = getCouleurProf(aff.prof_id);
-              return {
-                text: aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom,
-                bg,
-                color: getCouleurTexteSurFond(bg)
-              };
-            }
+            affectationsListe: data?.affectations || [],
+            horairesListe: data?.horaires || [],
           });
           return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}</h2>${table}</div>`;
         });
