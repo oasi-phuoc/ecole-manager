@@ -457,12 +457,6 @@ export default function TCF() {
 
     return (
       <div style={styles.card}>
-        <div style={styles.tabSaveRow}>
-          <button onClick={handleSaveResultat} style={styles.btnSave}>
-            Sauvegarder Résultat
-          </button>
-          {saveMsgByTab.resultat && <span style={styles.saveMsg}>{saveMsgByTab.resultat}</span>}
-        </div>
         <div style={styles.subTabsRow}>
           {niveaux.map(n => (
             <button
@@ -758,6 +752,20 @@ export default function TCF() {
     setOnglet(nextTab);
   };
 
+  const handleSaveCurrentTab = () => {
+    if (onglet === 'pool') handleSavePool();
+    else if (onglet === 'affectation') handleSaveAffectation();
+    else if (onglet === 'resultat') handleSaveResultat();
+  };
+
+  const currentSaveMsg = onglet === 'pool'
+    ? saveMsgByTab.pool
+    : onglet === 'affectation'
+      ? saveMsgByTab.affectation
+      : onglet === 'resultat'
+        ? saveMsgByTab.resultat
+        : '';
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -765,22 +773,30 @@ export default function TCF() {
         <h2 style={styles.title}>Test de connaissance</h2>
       </div>
 
-      <div style={styles.tabsRow}>
-        {[
-          { id: 'pool', label: 'Pool' },
-          { id: 'affectation', label: 'Affectation' },
-          { id: 'planning', label: 'Planning' },
-          { id: 'resultat', label: 'Résultat' },
-          { id: 'statistique', label: 'Statistique' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => handleTabChange(t.id)}
-            style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div style={styles.tabsBar}>
+        <div style={styles.tabsRow}>
+          {[
+            { id: 'pool', label: 'Pool' },
+            { id: 'affectation', label: 'Affectation' },
+            { id: 'planning', label: 'Planning' },
+            { id: 'resultat', label: 'Résultat' },
+            { id: 'statistique', label: 'Statistique' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => handleTabChange(t.id)}
+              style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {(onglet === 'pool' || onglet === 'affectation' || onglet === 'resultat') && (
+          <div style={styles.topSaveWrap}>
+            <button onClick={handleSaveCurrentTab} style={styles.btnSaveTop}>Sauvegarder</button>
+            {currentSaveMsg && <span style={styles.saveMsg}>{currentSaveMsg}</span>}
+          </div>
+        )}
       </div>
 
       {onglet === 'pool' && (
@@ -789,21 +805,11 @@ export default function TCF() {
             {renderSelectionSite('site1', 'Site 1')}
             {renderSelectionSite('site2', 'Site 2')}
           </div>
-          <div style={{ marginTop: 14 }}>
-            <button onClick={handleSavePool} style={styles.btnSave}>Sauvegarder Pool</button>
-            {saveMsgByTab.pool && <span style={styles.saveMsg}>{saveMsgByTab.pool}</span>}
-          </div>
         </div>
       )}
 
       {onglet === 'affectation' && (
         <div style={styles.card}>
-          <div style={styles.tabSaveRow}>
-            <button onClick={handleSaveAffectation} style={styles.btnSave}>
-              Sauvegarder Affectation
-            </button>
-            {saveMsgByTab.affectation && <span style={styles.saveMsg}>{saveMsgByTab.affectation}</span>}
-          </div>
           <h3 style={styles.cardTitle}>Affectation</h3>
           <div style={styles.empty}>Utilisez l’onglet Pool pour gérer les affectations hebdomadaires.</div>
         </div>
@@ -833,10 +839,12 @@ const styles = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
-  tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 },
+  tabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 },
+  tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap' },
+  topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569' },
   tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
-  tabSaveRow: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 10 },
+  btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
@@ -888,7 +896,7 @@ const styles = {
   tdCountLabel: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#334155', background: '#f8fafc' },
   tdCountValue: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#1e293b', textAlign: 'center', background: '#f8fafc' },
   tdCenterRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'center', fontWeight: 700 },
-  dot: { width: 12, height: 12, borderRadius: '50%', display: 'inline-block' },
+  dot: { width: 18, height: 18, borderRadius: '50%', display: 'inline-block' },
   rBtn: {
     marginLeft: 6,
     minWidth: 18,
@@ -909,7 +917,6 @@ const styles = {
     background: '#fee2e2',
   },
 
-  btnSave: { padding: '8px 16px', border: 'none', borderRadius: 8, background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' },
   saveMsg: { marginLeft: 10, fontSize: 12, color: '#166534', fontWeight: 700 },
 
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
