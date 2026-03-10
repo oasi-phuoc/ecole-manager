@@ -3123,18 +3123,31 @@ export default function EmploiDuTemps() {
                         const crsBase = (planningClasse.creneaux || []).filter(c => c.jour === 'Lundi' && c.periode === periode);
                         if (!crsBase.length) return [];
                         return crsBase.flatMap((crBase, idx) => [
-                          <tr key={`classe-tab-${periode}-${crBase.id}`} style={styles.tr}>
+                          <tr key={`classe-tab-${periode}-${crBase.id}`} style={{...styles.tr, height:56}}>
                             {idx === 0 && (
                               <td
                                 rowSpan={5}
-                                style={{...styles.td,width:46,minWidth:46,maxWidth:46,textAlign:'center',verticalAlign:'middle',background:'#f8fafc'}}
+                                style={{
+                                  ...styles.td,
+                                  width:46,
+                                  minWidth:46,
+                                  maxWidth:46,
+                                  textAlign:'center',
+                                  verticalAlign:'middle',
+                                  background:'#f8fafc',
+                                  padding:0,
+                                  overflow:'hidden',
+                                  borderRight:'1px solid #e5e7eb'
+                                }}
                               >
-                                <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap'}}>
-                                  {periode}
-                                </span>
+                                <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
+                                  <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>
+                                    {periode}
+                                  </span>
+                                </div>
                               </td>
                             )}
-                            <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                            <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,height:56}}>
                               P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                             </td>
                             {JOURS.map(jour => {
@@ -3145,7 +3158,7 @@ export default function EmploiDuTemps() {
                               const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
-                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,
+                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,height:56,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                   background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
                                   color: aff ? couleurTexteProf : undefined}}>
@@ -3174,7 +3187,7 @@ export default function EmploiDuTemps() {
                       return [
                         ...renderPeriodeRows('Matin'),
                         <tr key="classe-separation-matin-apresmidi">
-                          <td style={{...styles.td,width:46,minWidth:46,maxWidth:46,background:'#ffffff'}}></td>
+                          <td style={{...styles.td,width:46,minWidth:46,maxWidth:46,background:'#ffffff',padding:0,borderRight:'1px solid #e5e7eb'}}></td>
                           <td colSpan={6} style={{...styles.td,height:42,background:'#ffffff'}}></td>
                         </tr>,
                         ...renderPeriodeRows('Après-midi'),
