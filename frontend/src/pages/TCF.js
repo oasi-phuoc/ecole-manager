@@ -4,6 +4,10 @@ import axios from 'axios';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+const MOMENTS = [
+  { id: 'matin', label: 'Matin', periode: 'Matin' },
+  { id: 'apresMidi', label: 'Après-midi', periode: 'Après-midi' },
+];
 const SESSIONS = ['Rentrée scolaire', '1e semestre', '2e semestre'];
 
 const normaliserNiveau = (niveau) => String(niveau || '').trim().toUpperCase();
@@ -17,16 +21,22 @@ const nb = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
-const statutParNombrePeriodes = (count) => {
-  if (count >= 4) return 'vert';
-  if (count >= 1) return 'orange';
-  return 'rouge';
-};
 const couleurTotale = (total) => {
   if (total < 40) return { bg: '#fee2e2', text: '#b91c1c' };
   if (total <= 80) return { bg: '#ffedd5', text: '#c2410c' };
   return { bg: '#dcfce7', text: '#166534' };
 };
+const cycleStatut = (statut) => {
+  if (statut === 'vert') return 'orange';
+  if (statut === 'orange') return 'rouge';
+  return 'vert';
+};
+const normaliserPeriode = (p) =>
+  String(p || '')
+    .trim()
+    .toLowerCase()
+    .replace('è', 'e')
+    .replace('é', 'e');
 
 export default function TCF() {
   const navigate = useNavigate();
@@ -45,6 +55,7 @@ export default function TCF() {
   const [siteNames, setSiteNames] = useState({ site1: 'Site 1', site2: 'Site 2' });
   const [selectedBySite, setSelectedBySite] = useState({ site1: [], site2: [] });
   const [splitByProf, setSplitByProf] = useState({});
+  const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [saveMsg, setSaveMsg] = useState('');
 
   const [resultatNiveau, setResultatNiveau] = useState('');
@@ -95,6 +106,7 @@ export default function TCF() {
         if (poolState?.siteNames) setSiteNames(poolState.siteNames);
         if (poolState?.selectedBySite) setSelectedBySite(poolState.selectedBySite);
         if (poolState?.splitByProf) setSplitByProf(poolState.splitByProf);
+        if (poolState?.poolCellOverrides) setPoolCellOverrides(poolState.poolCellOverrides);
       } catch {}
 
       try {
@@ -132,8 +144,8 @@ export default function TCF() {
   }, [niveaux, resultatNiveau]);
 
   useEffect(() => {
-    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf }));
-  }, [siteNames, selectedBySite, splitByProf]);
+    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
+  }, [siteNames, selectedBySite, splitByProf, poolCellOverrides]);
 
   useEffect(() => {
     localStorage.setItem('tcf_resultats_scores', JSON.stringify(scores));
@@ -215,13 +227,65 @@ export default function TCF() {
     });
   };
 
-  const periodesDispoParJour = (profId, jour) => {
-    const creneauxJour = creneaux.filter(c => String(c.jour || '').toLowerCase() === jour.toLowerCase());
-    let count = 0;
+  const periodesDispoParDemiJournee = (profId, jour, momentId) => {
+    const periodeCible = momentId === 'matin' ? 'matin' : 'apres-midi';
+    const creneauxJour = creneaux.filter(c =>
+      String(c.jour || '').toLowerCase() === jour.toLowerCase()
+      && normaliserPeriode(c.periode) === periodeCible
+    );
+    const total = creneauxJour.length;
+    let dispo = 0;
     for (const c of creneauxJour) {
-      if (disposMap[`${profId}-${c.id}`] !== false) count += 1;
+      if (disposMap[`${profId}-${c.id}`] !== false) dispo += 1;
     }
-    return count;
+    return { dispo, total };
+  };
+
+  const cleCellulePool = (siteKey, profId, jour, momentId) => `${siteKey}::${profId}::${jour}::${momentId}`;
+
+  const statutBaseCellule = (profId, jour, momentId) => {
+    const { dispo, total } = periodesDispoParDemiJournee(profId, jour, momentId);
+    if (dispo <= 0 || total <= 0) return 'rouge';
+    if (dispo >= total) return 'vert';
+    return 'orange';
+  };
+
+  const statutCellule = (siteKey, profId, jour, momentId) => {
+    const key = cleCellulePool(siteKey, profId, jour, momentId);
+    return poolCellOverrides[key]?.statut || statutBaseCellule(profId, jour, momentId);
+  };
+
+  const rActifCellule = (siteKey, profId, jour, momentId) => {
+    const key = cleCellulePool(siteKey, profId, jour, momentId);
+    return !!poolCellOverrides[key]?.rActif;
+  };
+
+  const cycleCellule = (siteKey, profId, jour, momentId) => {
+    const key = cleCellulePool(siteKey, profId, jour, momentId);
+    const courant = statutCellule(siteKey, profId, jour, momentId);
+    const suivant = cycleStatut(courant);
+    setPoolCellOverrides(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        statut: suivant,
+        rActif: suivant === 'rouge' ? !!prev[key]?.rActif : false,
+      },
+    }));
+  };
+
+  const toggleRCellule = (siteKey, profId, jour, momentId) => {
+    const key = cleCellulePool(siteKey, profId, jour, momentId);
+    const statut = statutCellule(siteKey, profId, jour, momentId);
+    if (statut !== 'rouge') return;
+    setPoolCellOverrides(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        statut: 'rouge',
+        rActif: !prev[key]?.rActif,
+      },
+    }));
   };
 
   const scoreKey = (matiere, session, eleveId) => `${matiere}::${session}::${eleveId}`;
@@ -259,37 +323,73 @@ export default function TCF() {
     const ids = selectedBySite[siteKey] || [];
     if (!ids.length) return <div style={styles.empty}>Aucun professeur sélectionné.</div>;
 
-    const totalVertsSite = ids.reduce((acc, id) => {
-      return acc + JOURS.filter(j => statutParNombrePeriodes(periodesDispoParJour(id, j)) === 'vert').length;
-    }, 0);
+    const countVertsDemiJournee = (jour, momentId) =>
+      ids.reduce((acc, id) => acc + (statutCellule(siteKey, id, jour, momentId) === 'vert' ? 1 : 0), 0);
 
     return (
       <>
-        <div style={styles.badgeInfo}>Total cellules vertes: {totalVertsSite}</div>
         <div style={styles.tableWrap}>
-          <table style={styles.table}>
+          <table style={styles.tablePool}>
+            <colgroup>
+              <col style={{ width: 280, minWidth: 280, maxWidth: 280 }} />
+              {JOURS.flatMap(j => MOMENTS.map(m => (
+                <col key={`${j}-${m.id}`} style={{ width: 'auto' }} />
+              )))}
+            </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={styles.thLeft}>Nom prénom professeur</th>
-                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
-                <th style={styles.thCenter}>Verts</th>
+                <th style={styles.thLeft} rowSpan={2}>Professeur</th>
+                {JOURS.map(j => <th key={j} style={styles.thCenter} colSpan={2}>{j}</th>)}
+              </tr>
+              <tr style={styles.thead}>
+                {JOURS.map(j => MOMENTS.map(m => (
+                  <th key={`${j}-${m.id}`} style={styles.thCenter}>{m.label}</th>
+                )))}
               </tr>
             </thead>
             <tbody>
               {ids.map(id => {
                 const p = profMap[id];
-                const verts = JOURS.filter(j => statutParNombrePeriodes(periodesDispoParJour(id, j)) === 'vert').length;
                 return (
                   <tr key={id}>
                     <td style={styles.tdLeft}>{p ? `${p.prenom} ${p.nom}` : `Prof #${id}`}</td>
-                    {JOURS.map(j => {
-                      const statut = statutParNombrePeriodes(periodesDispoParJour(id, j));
-                      return <td key={id + '-' + j} style={styles.tdCenter}>{renderPastille(statut)}</td>;
-                    })}
-                    <td style={{ ...styles.tdCenter, fontWeight: 700 }}>{verts}</td>
+                    {JOURS.map(j => MOMENTS.map(m => {
+                      const statut = statutCellule(siteKey, id, j, m.id);
+                      const showR = statut === 'rouge';
+                      const rActif = rActifCellule(siteKey, id, j, m.id);
+                      return (
+                        <td
+                          key={`${id}-${j}-${m.id}`}
+                          style={styles.tdCenterCell}
+                          onClick={() => cycleCellule(siteKey, id, j, m.id)}
+                        >
+                          {renderPastille(statut)}
+                          {showR && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRCellule(siteKey, id, j, m.id);
+                              }}
+                              style={{ ...styles.rBtn, ...(rActif ? styles.rBtnActif : {}) }}
+                            >
+                              R
+                            </button>
+                          )}
+                        </td>
+                      );
+                    }))}
                   </tr>
                 );
               })}
+              <tr>
+                <td style={styles.tdCountLabel}>Nb verts</td>
+                {JOURS.map(j => MOMENTS.map(m => (
+                  <td key={`count-${j}-${m.id}`} style={styles.tdCountValue}>
+                    {countVertsDemiJournee(j, m.id)}
+                  </td>
+                )))}
+              </tr>
             </tbody>
           </table>
         </div>
@@ -326,16 +426,15 @@ export default function TCF() {
                       disabled={blocked}
                       onChange={() => toggleProfSite(siteKey, p.id)}
                     />
-                    <span>{p.prenom} {p.nom}</span>
+                    <span style={styles.profName}>{p.prenom} {p.nom}</span>
                   </label>
-                  <label style={styles.splitToggle}>
-                    <input
-                      type="checkbox"
-                      checked={!!splitByProf[p.id]}
-                      onChange={() => toggleSplitProf(p.id)}
-                    />
+                  <button
+                    type="button"
+                    onClick={() => toggleSplitProf(p.id)}
+                    style={{ ...styles.splitToggleBtn, ...(splitByProf[p.id] ? styles.splitToggleBtnActif : {}) }}
+                  >
                     Scinder
-                  </label>
+                  </button>
                 </div>
               );
             })}
@@ -643,7 +742,7 @@ export default function TCF() {
           <div style={{ marginTop: 14 }}>
             <button
               onClick={() => {
-                localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf }));
+                localStorage.setItem('tcf_pool_state', JSON.stringify({ siteNames, selectedBySite, splitByProf, poolCellOverrides }));
                 setSaveMsg('Sauvegarde effectuée.');
                 setTimeout(() => setSaveMsg(''), 2000);
               }}
@@ -702,23 +801,65 @@ const styles = {
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
   niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
-  profsList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 6 },
-  profItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 8px', background: 'white' },
+  profsList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 6 },
+  profItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 8px', background: 'white', minHeight: 34 },
   profItemBlocked: { opacity: 0.5, background: '#f8fafc' },
-  profCheck: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#334155' },
-  splitToggle: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#64748b' },
+  profCheck: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#334155', flex: 1, minWidth: 0 },
+  profName: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block', minWidth: 0 },
+  splitToggleBtn: {
+    flexShrink: 0,
+    minWidth: 64,
+    height: 22,
+    borderRadius: 11,
+    border: '1px solid #e2e8f0',
+    background: '#f8fafc',
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: 800,
+    cursor: 'pointer',
+    padding: '0 10px',
+    lineHeight: '20px',
+  },
+  splitToggleBtnActif: {
+    background: '#fee2e2',
+    borderColor: '#fca5a5',
+    color: '#dc2626',
+    fontWeight: 800,
+  },
 
-  badgeInfo: { display: 'inline-block', fontSize: 12, fontWeight: 700, color: '#334155', background: '#eef2ff', padding: '4px 8px', borderRadius: 99, marginBottom: 8 },
   tableWrap: { overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
+  tablePool: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1180 },
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
   thead: { background: '#f8fafc' },
   thLeft: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left' },
   thCenter: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center' },
   tdLeft: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b' },
   tdCenter: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', textAlign: 'center' },
+  tdCenterCell: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 6px', fontSize: 13, color: '#1e293b', textAlign: 'center', cursor: 'pointer' },
+  tdCountLabel: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#334155', background: '#f8fafc' },
+  tdCountValue: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#1e293b', textAlign: 'center', background: '#f8fafc' },
   tdCenterRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'center', fontWeight: 700 },
   dot: { width: 12, height: 12, borderRadius: '50%', display: 'inline-block' },
+  rBtn: {
+    marginLeft: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    border: '1px solid #e2e8f0',
+    background: '#f8fafc',
+    color: '#cbd5e1',
+    fontSize: 10,
+    fontWeight: 800,
+    cursor: 'pointer',
+    lineHeight: '16px',
+    padding: '0 5px',
+  },
+  rBtnActif: {
+    color: '#dc2626',
+    borderColor: '#fca5a5',
+    background: '#fee2e2',
+  },
 
   btnSave: { padding: '8px 16px', border: 'none', borderRadius: 8, background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' },
   saveMsg: { marginLeft: 10, fontSize: 12, color: '#166534', fontWeight: 700 },
