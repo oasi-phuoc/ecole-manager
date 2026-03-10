@@ -3162,9 +3162,11 @@ export default function EmploiDuTemps() {
                           ...(idx === 1 ? [(
                             <tr key={`classe-pause-${periode}`}>
                               <td style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                                {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                               </td>
-                              {JOURS.map(j => <td key={`classe-pause-${periode}-${j}`} style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center'}}>Pause</td>)}
+                              <td colSpan={5} style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center'}}>
+                                PAUSE
+                              </td>
                             </tr>
                           )] : [])
                         ]);
