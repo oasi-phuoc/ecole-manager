@@ -36,6 +36,10 @@ const HORAIRES_DEFAUT = [
   {periode:'Après-midi',num:3,debut:'15:20',fin:'16:05'},
   {periode:'Après-midi',num:4,debut:'16:05',fin:'16:50'},
 ];
+const PAUSES_PAR_PERIODE = {
+  Matin: { debut: '09:45', fin: '10:05' },
+  'Après-midi': { debut: '15:00', fin: '15:20' },
+};
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
 const normaliserIdsPrefBranches = (valeur) => {
@@ -53,7 +57,7 @@ const normaliserIdsPrefBranches = (valeur) => {
 
 export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState('pools');
-  const [sousOngletPlanning, setSousOngletPlanning] = useState('professeurs');
+  const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [profs, setProfs] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -1212,7 +1216,7 @@ export default function EmploiDuTemps() {
     </html>
   `;
   };
-  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, repeatPeriodeOnDays = false }) => {
+  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, repeatPeriodeOnDays = false, showPauseRows = false }) => {
     const lignes = [];
     ['Matin', 'Après-midi'].forEach((periode) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
@@ -1241,6 +1245,12 @@ export default function EmploiDuTemps() {
         lignes.push(
           `<tr><td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
+        if (showPauseRows && idx === 1) {
+          const pause = PAUSES_PAR_PERIODE[periode];
+          lignes.push(
+            `<tr><td class="creneau" style="background:#e5e7eb;font-weight:700;">Pause — ${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td>${JOURS.map(() => '<td style="background:#e5e7eb;font-weight:700;text-align:center;">Pause</td>').join('')}</tr>`
+          );
+        }
       });
     });
     return `
@@ -1276,9 +1286,10 @@ export default function EmploiDuTemps() {
         const table = buildPlanningTableHtml({
           creneauxListe: planningClasse.creneaux || [],
           repeatPeriodeOnDays: true,
+          showPauseRows: true,
           getCellData: (cr) => {
             const aff = (planningClasse.affectations || []).find(a => a.creneau_id === cr.id);
-            if (!aff) return { text: 'Aucun professeur affecté' };
+            if (!aff) return { text: '', bg: '#e5e7eb' };
             const bg = getCouleurProf(aff.prof_id);
             return {
               text: aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom,
@@ -1295,6 +1306,7 @@ export default function EmploiDuTemps() {
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
           repeatPeriodeOnDays: true,
+          showPauseRows: true,
           getCellData: (cr) => {
             const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
             if (hasBrancheAffectee(aff)) {
@@ -1319,6 +1331,7 @@ export default function EmploiDuTemps() {
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
           repeatPeriodeOnDays: true,
+          showPauseRows: true,
           getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
@@ -1396,9 +1409,10 @@ export default function EmploiDuTemps() {
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
             repeatPeriodeOnDays: true,
+            showPauseRows: true,
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (!aff) return { text: 'Aucun professeur affecté' };
+              if (!aff) return { text: '', bg: '#e5e7eb' };
               const bg = getCouleurProf(aff.prof_id);
               return {
                 text: aff.matiere_nom ? `${aff.prof_nom}\n${aff.matiere_nom}` : aff.prof_nom,
@@ -1422,6 +1436,7 @@ export default function EmploiDuTemps() {
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
             repeatPeriodeOnDays: true,
+            showPauseRows: true,
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
               if (hasBrancheAffectee(aff)) {
@@ -1449,6 +1464,7 @@ export default function EmploiDuTemps() {
           const table = buildPlanningTableHtml({
             creneauxListe: creneaux || [],
             repeatPeriodeOnDays: true,
+            showPauseRows: true,
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
                 c.jour === cr.jour &&
@@ -1534,7 +1550,9 @@ export default function EmploiDuTemps() {
                 abandonnerChangementsAffectationsCourants();
               }
               setOnglet(o.id);
-              if (o.id === 'plannings' && sousOngletPlanning === 'general') chargerPlanningGeneral(planningPoolId || '');
+              if (o.id === 'plannings') {
+                setSousOngletPlanning('classes');
+              }
             }}>
             {o.label}
           </button>
@@ -1793,12 +1811,12 @@ export default function EmploiDuTemps() {
                       </div>
                     </div>
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                      <label style={styles.lbl}>Classes {poolForm.niveau && <span style={{color:'#6366f1',fontSize:11,fontWeight:400}}>(niveau : {poolForm.niveau})</span>}</label>
+                      <label style={styles.lbl}>Classes</label>
                       <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
                         {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
                           <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:'#111827'}}>
                             <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
-                            {c.nom}{c.niveau && <span style={{opacity:.6,fontSize:11}}> ({c.niveau})</span>}
+                            {c.nom}
                           </label>
                         ))}
                       </div>
@@ -1834,12 +1852,27 @@ export default function EmploiDuTemps() {
                           {blocsProfs.map(bloc => bloc.items.length > 0 && (
                             <div key={bloc.label} style={{marginBottom:10}}>
                               <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
-                              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))',gap:8}}>
                                 {bloc.items.map(p => (
-                                  <label key={p.id} style={{...styles.checkBadge,background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',color:'#111827'}}>
-                                    <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} style={{marginRight:4}} />
-                                    {p.prenom} {p.nom}
-                                    {p.taux_activite ? <span style={{opacity:.7,fontSize:10,marginLeft:4}}>({p.taux_activite}%)</span> : ''}
+                                  <label
+                                    key={p.id}
+                                    style={{
+                                      ...styles.checkBadge,
+                                      display:'flex',
+                                      alignItems:'center',
+                                      gap:8,
+                                      minHeight:36,
+                                      padding:'7px 10px',
+                                      borderRadius:10,
+                                      background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',
+                                      color:'#111827'
+                                    }}
+                                  >
+                                    <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} />
+                                    <span style={{display:'flex',alignItems:'baseline',gap:4,flexWrap:'wrap',lineHeight:1.2}}>
+                                      <span>{p.prenom} {p.nom}</span>
+                                      {p.taux_activite ? <span style={{opacity:.7,fontSize:10}}>({p.taux_activite}%)</span> : ''}
+                                    </span>
                                   </label>
                                 ))}
                               </div>
@@ -1865,15 +1898,28 @@ export default function EmploiDuTemps() {
                         {['Matin','Après-midi'].map(per => (
                           <div key={per} style={{background:'#f8f9fa',borderRadius:8,padding:12}}>
                             <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:'#555'}}>{per}</div>
-                            {poolForm.horaires.filter(h=>h.periode===per).map((h,idx) => (
-                              <div key={idx} style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
-                                <span style={{fontSize:12,width:60,color:'#888'}}>P{idx+1}</span>
-                                <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.debut}
-                                  onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,debut:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
-                                <span style={{fontSize:11,color:'#aaa'}}>→</span>
-                                <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.fin}
-                                  onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
-                              </div>
+                            {poolForm.horaires
+                              .filter(h => h.periode === per)
+                              .sort((a, b) => Number(a.num || 0) - Number(b.num || 0))
+                              .map((h,idx) => (
+                              <React.Fragment key={`${per}-${h.num || idx}`}>
+                                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                                  <span style={{fontSize:12,width:60,color:'#888'}}>P{idx+1}</span>
+                                  <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.debut}
+                                    onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,debut:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                                  <span style={{fontSize:11,color:'#aaa'}}>→</span>
+                                  <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.fin}
+                                    onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                                </div>
+                                {idx === 1 && (
+                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,background:'#e5e7eb',borderRadius:6,padding:'4px 6px'}}>
+                                    <span style={{fontSize:12,width:60,color:'#374151',fontWeight:700}}>Pause</span>
+                                    <input readOnly style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}} value={PAUSES_PAR_PERIODE[per].debut} />
+                                    <span style={{fontSize:11,color:'#6b7280'}}>→</span>
+                                    <input readOnly style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}} value={PAUSES_PAR_PERIODE[per].fin} />
+                                  </div>
+                                )}
+                              </React.Fragment>
                             ))}
                           </div>
                         ))}
@@ -1919,6 +1965,41 @@ export default function EmploiDuTemps() {
                   <div style={styles.poolLabel}>CLASSES</div>
                   {pool.classes.map(c => <span key={c.id} style={{...styles.badge,background:'#e8f0fe',color:'#1a73e8'}}>{c.nom}</span>)}
                   {pool.classes.length===0&&<span style={styles.aucun}>Aucune</span>}
+                </div>
+                <div style={{marginTop:10}}>
+                  <div style={styles.poolLabel}>HORAIRES</div>
+                  <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                    <tbody>
+                      {['Matin','Après-midi'].map(per => {
+                        const horairesPeriode = (pool.horaires && pool.horaires.length === 8 ? pool.horaires : HORAIRES_DEFAUT)
+                          .filter(h => h.periode === per)
+                          .sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
+                        return (
+                          <React.Fragment key={`pool-horaires-${pool.id}-${per}`}>
+                            <tr>
+                              <td colSpan={3} style={{background:'#f8fafc',padding:'6px 8px',fontWeight:700,color:'#475569',border:'1px solid #e2e8f0'}}>{per}</td>
+                            </tr>
+                            {horairesPeriode.map((h, idx) => (
+                              <React.Fragment key={`pool-h-${pool.id}-${per}-${h.num || idx}`}>
+                                <tr>
+                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#64748b'}}>P{idx + 1}</td>
+                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0'}}>{h.debut}</td>
+                                  <td style={{padding:'5px 8px',border:'1px solid #e2e8f0'}}>{h.fin}</td>
+                                </tr>
+                                {idx === 1 && (
+                                  <tr>
+                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',fontWeight:700,background:'#e5e7eb'}}>Pause</td>
+                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',background:'#e5e7eb'}}>{PAUSES_PAR_PERIODE[per].debut}</td>
+                                    <td style={{padding:'5px 8px',border:'1px solid #cbd5e1',background:'#e5e7eb'}}>{PAUSES_PAR_PERIODE[per].fin}</td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ))}
@@ -2862,7 +2943,7 @@ export default function EmploiDuTemps() {
                               <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
                               {JOURS.map(j => <td key={`planning-only-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                             </tr>,
-                            ...crsBase.map((crBase, idx) => (
+                            ...crsBase.flatMap((crBase, idx) => [
                               <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                                   P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
@@ -2906,7 +2987,18 @@ export default function EmploiDuTemps() {
                                   );
                                 })}
                               </tr>
-                            ))
+                              ,
+                              ...(idx === 1 ? [(
+                                <tr key={`planning-only-pause-${periode}`}>
+                                  <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
+                                    Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                                  </td>
+                                  {JOURS.map(jour => (
+                                    <td key={`planning-only-pause-${periode}-${jour}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>
+                                  ))}
+                                </tr>
+                              )] : [])
+                            ])
                           ];
                         })
                       )}
@@ -2941,7 +3033,7 @@ export default function EmploiDuTemps() {
                         <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
                         {JOURS.map(j => <td key={`prof-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                       </tr>,
-                      ...crsBase.map((crBase,idx) => (
+                      ...crsBase.flatMap((crBase,idx) => [
                         <tr key={crBase.id} style={styles.tr}>
                           <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                             P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
@@ -2966,7 +3058,16 @@ export default function EmploiDuTemps() {
                             );
                           })}
                         </tr>
-                      ))
+                        ,
+                        ...(idx === 1 ? [(
+                          <tr key={`prof-pause-${periode}`}>
+                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
+                              Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                            </td>
+                            {JOURS.map(j => <td key={`prof-pause-${periode}-${j}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>)}
+                          </tr>
+                        )] : [])
+                      ])
                     ];
                   })}
                 </tbody>
@@ -3000,7 +3101,7 @@ export default function EmploiDuTemps() {
                           <td style={{...styles.periodeBandeCreneau, width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>{periode}</td>
                           {JOURS.map(j => <td key={`classe-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
                         </tr>,
-                        ...crsBase.map((crBase,idx) => (
+                        ...crsBase.flatMap((crBase,idx) => [
                           <tr key={`classe-tab-${crBase.id}`} style={styles.tr}>
                             <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
                               P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
@@ -3027,7 +3128,16 @@ export default function EmploiDuTemps() {
                               );
                             })}
                           </tr>
-                        ))
+                          ,
+                          ...(idx === 1 ? [(
+                            <tr key={`classe-pause-${periode}`}>
+                              <td style={{...styles.td,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                                Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                              </td>
+                              {JOURS.map(j => <td key={`classe-pause-${periode}-${j}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>)}
+                            </tr>
+                          )] : [])
+                        ])
                       ];
                     })}
                   </tbody>
