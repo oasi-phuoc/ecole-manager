@@ -63,6 +63,7 @@ export default function TCF() {
   const [affectationDirty, setAffectationDirty] = useState(false);
   const [resultatDirty, setResultatDirty] = useState(false);
   const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', affectation: '', resultat: '' });
+  const [saveToast, setSaveToast] = useState('');
 
   const [resultatNiveau, setResultatNiveau] = useState('');
   const [resultatMatiere, setResultatMatiere] = useState('francais');
@@ -288,6 +289,9 @@ export default function TCF() {
       alert('Au moins un site est requis.');
       return;
     }
+    const nomSite = siteNames[siteKey] || siteKey;
+    const ok = window.confirm(`Confirmer la suppression du site "${nomSite}" ?`);
+    if (!ok) return;
     setPoolDirty(true);
     setSiteOrder(prev => prev.filter(k => k !== siteKey));
     setSiteNames(prev => {
@@ -825,8 +829,10 @@ export default function TCF() {
 
   const afficherSaveMsg = (tab, msg = 'Sauvegarde effectuée.') => {
     setSaveMsgByTab(prev => ({ ...prev, [tab]: msg }));
+    setSaveToast(msg);
     setTimeout(() => {
       setSaveMsgByTab(prev => ({ ...prev, [tab]: '' }));
+      setSaveToast('');
     }, 2000);
   };
 
@@ -870,14 +876,6 @@ export default function TCF() {
     else if (onglet === 'resultat') handleSaveResultat();
   };
 
-  const currentSaveMsg = onglet === 'pool'
-    ? saveMsgByTab.pool
-    : onglet === 'affectation'
-      ? saveMsgByTab.affectation
-      : onglet === 'resultat'
-        ? saveMsgByTab.resultat
-        : '';
-
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -905,17 +903,19 @@ export default function TCF() {
         </div>
         {(onglet === 'pool' || onglet === 'affectation' || onglet === 'resultat') && (
           <div style={styles.topSaveWrap}>
+            {onglet === 'pool' && (
+              <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>
+                + Ajouter un site
+              </button>
+            )}
             <button onClick={handleSaveCurrentTab} style={styles.btnSaveTop}>Sauvegarder</button>
-            {currentSaveMsg && <span style={styles.saveMsg}>{currentSaveMsg}</span>}
           </div>
         )}
       </div>
+      {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
 
       {onglet === 'pool' && (
         <div style={styles.card}>
-          <div style={styles.poolActionsRow}>
-            <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>+ Ajouter un site</button>
-          </div>
           <div style={styles.siteStack}>
             {siteOrder.map((siteKey, idx) => renderSelectionSite(siteKey, `Site ${idx + 1}`))}
           </div>
@@ -999,7 +999,6 @@ const styles = {
   affectationSiteLevelsValue: { fontSize: 12, color: '#1e293b' },
 
   siteStack: { display: 'flex', flexDirection: 'column', gap: 14 },
-  poolActionsRow: { display: 'flex', justifyContent: 'flex-end', marginBottom: 10 },
   btnAddSite: { padding: '7px 12px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
   siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
@@ -1073,6 +1072,7 @@ const styles = {
   },
 
   saveMsg: { marginLeft: 10, fontSize: 12, color: '#166534', fontWeight: 700 },
+  noticeBand: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
 
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
   subTabBtn: { padding: '7px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569' },

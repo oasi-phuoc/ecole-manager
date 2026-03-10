@@ -114,9 +114,15 @@ export default function EmploiDuTemps() {
   const [pausesParPeriode, setPausesParPeriode] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
   const [pausesParPeriodeForm, setPausesParPeriodeForm] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
   const [poolAffId, setPoolAffId] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const headers = { Authorization: 'Bearer ' + token };
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: 'success' }), 2200);
+  };
 
   useEffect(() => { chargerTout(); }, []);
 
@@ -227,7 +233,7 @@ export default function EmploiDuTemps() {
       axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
     ]);
     chargerDisposAffectations(poolAffId);
-    alert('Disponibilités et remarque sauvegardées !');
+    showToast('Disponibilités et remarque sauvegardées.');
   };
 
   const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
@@ -274,7 +280,8 @@ export default function EmploiDuTemps() {
       setPoolEdit(null);
       setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
       await chargerTout();
-    } catch(err) { alert(err.response?.data?.message || err.message); }
+      showToast('Pool sauvegardé.');
+    } catch(err) { showToast(err.response?.data?.message || err.message, 'error'); }
   };
 
   const toggleArr = (arr, id) => arr.includes(id) ? arr.filter(x=>x!==id) : [...arr, id];
@@ -945,11 +952,9 @@ export default function EmploiDuTemps() {
   };
   const sauvegarderAffectationsProfs = async () => {
     if (!hasAffectationsUnsaved) {
-      alert('Aucun changement à sauvegarder.');
+      showToast('Aucun changement à sauvegarder.', 'info');
       return;
     }
-    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation professeurs ?");
-    if (!confirmer) return;
     try {
       const keyFor = (a) => `${String(a.prof_id)}|${String(a.creneau_id)}`;
       const origMap = new Map((affectations || []).map(a => [keyFor(a), a]));
@@ -1003,7 +1008,7 @@ export default function EmploiDuTemps() {
         }));
 
       if (!deletes.length && !upserts.length && !updatesTitulaires.length) {
-        alert('Aucun changement à sauvegarder.');
+        showToast('Aucun changement à sauvegarder.', 'info');
         setHasAffectationsUnsaved(false);
         return;
       }
@@ -1024,18 +1029,16 @@ export default function EmploiDuTemps() {
         await axios.post(API + '/planning/titulaires', t, { headers });
       }
       await chargerTout();
-      alert('Changements sauvegardés.');
+      showToast('Changements sauvegardés.');
     } catch (err) {
-      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des affectations professeurs.");
+      showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des affectations professeurs.", 'error');
     }
   };
   const sauvegarderAffectationsBranches = async () => {
     if (!hasBranchesUnsaved) {
-      alert('Aucun changement à sauvegarder.');
+      showToast('Aucun changement à sauvegarder.', 'info');
       return;
     }
-    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation des branches ?");
-    if (!confirmer) return;
     if (!classePlanningId || !planningClasse) {
       alert("Sélectionnez d'abord une classe.");
       return;
@@ -1060,18 +1063,16 @@ export default function EmploiDuTemps() {
       await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
       setBranchesMatiereDraftMap({});
       setHasBranchesUnsaved(false);
-      alert('Changements sauvegardés.');
+      showToast('Changements sauvegardés.');
     } catch (err) {
-      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des branches.");
+      showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des branches.", 'error');
     }
   };
   const sauvegarderAffectationsClasses = async () => {
     if (!hasClassesUnsaved) {
-      alert('Aucun changement à sauvegarder.');
+      showToast('Aucun changement à sauvegarder.', 'info');
       return;
     }
-    const confirmer = window.confirm("Voulez-vous sauvegarder les changements d'affectation des classes ?");
-    if (!confirmer) return;
     try {
       const byClass = (liste) => {
         const map = new Map();
@@ -1115,9 +1116,9 @@ export default function EmploiDuTemps() {
 
       await chargerTout();
       if (classePlanningId) await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-      alert('Changements sauvegardés.');
+      showToast('Changements sauvegardés.');
     } catch (err) {
-      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des classes.");
+      showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des classes.", 'error');
     }
   };
   const getClasseIdDepuisValeurAffectation = (valeur) => {
@@ -1621,6 +1622,11 @@ export default function EmploiDuTemps() {
           </button>
         ))}
       </div>
+      {toast.message ? (
+        <div style={{ ...styles.noticeBand, ...(toast.type === 'error' ? styles.noticeBandError : toast.type === 'info' ? styles.noticeBandInfo : styles.noticeBandSuccess) }}>
+          {toast.message}
+        </div>
+      ) : null}
 
       {onglet === 'plannings' && (
         <div style={{...styles.affActionsWrap, marginBottom:12}}>
@@ -2186,7 +2192,7 @@ export default function EmploiDuTemps() {
                 if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
                 if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
                 if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
-                alert("Aucun changement à sauvegarder pour ce sous-onglet.");
+                showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
               }}
             >
               💾 Sauvegarder
@@ -3356,6 +3362,10 @@ const styles = {
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
+  noticeBand:{padding:'10px 16px',borderRadius:8,marginBottom:12,fontSize:13,fontWeight:600},
+  noticeBandSuccess:{background:'#d1fae5',color:'#065f46'},
+  noticeBandInfo:{background:'#d1fae5',color:'#065f46'},
+  noticeBandError:{background:'#fee2e2',color:'#991b1b'},
   onglets:{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'},
   onglet:{padding:'8px 16px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   ongletActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},

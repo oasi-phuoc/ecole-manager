@@ -351,7 +351,7 @@ export default function Notes() {
             <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</div>
           </div>
           <button style={{ ...s.btnSauver, opacity: peutModifierNotes() ? 1 : 0.4, cursor: peutModifierNotes() ? 'pointer' : 'not-allowed' }}
-            disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>💾 Enregistrer</button>
+            disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>Enregistrer</button>
         </div>
         {sauvegarde && <div style={s.successMsg}>✅ Notes enregistrées !</div>}
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
@@ -1205,7 +1205,7 @@ const s = {
   moyenneBox: { background: 'white', padding: '10px 18px', borderRadius: 10, textAlign: 'center', border: '1px solid #e2e8f0' },
   moyenneLabel: { fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
   moyenneValeur: { fontSize: 22, fontWeight: 700, color: '#6366f1' },
-  btnSauver: { padding: '8px 18px', background: '#10b981', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  btnSauver: { padding: '8px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   btnImprimer: { padding: '7px 14px', background: 'white', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
   tableContainer: { overflowX: 'auto', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
