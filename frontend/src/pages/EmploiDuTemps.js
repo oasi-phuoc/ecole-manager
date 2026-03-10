@@ -36,7 +36,7 @@ const HORAIRES_DEFAUT = [
   {periode:'Après-midi',num:3,debut:'15:20',fin:'16:05'},
   {periode:'Après-midi',num:4,debut:'16:05',fin:'16:50'},
 ];
-const PAUSES_PAR_PERIODE = {
+const PAUSES_PAR_PERIODE_DEFAUT = {
   Matin: { debut: '09:45', fin: '10:05' },
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
@@ -56,6 +56,10 @@ const normaliserIdsPrefBranches = (valeur) => {
 };
 
 export default function EmploiDuTemps() {
+  const clonePausesParPeriode = (source) => ({
+    Matin: { ...source.Matin },
+    'Après-midi': { ...source['Après-midi'] },
+  });
   const [onglet, setOnglet] = useState('pools');
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
@@ -107,6 +111,8 @@ export default function EmploiDuTemps() {
   const [showPoolForm, setShowPoolForm] = useState(false);
   const [poolEdit, setPoolEdit] = useState(null);
   const [poolForm, setPoolForm] = useState({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
+  const [pausesParPeriode, setPausesParPeriode] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
+  const [pausesParPeriodeForm, setPausesParPeriodeForm] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
   const [poolAffId, setPoolAffId] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -263,6 +269,7 @@ export default function EmploiDuTemps() {
       } else {
         await axios.post(API + '/planning/pools', poolForm, { headers });
       }
+      setPausesParPeriode(clonePausesParPeriode(pausesParPeriodeForm));
       setShowPoolForm(false); setPoolEdit(null);
       setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
       chargerTout();
@@ -1246,7 +1253,7 @@ export default function EmploiDuTemps() {
           `<tr><td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
-          const pause = PAUSES_PAR_PERIODE[periode];
+          const pause = pausesParPeriode[periode];
           lignes.push(
             `<tr><td class="creneau" style="background:#e5e7eb;font-weight:700;">Pause — ${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td>${JOURS.map(() => '<td style="background:#e5e7eb;font-weight:700;text-align:center;">Pause</td>').join('')}</tr>`
           );
@@ -1767,7 +1774,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={styles.rowBetween}>
             <h3 style={styles.cardTitre}>Pools</h3>
-            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); }}>+ Nouveau pool</button>}
+            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Nouveau pool</button>}
           </div>
 
           {showPoolForm && (
@@ -1812,11 +1819,24 @@ export default function EmploiDuTemps() {
                     </div>
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
                       <label style={styles.lbl}>Classes</label>
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))',gap:8,marginTop:6}}>
                         {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
-                          <label key={c.id} style={{...styles.checkBadge,background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',color:'#111827'}}>
-                            <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} style={{marginRight:4}} />
-                            {c.nom}
+                          <label
+                            key={c.id}
+                            style={{
+                              ...styles.checkBadge,
+                              display:'flex',
+                              alignItems:'center',
+                              gap:8,
+                              minHeight:36,
+                              padding:'7px 10px',
+                              borderRadius:10,
+                              background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',
+                              color:'#111827'
+                            }}
+                          >
+                            <input type="checkbox" checked={poolForm.classe_ids.includes(c.id)} onChange={() => setPoolForm({...poolForm,classe_ids:toggleArr(poolForm.classe_ids,c.id)})} />
+                            <span style={{lineHeight:1.2}}>{c.nom}</span>
                           </label>
                         ))}
                       </div>
@@ -1852,7 +1872,7 @@ export default function EmploiDuTemps() {
                           {blocsProfs.map(bloc => bloc.items.length > 0 && (
                             <div key={bloc.label} style={{marginBottom:10}}>
                               <div style={{fontSize:11,fontWeight:700,color:'#6366f1',marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{bloc.label}</div>
-                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))',gap:8}}>
+                              <div style={{display:'grid',gridTemplateColumns:'repeat(3, minmax(0, 1fr))',gap:8}}>
                                 {bloc.items.map(p => (
                                   <label
                                     key={p.id}
@@ -1912,23 +1932,27 @@ export default function EmploiDuTemps() {
                                     onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
                                 </div>
                                 {idx === 1 && (
-                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6,background:'#e5e7eb',borderRadius:6,padding:'4px 6px'}}>
-                                    <span style={{fontSize:12,width:60,color:'#374151',fontWeight:700}}>Pause</span>
+                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                                    <span style={{fontSize:12,width:60,color:'#888'}}>Pause</span>
                                     <input
-                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}}
-                                      value={PAUSES_PAR_PERIODE[per].debut}
+                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}}
+                                      value={pausesParPeriodeForm[per].debut}
                                       onChange={e => {
-                                        PAUSES_PAR_PERIODE[per] = { ...PAUSES_PAR_PERIODE[per], debut: e.target.value };
-                                        setPoolForm(prev => ({ ...prev }));
+                                        setPausesParPeriodeForm(prev => ({
+                                          ...prev,
+                                          [per]: { ...prev[per], debut: e.target.value }
+                                        }));
                                       }}
                                     />
-                                    <span style={{fontSize:11,color:'#6b7280'}}>→</span>
+                                    <span style={{fontSize:11,color:'#aaa'}}>→</span>
                                     <input
-                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12,background:'#f1f5f9',color:'#334155'}}
-                                      value={PAUSES_PAR_PERIODE[per].fin}
+                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}}
+                                      value={pausesParPeriodeForm[per].fin}
                                       onChange={e => {
-                                        PAUSES_PAR_PERIODE[per] = { ...PAUSES_PAR_PERIODE[per], fin: e.target.value };
-                                        setPoolForm(prev => ({ ...prev }));
+                                        setPausesParPeriodeForm(prev => ({
+                                          ...prev,
+                                          [per]: { ...prev[per], fin: e.target.value }
+                                        }));
                                       }}
                                     />
                                   </div>
@@ -1966,6 +1990,7 @@ export default function EmploiDuTemps() {
                         prof_ids:pool.profs.map(p=>p.id),classe_ids:pool.classes.map(c=>c.id),
                         branche_ids:pool.branches.map(b=>b.id),
                         horaires:pool.horaires&&pool.horaires.length===8?pool.horaires:[...HORAIRES_DEFAUT]});
+                      setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode));
                     }}>✏️</button>
                     <button style={styles.btnIcon} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
                   </div>}
@@ -1977,7 +2002,26 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={{marginTop:8}}>
                   <div style={styles.poolLabel}>CLASSES</div>
-                  {pool.classes.map(c => <span key={c.id} style={{...styles.badge,background:'#e8f0fe',color:'#1a73e8'}}>{c.nom}</span>)}
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))',gap:6}}>
+                    {pool.classes.map(c => (
+                      <span
+                        key={c.id}
+                        style={{
+                          ...styles.badge,
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          minHeight:30,
+                          padding:'6px 10px',
+                          borderRadius:10,
+                          background:'#e8f0fe',
+                          color:'#1a73e8'
+                        }}
+                      >
+                        {c.nom}
+                      </span>
+                    ))}
+                  </div>
                   {pool.classes.length===0&&<span style={styles.aucun}>Aucune</span>}
                 </div>
               </div>
@@ -2970,7 +3014,7 @@ export default function EmploiDuTemps() {
                               ...(idx === 1 ? [(
                                 <tr key={`planning-only-pause-${periode}`}>
                                   <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
-                                    Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                                    Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                                   </td>
                                   {JOURS.map(jour => (
                                     <td key={`planning-only-pause-${periode}-${jour}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>
@@ -3041,7 +3085,7 @@ export default function EmploiDuTemps() {
                         ...(idx === 1 ? [(
                           <tr key={`prof-pause-${periode}`}>
                             <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
-                              Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                              Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                             </td>
                             {JOURS.map(j => <td key={`prof-pause-${periode}-${j}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>)}
                           </tr>
@@ -3117,7 +3161,7 @@ export default function EmploiDuTemps() {
                           ...(idx === 1 ? [(
                             <tr key={`classe-pause-${periode}`}>
                               <td style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                Pause — {PAUSES_PAR_PERIODE[periode].debut}–{PAUSES_PAR_PERIODE[periode].fin}
+                                Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                               </td>
                               {JOURS.map(j => <td key={`classe-pause-${periode}-${j}`} style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center'}}>Pause</td>)}
                             </tr>
