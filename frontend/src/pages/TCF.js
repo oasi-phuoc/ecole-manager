@@ -100,6 +100,7 @@ export default function TCF() {
   const [selectedBySite, setSelectedBySite] = useState({ site1: [], site2: [] });
   const [siteOrder, setSiteOrder] = useState(['site1', 'site2']);
   const [siteCounter, setSiteCounter] = useState(2);
+  const [siteActif, setSiteActif] = useState('site1');
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [poolDirty, setPoolDirty] = useState(false);
@@ -229,6 +230,13 @@ export default function TCF() {
   useEffect(() => {
     if (!resultatNiveau && niveaux.length) setResultatNiveau(niveaux[0]);
   }, [niveaux, resultatNiveau]);
+
+  useEffect(() => {
+    if (!siteOrder.length) return;
+    if (!siteActif || !siteOrder.includes(siteActif)) {
+      setSiteActif(siteOrder[0]);
+    }
+  }, [siteOrder, siteActif]);
 
   useEffect(() => {
     if (statSens === 'fort' && String(statSeuil) !== '80') setStatSeuil('80');
@@ -378,6 +386,7 @@ export default function TCF() {
     setSiteNames(prev => ({ ...prev, [key]: `Site ${next}` }));
     setSiteLevels(prev => ({ ...prev, [key]: [] }));
     setSelectedBySite(prev => ({ ...prev, [key]: [] }));
+    setSiteActif(key);
   };
 
   const supprimerSite = (siteKey) => {
@@ -577,6 +586,12 @@ export default function TCF() {
 
     const countVertsDemiJournee = (jour, momentId) =>
       ids.reduce((acc, id) => acc + (statutCellule(siteKey, id, jour, momentId) === 'vert' ? 1 : 0), 0);
+    const countReservesDemiJournee = (jour, momentId) =>
+      ids.reduce((acc, id) => {
+        const estRouge = statutCellule(siteKey, id, jour, momentId) === 'rouge';
+        const reserveActive = rActifCellule(siteKey, id, jour, momentId);
+        return acc + (estRouge && reserveActive ? 1 : 0);
+      }, 0);
 
     return (
       <div style={styles.tableWrap}>
@@ -636,10 +651,18 @@ export default function TCF() {
               );
             })}
             <tr>
-              <td style={styles.tdCountLabel}>Nb verts</td>
+              <td style={styles.tdCountLabel}>Disponibles</td>
               {JOURS.map(j => MOMENTS.map(m => (
                 <td key={`count-${j}-${m.id}`} style={styles.tdCountValue}>
                   {countVertsDemiJournee(j, m.id)}
+                </td>
+              )))}
+            </tr>
+            <tr>
+              <td style={styles.tdCountLabel}>Réserves</td>
+              {JOURS.map(j => MOMENTS.map(m => (
+                <td key={`count-r-${j}-${m.id}`} style={styles.tdCountValue}>
+                  {countReservesDemiJournee(j, m.id)}
                 </td>
               )))}
             </tr>
@@ -707,33 +730,42 @@ export default function TCF() {
             </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={styles.thCenter}>Demi-journée</th>
-                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
+                <th style={styles.thCenter}></th>
+                {JOURS.map(j => (
+                  <th key={`toggle-${j}`} style={styles.thCenter}>
+                    <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
+                        }}
+                        style={{ ...styles.toggleBtn, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnActif : {}) }}
+                      >
+                        Actif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
+                        }}
+                        style={{ ...styles.toggleBtn, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnActif : {}) }}
+                      >
+                        Inactif
+                      </button>
+                    </div>
+                  </th>
+                ))}
               </tr>
               <tr style={styles.thead}>
                 <th style={styles.thCenter}></th>
-                {JOURS.map(j => (
-                  <td key={`toggle-${j}`} style={styles.tdCenterRead}>
-                    <button
-                      type="button"
-                      onClick={() => toggleJourActifSite(siteKey, j)}
-                      style={{
-                        ...styles.toggleBtn,
-                        ...(isJourActifSite(siteKey, j) ? styles.toggleBtnActif : styles.toggleBtnInactif),
-                        borderRadius: 999,
-                      }}
-                    >
-                      {isJourActifSite(siteKey, j) ? 'Actif' : 'Inactif'}
-                    </button>
-                  </td>
-                ))}
+                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
               </tr>
             </thead>
             <tbody>
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.04em' }}>{moment.label}</td>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>{moment.label}</td>
                     {JOURS.map((j) => {
                       const actif = isJourActifSite(siteKey, j);
                       if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
@@ -1618,11 +1650,6 @@ export default function TCF() {
         </div>
         {(onglet === 'pool' || onglet === 'affectation' || onglet === 'resultat') && (
           <div style={styles.topSaveWrap}>
-            {onglet === 'pool' && (
-              <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>
-                + Ajouter un site
-              </button>
-            )}
             <button onClick={handleSaveCurrentTab} style={styles.btnSaveTop}>Sauvegarder</button>
           </div>
         )}
@@ -1631,8 +1658,25 @@ export default function TCF() {
 
       {onglet === 'pool' && (
         <div style={styles.card}>
+          <div style={{ ...styles.topSaveWrap, marginBottom: 10 }}>
+            <div style={styles.subTabsRow}>
+              {siteOrder.map((siteKey, idx) => (
+                <button
+                  key={`pool-site-tab-${siteKey}`}
+                  type="button"
+                  onClick={() => setSiteActif(siteKey)}
+                  style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
+                >
+                  {siteNames[siteKey] || `Site ${idx + 1}`}
+                </button>
+              ))}
+            </div>
+            <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>
+              + Ajouter un site
+            </button>
+          </div>
           <div style={styles.siteStack}>
-            {siteOrder.map((siteKey, idx) => renderSelectionSite(siteKey, `Site ${idx + 1}`))}
+            {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`)}
           </div>
         </div>
       )}
@@ -1698,8 +1742,8 @@ const styles = {
   tabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 },
   tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap' },
   topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid transparent', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
-  tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
+  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' },
+  tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#111827' },
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
