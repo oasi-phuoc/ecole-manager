@@ -1184,7 +1184,7 @@ export default function TCF() {
       <div style={styles.card}>
         <div style={styles.panelTopWhite}>
           <div style={styles.panelTopInner}>
-            <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
+            <div style={{ ...styles.subTabsRow, marginBottom: 0, alignItems: 'center' }}>
               {siteOrder.map((sKey, idx) => (
                 <button
                   key={`roles-site-tab-${sKey}`}
@@ -1195,13 +1195,13 @@ export default function TCF() {
                   {siteNames[sKey] || `Site ${idx + 1}`}
                 </button>
               ))}
-            </div>
-            <div style={styles.rolesTopRight}>
               <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
                 <option value="">- Sélectionner une demi-journée -</option>
                 {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
               </select>
-              {useGroups && (
+            </div>
+            {useGroups && (
+              <div style={styles.rolesTopRight}>
                 <div style={styles.toggleWrap}>
                   <button
                     type="button"
@@ -1218,8 +1218,8 @@ export default function TCF() {
                     Groupe 2
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
         {useGroups && (
