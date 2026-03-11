@@ -41,6 +41,7 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
+const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
 const normaliserIdsPrefBranches = (valeur) => {
   if (!valeur) return [];
@@ -1951,9 +1952,15 @@ export default function EmploiDuTemps() {
                                     }}
                                   >
                                     <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} />
-                                    <span style={{display:'flex',alignItems:'baseline',gap:4,flexWrap:'wrap',lineHeight:1.2}}>
-                                      <span>{p.prenom} {p.nom}</span>
-                                      {p.taux_activite ? <span style={{opacity:.7,fontSize:10}}>({p.taux_activite}%)</span> : ''}
+                                    <span style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,flexWrap:'nowrap',lineHeight:1.2,width:'100%'}}>
+                                      <span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.prenom} {nomSansSuffixe(p.nom)}</span>
+                                      <span style={{display:'inline-flex',alignItems:'center',gap:5,flexShrink:0}}>
+                                        {p.taux_activite ? <span style={{opacity:.75,fontSize:10,fontWeight:700}}>{p.taux_activite}%</span> : null}
+                                        <span title={`${p.niveau_prefere ? `Niveau: ${p.niveau_prefere}` : ''}${p.lieu_travail_prefere ? `${p.niveau_prefere ? ' • ' : ''}Lieu: ${p.lieu_travail_prefere}` : ''}`}
+                                          style={{fontSize:12,opacity:0.85}}>
+                                          {p.niveau_prefere && p.lieu_travail_prefere ? '🎯' : (p.niveau_prefere ? '🎓' : (p.lieu_travail_prefere ? '📍' : '•'))}
+                                        </span>
+                                      </span>
                                     </span>
                                   </label>
                                 ))}

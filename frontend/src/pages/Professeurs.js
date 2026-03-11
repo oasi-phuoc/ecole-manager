@@ -9,6 +9,8 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
 const NIVEAUX = ['CSC','CFR','EPL'];
+const LIEUX_PREF = ['BOTZA','SYNECOM','CREUSET'];
+const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
   if (!valeur) return [];
@@ -42,7 +44,7 @@ export default function Professeurs({
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'' });
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau' });
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
   const [emailEnvoi, setEmailEnvoi] = useState({});
   const [showDocs, setShowDocs] = useState(false);
@@ -191,11 +193,11 @@ export default function Professeurs({
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
-  const resetForm = () => setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:''});
+  const resetForm = () => setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau'});
 
   const handleEdit = (p) => {
     setProfEdit(p);
-    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||''});
+    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau'});
     setShowForm(true);
   };
 
@@ -353,7 +355,7 @@ export default function Professeurs({
                       </div>
                     </div>
                     {!hidePreferences && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveau(x) préféré(s)</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveaux préférés</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                         {NIVEAUX.map(n => {
                           const niveaux = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
@@ -362,7 +364,8 @@ export default function Professeurs({
                             <button key={n} type="button"
                               onClick={() => {
                                 const curr = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
-                                const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
+                                let newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
+                                if (newNiv.length === NIVEAUX.length) newNiv = [];
                                 setForm(prev => ({...prev, niveau_prefere: newNiv.join(',')}));
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
@@ -426,21 +429,23 @@ export default function Professeurs({
                         )}
                       </div>
                     )}
+                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:6,marginTop:4,textTransform:'uppercase'}}>🧭 Desideratas</div>
                     {!hideRemarque && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques pour les niveaux et branches</label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
                     </div>}
                     {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieu(x) de travail préféré(s)</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieux de travail préférés</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {['BOTZA','SYNECOM','CREUSET'].map(l => {
+                        {LIEUX_PREF.map(l => {
                           const lieux = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
                           const selected = lieux.includes(l);
                           return (
                             <button key={l} type="button"
                               onClick={() => {
                                 const curr = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
-                                const newLieux = selected ? curr.filter(x=>x!==l) : [...curr, l];
+                                let newLieux = selected ? curr.filter(x=>x!==l) : [...curr, l];
+                                if (newLieux.length === LIEUX_PREF.length) newLieux = [];
                                 setForm({...form, lieu_travail_prefere: newLieux.join(',')});
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#0891b2':'#e2e8f0'),background:selected?'#cffafe':'white',color:selected?'#0e7490':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
@@ -459,6 +464,21 @@ export default function Professeurs({
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques lieu de travail</label>
                       <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
                     </div>}
+                    {!hidePreferencesLieu && !hidePreferences && (
+                      <div style={{display:'flex',flexDirection:'column'}}>
+                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Priorité</label>
+                        <div style={{display:'flex',gap:8}}>
+                          <button type="button" onClick={() => setForm({...form, priorite_pref:'niveau'})}
+                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='niveau'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='niveau'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
+                            Niveau
+                          </button>
+                          <button type="button" onClick={() => setForm({...form, priorite_pref:'lieu'})}
+                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='lieu'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='lieu'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
+                            Lieu de travail
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
                       <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
@@ -483,7 +503,7 @@ export default function Professeurs({
         <div style={s.overlay}>
           <div style={{...s.modal, maxWidth:600}}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {docsProf.nom}</h3>
+              <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {nomSansSuffixe(docsProf.nom)}</h3>
               <button style={s.btnClose} onClick={() => setShowDocs(false)}>✕</button>
             </div>
             {isAdmin() && (
@@ -552,7 +572,7 @@ export default function Professeurs({
               <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
-                <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{p.nom}</b></td>
+                <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{nomSansSuffixe(p.nom)}</b></td>
                 <td style={{...s.td,width:150,minWidth:150,whiteSpace:'nowrap'}}>{p.prenom}</td>
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>

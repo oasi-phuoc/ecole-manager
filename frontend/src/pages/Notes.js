@@ -19,6 +19,18 @@ const fmtNote = (n) => {
   if (isNaN(num)) return '—';
   return num % 1 === 0 ? String(Math.round(num)) : String(parseFloat(num.toFixed(1)));
 };
+const abregerMatiere = (nom) => {
+  const txt = String(nom || '').trim();
+  if (!txt) return '';
+  const map = {
+    'Mathématiques': 'Math',
+    'Français': 'Français',
+    'Sciences naturelles': 'Sc. nat.',
+    'Connaissance de l\'environnement': 'Env.',
+  };
+  return map[txt] || txt;
+};
+const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const sortMatieres = (matieres) => [...matieres].sort((a, b) => {
   const pri = (n) => n === 'Français' ? 0 : n === 'Mathématiques' ? 1 : 2;
@@ -377,7 +389,7 @@ export default function Notes() {
                 const noteDirecte = !avecPoints && eleve.note !== '' ? parseFloat(eleve.note) : null;
                 return (
                   <tr key={eleve.id} style={{ ...s.tr, background: eleve.absent ? '#fff8f8' : eleve.dispense ? '#f8f8ff' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                    <td style={s.td}><b>{eleve.nom}</b></td>
+                    <td style={s.td}><b>{nomSansSuffixe(eleve.nom)}</b></td>
                     <td style={s.td}>{eleve.prenom}</td>
                     {avecPoints ? (
                       <td style={{ ...s.td, textAlign: 'center' }}>
@@ -465,7 +477,7 @@ export default function Notes() {
           {vueGeneraleMode === 'eleve' && (
             <select style={{ ...s.select, marginLeft: 8 }} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
               <option value="">— Choisir un élève —</option>
-              {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{e.nom} {e.prenom}</option>)}
+              {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
             </select>
           )}
         </div>
@@ -478,16 +490,26 @@ export default function Notes() {
         {vueGeneraleMode === 'tous' && rapport && (
           <div ref={printRef} style={{ overflowX: 'auto' }}>
             <table style={{ ...s.tbl, fontSize: 12 }}>
+              <colgroup>
+                <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
+                <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
+                {modeMatieres.map(m => <col key={`col-mat-${m.matiere_id}`} style={{ width: 'auto' }} />)}
+                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
+                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
+                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
+              </colgroup>
               <thead>
                 <tr style={s.theadRow}>
                   <th style={s.th}>Nom</th>
                   <th style={s.th}>Prénom</th>
                   {modeMatieres.map(m => (
-                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', width: 40, padding: '0 4px 8px 4px', verticalAlign: 'bottom' }}>
-                      <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', height: 100, display: 'flex', alignItems: 'center' }}>{m.matiere_nom}</div>
+                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      {abregerMatiere(m.matiere_nom)}
                     </th>
                   ))}
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moy. gén.</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>principales</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>secondaires</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>générale</th>
                 </tr>
               </thead>
               <tbody>
@@ -495,15 +517,27 @@ export default function Notes() {
                   const moys = modeMatieres.map(m => moyenneEleveMatiere(m, eleve.id));
                   const valides = moys.filter(v => v !== null);
                   const moyGen = valides.length > 0 ? Math.round(valides.reduce((a, v) => a + v, 0) / valides.length * 10) / 10 : null;
+                  const principales = modeMatieres.filter(m => Number(m?.coefficient || 1) >= 2);
+                  const secondaires = modeMatieres.filter(m => Number(m?.coefficient || 1) < 2);
+                  const moyPrinVals = (principales.length ? principales : modeMatieres).map(m => moyenneEleveMatiere(m, eleve.id)).filter(v => v !== null);
+                  const moySecVals = (secondaires.length ? secondaires : []).map(m => moyenneEleveMatiere(m, eleve.id)).filter(v => v !== null);
+                  const moyPrin = moyPrinVals.length ? Math.round(moyPrinVals.reduce((a, v) => a + v, 0) / moyPrinVals.length * 10) / 10 : null;
+                  const moySec = moySecVals.length ? Math.round(moySecVals.reduce((a, v) => a + v, 0) / moySecVals.length * 10) / 10 : null;
                   return (
                     <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                      <td style={{ ...s.td, fontWeight: 700 }}>{eleve.nom}</td>
-                      <td style={s.td}>{eleve.prenom}</td>
+                      <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                      <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                       {moys.map((moy, j) => (
                         <td key={j} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>
                           {moy !== null ? fmtNote(moy) : '—'}
                         </td>
                       ))}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moyPrin !== null ? (moyPrin >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                        {moyPrin !== null ? fmtNote(moyPrin) : '—'}
+                      </td>
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moySec !== null ? (moySec >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                        {moySec !== null ? fmtNote(moySec) : '—'}
+                      </td>
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moyGen !== null ? (moyGen >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
                         {moyGen !== null ? fmtNote(moyGen) : '—'}
                       </td>
@@ -519,6 +553,8 @@ export default function Notes() {
                     return <td key={m.matiere_id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>;
                   })}
                   <td style={s.td}></td>
+                  <td style={s.td}></td>
+                  <td style={s.td}></td>
                 </tr>
               </tbody>
             </table>
@@ -530,6 +566,12 @@ export default function Notes() {
           <div ref={printRef} style={{ overflowX: 'auto' }}>
             <h3 style={{ marginBottom: 12, fontSize: 15 }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
             <table style={{ ...s.tbl, fontSize: 12 }}>
+              <colgroup>
+                <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
+                <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
+                {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 'auto' }} />)}
+                <col style={{ width: 90, minWidth: 90, maxWidth: 90 }} />
+              </colgroup>
               <thead>
                 <tr style={s.theadRow}>
                   <th style={s.th}>Nom</th>
@@ -548,8 +590,8 @@ export default function Notes() {
                   const moy = moyenneEleveMatiere(matiereRapport, eleve.id);
                   return (
                     <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                      <td style={{ ...s.td, fontWeight: 700 }}>{eleve.nom}</td>
-                      <td style={s.td}>{eleve.prenom}</td>
+                      <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                      <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                       {matiereRapport.evaluations.map(ev => {
                         const n = ev.notes.find(n => n.eleve_id === eleve.id);
                         const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa';
@@ -574,7 +616,7 @@ export default function Notes() {
         {/* ---- VUE PAR ELEVE ---- */}
         {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (
           <div ref={printRef}>
-            <h3 style={{ marginBottom: 16, fontSize: 15 }}>{eleveRapport.prenom} {eleveRapport.nom} — {classeNom}</h3>
+            <h3 style={{ marginBottom: 16, fontSize: 15 }}>{eleveRapport.prenom} {nomSansSuffixe(eleveRapport.nom)} — {classeNom}</h3>
             {modeMatieres.map(matiere => {
               const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
               return (
