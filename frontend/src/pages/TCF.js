@@ -1462,88 +1462,97 @@ export default function TCF() {
   };
 
   const renderGraphique = () => {
+    const isFr = ongletGraphiqueMatiere === 'francais';
     const poolClasses = graphPoolId ? (classesEligiblesSite[String(graphPoolId)] || []) : [];
     const poolClassIds = new Set(poolClasses.map(c => String(c.id)));
     const elevesPool = eleves
       .filter(e => poolClassIds.has(String(e.classe_id)))
       .sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'));
-    const sessionsToShow = graphSession === '2e semestre'
-      ? ["Test d'août", '1e semestre', '2e semestre']
-      : graphSession === '1e semestre'
-        ? ["Test d'août", '1e semestre']
-        : graphSession === "Test d'août"
-          ? ["Test d'août"]
-          : [];
-    const series = sessionsToShow.map((session) => {
-      const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
-      if (ongletGraphiqueMatiere === 'francais') {
-        const fr = calculFr(sc);
-        const oral = Number(fr.oral || 0);
-        const ecrit = Number(fr.ecrit || 0);
-        const moyenne = (oral + ecrit) / 2;
-        return { session, oral, ecrit, moyenne };
-      }
-      const ma = calculMath(sc);
-      const total = Number(ma.total || 0);
-      return { session, oral: total, ecrit: total, moyenne: total };
-    });
-    const maxVal = Math.max(1, ...series.flatMap(s => [s.oral, s.ecrit, s.moyenne]));
+
+    const maxScore = isFr ? 60 : 40;
+    const barH = 200;
+
+    const dataEleves = graphPoolId && graphSession
+      ? elevesPool.map(e => {
+          const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
+          if (isFr) {
+            const fr = calculFr(sc);
+            return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' };
+          }
+          const ma = calculMath(sc);
+          return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+        }).filter(e => e.hasData)
+      : [];
+
+    const label1 = isFr ? 'Oral (CO+PO)' : 'CSC-CFR (P1+P2)';
+    const label2 = isFr ? 'Écrit (CE+PE)' : 'CAF-CAP (P3+P4)';
 
     return (
       <div style={styles.card}>
         <div style={styles.filtersRow}>
           <div style={styles.toggleWrap}>
-            <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(ongletGraphiqueMatiere === 'francais' ? styles.toggleBtnActif : {}) }}>Français</button>
-            <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(ongletGraphiqueMatiere === 'math' ? styles.toggleBtnActif : {}) }}>Math</button>
+            <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
+            <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Mathématiques</button>
           </div>
-          <select value={graphPoolId} onChange={(e) => { setGraphPoolId(e.target.value); setGraphEleveId(''); }} style={styles.select}>
-            <option value="">- Sélectionner le pool -</option>
+          <select value={graphPoolId} onChange={(e) => setGraphPoolId(e.target.value)} style={styles.select}>
+            <option value="">- Pool -</option>
             {siteOrder.map((siteKey, idx) => <option key={`graph-pool-${siteKey}`} value={siteKey}>{siteNames[siteKey] || `Site ${idx + 1}`}</option>)}
           </select>
           <select value={graphSession} onChange={(e) => setGraphSession(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner la session -</option>
+            <option value="">- Session -</option>
             {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select value={graphEleveId} onChange={(e) => setGraphEleveId(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner l'élève -</option>
-            {elevesPool.map(e => <option key={`graph-eleve-${e.id}`} value={String(e.id)}>{e.prenom} {toDisplayNom(e.nom)}</option>)}
-          </select>
         </div>
-        {!graphPoolId || !graphSession || !graphEleveId ? (
-          <div style={styles.empty}>Sélectionnez un pool, une session et un élève.</div>
+        {!graphPoolId || !graphSession ? (
+          <div style={styles.empty}>Sélectionnez un pool et une session.</div>
+        ) : dataEleves.length === 0 ? (
+          <div style={styles.empty}>Aucun résultat saisi pour cette sélection.</div>
         ) : (
           <>
-            <div style={styles.graphWrap}>
-              {series.map((s) => (
-                <div key={`bar-${s.session}`} style={styles.graphSessionCol}>
-                  <div style={styles.graphSessionLabel}>{s.session}</div>
-                  <div style={styles.graphBars}>
-                    <div style={{ ...styles.graphBar, height: `${(s.oral / maxVal) * 180}px`, background: '#60a5fa' }} title={`Oral: ${s.oral}`}></div>
-                    <div style={{ ...styles.graphBar, height: `${(s.ecrit / maxVal) * 180}px`, background: '#34d399' }} title={`Écrit: ${s.ecrit}`}></div>
-                    <div style={{ ...styles.graphBar, height: `${(s.moyenne / maxVal) * 180}px`, background: '#f59e0b' }} title={`Moyenne: ${s.moyenne.toFixed(1)}`}></div>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div>
+                <span style={{ fontSize: 12, color: '#475569' }}>{label1}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div>
+                <span style={{ fontSize: 12, color: '#475569' }}>{label2}</span>
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, position: 'relative', minWidth: dataEleves.length * 70 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: barH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
+                  {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
+                    <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
+                  ))}
+                </div>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  {[1, 0.75, 0.5, 0.25].map(ratio => (
+                    <div key={ratio} style={{ position: 'absolute', bottom: ratio * barH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
+                  ))}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: barH, padding: '0 8px' }}>
+                    {dataEleves.map(e => (
+                      <div key={`eleve-${e.id}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48, flex: '0 0 auto' }}>
+                        <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2, textAlign: 'center' }}>
+                          {e.v1}/{e.v2}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: barH - 18 }}>
+                          <div style={{ width: 20, height: Math.max(2, (e.v1 / maxScore) * (barH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${e.v1}`} />
+                          <div style={{ width: 20, height: Math.max(2, (e.v2 / maxScore) * (barH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${e.v2}`} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
+              <div style={{ display: 'flex', marginLeft: 36, gap: 8, padding: '4px 8px' }}>
+                {dataEleves.map(e => (
+                  <div key={`lbl-${e.id}`} style={{ minWidth: 48, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                    {e.label}
+                  </div>
+                ))}
+              </div>
             </div>
-            {series.length > 1 && (
-              <svg width="100%" height="120" viewBox="0 0 600 120" style={{ marginTop: 8 }}>
-                {series.map((s, i) => {
-                  const x = 30 + (i * (540 / (series.length - 1)));
-                  const y = 100 - ((s.moyenne / maxVal) * 90);
-                  return <circle key={`mean-dot-${s.session}`} cx={x} cy={y} r="4" fill="#f59e0b" />;
-                })}
-                <polyline
-                  fill="none"
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                  points={series.map((s, i) => {
-                    const x = 30 + (i * (540 / (series.length - 1)));
-                    const y = 100 - ((s.moyenne / maxVal) * 90);
-                    return `${x},${y}`;
-                  }).join(' ')}
-                />
-              </svg>
-            )}
           </>
         )}
       </div>
