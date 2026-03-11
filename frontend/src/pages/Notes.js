@@ -489,11 +489,19 @@ export default function Notes() {
         {/* ---- VUE TOUS ---- */}
         {vueGeneraleMode === 'tous' && rapport && (
           <div ref={printRef} style={{ overflowX: 'auto' }}>
-            <table style={{ ...s.tbl, fontSize: 12 }}>
+            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
                 <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
-                {modeMatieres.map(m => <col key={`col-mat-${m.matiere_id}`} style={{ width: 'auto' }} />)}
+                {modeMatieres.map(m => (
+                  <col
+                    key={`col-mat-${m.matiere_id}`}
+                    style={{
+                      width: `calc((100% - 610px) / ${Math.max(modeMatieres.length, 1)})`,
+                      minWidth: 90
+                    }}
+                  />
+                ))}
                 <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
                 <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
                 <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />

@@ -110,11 +110,10 @@ export default function Professeurs({
   };
 
   const chargerBranchesNiveaux = async (niveaux = []) => {
-    if (!niveaux.length) { setBranchesDisponibles([]); return; }
     try {
       const r = await axios.get(API+'/branches', { headers });
       const branchesFiltrees = r.data
-        .filter(b => niveaux.includes(b.niveau))
+        .filter(b => !niveaux.length || niveaux.includes(b.niveau))
         .filter((b) => {
           const code = String(b.designation_courte || '').trim().toUpperCase();
           const nom = String(b.nom || '').trim().toLowerCase();
@@ -324,7 +323,7 @@ export default function Professeurs({
                   </div>
                 </div>
 
-                {/* COLONNE 2 - Infos professionnelles */}
+                {/* COLONNE 2 - Desideratas */}
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -354,7 +353,13 @@ export default function Professeurs({
                         </select>
                       </div>
                     </div>
-                    {!hidePreferences && <div style={{display:'flex',flexDirection:'column'}}>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,alignItems:'start',marginTop:14}}>
+                <div>
+                  {!hidePreferences && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveaux préférés</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                         {NIVEAUX.map(n => {
@@ -380,6 +385,9 @@ export default function Professeurs({
                         </button>
                       </div>
                     </div>}
+                    {(!hidePreferences || !hidePreferencesLieu || !hideRemarque) && (
+                      <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:6,marginTop:8,textTransform:'uppercase'}}>🧭 Desideratas</div>
+                    )}
                     {!hidePreferences && niveauxPreferesSelectionnes.length > 0 && (
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
@@ -429,7 +437,6 @@ export default function Professeurs({
                         )}
                       </div>
                     )}
-                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:6,marginTop:4,textTransform:'uppercase'}}>🧭 Desideratas</div>
                     {!hideRemarque && <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques pour les niveaux et branches</label>
                       <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
@@ -486,8 +493,8 @@ export default function Professeurs({
                         <option value="false">❌ Inactif</option>
                       </select>
                     </div>
-                  </div>
                 </div>
+                <div />
               </div>
 
               <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>

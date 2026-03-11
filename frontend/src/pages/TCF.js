@@ -571,6 +571,84 @@ export default function TCF() {
     }));
   };
 
+  const renderTablePoolSite = (siteKey) => {
+    const ids = selectedBySite[siteKey] || [];
+    if (!ids.length) return <div style={styles.empty}>Aucun professeur sélectionné.</div>;
+
+    const countVertsDemiJournee = (jour, momentId) =>
+      ids.reduce((acc, id) => acc + (statutCellule(siteKey, id, jour, momentId) === 'vert' ? 1 : 0), 0);
+
+    return (
+      <div style={styles.tableWrap}>
+        <table style={styles.tablePool}>
+          <colgroup>
+            <col style={{ width: 245, minWidth: 245, maxWidth: 245 }} />
+            {JOURS.flatMap(j => MOMENTS.map(m => (
+              <col key={`${j}-${m.id}`} style={{ width: 'auto' }} />
+            )))}
+          </colgroup>
+          <thead>
+            <tr style={styles.thead}>
+              <th style={styles.thProfPool} rowSpan={2}>Professeur</th>
+              {JOURS.map(j => <th key={j} style={styles.thCenter} colSpan={2}>{j}</th>)}
+            </tr>
+            <tr style={styles.thead}>
+              {JOURS.map(j => MOMENTS.map(m => (
+                <th key={`${j}-${m.id}`} style={styles.thCenter}>{m.label}</th>
+              )))}
+            </tr>
+          </thead>
+          <tbody>
+            {ids.map(id => {
+              const p = profMap[id];
+              return (
+                <tr key={id}>
+                  <td style={styles.tdProfPool}>{p ? `${p.prenom} ${toDisplayNom(p.nom)}` : `Prof #${id}`}</td>
+                  {JOURS.map(j => MOMENTS.map(m => {
+                    const statut = statutCellule(siteKey, id, j, m.id);
+                    const showR = statut === 'rouge';
+                    const rActif = rActifCellule(siteKey, id, j, m.id);
+                    return (
+                      <td
+                        key={`${id}-${j}-${m.id}`}
+                        style={styles.tdCenterCell}
+                        onClick={() => cycleCellule(siteKey, id, j, m.id)}
+                      >
+                        <div style={styles.cellStatusWrap}>
+                          {renderPastille(statut)}
+                          {showR && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRCellule(siteKey, id, j, m.id);
+                              }}
+                              style={{ ...styles.rBtn, ...(rActif ? styles.rBtnActif : {}) }}
+                            >
+                              R
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  }))}
+                </tr>
+              );
+            })}
+            <tr>
+              <td style={styles.tdCountLabel}>Nb verts</td>
+              {JOURS.map(j => MOMENTS.map(m => (
+                <td key={`count-${j}-${m.id}`} style={styles.tdCountValue}>
+                  {countVertsDemiJournee(j, m.id)}
+                </td>
+              )))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const renderTableAffectationSite = (siteKey) => {
     const classesSite = classesEligiblesSite[siteKey] || [];
     if (!classesSite.length) return <div style={styles.empty}>Aucune classe disponible pour les niveaux sélectionnés.</div>;
@@ -779,7 +857,7 @@ export default function TCF() {
       ))}
 
       <div style={styles.sectionTitle}>Affectation hebdomadaire selon les jours</div>
-      {renderTableAffectationSite(siteKey)}
+      {renderTablePoolSite(siteKey)}
     </div>
   );
 
@@ -1453,6 +1531,26 @@ export default function TCF() {
     afficherSaveMsg('affectation');
   };
 
+  const resetAffectationToSaved = () => {
+    try {
+      const aff = JSON.parse(localStorage.getItem('tcf_affectation_state') || '{}');
+      setAffectationDateDebutBySite(aff?.dateDebutBySite || {});
+      setAffectationHorairesBySite(aff?.horairesBySite || {});
+      setAffectationClassesBySite(aff?.classesBySite || {});
+      setAffectationJoursActifsBySite(aff?.joursActifsBySite || {});
+      setRolesAffectesByPoolDemi(aff?.rolesByPoolDemi || {});
+      setOrganisationByPoolDemi(aff?.organisationByPoolDemi || {});
+    } catch {
+      setAffectationDateDebutBySite({});
+      setAffectationHorairesBySite({});
+      setAffectationClassesBySite({});
+      setAffectationJoursActifsBySite({});
+      setRolesAffectesByPoolDemi({});
+      setOrganisationByPoolDemi({});
+    }
+    setAffectationDirty(false);
+  };
+
   const handleSaveResultat = () => {
     localStorage.setItem('tcf_resultats_scores', JSON.stringify(scores));
     setResultatDirty(false);
@@ -1471,8 +1569,19 @@ export default function TCF() {
     if (tabHasUnsaved(onglet)) {
       const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cet onglet sans sauvegarder ?');
       if (!ok) return;
+      if (onglet === 'affectation') resetAffectationToSaved();
     }
     setOnglet(nextTab);
+  };
+
+  const handleAffectationSubTabChange = (next) => {
+    if (next === sousOngletAffectation) return;
+    if (affectationDirty) {
+      const ok = window.confirm('Des changements dans Affectation ne sont pas sauvegardés. Changer de sous-onglet sans sauvegarder ?');
+      if (!ok) return;
+      resetAffectationToSaved();
+    }
+    setSousOngletAffectation(next);
   };
 
   const handleSaveCurrentTab = () => {
@@ -1532,13 +1641,13 @@ export default function TCF() {
         <div style={styles.card}>
           <div style={styles.subTabsRow}>
             <button
-              onClick={() => setSousOngletAffectation('classes')}
+              onClick={() => handleAffectationSubTabChange('classes')}
               style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'classes' ? styles.subTabBtnActif : {}) }}
             >
               Classes
             </button>
             <button
-              onClick={() => setSousOngletAffectation('roles')}
+              onClick={() => handleAffectationSubTabChange('roles')}
               style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'roles' ? styles.subTabBtnActif : {}) }}
             >
               Rôles
@@ -1589,7 +1698,7 @@ const styles = {
   tabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 },
   tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap' },
   topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569' },
+  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid transparent', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
   tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
