@@ -547,9 +547,22 @@ export default function TCF() {
     setAffectationDirty(true);
     setAffectationJoursActifsBySite(prev => {
       const siteData = { ...(prev?.[siteKey] || {}) };
-      siteData[jour] = !isJourActifSite(siteKey, jour);
+      const nextActif = !isJourActifSite(siteKey, jour);
+      siteData[jour] = nextActif;
       return { ...prev, [siteKey]: siteData };
     });
+    // Si le jour est désactivé, on libère toutes les classes de la journée
+    // pour qu'elles puissent être réaffectées sur d'autres demi-journées.
+    if (isJourActifSite(siteKey, jour)) {
+      setAffectationClassesBySite(prev => {
+        const next = { ...prev };
+        const siteData = { ...(next[siteKey] || {}) };
+        siteData[cellKeyAffectation(jour, 'matin')] = [];
+        siteData[cellKeyAffectation(jour, 'apresMidi')] = [];
+        next[siteKey] = siteData;
+        return next;
+      });
+    }
   };
   const classeDejaUtiliseeDansSite = (siteKey, classeId) => {
     const siteData = affectationClassesBySite?.[siteKey] || {};
@@ -571,7 +584,13 @@ export default function TCF() {
       return next;
     });
   };
-  const getHoraireSite = (siteKey, champ) => affectationHorairesBySite?.[siteKey]?.[champ] || '';
+  const getHoraireSite = (siteKey, champ) => {
+    const val = affectationHorairesBySite?.[siteKey]?.[champ];
+    if (val !== undefined && val !== null && String(val).trim() !== '') return val;
+    if (champ === 'matinDebut') return '08:30';
+    if (champ === 'apresMidiDebut') return '13:30';
+    return '';
+  };
   const setHoraireSite = (siteKey, champ, value) => {
     setAffectationDirty(true);
     setAffectationHorairesBySite(prev => ({
@@ -731,33 +750,6 @@ export default function TCF() {
             <thead>
               <tr style={styles.thead}>
                 <th style={styles.thCenter}></th>
-                {JOURS.map(j => (
-                  <th key={`toggle-${j}`} style={styles.thCenter}>
-                    <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
-                        }}
-                        style={{ ...styles.toggleBtn, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnActif : {}) }}
-                      >
-                        Actif
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
-                        }}
-                        style={{ ...styles.toggleBtn, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnActif : {}) }}
-                      >
-                        Inactif
-                      </button>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-              <tr style={styles.thead}>
-                <th style={styles.thCenter}></th>
                 {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
               </tr>
             </thead>
@@ -814,12 +806,39 @@ export default function TCF() {
             </tbody>
           </table>
         </div>
+        <div style={styles.dayToggleOutsideRow}>
+          <div style={styles.dayToggleOutsideSpacer}></div>
+          {JOURS.map((j) => (
+            <div key={`outside-toggle-${j}`} style={styles.dayToggleOutsideCell}>
+              <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
+                  }}
+                  style={{ ...styles.toggleBtnDay, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
+                >
+                  Actif
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
+                  }}
+                  style={{ ...styles.toggleBtnDay, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
+                >
+                  Inactif
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </>
     );
   };
 
-  const renderSelectionSite = (siteKey, siteLabel) => (
-    <div key={siteKey} style={styles.siteCard}>
+  const renderSelectionSite = (siteKey, siteLabel, sansCadre = false) => (
+    <div key={siteKey} style={sansCadre ? styles.siteCardPlain : styles.siteCard}>
       <div style={styles.siteHeader}>
         <span style={styles.siteTitle}>{siteLabel} - </span>
         <input
@@ -1657,9 +1676,9 @@ export default function TCF() {
       {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
 
       {onglet === 'pool' && (
-        <div style={styles.card}>
-          <div style={{ ...styles.topSaveWrap, marginBottom: 10 }}>
-            <div style={styles.subTabsRow}>
+        <div style={styles.poolPanel}>
+          <div style={{ ...styles.poolSiteTabsBar, marginBottom: 10 }}>
+            <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
               {siteOrder.map((siteKey, idx) => (
                 <button
                   key={`pool-site-tab-${siteKey}`}
@@ -1671,12 +1690,12 @@ export default function TCF() {
                 </button>
               ))}
             </div>
-            <button type="button" style={styles.btnAddSite} onClick={ajouterSite}>
-              + Ajouter un site
+            <button type="button" style={styles.btnAddSitePoolTabs} onClick={ajouterSite}>
+              Ajouter un site
             </button>
           </div>
           <div style={styles.siteStack}>
-            {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`)}
+            {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
           </div>
         </div>
       )}
@@ -1746,6 +1765,7 @@ const styles = {
   tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#111827' },
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
+  poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
   affectationSiteLevelsBox: { border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', padding: 10, marginBottom: 10 },
@@ -1757,6 +1777,7 @@ const styles = {
   siteStack: { display: 'flex', flexDirection: 'column', gap: 14 },
   btnAddSite: { padding: '7px 12px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
+  siteCardPlain: { border: 'none', borderRadius: 0, padding: 0, background: 'transparent' },
   siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
   siteInput: { width: 260, maxWidth: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b' },
@@ -1835,11 +1856,18 @@ const styles = {
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
   subTabBtn: { padding: '7px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none' },
   subTabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
+  poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  btnAddSitePoolTabs: { marginLeft: 'auto', height: 37, padding: '7px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
   filtersRow: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 },
   toggleWrap: { display: 'flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' },
   toggleBtn: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
   toggleBtnActif: { background: '#6366f1', color: 'white' },
   toggleBtnInactif: { background: '#111827', color: '#ffffff' },
+  dayToggleOutsideRow: { display: 'grid', gridTemplateColumns: '110px repeat(5, 1fr)', gap: 8, marginTop: 8, alignItems: 'center' },
+  dayToggleOutsideSpacer: { height: 1 },
+  dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
+  toggleBtnDay: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
+  toggleBtnDayActif: { background: '#ffffff', color: '#111827', fontWeight: 800 },
   select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
