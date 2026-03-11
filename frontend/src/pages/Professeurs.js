@@ -263,10 +263,8 @@ export default function Professeurs({
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,alignItems:'start'}}>
-
-                {/* COLONNE 1 - Connexion + Infos personnelles */}
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Connexion</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Email *</label>
@@ -277,8 +275,9 @@ export default function Professeurs({
                       <input style={s.inp} type="password" autoComplete="new-password" value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder="Laisser vide pour générer automatiquement" />
                     </div>
                   </div>
+
                   <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NOM *</label>
                       <input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value.toUpperCase()})} placeholder="DUPONT" />
@@ -321,10 +320,7 @@ export default function Professeurs({
                       <input style={s.inp} value={form.lieu} onChange={e=>setForm({...form,lieu:e.target.value})} placeholder="Sion" />
                     </div>
                   </div>
-                </div>
 
-                {/* COLONNE 2 - Desideratas */}
-                <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     <div style={{display:'grid',gridTemplateColumns:hidePeriodesSemaine ? '1fr' : '1fr 1fr',gap:10}}>
@@ -355,11 +351,14 @@ export default function Professeurs({
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,alignItems:'start',marginTop:14}}>
                 <div>
-                  {!hidePreferences && <div style={{display:'flex',flexDirection:'column'}}>
+                  {(!hidePreferences || !hidePreferencesLieu || !hideRemarque) && (
+                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🧭 Désidératas</div>
+                  )}
+
+                  {!hidePreferences && (
+                    <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveaux préférés</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                         {NIVEAUX.map(n => {
@@ -384,117 +383,120 @@ export default function Professeurs({
                           Aucune préférence
                         </button>
                       </div>
-                    </div>}
-                    {(!hidePreferences || !hidePreferencesLieu || !hideRemarque) && (
-                      <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:6,marginTop:8,textTransform:'uppercase'}}>🧭 Desideratas</div>
-                    )}
-                    {!hidePreferences && niveauxPreferesSelectionnes.length > 0 && (
-                      <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
-                        {branchesDisponibles.length === 0 ? (
-                          <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
-                        ) : (
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
-                            {branchesDisponibles.map(b => {
-                              const selected = (b.ids || []).some(id => branchesSpecialitesSelectionnees.includes(String(id)));
-                              return (
-                                <button key={b.id} type="button"
-                                  title={(b.noms || []).join(' / ')}
-                                  onClick={() => {
-                                    setForm(prev => {
-                                      const curr = normaliserBranchesSpecialites(prev.branches_specialites);
-                                      let newSel;
-                                      if (selected) {
-                                        newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
-                                      } else {
-                                        newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
-                                      }
-                                      return {...prev, branches_specialites:newSel};
-                                    });
-                                  }}
-                                  style={{
-                                    height: 34,
-                                    width: '100%',
-                                    borderRadius: 9,
-                                    border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
-                                    background:selected?'#e0e7ff':'white',
-                                    color:selected?'#3730a3':'#64748b',
-                                    cursor:'pointer',
-                                    fontWeight:700,
-                                    fontSize:12,
-                                    transition:'all 0.15s',
-                                    display:'flex',
-                                    alignItems:'center',
-                                    justifyContent:'center',
-                                    textAlign:'center',
-                                    padding:'0 8px'
-                                  }}>
-                                  {b.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {!hideRemarque && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques pour les niveaux et branches</label>
-                      <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
-                    </div>}
-                    {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieux de travail préférés</label>
-                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {LIEUX_PREF.map(l => {
-                          const lieux = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
-                          const selected = lieux.includes(l);
-                          return (
-                            <button key={l} type="button"
-                              onClick={() => {
-                                const curr = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
-                                let newLieux = selected ? curr.filter(x=>x!==l) : [...curr, l];
-                                if (newLieux.length === LIEUX_PREF.length) newLieux = [];
-                                setForm({...form, lieu_travail_prefere: newLieux.join(',')});
-                              }}
-                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#0891b2':'#e2e8f0'),background:selected?'#cffafe':'white',color:selected?'#0e7490':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
-                              {l}
-                            </button>
-                          );
-                        })}
-                        <button type="button"
-                          onClick={() => setForm({...form, lieu_travail_prefere:''})}
-                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!form.lieu_travail_prefere)?'#94a3b8':'#e2e8f0'),background:(!form.lieu_travail_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
-                          Aucune préférence
+                    </div>
+                  )}
+
+                  {!hidePreferences && niveauxPreferesSelectionnes.length > 0 && (
+                    <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
+                      {branchesDisponibles.length === 0 ? (
+                        <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
+                      ) : (
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
+                          {branchesDisponibles.map(b => {
+                            const selected = (b.ids || []).some(id => branchesSpecialitesSelectionnees.includes(String(id)));
+                            return (
+                              <button key={b.id} type="button"
+                                title={(b.noms || []).join(' / ')}
+                                onClick={() => {
+                                  setForm(prev => {
+                                    const curr = normaliserBranchesSpecialites(prev.branches_specialites);
+                                    let newSel;
+                                    if (selected) {
+                                      newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
+                                    } else {
+                                      newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
+                                    }
+                                    return {...prev, branches_specialites:newSel};
+                                  });
+                                }}
+                                style={{
+                                  height: 34,
+                                  width: '100%',
+                                  borderRadius: 9,
+                                  border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
+                                  background:selected?'#e0e7ff':'white',
+                                  color:selected?'#3730a3':'#64748b',
+                                  cursor:'pointer',
+                                  fontWeight:700,
+                                  fontSize:12,
+                                  transition:'all 0.15s',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center',
+                                  textAlign:'center',
+                                  padding:'0 8px'
+                                }}>
+                                {b.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!hideRemarque && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques pour les niveaux et branches</label>
+                    <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
+                  </div>}
+
+                  {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieux de travail préférés</label>
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {LIEUX_PREF.map(l => {
+                        const lieux = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                        const selected = lieux.includes(l);
+                        return (
+                          <button key={l} type="button"
+                            onClick={() => {
+                              const curr = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                              let newLieux = selected ? curr.filter(x=>x!==l) : [...curr, l];
+                              if (newLieux.length === LIEUX_PREF.length) newLieux = [];
+                              setForm({...form, lieu_travail_prefere: newLieux.join(',')});
+                            }}
+                            style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#0891b2':'#e2e8f0'),background:selected?'#cffafe':'white',color:selected?'#0e7490':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
+                            {l}
+                          </button>
+                        );
+                      })}
+                      <button type="button"
+                        onClick={() => setForm({...form, lieu_travail_prefere:''})}
+                        style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!form.lieu_travail_prefere)?'#94a3b8':'#e2e8f0'),background:(!form.lieu_travail_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
+                        Aucune préférence
+                      </button>
+                    </div>
+                  </div>}
+
+                  {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques lieu de travail</label>
+                    <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
+                  </div>}
+
+                  {!hidePreferencesLieu && !hidePreferences && (
+                    <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Priorité</label>
+                      <div style={{display:'flex',gap:8}}>
+                        <button type="button" onClick={() => setForm({...form, priorite_pref:'niveau'})}
+                          style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='niveau'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='niveau'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
+                          Niveau
+                        </button>
+                        <button type="button" onClick={() => setForm({...form, priorite_pref:'lieu'})}
+                          style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='lieu'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='lieu'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
+                          Lieu de travail
                         </button>
                       </div>
-                    </div>}
-                    {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques lieu de travail</label>
-                      <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
-                    </div>}
-                    {!hidePreferencesLieu && !hidePreferences && (
-                      <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Priorité</label>
-                        <div style={{display:'flex',gap:8}}>
-                          <button type="button" onClick={() => setForm({...form, priorite_pref:'niveau'})}
-                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='niveau'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='niveau'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
-                            Niveau
-                          </button>
-                          <button type="button" onClick={() => setForm({...form, priorite_pref:'lieu'})}
-                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='lieu'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='lieu'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
-                            Lieu de travail
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
-                      <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
-                        <option value="true">✅ Actif</option>
-                        <option value="false">❌ Inactif</option>
-                      </select>
                     </div>
+                  )}
+
+                  <div style={{display:'flex',flexDirection:'column'}}>
+                    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
+                    <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
+                      <option value="true">✅ Actif</option>
+                      <option value="false">❌ Inactif</option>
+                    </select>
+                  </div>
                 </div>
-                <div />
               </div>
 
               <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>
