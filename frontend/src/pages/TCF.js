@@ -1070,107 +1070,119 @@ export default function TCF() {
                   </tr>
                 </thead>
                 <tbody>
-                  {LIGNES_ORGANISATION.map((lg) => (
-                    <tr key={`ligne-${lg.row}`}>
-                      <td style={styles.tdCenter}>
-                        <input
-                          style={{ ...styles.select, width: 88 }}
-                          value={lignesHoraire[lg.row]?.start || ''}
-                          onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
-                          placeholder="Début"
-                        />
-                        <input
-                          style={{ ...styles.select, width: 88, marginLeft: 6 }}
-                          value={lignesHoraire[lg.row]?.end || ''}
-                          onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
-                          placeholder="Fin"
-                        />
-                      </td>
-                      <td style={styles.tdCenterRead}>{lg.temps ? `${lg.temps}'` : ''}</td>
-                      {classesColonnes.map((cl) => {
-                        if (lg.row === 1) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
-                        if (lg.row === 2) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
-                        if ([3, 4, 5].includes(lg.row)) {
-                          const bloc = org.blocA || {};
-                          return (
-                            <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
-                              <div style={styles.pastillesWrap}>
-                                {['PE', 'PO', 'CE'].map(tag => (
-                                  <button
-                                    key={`${lg.row}-${cl.id}-${tag}`}
-                                    type="button"
-                                    onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocA', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                    style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                  >
-                                    {tag}
-                                  </button>
-                                ))}
-                              </div>
-                            </td>
-                          );
-                        }
-                        if (lg.row === 6 || lg.row === 7) {
-                          const bloc = org[`ligne${lg.row}`] || {};
-                          return (
-                            <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
-                              <div style={styles.pastillesWrap}>
-                                {['Pause', 'CO'].map(tag => (
-                                  <button
-                                    key={`${lg.row}-${cl.id}-${tag}`}
-                                    type="button"
-                                    onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, `ligne${lg.row}`, tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                    style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                  >
-                                    {tag}
-                                  </button>
-                                ))}
-                              </div>
-                            </td>
-                          );
-                        }
-                        if ([8, 9, 10].includes(lg.row)) {
-                          const bloc = org.blocB || {};
-                          return (
-                            <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
-                              <div style={styles.pastillesWrap}>
-                                {['PE', 'PO', 'CE'].map(tag => (
-                                  <button
-                                    key={`${lg.row}-${cl.id}-${tag}`}
-                                    type="button"
-                                    onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocB', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                    style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                  >
-                                    {tag}
-                                  </button>
-                                ))}
-                              </div>
-                            </td>
-                          );
-                        }
-                        return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}></td>;
-                      })}
-                      <td style={styles.tdCenterRead}>{lg.role}</td>
-                      <td style={styles.tdLeft}>
-                        <div style={styles.pastillesWrap}>
-                          {Object.entries(rolesMap)
-                            .filter(([, role]) => {
-                              if (!role) return false;
-                              if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
-                              if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
-                              if (lg.role === 'Accompagnement') return role === 'Accompagnement';
-                              if (lg.role === 'Correction') return role === 'Correction';
-                              if (lg.role === 'Surveillance') return role === 'Surveillance';
-                              return false;
-                            })
-                            .map(([pid]) => {
-                              const p = profMap[String(pid)];
-                              if (!p) return null;
-                              return <span key={`${lg.row}-prof-${pid}`} style={styles.profChip}>{p.prenom} {toDisplayNom(p.nom)}</span>;
-                            })}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {LIGNES_ORGANISATION.map((lg) => {
+                    const estBlocAStart = lg.row === 3;
+                    const estBlocAInner = lg.row === 4 || lg.row === 5;
+                    const estBlocBStart = lg.row === 8;
+                    const estBlocBInner = lg.row === 9 || lg.row === 10;
+                    const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
+                    return (
+                      <tr key={`ligne-${lg.row}`}>
+                        {afficherHoraireTemps && (
+                          <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
+                            <input
+                              style={{ ...styles.select, width: 88 }}
+                              value={lignesHoraire[lg.row]?.start || ''}
+                              onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
+                              placeholder="Début"
+                            />
+                            <input
+                              style={{ ...styles.select, width: 88, marginLeft: 6 }}
+                              value={lignesHoraire[lg.row]?.end || ''}
+                              onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
+                              placeholder="Fin"
+                            />
+                          </td>
+                        )}
+                        {afficherHoraireTemps && (
+                          <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
+                        )}
+                        {classesColonnes.map((cl) => {
+                          if (lg.row === 1) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
+                          if (lg.row === 2) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
+                          if (estBlocAInner || estBlocBInner) return null;
+                          if (estBlocAStart) {
+                            const bloc = org.blocA || {};
+                            return (
+                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                                <div style={styles.pastillesWrap}>
+                                  {['PE', 'PO', 'CE'].map(tag => (
+                                    <button
+                                      key={`${lg.row}-${cl.id}-${tag}`}
+                                      type="button"
+                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocA', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
+                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
+                                    >
+                                      {tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                            );
+                          }
+                          if (lg.row === 6 || lg.row === 7) {
+                            const bloc = org[`ligne${lg.row}`] || {};
+                            return (
+                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
+                                <div style={styles.pastillesWrap}>
+                                  {['Pause', 'CO'].map(tag => (
+                                    <button
+                                      key={`${lg.row}-${cl.id}-${tag}`}
+                                      type="button"
+                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, `ligne${lg.row}`, tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
+                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
+                                    >
+                                      {tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                            );
+                          }
+                          if (estBlocBStart) {
+                            const bloc = org.blocB || {};
+                            return (
+                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                                <div style={styles.pastillesWrap}>
+                                  {['PE', 'PO', 'CE'].map(tag => (
+                                    <button
+                                      key={`${lg.row}-${cl.id}-${tag}`}
+                                      type="button"
+                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocB', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
+                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
+                                    >
+                                      {tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                            );
+                          }
+                          return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}></td>;
+                        })}
+                        <td style={styles.tdCenterRead}>{lg.role}</td>
+                        <td style={styles.tdLeft}>
+                          <div style={styles.pastillesWrap}>
+                            {Object.entries(rolesMap)
+                              .filter(([, role]) => {
+                                if (!role) return false;
+                                if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
+                                if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+                                if (lg.role === 'Accompagnement') return role === 'Accompagnement';
+                                if (lg.role === 'Correction') return role === 'Correction';
+                                if (lg.role === 'Surveillance') return role === 'Surveillance';
+                                return false;
+                              })
+                              .map(([pid]) => {
+                                const p = profMap[String(pid)];
+                                if (!p) return null;
+                                return <span key={`${lg.row}-prof-${pid}`} style={styles.profChip}>{p.prenom} {toDisplayNom(p.nom)}</span>;
+                              })}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
