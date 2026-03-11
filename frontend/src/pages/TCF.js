@@ -1527,23 +1527,49 @@ export default function TCF() {
 
   const printCharts = (charts, isFr, maxScore) => {
     const matLabel = isFr ? 'Français' : 'Mathématiques';
-    const pages = charts.map(c => {
+    const headerHtml = `<div class="page-header">
+        <div class="header-left">
+          <div class="header-dept">Département de la santé, des affaires sociales et de la culture</div>
+          <div class="header-service">Service de l'action sociale</div>
+          <div class="header-office">Office de l'asile</div>
+          <div class="header-centre">Centre de formation "Le Botza"</div>
+        </div>
+      </div>`;
+    const footerHtml = `<div class="page-footer">
+        <span>Zone Industrielle 4, 1963 Vétroz</span>
+        <span class="footer-sep">|</span>
+        <span>Tél. 027 606 18 60</span>
+      </div>`;
+    const pagesWithLayout = charts.map(c => {
       const svg = c.series.length > 0 ? buildChartSVG(c.series, maxScore, isFr) : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
       return `<div class="page">
-        <div class="page-title">${c.label}</div>
-        <div class="page-sub">${matLabel}</div>
-        ${svg}
+        ${headerHtml}
+        <div class="page-content">
+          <div class="page-title">${c.label}</div>
+          <div class="page-sub">${matLabel}</div>
+          ${svg}
+        </div>
+        ${footerHtml}
       </div>`;
     });
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Graphiques TCF</title>
       <style>
+        * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; }
-        .page { padding: 32px; page-break-after: always; box-sizing: border-box; }
+        .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
+        .page-header { border-bottom: 2px solid #6366f1; padding: 18px 32px 12px; }
+        .header-dept { font-size: 11px; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-service { font-size: 11px; color: #475569; }
+        .header-office { font-size: 11px; color: #475569; }
+        .header-centre { font-size: 14px; font-weight: 800; color: #1e293b; margin-top: 4px; }
+        .page-content { flex: 1; padding: 28px 32px; }
         .page-title { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .page-sub { font-size: 13px; color: #6366f1; margin-bottom: 24px; font-weight: 600; }
+        .page-footer { border-top: 1px solid #e2e8f0; padding: 10px 32px; font-size: 11px; color: #94a3b8; display: flex; gap: 12px; align-items: center; }
+        .footer-sep { color: #cbd5e1; }
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-      </style></head><body>${pages.join('')}</body></html>`;
+      </style></head><body>${pagesWithLayout.join('')}</body></html>`;
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
@@ -2103,14 +2129,14 @@ const styles = {
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
-  btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569' },
+  btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   tabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 },
   tabsRow: { display: 'flex', gap: 10, flexWrap: 'wrap' },
   topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' },
+  tabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1' },
   tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#111827' },
-  btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
+  btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
   panelTopWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, marginBottom: 10 },
@@ -2125,7 +2151,7 @@ const styles = {
   affectationSiteLevelsValue: { fontSize: 12, color: '#1e293b' },
 
   siteStack: { display: 'flex', flexDirection: 'column', gap: 14 },
-  btnAddSite: { padding: '7px 12px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer' },
+  btnAddSite: { padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
   siteCardPlain: { border: 'none', borderRadius: 0, padding: 0, background: 'transparent' },
   siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
@@ -2203,23 +2229,23 @@ const styles = {
   saveMsg: { marginLeft: 10, fontSize: 12, color: '#166534', fontWeight: 700 },
   noticeBand: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
 
-  subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
-  subTabBtn: { padding: '7px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none' },
+  subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
+  subTabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', lineHeight: '1' },
   subTabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
   poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  btnAddSitePoolTabs: { marginLeft: 'auto', height: 37, padding: '7px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnAddSitePoolTabs: { marginLeft: 'auto', padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: '1' },
   rolesTopRight: { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   filtersRow: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 },
-  toggleWrap: { display: 'flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' },
-  toggleBtn: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
+  toggleWrap: { display: 'flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', alignItems: 'stretch' },
+  toggleBtn: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnActif: { background: '#6366f1', color: 'white' },
   toggleBtnInactif: { background: '#111827', color: '#ffffff' },
   dayToggleOutsideRow: { display: 'grid', gridTemplateColumns: '110px repeat(5, 1fr)', gap: 8, marginTop: 8, alignItems: 'center' },
   dayToggleOutsideSpacer: { height: 1 },
   dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
-  toggleBtnDay: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
+  toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
-  select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white' },
+  select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white', lineHeight: '1' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
   tdLeftRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'left', fontWeight: 700 },
