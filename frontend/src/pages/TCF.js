@@ -1836,7 +1836,7 @@ export default function TCF() {
       )}
 
       {onglet === 'classes' && (
-        <div style={styles.card}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={styles.panelTopWhite}>
             <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
               {siteOrder.map((siteKey, idx) => (
