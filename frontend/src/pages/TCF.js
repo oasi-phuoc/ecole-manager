@@ -106,7 +106,7 @@ export default function TCF() {
   const [poolDirty, setPoolDirty] = useState(false);
   const [affectationDirty, setAffectationDirty] = useState(false);
   const [resultatDirty, setResultatDirty] = useState(false);
-  const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', affectation: '', resultat: '' });
+  const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', classes: '', roles: '', resultat: '' });
   const [saveToast, setSaveToast] = useState('');
 
   const [resultatNiveau, setResultatNiveau] = useState('');
@@ -120,12 +120,11 @@ export default function TCF() {
   const [statOrdre, setStatOrdre] = useState('decroissant');
   const [statSession, setStatSession] = useState('');
   const [statSeuil, setStatSeuil] = useState('60');
-  const [sousOngletAffectation, setSousOngletAffectation] = useState('classes');
+  const [rolesGroupActif, setRolesGroupActif] = useState('g1');
   const [affectationDateDebutBySite, setAffectationDateDebutBySite] = useState({});
   const [affectationHorairesBySite, setAffectationHorairesBySite] = useState({});
   const [affectationClassesBySite, setAffectationClassesBySite] = useState({});
   const [affectationJoursActifsBySite, setAffectationJoursActifsBySite] = useState({});
-  const [rolesPoolSelect, setRolesPoolSelect] = useState('');
   const [rolesDemiJourneeSelect, setRolesDemiJourneeSelect] = useState('');
   const [rolesAffectesByPoolDemi, setRolesAffectesByPoolDemi] = useState({});
   const [organisationByPoolDemi, setOrganisationByPoolDemi] = useState({});
@@ -587,8 +586,10 @@ export default function TCF() {
   const getHoraireSite = (siteKey, champ) => {
     const val = affectationHorairesBySite?.[siteKey]?.[champ];
     if (val !== undefined && val !== null && String(val).trim() !== '') return val;
-    if (champ === 'matinDebut') return '08:30';
+    if (champ === 'matinDebut') return '08:20';
+    if (champ === 'matinFin') return '11:15';
     if (champ === 'apresMidiDebut') return '13:30';
+    if (champ === 'apresMidiFin') return '16:15';
     return '';
   };
   const setHoraireSite = (siteKey, champ, value) => {
@@ -874,7 +875,7 @@ export default function TCF() {
         </button>
       </div>
 
-      <div style={styles.sectionTitle}>Liste des professeurs séparée par niveau des pools</div>
+      <div style={styles.sectionTitle}>Liste des professeurs</div>
       {chargement ? <div style={styles.empty}>Chargement...</div> : Object.entries(profsParNiveauPool).map(([niveau, liste]) => (
         <div key={niveau} style={styles.niveauBlock}>
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
@@ -907,7 +908,6 @@ export default function TCF() {
         </div>
       ))}
 
-      <div style={styles.sectionTitle}>Affectation hebdomadaire selon les jours</div>
       {renderTablePoolSite(siteKey)}
     </div>
   );
@@ -1072,20 +1072,49 @@ export default function TCF() {
     });
   };
 
-  const setTagClasseBloc = (poolId, demiId, blocKey, tag, classeId) => {
+  const setTagClasseBloc = (poolId, demiId, blocKey, tag, targetId) => {
     setAffectationDirty(true);
     setOrganisationByPoolDemi(prev => {
       const key = `${poolId}::${demiId}`;
       const cur = { ...(prev[key] || {}) };
       const bloc = { ...(cur[blocKey] || {}) };
-      bloc[tag] = classeId ? String(classeId) : '';
+      const value = targetId ? String(targetId) : '';
+      bloc[tag] = value;
+      if ((blocKey === 'ligne6' || blocKey === 'ligne7') && value) {
+        // Une classe (ou un groupe) ne peut pas avoir Pause et CO en même temps.
+        const autreTag = tag === 'Pause' ? 'CO' : 'Pause';
+        if (bloc[autreTag] === value) bloc[autreTag] = '';
+      }
       cur[blocKey] = bloc;
       return { ...prev, [key]: cur };
     });
   };
 
+  const setRoleGroupClasse = (poolId, demiId, groupId, classeId) => {
+    setAffectationDirty(true);
+    setOrganisationByPoolDemi(prev => {
+      const key = `${poolId}::${demiId}`;
+      const cur = { ...(prev[key] || {}) };
+      const wasInG1 = (cur.groups?.g1 || []).map(String).includes(String(classeId));
+      const wasInG2 = (cur.groups?.g2 || []).map(String).includes(String(classeId));
+      const groups = {
+        g1: [...(cur.groups?.g1 || [])],
+        g2: [...(cur.groups?.g2 || [])],
+      };
+      groups.g1 = groups.g1.filter(id => String(id) !== String(classeId));
+      groups.g2 = groups.g2.filter(id => String(id) !== String(classeId));
+      const target = groupId === 'g2' ? 'g2' : 'g1';
+      const already = target === 'g1' ? wasInG1 : wasInG2;
+      groups[target] = already
+        ? groups[target].filter(id => String(id) !== String(classeId))
+        : [...groups[target], String(classeId)];
+      cur.groups = groups;
+      return { ...prev, [key]: cur };
+    });
+  };
+
   const renderRoles = () => {
-    const siteKey = String(rolesPoolSelect || '');
+    const siteKey = String(siteActif || '');
     const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
     const selectedProfIds = siteKey ? (selectedBySite[siteKey] || []) : [];
     const profsPool = selectedProfIds
@@ -1096,15 +1125,42 @@ export default function TCF() {
         ? selectedProfIds.filter((id) => statutCellule(siteKey, String(id), demi.jour, demi.moment) === 'rouge' && rActifCellule(siteKey, String(id), demi.jour, demi.moment))
         : []
     );
-    const key = `${rolesPoolSelect}::${rolesDemiJourneeSelect}`;
+    const key = `${siteKey}::${rolesDemiJourneeSelect}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
     const org = organisationByPoolDemi[key] || {};
-    const classesAffecteesDemi = demi ? (affectationClassesBySite?.[String(rolesPoolSelect)]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
-    const classesColonnes = classesAffecteesDemi
+    const classesAffecteesDemi = demi ? (affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
+    const classesAffecteesObjs = classesAffecteesDemi
       .map(cid => classes.find(c => String(c.id) === String(cid)))
       .filter(Boolean);
+    const useGroups = classesAffecteesObjs.length > 2;
+    const savedGroups = {
+      g1: (org.groups?.g1 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid))),
+      g2: (org.groups?.g2 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid))),
+    };
+    const assignedSaved = new Set([...savedGroups.g1, ...savedGroups.g2]);
+    const unassigned = classesAffecteesDemi.filter(cid => !assignedSaved.has(String(cid)));
+    if (useGroups) {
+      for (const cid of unassigned) {
+        if (savedGroups.g1.length <= savedGroups.g2.length) savedGroups.g1.push(String(cid));
+        else savedGroups.g2.push(String(cid));
+      }
+    }
+    const classesColonnes = useGroups
+      ? [
+        {
+          id: 'group:g1',
+          nom: savedGroups.g1.map(cid => classes.find(c => String(c.id) === String(cid))?.nom).filter(Boolean).join(' + ') || 'Groupe 1',
+          classIds: savedGroups.g1,
+        },
+        {
+          id: 'group:g2',
+          nom: savedGroups.g2.map(cid => classes.find(c => String(c.id) === String(cid))?.nom).filter(Boolean).join(' + ') || 'Groupe 2',
+          classIds: savedGroups.g2,
+        },
+      ]
+      : classesAffecteesObjs.map(cl => ({ id: String(cl.id), nom: cl.nom, classIds: [String(cl.id)] }));
     const defaultStart = demi
-      ? (demi.moment === 'matin' ? getHoraireSite(String(rolesPoolSelect), 'matinDebut') : getHoraireSite(String(rolesPoolSelect), 'apresMidiDebut'))
+      ? (demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut'))
       : '';
     const defaultStartMin = parseTimeToMinutes(defaultStart);
     const lignesHoraire = {};
@@ -1126,20 +1182,67 @@ export default function TCF() {
 
     return (
       <div style={styles.card}>
-        <div style={styles.filtersRow}>
-          <select value={rolesPoolSelect} onChange={(e) => { setRolesPoolSelect(e.target.value); setRolesDemiJourneeSelect(''); }} style={styles.select}>
-            <option value="">- Sélectionner un pool -</option>
-            {siteOrder.map((siteKey, idx) => (
-              <option key={`role-pool-${siteKey}`} value={siteKey}>{siteNames[siteKey] || `Site ${idx + 1}`}</option>
-            ))}
-          </select>
-          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner une demi-journée -</option>
-            {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
+        <div style={styles.panelTopWhite}>
+          <div style={styles.panelTopInner}>
+            <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
+              {siteOrder.map((sKey, idx) => (
+                <button
+                  key={`roles-site-tab-${sKey}`}
+                  type="button"
+                  onClick={() => setSiteActif(sKey)}
+                  style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
+                >
+                  {siteNames[sKey] || `Site ${idx + 1}`}
+                </button>
+              ))}
+            </div>
+            <div style={styles.rolesTopRight}>
+              <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
+                <option value="">- Sélectionner une demi-journée -</option>
+                {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+              </select>
+              {useGroups && (
+                <div style={styles.toggleWrap}>
+                  <button
+                    type="button"
+                    onClick={() => setRolesGroupActif('g1')}
+                    style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g1' ? styles.toggleBtnActif : {}) }}
+                  >
+                    Groupe 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRolesGroupActif('g2')}
+                    style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g2' ? styles.toggleBtnActif : {}) }}
+                  >
+                    Groupe 2
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        {!rolesPoolSelect || !rolesDemiJourneeSelect ? (
-          <div style={styles.empty}>Sélectionnez un pool et une demi-journée.</div>
+        {useGroups && (
+          <div style={{ ...styles.pastillesWrap, marginBottom: 10 }}>
+            {classesAffecteesObjs.map((cl) => {
+              const actifDansG1 = savedGroups.g1.includes(String(cl.id));
+              const actifDansG2 = savedGroups.g2.includes(String(cl.id));
+              const actif = rolesGroupActif === 'g1' ? actifDansG1 : actifDansG2;
+              return (
+                <button
+                  key={`group-class-${cl.id}`}
+                  type="button"
+                  onClick={() => setRoleGroupClasse(siteKey, rolesDemiJourneeSelect, rolesGroupActif, cl.id)}
+                  style={{ ...styles.classChip, ...(actif ? styles.classChipActif : {}) }}
+                >
+                  {cl.nom}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!siteKey || !rolesDemiJourneeSelect ? (
+          <div style={styles.empty}>Sélectionnez un site et une demi-journée.</div>
         ) : (
           <div style={styles.rolesGrid}>
             <div style={styles.tableWrap}>
@@ -1167,7 +1270,7 @@ export default function TCF() {
                                 const deja = Object.entries(rolesMap).filter(([pid, r]) => String(pid) !== String(p.id) && r === nextRole).length;
                                 if (deja >= (ROLE_CAP[nextRole] ?? Infinity)) return;
                               }
-                              setRoleProf(rolesPoolSelect, rolesDemiJourneeSelect, p.id, nextRole);
+                              setRoleProf(siteKey, rolesDemiJourneeSelect, p.id, nextRole);
                             }}
                             style={styles.select}
                           >
@@ -1189,6 +1292,13 @@ export default function TCF() {
 
             <div style={styles.tableWrap}>
               <table style={styles.tableRolesRight}>
+                <colgroup>
+                  <col style={{ width: 120, minWidth: 120, maxWidth: 120 }} />
+                  <col style={{ width: 72, minWidth: 72, maxWidth: 72 }} />
+                  {classesColonnes.map((col) => <col key={`role-col-${col.id}`} style={{ width: 150, minWidth: 150, maxWidth: 150 }} />)}
+                  <col style={{ width: 120, minWidth: 120, maxWidth: 120 }} />
+                  <col style={{ width: 'auto' }} />
+                </colgroup>
                 <thead>
                   <tr style={styles.thead}>
                     <th style={styles.thCenter}>Horaire</th>
@@ -1212,13 +1322,13 @@ export default function TCF() {
                             <input
                               style={{ ...styles.select, width: 88 }}
                               value={lignesHoraire[lg.row]?.start || ''}
-                              onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
+                              onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
                               placeholder="Début"
                             />
                             <input
                               style={{ ...styles.select, width: 88, marginLeft: 6 }}
                               value={lignesHoraire[lg.row]?.end || ''}
-                              onChange={(e) => setHoraireLigne(rolesPoolSelect, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
+                              onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
                               placeholder="Fin"
                             />
                           </td>
@@ -1234,17 +1344,24 @@ export default function TCF() {
                             const bloc = org.blocA || {};
                             return (
                               <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
-                                <div style={styles.pastillesWrap}>
-                                  {['PE', 'PO', 'CE'].map(tag => (
-                                    <button
-                                      key={`${lg.row}-${cl.id}-${tag}`}
-                                      type="button"
-                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocA', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                    >
-                                      {tag}
-                                    </button>
-                                  ))}
+                                <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                  {['PE', 'PO', 'CE'].map(tag => {
+                                    const selectedVal = String(bloc[tag] || '');
+                                    const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    if (alreadyElsewhere) return null;
+                                    const targetValue = cl.id;
+                                    return (
+                                      <button
+                                        key={`${lg.row}-${cl.id}-${tag}`}
+                                        type="button"
+                                        onClick={() => setTagClasseBloc(siteKey, rolesDemiJourneeSelect, 'blocA', tag, estDansCol ? '' : targetValue)}
+                                        style={{ ...styles.classChip, ...(estDansCol ? styles.classChipActif : {}) }}
+                                      >
+                                        {tag}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </td>
                             );
@@ -1253,17 +1370,31 @@ export default function TCF() {
                             const bloc = org[`ligne${lg.row}`] || {};
                             return (
                               <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
-                                <div style={styles.pastillesWrap}>
-                                  {['Pause', 'CO'].map(tag => (
-                                    <button
-                                      key={`${lg.row}-${cl.id}-${tag}`}
-                                      type="button"
-                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, `ligne${lg.row}`, tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                    >
-                                      {tag}
-                                    </button>
-                                  ))}
+                                <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                  {['Pause', 'CO'].map(tag => {
+                                    const selectedVal = String(bloc[tag] || '');
+                                    const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    if (alreadyElsewhere) return null;
+                                    const autreTag = tag === 'Pause' ? 'CO' : 'Pause';
+                                    const selectedAutre = String(bloc[autreTag] || '');
+                                    const bloqueCarMemeClasse = selectedAutre && (cl.classIds.includes(selectedAutre) || selectedAutre === cl.id) && !estDansCol;
+                                    const targetValue = cl.id;
+                                    return (
+                                      <button
+                                        key={`${lg.row}-${cl.id}-${tag}`}
+                                        type="button"
+                                        disabled={bloqueCarMemeClasse}
+                                        onClick={() => {
+                                          if (bloqueCarMemeClasse) return;
+                                          setTagClasseBloc(siteKey, rolesDemiJourneeSelect, `ligne${lg.row}`, tag, estDansCol ? '' : targetValue);
+                                        }}
+                                        style={{ ...styles.classChip, ...(estDansCol ? styles.classChipActif : {}), ...(bloqueCarMemeClasse ? styles.classChipDisabled : {}) }}
+                                      >
+                                        {tag}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </td>
                             );
@@ -1272,17 +1403,24 @@ export default function TCF() {
                             const bloc = org.blocB || {};
                             return (
                               <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
-                                <div style={styles.pastillesWrap}>
-                                  {['PE', 'PO', 'CE'].map(tag => (
-                                    <button
-                                      key={`${lg.row}-${cl.id}-${tag}`}
-                                      type="button"
-                                      onClick={() => setTagClasseBloc(rolesPoolSelect, rolesDemiJourneeSelect, 'blocB', tag, String(bloc[tag]) === String(cl.id) ? '' : cl.id)}
-                                      style={{ ...styles.classChip, ...(String(bloc[tag]) === String(cl.id) ? styles.classChipActif : {}) }}
-                                    >
-                                      {tag}
-                                    </button>
-                                  ))}
+                                <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                  {['PE', 'PO', 'CE'].map(tag => {
+                                    const selectedVal = String(bloc[tag] || '');
+                                    const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    if (alreadyElsewhere) return null;
+                                    const targetValue = cl.id;
+                                    return (
+                                      <button
+                                        key={`${lg.row}-${cl.id}-${tag}`}
+                                        type="button"
+                                        onClick={() => setTagClasseBloc(siteKey, rolesDemiJourneeSelect, 'blocB', tag, estDansCol ? '' : targetValue)}
+                                        style={{ ...styles.classChip, ...(estDansCol ? styles.classChipActif : {}) }}
+                                      >
+                                        {tag}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </td>
                             );
@@ -1579,7 +1717,7 @@ export default function TCF() {
       organisationByPoolDemi: organisationByPoolDemi,
     }));
     setAffectationDirty(false);
-    afficherSaveMsg('affectation');
+    afficherSaveMsg(onglet === 'roles' ? 'roles' : 'classes');
   };
 
   const resetAffectationToSaved = () => {
@@ -1610,7 +1748,7 @@ export default function TCF() {
 
   const tabHasUnsaved = (tab) => {
     if (tab === 'pool') return poolDirty;
-    if (tab === 'affectation') return affectationDirty;
+    if (tab === 'classes' || tab === 'roles') return affectationDirty;
     if (tab === 'resultat') return resultatDirty;
     return false;
   };
@@ -1620,24 +1758,14 @@ export default function TCF() {
     if (tabHasUnsaved(onglet)) {
       const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cet onglet sans sauvegarder ?');
       if (!ok) return;
-      if (onglet === 'affectation') resetAffectationToSaved();
+      if (onglet === 'classes' || onglet === 'roles') resetAffectationToSaved();
     }
     setOnglet(nextTab);
   };
 
-  const handleAffectationSubTabChange = (next) => {
-    if (next === sousOngletAffectation) return;
-    if (affectationDirty) {
-      const ok = window.confirm('Des changements dans Affectation ne sont pas sauvegardés. Changer de sous-onglet sans sauvegarder ?');
-      if (!ok) return;
-      resetAffectationToSaved();
-    }
-    setSousOngletAffectation(next);
-  };
-
   const handleSaveCurrentTab = () => {
     if (onglet === 'pool') handleSavePool();
-    else if (onglet === 'affectation') handleSaveAffectation();
+    else if (onglet === 'classes' || onglet === 'roles') handleSaveAffectation();
     else if (onglet === 'resultat') handleSaveResultat();
   };
 
@@ -1652,11 +1780,12 @@ export default function TCF() {
         <div style={styles.tabsRow}>
           {[
             { id: 'pool', label: 'Pool' },
-            { id: 'affectation', label: 'Affectation' },
-            { id: 'planning', label: 'Planning' },
-            { id: 'resultat', label: 'Résultat' },
-            { id: 'statistique', label: 'Statistique' },
-            { id: 'graphique', label: 'Graphique' },
+            { id: 'classes', label: 'Classes' },
+            { id: 'roles', label: 'Rôles' },
+            { id: 'planning', label: 'Plannings' },
+            { id: 'resultat', label: 'Résultats' },
+            { id: 'statistique', label: 'Statistiques' },
+            { id: 'graphique', label: 'Graphiques' },
           ].map(t => (
             <button
               key={t.id}
@@ -1667,7 +1796,7 @@ export default function TCF() {
             </button>
           ))}
         </div>
-        {(onglet === 'pool' || onglet === 'affectation' || onglet === 'resultat') && (
+        {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
           <div style={styles.topSaveWrap}>
             <button onClick={handleSaveCurrentTab} style={styles.btnSaveTop}>Sauvegarder</button>
           </div>
@@ -1677,11 +1806,40 @@ export default function TCF() {
 
       {onglet === 'pool' && (
         <div style={styles.poolPanel}>
-          <div style={{ ...styles.poolSiteTabsBar, marginBottom: 10 }}>
+          <div style={styles.panelTopWhite}>
+            <div style={{ ...styles.poolSiteTabsBar, marginBottom: 0 }}>
+              <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
+                {siteOrder.map((siteKey, idx) => (
+                  <button
+                    key={`pool-site-tab-${siteKey}`}
+                    type="button"
+                    onClick={() => setSiteActif(siteKey)}
+                    style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
+                  >
+                    {siteNames[siteKey] || `Site ${idx + 1}`}
+                  </button>
+                ))}
+              </div>
+              <button type="button" style={styles.btnAddSitePoolTabs} onClick={ajouterSite}>
+                Ajouter un site
+              </button>
+            </div>
+          </div>
+          <div style={styles.panelContentWhite}>
+            <div style={styles.siteStack}>
+              {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onglet === 'classes' && (
+        <div style={styles.card}>
+          <div style={styles.panelTopWhite}>
             <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
               {siteOrder.map((siteKey, idx) => (
                 <button
-                  key={`pool-site-tab-${siteKey}`}
+                  key={`classes-site-tab-${siteKey}`}
                   type="button"
                   onClick={() => setSiteActif(siteKey)}
                   style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
@@ -1690,47 +1848,14 @@ export default function TCF() {
                 </button>
               ))}
             </div>
-            <button type="button" style={styles.btnAddSitePoolTabs} onClick={ajouterSite}>
-              Ajouter un site
-            </button>
           </div>
-          <div style={styles.siteStack}>
-            {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
+          <div style={styles.panelContentWhite}>
+            {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
           </div>
         </div>
       )}
 
-      {onglet === 'affectation' && (
-        <div style={styles.card}>
-          <div style={styles.subTabsRow}>
-            <button
-              onClick={() => handleAffectationSubTabChange('classes')}
-              style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'classes' ? styles.subTabBtnActif : {}) }}
-            >
-              Classes
-            </button>
-            <button
-              onClick={() => handleAffectationSubTabChange('roles')}
-              style={{ ...styles.subTabBtn, ...(sousOngletAffectation === 'roles' ? styles.subTabBtnActif : {}) }}
-            >
-              Rôles
-            </button>
-          </div>
-          {sousOngletAffectation === 'classes' && (
-            <div style={styles.siteStack}>
-              {siteOrder.map((siteKey, idx) => (
-                <div key={`aff-class-site-${siteKey}`} style={styles.siteCard}>
-                  <div style={styles.sectionTitle}>{siteNames[siteKey] || `Site ${idx + 1}`}</div>
-                  {renderTableAffectationSite(siteKey)}
-                </div>
-              ))}
-            </div>
-          )}
-          {sousOngletAffectation === 'roles' && (
-            renderRoles()
-          )}
-        </div>
-      )}
+      {onglet === 'roles' && renderRoles()}
 
       {onglet === 'planning' && (
         <div style={styles.card}>
@@ -1766,6 +1891,9 @@ const styles = {
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
+  panelTopWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, marginBottom: 10 },
+  panelTopInner: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
+  panelContentWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
   affectationSiteLevelsBox: { border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', padding: 10, marginBottom: 10 },
@@ -1858,6 +1986,7 @@ const styles = {
   subTabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
   poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   btnAddSitePoolTabs: { marginLeft: 'auto', height: 37, padding: '7px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  rolesTopRight: { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   filtersRow: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 },
   toggleWrap: { display: 'flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' },
   toggleBtn: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
@@ -1867,7 +1996,7 @@ const styles = {
   dayToggleOutsideSpacer: { height: 1 },
   dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
   toggleBtnDay: { padding: '7px 11px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none' },
-  toggleBtnDayActif: { background: '#ffffff', color: '#111827', fontWeight: 800 },
+  toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
@@ -1878,6 +2007,7 @@ const styles = {
   pastillesWrap: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   classChip: { border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   classChipActif: { border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+  classChipDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   tdSpacer: { padding: 0, height: 22, background: '#ffffff', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9' },
   rolesGrid: { display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 },
   tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 360 },
