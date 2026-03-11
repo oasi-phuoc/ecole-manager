@@ -1250,7 +1250,7 @@ export default function TCF() {
                 <thead>
                   <tr style={styles.thead}>
                     <th style={styles.thLeftFixed}>Professeurs</th>
-                    <th style={styles.thLeftFixed}>Rôle</th>
+                    <th style={{ ...styles.thLeftFixed, width: 185, minWidth: 185, maxWidth: 185 }}>Rôle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1261,7 +1261,7 @@ export default function TCF() {
                         <td style={{ ...styles.tdLeft, ...(reserveSet.has(String(p.id)) ? styles.tdReserve : {}) }}>
                           {p.prenom} {toDisplayNom(p.nom)}
                         </td>
-                        <td style={styles.tdLeft}>
+                        <td style={{ ...styles.tdLeft, width: 185, minWidth: 185, maxWidth: 185 }}>
                           <select
                             value={selectedRole}
                             onChange={(e) => {
@@ -1272,7 +1272,7 @@ export default function TCF() {
                               }
                               setRoleProf(siteKey, rolesDemiJourneeSelect, p.id, nextRole);
                             }}
-                            style={styles.select}
+                            style={{ ...styles.select, width: '100%' }}
                           >
                             <option value="">—</option>
                             {ROLES_COLONNE.map((r) => {
@@ -1293,7 +1293,7 @@ export default function TCF() {
             <div style={styles.tableWrap}>
               <table style={styles.tableRolesRight}>
                 <colgroup>
-                  <col style={{ width: 120, minWidth: 120, maxWidth: 120 }} />
+                  <col style={{ width: 116, minWidth: 116, maxWidth: 116 }} />
                   <col style={{ width: 72, minWidth: 72, maxWidth: 72 }} />
                   {classesColonnes.map((col) => <col key={`role-col-${col.id}`} style={{ width: 150, minWidth: 150, maxWidth: 150 }} />)}
                   <col style={{ width: 120, minWidth: 120, maxWidth: 120 }} />
@@ -1319,18 +1319,20 @@ export default function TCF() {
                       <tr key={`ligne-${lg.row}`}>
                         {afficherHoraireTemps && (
                           <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
-                            <input
-                              style={{ ...styles.select, width: 88 }}
-                              value={lignesHoraire[lg.row]?.start || ''}
-                              onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
-                              placeholder="Début"
-                            />
-                            <input
-                              style={{ ...styles.select, width: 88, marginLeft: 6 }}
-                              value={lignesHoraire[lg.row]?.end || ''}
-                              onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
-                              placeholder="Fin"
-                            />
+                            <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                              <input
+                                style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
+                                value={lignesHoraire[lg.row]?.start || ''}
+                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
+                                placeholder="Début"
+                              />
+                              <input
+                                style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
+                                value={lignesHoraire[lg.row]?.end || ''}
+                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
+                                placeholder="Fin"
+                              />
+                            </div>
                           </td>
                         )}
                         {afficherHoraireTemps && (
@@ -2010,7 +2012,7 @@ const styles = {
   classChipDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   tdSpacer: { padding: 0, height: 22, background: '#ffffff', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9' },
   rolesGrid: { display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 },
-  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 360 },
+  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 380 },
   tableRolesRight: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 },
   thLeftFixed: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 160, minWidth: 160, maxWidth: 160 },
   tdReserve: { background: '#ede9fe', color: '#4c1d95', fontWeight: 700 },
