@@ -1465,6 +1465,83 @@ export default function TCF() {
     );
   };
 
+  const buildChartSVG = (series, maxScore, isFr) => {
+    const bgW = 80;
+    const innerH = 180;
+    const padL = 36;
+    const padB = 24;
+    const svgW = padL + series.length * bgW + 20;
+    const svgH = innerH + padB + 10;
+    const label1 = isFr ? 'Oral' : 'CSC-CFR';
+    const label2 = isFr ? 'Écrit' : 'CAF-CAP';
+    const parts = [];
+    // Grid + Y labels
+    [0, 0.25, 0.5, 0.75, 1].forEach(r => {
+      const y = innerH - r * innerH;
+      parts.push(`<line x1="${padL}" y1="${y}" x2="${svgW - 10}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4,3"/>`);
+      parts.push(`<text x="${padL - 4}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(r * maxScore)}</text>`);
+    });
+    // Bars
+    series.forEach((s, i) => {
+      const cx = padL + i * bgW + bgW / 2;
+      const bx1 = cx - 23, bx2 = cx + 3;
+      const h1 = Math.max(2, (s.v1 / maxScore) * innerH);
+      const h2 = Math.max(2, (s.v2 / maxScore) * innerH);
+      parts.push(`<rect x="${bx1}" y="${innerH - h1}" width="20" height="${h1}" fill="#60a5fa" rx="3"/>`);
+      parts.push(`<rect x="${bx2}" y="${innerH - h2}" width="20" height="${h2}" fill="#34d399" rx="3"/>`);
+      parts.push(`<text x="${cx}" y="${Math.min(innerH - h1, innerH - h2) - 5}" text-anchor="middle" font-size="10" fill="#475569">${s.v1}/${s.v2}</text>`);
+      parts.push(`<text x="${cx}" y="${innerH + 14}" text-anchor="middle" font-size="11" fill="#334155">${s.session}</text>`);
+    });
+    // Trend line
+    if (series.length > 1) {
+      const pts = series.map((s, i) => {
+        const moy = (s.v1 + s.v2) / 2;
+        return { x: padL + i * bgW + bgW / 2, y: innerH - (moy / maxScore) * innerH, moy };
+      });
+      parts.push(`<polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6,3" points="${pts.map(p => `${p.x},${p.y}`).join(' ')}"/>`);
+      pts.forEach(p => {
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="white" stroke-width="1.5"/>`);
+        parts.push(`<text x="${p.x}" y="${p.y - 9}" text-anchor="middle" font-size="10" fill="#92400e" font-weight="700">${p.moy.toFixed(1)}</text>`);
+      });
+    }
+    // Legend
+    parts.push(`<rect x="${padL}" y="${svgH - 4}" width="12" height="12" fill="#60a5fa" rx="2"/>`);
+    parts.push(`<text x="${padL + 16}" y="${svgH + 6}" font-size="10" fill="#475569">${label1}</text>`);
+    parts.push(`<rect x="${padL + 80}" y="${svgH - 4}" width="12" height="12" fill="#34d399" rx="2"/>`);
+    parts.push(`<text x="${padL + 96}" y="${svgH + 6}" font-size="10" fill="#475569">${label2}</text>`);
+    if (series.length > 1) {
+      parts.push(`<line x1="${padL + 160}" y1="${svgH + 2}" x2="${padL + 180}" y2="${svgH + 2}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);
+      parts.push(`<circle cx="${padL + 170}" cy="${svgH + 2}" r="3.5" fill="#f59e0b"/>`);
+      parts.push(`<text x="${padL + 185}" y="${svgH + 6}" font-size="10" fill="#475569">Moyenne</text>`);
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH + 20}">${parts.join('')}</svg>`;
+  };
+
+  const printCharts = (charts, isFr, maxScore) => {
+    const matLabel = isFr ? 'Français' : 'Mathématiques';
+    const pages = charts.map(c => {
+      const svg = c.series.length > 0 ? buildChartSVG(c.series, maxScore, isFr) : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
+      return `<div class="page">
+        <div class="page-title">${c.label}</div>
+        <div class="page-sub">${matLabel}</div>
+        ${svg}
+      </div>`;
+    });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Graphiques TCF</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 0; }
+        .page { padding: 32px; page-break-after: always; box-sizing: border-box; }
+        .page:last-child { page-break-after: auto; }
+        .page-title { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+        .page-sub { font-size: 13px; color: #6366f1; margin-bottom: 24px; font-weight: 600; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style></head><body>${pages.join('')}</body></html>`;
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  };
+
   const renderGraphique = () => {
     const isFr = ongletGraphiqueMatiere === 'francais';
     const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
@@ -1512,6 +1589,35 @@ export default function TCF() {
           const ma = calculMath(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
         }).filter(e => e.hasData)
       : [];
+
+    const handlePrintSelection = () => {
+      if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
+        const e = eleves.find(ev => String(ev.id) === graphEleveId);
+        const classe = classesMap[String(e?.classe_id)]?.nom || '';
+        printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv }], isFr, maxScore);
+      } else if (graphVue === 'classe' && graphClasseId && dataClasse.length > 0) {
+        const cl = classes.find(c => String(c.id) === graphClasseId);
+        printCharts([{ label: `Classe ${cl?.nom || graphClasseId} — ${graphSession}`, series: dataClasse }], isFr, maxScore);
+      }
+    };
+
+    const handlePrintAll = () => {
+      const sessionsIds = sessionsToShowIds.length > 0 ? sessionsToShowIds : SESSIONS.slice();
+      const charts = elevesNiveauGraph.map(e => {
+        const series = sessionsIds.map(session => {
+          const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
+          if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+          const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+        }).filter(s => s.hasData);
+        const classe = classesMap[String(e.classe_id)]?.nom || '';
+        return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series };
+      }).filter(c => c.series.length > 0);
+      if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
+      printCharts(charts, isFr, maxScore);
+    };
+
+    const canPrintSelection = (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
+      (graphVue === 'classe' && graphClasseId && dataClasse.length > 0);
 
     // Rendu barres sans ligne de tendance (vue Classe)
     const renderBars = (items, keyPrefix) => (
@@ -1651,16 +1757,28 @@ export default function TCF() {
             )}
           </div>
         </div>
-        {/* Légende */}
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label1}</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label2}</span></div>
-          {graphVue === 'individuelle' && sessionsIndiv.length > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5,3" /><circle cx="11" cy="5" r="3.5" fill="#f59e0b" /></svg>
-              <span style={{ fontSize: 12, color: '#475569' }}>Moyenne (évolution)</span>
-            </div>
-          )}
+        {/* Légende + boutons impression */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label1}</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label2}</span></div>
+            {graphVue === 'individuelle' && sessionsIndiv.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5,3" /><circle cx="11" cy="5" r="3.5" fill="#f59e0b" /></svg>
+                <span style={{ fontSize: 12, color: '#475569' }}>Moyenne (évolution)</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={handlePrintSelection} disabled={!canPrintSelection}
+              style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
+              🖨 Imprimer sélection
+            </button>
+            <button type="button" onClick={handlePrintAll}
+              style={styles.btnSaveTop}>
+              🖨 Tout imprimer
+            </button>
+          </div>
         </div>
         {/* Graphique */}
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
