@@ -38,6 +38,7 @@ export default function Professeurs({
   hidePeriodesSemaine = false,
   hidePreferencesLieu = false,
   hideRemarque = false,
+  singleColumnForm = false,
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -221,6 +222,10 @@ export default function Professeurs({
   });
   const niveauxPreferesSelectionnes = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
   const branchesSpecialitesSelectionnees = normaliserBranchesSpecialites(form.branches_specialites);
+  const libelleNiveauxBranches = niveauxPreferesSelectionnes.length > 0
+    ? form.niveau_prefere
+    : 'Tous niveaux (CSC, CFR, EPL)';
+  const colsForm = singleColumnForm ? '1fr' : '1fr 1fr';
 
   useEffect(() => {
     if (hidePreferences) return;
@@ -262,7 +267,7 @@ export default function Professeurs({
               <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,alignItems:'start'}}>
+              <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'start'}}>
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
@@ -277,7 +282,7 @@ export default function Professeurs({
                   </div>
 
                   <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+                  <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10,marginBottom:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NOM *</label>
                       <input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value.toUpperCase()})} placeholder="DUPONT" />
@@ -333,7 +338,7 @@ export default function Professeurs({
                         <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
                       </div>}
                     </div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10}}>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
                         <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
@@ -386,9 +391,9 @@ export default function Professeurs({
                     </div>
                   )}
 
-                  {!hidePreferences && niveauxPreferesSelectionnes.length > 0 && (
+                  {!hidePreferences && (
                     <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {form.niveau_prefere}</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {libelleNiveauxBranches}</label>
                       {branchesDisponibles.length === 0 ? (
                         <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
                       ) : (
@@ -455,7 +460,7 @@ export default function Professeurs({
                               if (newLieux.length === LIEUX_PREF.length) newLieux = [];
                               setForm({...form, lieu_travail_prefere: newLieux.join(',')});
                             }}
-                            style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#0891b2':'#e2e8f0'),background:selected?'#cffafe':'white',color:selected?'#0e7490':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
+                            style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
                             {l}
                           </button>
                         );

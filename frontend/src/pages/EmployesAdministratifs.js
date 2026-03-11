@@ -5,12 +5,13 @@ export default function EmployesAdministratifs() {
   return (
     <Professeurs
       apiBase="/employes-administratifs"
-      titre="🧑‍💼 Employés administratifs"
+      titre="Administratifs"
       nomEntite="employé administratif"
       hidePreferences={true}
       hidePeriodesSemaine={true}
       hidePreferencesLieu={true}
       hideRemarque={true}
+      singleColumnForm={true}
     />
   );
 }

@@ -842,7 +842,7 @@ export default function TCF() {
       <div style={styles.siteHeader}>
         <span style={styles.siteTitle}>{siteLabel} - </span>
         <input
-          value={siteNames[siteKey]}
+          value={siteNames[siteKey] ?? ''}
           onChange={e => {
             setPoolDirty(true);
             setSiteNames(prev => ({ ...prev, [siteKey]: e.target.value }));
@@ -880,7 +880,7 @@ export default function TCF() {
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
           <div style={styles.profsList}>
             {liste.map(p => {
-              const checked = selectedBySite[siteKey].includes(p.id);
+              const checked = (selectedBySite[siteKey] || []).includes(p.id);
               const blocked = estBloqueDansAutreSite(siteKey, p.id);
               return (
                 <div key={p.id} style={{ ...styles.profItem, ...(blocked ? styles.profItemBlocked : {}) }}>
