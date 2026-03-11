@@ -1581,122 +1581,66 @@ export default function TCF() {
     filtres.sort((a, b) => (statOrdre === 'croissant' ? a.total - b.total : b.total - a.total));
 
     return (
-      <div style={styles.card}>
-        <div style={styles.subTabsRow}>
-          <button
-            onClick={() => setStatSousOnglet('tri')}
-            style={{ ...styles.subTabBtn, ...(statSousOnglet === 'tri' ? styles.subTabBtnActif : {}) }}
-          >
-            Trier
-          </button>
-        </div>
-
-        {statSousOnglet === 'tri' && (
-          <>
-            <div style={styles.filtersRow}>
-              <div style={styles.toggleWrap}>
-                <button
-                  onClick={() => setStatMatiere('francais')}
-                  style={{ ...styles.toggleBtn, ...(statMatiere === 'francais' ? styles.toggleBtnActif : {}) }}
-                >
-                  Français
-                </button>
-                <button
-                  onClick={() => setStatMatiere('math')}
-                  style={{ ...styles.toggleBtn, ...(statMatiere === 'math' ? styles.toggleBtnActif : {}) }}
-                >
-                  Math
-                </button>
-              </div>
-
-              <div style={styles.toggleWrap}>
-                <button
-                  onClick={() => { setStatSens('fort'); setStatSeuil('80'); }}
-                  style={{ ...styles.toggleBtn, ...(statSens === 'fort' ? styles.toggleBtnActif : {}) }}
-                >
-                  Fort
-                </button>
-                <button
-                  onClick={() => { setStatSens('faible'); setStatSeuil('40'); }}
-                  style={{ ...styles.toggleBtn, ...(statSens === 'faible' ? styles.toggleBtnActif : {}) }}
-                >
-                  Faible
-                </button>
-              </div>
-
-              <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
-                <option value="">- Sélectionner la session -</option>
-                {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-
-              <input
-                type="number"
-                value={statSeuil}
-                onChange={e => setStatSeuil(e.target.value)}
-                style={{ ...styles.select, width: 120 }}
-                placeholder="Seuil"
-              />
-              <button type="button" onClick={() => setStatSousOnglet('tri')} style={styles.btnSaveTop}>Trier</button>
-              <div style={styles.toggleWrap}>
-                <button
-                  onClick={() => setStatOrdre('croissant')}
-                  style={{ ...styles.toggleBtn, ...(statOrdre === 'croissant' ? styles.toggleBtnActif : {}) }}
-                >
-                  Croissant
-                </button>
-                <button
-                  onClick={() => setStatOrdre('decroissant')}
-                  style={{ ...styles.toggleBtn, ...(statOrdre === 'decroissant' ? styles.toggleBtnActif : {}) }}
-                >
-                  Décroissant
-                </button>
-              </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={styles.panelTopWhite}>
+          <div style={styles.filtersRow}>
+            <div style={styles.toggleWrap}>
+              <button onClick={() => setStatMatiere('francais')} style={{ ...styles.toggleBtn, ...(statMatiere === 'francais' ? styles.toggleBtnActif : {}) }}>Français</button>
+              <button onClick={() => setStatMatiere('math')} style={{ ...styles.toggleBtn, ...(statMatiere === 'math' ? styles.toggleBtnActif : {}) }}>Math</button>
             </div>
-
-            {!statSession ? (
-              <div style={styles.empty}>Sélectionnez une session pour trier.</div>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <colgroup>
-                    <col style={{ width: 60, minWidth: 60, maxWidth: 60 }} />
-                    <col style={{ width: 95, minWidth: 95, maxWidth: 95 }} />
-                    <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
-                    <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
-                    <col style={{ width: 'auto' }} />
-                  </colgroup>
-                  <thead>
-                    <tr style={styles.thead}>
-                      <th style={styles.thCenter}>N°</th>
-                      <th style={styles.thCenter}>Classe</th>
-                      <th style={styles.thLeft}>Nom</th>
-                      <th style={styles.thLeft}>Prénom</th>
-                      <th style={styles.thCenter}>Total</th>
+            <div style={styles.toggleWrap}>
+              <button onClick={() => { setStatSens('fort'); setStatSeuil('80'); }} style={{ ...styles.toggleBtn, ...(statSens === 'fort' ? styles.toggleBtnActif : {}) }}>Fort</button>
+              <button onClick={() => { setStatSens('faible'); setStatSeuil('40'); }} style={{ ...styles.toggleBtn, ...(statSens === 'faible' ? styles.toggleBtnActif : {}) }}>Faible</button>
+              <button onClick={() => setStatOrdre('croissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'croissant' ? styles.toggleBtnActif : {}) }}>Croissant</button>
+              <button onClick={() => setStatOrdre('decroissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'decroissant' ? styles.toggleBtnActif : {}) }}>Décroissant</button>
+            </div>
+            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
+              <option value="">- Sélectionner la session -</option>
+              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)} style={{ ...styles.select, width: 120 }} placeholder="Seuil" />
+          </div>
+        </div>
+        {!statSession ? (
+          <div style={styles.empty}>Sélectionnez une session pour trier.</div>
+        ) : (
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <colgroup>
+                <col style={{ width: 60, minWidth: 60, maxWidth: 60 }} />
+                <col style={{ width: 95, minWidth: 95, maxWidth: 95 }} />
+                <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
+                <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
+                <col style={{ width: 'auto' }} />
+              </colgroup>
+              <thead>
+                <tr style={styles.thead}>
+                  <th style={styles.thCenter}>N°</th>
+                  <th style={styles.thCenter}>Classe</th>
+                  <th style={styles.thLeft}>Nom</th>
+                  <th style={styles.thLeft}>Prénom</th>
+                  <th style={styles.thCenter}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtres.map((r, i) => {
+                  const c = couleurTotale(r.total);
+                  return (
+                    <tr key={r.id}>
+                      <td style={styles.tdCenter}>{i + 1}</td>
+                      <td style={styles.tdCenter}>{r.classe}</td>
+                      <td style={styles.tdLeft}>{toDisplayNom(r.nom)}</td>
+                      <td style={styles.tdLeft}>{r.prenom}</td>
+                      <td style={{ ...styles.tdLeftRead, background: c.bg, color: c.text }}>{r.total}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filtres.map((r, i) => {
-                      const c = couleurTotale(r.total);
-                      return (
-                        <tr key={r.id}>
-                          <td style={styles.tdCenter}>{i + 1}</td>
-                          <td style={styles.tdCenter}>{r.classe}</td>
-                          <td style={styles.tdLeft}>{toDisplayNom(r.nom)}</td>
-                          <td style={styles.tdLeft}>{r.prenom}</td>
-                          <td style={{ ...styles.tdLeftRead, background: c.bg, color: c.text }}>{r.total}</td>
-                        </tr>
-                      );
-                    })}
-                    {filtres.length === 0 && (
-                      <tr>
-                        <td colSpan={5} style={styles.empty}>Aucun élève ne correspond au tri.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+                  );
+                })}
+                {filtres.length === 0 && (
+                  <tr><td colSpan={5} style={styles.empty}>Aucun élève ne correspond au tri.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     );
