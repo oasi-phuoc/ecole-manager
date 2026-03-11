@@ -1243,6 +1243,8 @@ export default function TCF() {
         )}
         {!siteKey || !rolesDemiJourneeSelect ? (
           <div style={styles.empty}>Sélectionnez un site et une demi-journée.</div>
+        ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
+          <div style={styles.empty}>La demi-journée sélectionnée est inactive pour ce site.</div>
         ) : (
           <div style={styles.rolesGrid}>
             <div style={styles.tableWrap}>
