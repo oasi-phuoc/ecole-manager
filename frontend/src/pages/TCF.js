@@ -1480,18 +1480,28 @@ export default function TCF() {
       : elevesNiveauGraph;
 
     const maxScore = isFr ? 60 : 40;
-    const barH = 200;
+    const barH = 220;
+    const innerBarH = barH - 22;
+    const barGroupW = 70;
     const label1 = isFr ? 'Oral (CO+PO)' : 'CSC-CFR (P1+P2)';
     const label2 = isFr ? 'Écrit (CE+PE)' : 'CAF-CAP (P3+P4)';
 
-    // Vue Individuelle : barres par session pour l'élève sélectionné
-    const sessionsIndiv = SESSIONS.map(session => {
+    // Sessions cumulatives selon la sélection
+    const sessionsToShowIds = graphSession === "2e semestre"
+      ? ["Test d'août", '1e semestre', '2e semestre']
+      : graphSession === '1e semestre'
+        ? ["Test d'août", '1e semestre']
+        : graphSession === "Test d'août"
+          ? ["Test d'août"]
+          : [];
+
+    const sessionsIndiv = sessionsToShowIds.map(session => {
       const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
       if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
       const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
     }).filter(s => s.hasData);
 
-    // Vue Classe : barres par élève de la classe sélectionnée pour la session
+    // Vue Classe
     const elevesClasse = graphClasseId
       ? eleves.filter(e => String(e.classe_id) === graphClasseId).sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'))
       : [];
@@ -1503,25 +1513,26 @@ export default function TCF() {
         }).filter(e => e.hasData)
       : [];
 
+    // Rendu barres sans ligne de tendance (vue Classe)
     const renderBars = (items, keyPrefix) => (
       <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, position: 'relative', minWidth: items.length * 70 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: barH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: innerBarH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
             {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
               <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
             ))}
           </div>
           <div style={{ flex: 1, position: 'relative' }}>
             {[1, 0.75, 0.5, 0.25].map(ratio => (
-              <div key={ratio} style={{ position: 'absolute', bottom: ratio * barH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
+              <div key={ratio} style={{ position: 'absolute', bottom: ratio * innerBarH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
             ))}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: barH, padding: '0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: innerBarH, padding: '0 8px' }}>
               {items.map((item, idx) => (
-                <div key={`${keyPrefix}-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48, flex: '0 0 auto' }}>
-                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2, textAlign: 'center' }}>{item.v1}/{item.v2}</div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: barH - 18 }}>
-                    <div style={{ width: 20, height: Math.max(2, (item.v1 / maxScore) * (barH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${item.v1}`} />
-                    <div style={{ width: 20, height: Math.max(2, (item.v2 / maxScore) * (barH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${item.v2}`} />
+                <div key={`${keyPrefix}-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: barGroupW - 16, flex: '0 0 auto' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{item.v1}/{item.v2}</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: innerBarH - 18 }}>
+                    <div style={{ width: 20, height: Math.max(2, (item.v1 / maxScore) * (innerBarH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${item.v1}`} />
+                    <div style={{ width: 20, height: Math.max(2, (item.v2 / maxScore) * (innerBarH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${item.v2}`} />
                   </div>
                 </div>
               ))}
@@ -1530,7 +1541,7 @@ export default function TCF() {
         </div>
         <div style={{ display: 'flex', marginLeft: 36, gap: 8, padding: '4px 8px' }}>
           {items.map((item, idx) => (
-            <div key={`lbl-${keyPrefix}-${idx}`} style={{ minWidth: 48, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
+            <div key={`lbl-${keyPrefix}-${idx}`} style={{ minWidth: barGroupW - 16, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
               {item.label || item.session}
             </div>
           ))}
@@ -1538,10 +1549,69 @@ export default function TCF() {
       </div>
     );
 
+    // Rendu barres avec ligne de tendance (vue Individuelle)
+    const renderIndivBars = (series) => {
+      const chartW = series.length * barGroupW + 16;
+      const trendPoints = series.map((s, i) => {
+        const moy = (s.v1 + s.v2) / 2;
+        const x = i * barGroupW + barGroupW / 2;
+        const y = (innerBarH - 18) - (moy / maxScore) * (innerBarH - 18);
+        return { x, y, moy };
+      });
+      return (
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: innerBarH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
+              {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
+                <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
+              ))}
+            </div>
+            <div style={{ position: 'relative', width: chartW, height: innerBarH, flexShrink: 0 }}>
+              {/* Lignes de grille */}
+              {[1, 0.75, 0.5, 0.25].map(ratio => (
+                <div key={ratio} style={{ position: 'absolute', bottom: ratio * (innerBarH - 18), left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
+              ))}
+              {/* Barres */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: innerBarH, padding: '0 8px' }}>
+                {series.map((s, idx) => (
+                  <div key={`indiv-${idx}`} style={{ width: barGroupW, display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
+                    <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{s.v1}/{s.v2}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: innerBarH - 18 }}>
+                      <div style={{ width: 20, height: Math.max(2, (s.v1 / maxScore) * (innerBarH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${s.v1}`} />
+                      <div style={{ width: 20, height: Math.max(2, (s.v2 / maxScore) * (innerBarH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${s.v2}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Ligne de tendance (moyenne) */}
+              {series.length > 1 && (
+                <svg style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none' }} width={chartW} height={innerBarH - 18} overflow="visible">
+                  <polyline fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,3"
+                    points={trendPoints.map(p => `${p.x + 8},${p.y}`).join(' ')} />
+                  {trendPoints.map((p, i) => (
+                    <g key={i}>
+                      <circle cx={p.x + 8} cy={p.y} r="5" fill="#f59e0b" stroke="white" strokeWidth="1.5" />
+                      <text x={p.x + 8} y={p.y - 9} textAnchor="middle" fontSize="10" fill="#92400e" fontWeight="700">{p.moy.toFixed(1)}</text>
+                    </g>
+                  ))}
+                </svg>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', marginLeft: 36, padding: '4px 8px' }}>
+            {series.map((s, idx) => (
+              <div key={`lbl-indiv-${idx}`} style={{ width: barGroupW, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                {s.session}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={styles.panelTopWhite}>
-          {/* Ligne niveaux */}
           {niveaux.length > 0 && (
             <div style={{ ...styles.subTabsRow, marginBottom: 8 }}>
               {niveaux.map(n => (
@@ -1550,7 +1620,6 @@ export default function TCF() {
               ))}
             </div>
           )}
-          {/* Ligne filtres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.select}>
               <option value="">- Sélectionner la session -</option>
@@ -1586,11 +1655,18 @@ export default function TCF() {
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label1}</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label2}</span></div>
+          {graphVue === 'individuelle' && sessionsIndiv.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5,3" /><circle cx="11" cy="5" r="3.5" fill="#f59e0b" /></svg>
+              <span style={{ fontSize: 12, color: '#475569' }}>Moyenne (évolution)</span>
+            </div>
+          )}
         </div>
         {/* Graphique */}
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0 && renderBars(sessionsIndiv, 'indiv')}
+        {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
+        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
+        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderIndivBars(sessionsIndiv)}
         {graphVue === 'classe' && !graphClasseId && <div style={styles.empty}>Sélectionnez une classe.</div>}
         {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cette classe et cette session.</div>}
