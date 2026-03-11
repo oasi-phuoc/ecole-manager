@@ -132,6 +132,10 @@ export default function TCF() {
   const [graphPoolId, setGraphPoolId] = useState('');
   const [graphSession, setGraphSession] = useState('');
   const [graphEleveId, setGraphEleveId] = useState('');
+  const [graphVue, setGraphVue] = useState('individuelle');
+  const [graphNiveau, setGraphNiveau] = useState('');
+  const [graphClasseId, setGraphClasseId] = useState('');
+  const [graphEleveSearch, setGraphEleveSearch] = useState('');
 
   useEffect(() => {
     const charger = async () => {
@@ -1463,98 +1467,134 @@ export default function TCF() {
 
   const renderGraphique = () => {
     const isFr = ongletGraphiqueMatiere === 'francais';
-    const poolClasses = graphPoolId ? (classesEligiblesSite[String(graphPoolId)] || []) : [];
-    const poolClassIds = new Set(poolClasses.map(c => String(c.id)));
-    const elevesPool = eleves
-      .filter(e => poolClassIds.has(String(e.classe_id)))
+    const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
+    const classesNiveau = classes
+      .filter(c => normaliserNiveau(c.niveau) === niveauActif)
+      .sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+    const classeIdsNiveau = new Set(classesNiveau.map(c => String(c.id)));
+    const elevesNiveauGraph = eleves
+      .filter(e => classeIdsNiveau.has(String(e.classe_id)))
       .sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'));
+    const elevesFiltered = graphEleveSearch
+      ? elevesNiveauGraph.filter(e => `${e.prenom || ''} ${toDisplayNom(e.nom)}`.toLowerCase().includes(graphEleveSearch.toLowerCase()))
+      : elevesNiveauGraph;
 
     const maxScore = isFr ? 60 : 40;
     const barH = 200;
-
-    const dataEleves = graphPoolId && graphSession
-      ? elevesPool.map(e => {
-          const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
-          if (isFr) {
-            const fr = calculFr(sc);
-            return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' };
-          }
-          const ma = calculMath(sc);
-          return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
-        }).filter(e => e.hasData)
-      : [];
-
     const label1 = isFr ? 'Oral (CO+PO)' : 'CSC-CFR (P1+P2)';
     const label2 = isFr ? 'Écrit (CE+PE)' : 'CAF-CAP (P3+P4)';
 
-    return (
-      <div style={styles.card}>
-        <div style={styles.filtersRow}>
-          <div style={styles.toggleWrap}>
-            <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
-            <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Mathématiques</button>
+    // Vue Individuelle : barres par session pour l'élève sélectionné
+    const sessionsIndiv = SESSIONS.map(session => {
+      const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
+      if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+      const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+    }).filter(s => s.hasData);
+
+    // Vue Classe : barres par élève de la classe sélectionnée pour la session
+    const elevesClasse = graphClasseId
+      ? eleves.filter(e => String(e.classe_id) === graphClasseId).sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'))
+      : [];
+    const dataClasse = graphSession
+      ? elevesClasse.map(e => {
+          const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
+          if (isFr) { const fr = calculFr(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+          const ma = calculMath(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+        }).filter(e => e.hasData)
+      : [];
+
+    const renderBars = (items, keyPrefix) => (
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, position: 'relative', minWidth: items.length * 70 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: barH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
+            {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
+              <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
+            ))}
           </div>
-          <select value={graphPoolId} onChange={(e) => setGraphPoolId(e.target.value)} style={styles.select}>
-            <option value="">- Pool -</option>
-            {siteOrder.map((siteKey, idx) => <option key={`graph-pool-${siteKey}`} value={siteKey}>{siteNames[siteKey] || `Site ${idx + 1}`}</option>)}
-          </select>
-          <select value={graphSession} onChange={(e) => setGraphSession(e.target.value)} style={styles.select}>
-            <option value="">- Session -</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div style={{ flex: 1, position: 'relative' }}>
+            {[1, 0.75, 0.5, 0.25].map(ratio => (
+              <div key={ratio} style={{ position: 'absolute', bottom: ratio * barH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
+            ))}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: barH, padding: '0 8px' }}>
+              {items.map((item, idx) => (
+                <div key={`${keyPrefix}-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48, flex: '0 0 auto' }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2, textAlign: 'center' }}>{item.v1}/{item.v2}</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: barH - 18 }}>
+                    <div style={{ width: 20, height: Math.max(2, (item.v1 / maxScore) * (barH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${item.v1}`} />
+                    <div style={{ width: 20, height: Math.max(2, (item.v2 / maxScore) * (barH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${item.v2}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        {!graphPoolId || !graphSession ? (
-          <div style={styles.empty}>Sélectionnez un pool et une session.</div>
-        ) : dataEleves.length === 0 ? (
-          <div style={styles.empty}>Aucun résultat saisi pour cette sélection.</div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div>
-                <span style={{ fontSize: 12, color: '#475569' }}>{label1}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div>
-                <span style={{ fontSize: 12, color: '#475569' }}>{label2}</span>
-              </div>
+        <div style={{ display: 'flex', marginLeft: 36, gap: 8, padding: '4px 8px' }}>
+          {items.map((item, idx) => (
+            <div key={`lbl-${keyPrefix}-${idx}`} style={{ minWidth: 48, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
+              {item.label || item.session}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, position: 'relative', minWidth: dataEleves.length * 70 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: barH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
-                  {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
-                    <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
-                  ))}
-                </div>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  {[1, 0.75, 0.5, 0.25].map(ratio => (
-                    <div key={ratio} style={{ position: 'absolute', bottom: ratio * barH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
-                  ))}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: barH, padding: '0 8px' }}>
-                    {dataEleves.map(e => (
-                      <div key={`eleve-${e.id}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 48, flex: '0 0 auto' }}>
-                        <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2, textAlign: 'center' }}>
-                          {e.v1}/{e.v2}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: barH - 18 }}>
-                          <div style={{ width: 20, height: Math.max(2, (e.v1 / maxScore) * (barH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${e.v1}`} />
-                          <div style={{ width: 20, height: Math.max(2, (e.v2 / maxScore) * (barH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${e.v2}`} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', marginLeft: 36, gap: 8, padding: '4px 8px' }}>
-                {dataEleves.map(e => (
-                  <div key={`lbl-${e.id}`} style={{ minWidth: 48, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
-                    {e.label}
-                  </div>
-                ))}
-              </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={styles.panelTopWhite}>
+          {/* Ligne niveaux */}
+          {niveaux.length > 0 && (
+            <div style={{ ...styles.subTabsRow, marginBottom: 8 }}>
+              {niveaux.map(n => (
+                <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                  style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+              ))}
             </div>
-          </>
-        )}
+          )}
+          {/* Ligne filtres */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.select}>
+              <option value="">- Sélectionner la session -</option>
+              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <div style={styles.toggleWrap}>
+              <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
+              <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
+            </div>
+            <div style={styles.toggleWrap}>
+              <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
+              <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
+            </div>
+            {graphVue === 'classe' && (
+              <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
+                <option value="">- Sélectionner la classe -</option>
+                {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
+              </select>
+            )}
+            {graphVue === 'individuelle' && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input type="text" value={graphEleveSearch} onChange={e => { setGraphEleveSearch(e.target.value); setGraphEleveId(''); }}
+                  placeholder="Rechercher nom/prénom..." style={{ ...styles.select, minWidth: 180 }} />
+                <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.select}>
+                  <option value="">- Sélectionner l'élève -</option>
+                  {elevesFiltered.map(e => <option key={e.id} value={String(e.id)}>{e.prenom} {toDisplayNom(e.nom)}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Légende */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label1}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label2}</span></div>
+        </div>
+        {/* Graphique */}
+        {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
+        {graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
+        {graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0 && renderBars(sessionsIndiv, 'indiv')}
+        {graphVue === 'classe' && !graphClasseId && <div style={styles.empty}>Sélectionnez une classe.</div>}
+        {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
+        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cette classe et cette session.</div>}
+        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderBars(dataClasse, 'classe')}
       </div>
     );
   };
@@ -1584,6 +1624,10 @@ export default function TCF() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={styles.panelTopWhite}>
           <div style={styles.filtersRow}>
+            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
+              <option value="">- Sélectionner la session -</option>
+              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
             <div style={styles.toggleWrap}>
               <button onClick={() => setStatMatiere('francais')} style={{ ...styles.toggleBtn, ...(statMatiere === 'francais' ? styles.toggleBtnActif : {}) }}>Français</button>
               <button onClick={() => setStatMatiere('math')} style={{ ...styles.toggleBtn, ...(statMatiere === 'math' ? styles.toggleBtnActif : {}) }}>Math</button>
@@ -1591,13 +1635,11 @@ export default function TCF() {
             <div style={styles.toggleWrap}>
               <button onClick={() => { setStatSens('fort'); setStatSeuil('80'); }} style={{ ...styles.toggleBtn, ...(statSens === 'fort' ? styles.toggleBtnActif : {}) }}>Fort</button>
               <button onClick={() => { setStatSens('faible'); setStatSeuil('40'); }} style={{ ...styles.toggleBtn, ...(statSens === 'faible' ? styles.toggleBtnActif : {}) }}>Faible</button>
+            </div>
+            <div style={styles.toggleWrap}>
               <button onClick={() => setStatOrdre('croissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'croissant' ? styles.toggleBtnActif : {}) }}>Croissant</button>
               <button onClick={() => setStatOrdre('decroissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'decroissant' ? styles.toggleBtnActif : {}) }}>Décroissant</button>
             </div>
-            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
-              <option value="">- Sélectionner la session -</option>
-              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
             <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)} style={{ ...styles.select, width: 120 }} placeholder="Seuil" />
           </div>
         </div>
