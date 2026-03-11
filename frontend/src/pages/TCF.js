@@ -120,6 +120,7 @@ export default function TCF() {
   const [statOrdre, setStatOrdre] = useState('decroissant');
   const [statSession, setStatSession] = useState('');
   const [statSeuil, setStatSeuil] = useState('60');
+  const [statNiveau, setStatNiveau] = useState('');
   const [rolesGroupActif, setRolesGroupActif] = useState('g1');
   const [affectationDateDebutBySite, setAffectationDateDebutBySite] = useState({});
   const [affectationHorairesBySite, setAffectationHorairesBySite] = useState({});
@@ -227,7 +228,14 @@ export default function TCF() {
       const n = normaliserNiveau(c.niveau);
       if (n) set.add(n);
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+    const ORDRE_NIVEAUX = ['CSC', 'CFR', 'EPL'];
+    return Array.from(set).sort((a, b) => {
+      const ia = ORDRE_NIVEAUX.indexOf(a), ib = ORDRE_NIVEAUX.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, 'fr');
+    });
   }, [classes]);
 
   useEffect(() => {
@@ -1552,9 +1560,7 @@ export default function TCF() {
     const elevesNiveauGraph = eleves
       .filter(e => classeIdsNiveau.has(String(e.classe_id)))
       .sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'));
-    const elevesFiltered = graphEleveSearch
-      ? elevesNiveauGraph.filter(e => `${e.prenom || ''} ${toDisplayNom(e.nom)}`.toLowerCase().includes(graphEleveSearch.toLowerCase()))
-      : elevesNiveauGraph;
+    const elevesFiltered = elevesNiveauGraph;
 
     const maxScore = isFr ? 60 : 40;
     const barH = 220;
@@ -1747,11 +1753,23 @@ export default function TCF() {
             )}
             {graphVue === 'individuelle' && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="text" value={graphEleveSearch} onChange={e => { setGraphEleveSearch(e.target.value); setGraphEleveId(''); }}
-                  placeholder="Rechercher nom/prénom..." style={{ ...styles.select, minWidth: 180 }} />
+                <input
+                  type="number" min="1" max={elevesNiveauGraph.length}
+                  value={graphEleveSearch}
+                  onChange={e => setGraphEleveSearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const n = parseInt(graphEleveSearch, 10);
+                      const found = elevesNiveauGraph[n - 1];
+                      if (found) setGraphEleveId(String(found.id));
+                    }
+                  }}
+                  placeholder="N° élève (Entrée)"
+                  style={{ ...styles.select, width: 150 }}
+                />
                 <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.select}>
                   <option value="">- Sélectionner l'élève -</option>
-                  {elevesFiltered.map(e => <option key={e.id} value={String(e.id)}>{e.prenom} {toDisplayNom(e.nom)}</option>)}
+                  {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {e.prenom} {toDisplayNom(e.nom)}</option>)}
                 </select>
               </div>
             )}
@@ -1797,7 +1815,12 @@ export default function TCF() {
     const seuil = Number(statSeuil) || 0;
     const matiere = statMatiere;
     const session = statSession;
+    const niveauActifStat = statNiveau || (niveaux.length ? niveaux[0] : '');
+    const classesNiveauStat = niveauActifStat
+      ? new Set(classes.filter(c => normaliserNiveau(c.niveau) === niveauActifStat).map(c => String(c.id)))
+      : null;
     const rows = eleves
+      .filter(e => !classesNiveauStat || classesNiveauStat.has(String(e.classe_id)))
       .map(e => {
         const sc = getScore(matiere, session, e.id);
         const total = matiere === 'francais' ? calculFr(sc).total : calculMath(sc).total;
@@ -1817,6 +1840,14 @@ export default function TCF() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={styles.panelTopWhite}>
+          {niveaux.length > 0 && (
+            <div style={{ ...styles.subTabsRow, marginBottom: 8 }}>
+              {niveaux.map(n => (
+                <button key={n} type="button" onClick={() => setStatNiveau(n)}
+                  style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+              ))}
+            </div>
+          )}
           <div style={styles.filtersRow}>
             <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
               <option value="">- Sélectionner la session -</option>
