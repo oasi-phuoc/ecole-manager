@@ -1179,7 +1179,7 @@ export default function TCF() {
     });
 
     return (
-      <div style={styles.card}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={styles.panelTopWhite}>
           <div style={styles.panelTopInner}>
             <div style={{ ...styles.subTabsRow, marginBottom: 0, alignItems: 'center' }}>
