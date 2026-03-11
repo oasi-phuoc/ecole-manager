@@ -805,34 +805,32 @@ export default function TCF() {
                 </React.Fragment>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td style={{ padding: '8px 4px', border: 'none', background: 'white' }}></td>
+                {JOURS.map((j) => (
+                  <td key={`toggle-${j}`} style={{ padding: '8px 4px', textAlign: 'center', border: 'none', background: 'white' }}>
+                    <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
+                      <button
+                        type="button"
+                        onClick={() => { if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
+                        style={{ ...styles.toggleBtnDay, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
+                      >
+                        Actif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
+                        style={{ ...styles.toggleBtnDay, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
+                      >
+                        Inactif
+                      </button>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
           </table>
-        </div>
-        <div style={styles.dayToggleOutsideRow}>
-          <div style={styles.dayToggleOutsideSpacer}></div>
-          {JOURS.map((j) => (
-            <div key={`outside-toggle-${j}`} style={styles.dayToggleOutsideCell}>
-              <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
-                  }}
-                  style={{ ...styles.toggleBtnDay, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
-                >
-                  Actif
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j);
-                  }}
-                  style={{ ...styles.toggleBtnDay, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
-                >
-                  Inactif
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       </>
     );
@@ -1189,7 +1187,7 @@ export default function TCF() {
                 <button
                   key={`roles-site-tab-${sKey}`}
                   type="button"
-                  onClick={() => setSiteActif(sKey)}
+                  onClick={() => { if (sKey !== siteActif) { setSiteActif(sKey); setRolesDemiJourneeSelect(''); } }}
                   style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
                 >
                   {siteNames[sKey] || `Site ${idx + 1}`}
@@ -1252,7 +1250,7 @@ export default function TCF() {
                 <thead>
                   <tr style={styles.thead}>
                     <th style={styles.thLeftFixed}>Professeurs</th>
-                    <th style={{ ...styles.thLeftFixed, width: 185, minWidth: 185, maxWidth: 185 }}>Rôle</th>
+                    <th style={{ ...styles.thLeftFixed, width: 155, minWidth: 155, maxWidth: 155 }}>Rôle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1263,7 +1261,7 @@ export default function TCF() {
                         <td style={{ ...styles.tdLeft, ...(reserveSet.has(String(p.id)) ? styles.tdReserve : {}) }}>
                           {p.prenom} {toDisplayNom(p.nom)}
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 185, minWidth: 185, maxWidth: 185 }}>
+                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
                           <select
                             value={selectedRole}
                             onChange={(e) => {
@@ -1298,7 +1296,7 @@ export default function TCF() {
                   <col style={{ width: 116, minWidth: 116, maxWidth: 116 }} />
                   <col style={{ width: 72, minWidth: 72, maxWidth: 72 }} />
                   {classesColonnes.map((col) => <col key={`role-col-${col.id}`} style={{ width: 150, minWidth: 150, maxWidth: 150 }} />)}
-                  <col style={{ width: 120, minWidth: 120, maxWidth: 120 }} />
+                  <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
                   <col style={{ width: 'auto' }} />
                 </colgroup>
                 <thead>
@@ -2014,7 +2012,7 @@ const styles = {
   classChipDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   tdSpacer: { padding: 0, height: 22, background: '#ffffff', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9' },
   rolesGrid: { display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 },
-  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 380 },
+  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 360 },
   tableRolesRight: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 },
   thLeftFixed: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 160, minWidth: 160, maxWidth: 160 },
   tdReserve: { background: '#ede9fe', color: '#4c1d95', fontWeight: 700 },
