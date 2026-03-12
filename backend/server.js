@@ -8,14 +8,26 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-const allowedOrigins = (process.env.CORS_ORIGIN || '')
+const envOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://ecole-manager-frontend.onrender.com',
+  'https://ecole-manager.onrender.com',
+];
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    try {
+      const host = new URL(origin).hostname;
+      if (host.endsWith('.onrender.com')) return cb(null, true);
+    } catch {}
     return cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -46,7 +58,7 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
-    const proto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+    const proto = String(req.headers['x-forwarded-proto'] || '').toLowerCase().split(',')[0].trim();
     if (req.secure || proto === 'https') return next();
     return res.status(426).json({ message: 'HTTPS requis' });
   });
