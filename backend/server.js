@@ -23,6 +23,7 @@ const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
+    if (envOrigins.length === 0) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     try {
       const host = new URL(origin).hostname;
