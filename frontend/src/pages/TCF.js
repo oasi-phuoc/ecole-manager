@@ -1681,7 +1681,7 @@ export default function TCF() {
     const classeIdsNiveau = new Set(classesNiveau.map(c => String(c.id)));
     const elevesNiveauGraph = eleves
       .filter(e => classeIdsNiveau.has(String(e.classe_id)))
-      .sort((a, b) => `${a.prenom || ''} ${toDisplayNom(a.nom)}`.localeCompare(`${b.prenom || ''} ${toDisplayNom(b.nom)}`, 'fr'));
+      .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
     const elevesFiltered = elevesNiveauGraph;
 
     const maxScore = isFr ? 60 : 40;
@@ -1795,7 +1795,7 @@ export default function TCF() {
       const classeAff = String(opts.classe || '');
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 800, maxWidth: '100%' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '12px 24px', width: 800, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
@@ -1829,10 +1829,6 @@ export default function TCF() {
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
             <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ fontSize: '6pt', color: '#64748b', lineHeight: 1.35 }}>
-                <div>Zone Industrielle 4, 1963 Vétroz</div>
-                <div>Tél. 027 606 18 60</div>
-              </div>
               <img
                 src={logoPiedSrc}
                 alt="Logo pied de page"
@@ -1846,6 +1842,10 @@ export default function TCF() {
                   e.currentTarget.style.display = 'none';
                 }}
               />
+              <div style={{ fontSize: '6pt', color: '#64748b', lineHeight: 1.35 }}>
+                <div>Zone Industrielle 4, 1963 Vétroz</div>
+                <div>Tél. 027 606 18 60</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1900,7 +1900,7 @@ export default function TCF() {
                 />
                 <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.select}>
                   <option value="">- Sélectionner l'élève -</option>
-                  {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {e.prenom} {toDisplayNom(e.nom)}</option>)}
+                  {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
                 </select>
               </div>
             )}
