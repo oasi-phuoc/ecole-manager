@@ -402,6 +402,16 @@ export default function Eleves() {
     return matchR && matchC;
   });
 
+  const referenceObservationPreview = (() => {
+    if (!obsEleve) return '';
+    const nom = String(obsEleve.nom || '').trim();
+    const prenom = String(obsEleve.prenom || '').trim();
+    const initialNom = nom ? nom[0].toUpperCase() : 'X';
+    const initialPrenom = prenom ? prenom[0].toUpperCase() : 'X';
+    const nextNum = (observations?.length || 0) + 1;
+    return `${initialPrenom}${initialNom}-${String(nextNum).padStart(2, '0')}`;
+  })();
+
   return (
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
@@ -820,6 +830,7 @@ export default function Eleves() {
                 <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:8,fontSize:12,color:'#64748b'}}>
                   <span>✍️ Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
                   <span>📅 {new Date().toLocaleDateString('fr-CH')}</span>
+                  <span>🔖 <b>{referenceObservationPreview}</b></span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column'}}>
                   <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Titre *</label>

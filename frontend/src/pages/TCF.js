@@ -137,24 +137,27 @@ export default function TCF() {
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
+  const [anneeScolaire, setAnneeScolaire] = useState('');
 
   useEffect(() => {
     const charger = async () => {
       setChargement(true);
       try {
-        const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves] = await Promise.all([
+        const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres] = await Promise.all([
           axios.get(API + '/profs', { headers }),
           axios.get(API + '/planning/pools', { headers }),
           axios.get(API + '/planning/creneaux', { headers }),
           axios.get(API + '/planning/general', { headers }),
           axios.get(API + '/classes', { headers }),
           axios.get(API + '/eleves', { headers }),
+          axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
         ]);
         setProfs((rp.data || []).filter(p => p.actif !== false));
         setPools(rPools.data || []);
         setCreneaux(rCreneaux.data || []);
         setClasses((rClasses.data || []).filter(c => c.actif !== false));
         setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
+        setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
 
         const dMap = {};
         (rGeneral.data?.dispos || []).forEach(d => {
@@ -167,6 +170,7 @@ export default function TCF() {
         setCreneaux([]);
         setClasses([]);
         setEleves([]);
+        setAnneeScolaire('');
         setDisposMap({});
       }
 
@@ -1505,89 +1509,142 @@ export default function TCF() {
     );
   };
 
-  const buildChartSVG = (series, maxScore, isFr) => {
-    const bgW = 80;
-    const innerH = 180;
-    const padL = 36;
-    const padB = 24;
-    const svgW = padL + series.length * bgW + 20;
-    const svgH = innerH + padB + 10;
+  const buildChartSVG = (series, maxScore, isFr, options = {}) => {
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const showTrend = options.showTrend !== false;
+    const niveau = normaliserNiveau(options.niveau || '');
     const label1 = isFr ? 'Oral' : 'CSC-CFR';
     const label2 = isFr ? 'Écrit' : 'CAF-CAP';
+
+    const barW = 38;
+    const groupW = 120;
+    const innerH = 350;
+    const padL = 48;
+    const padT = 10;
+    const padB = 70;
+    const legendW = 190;
+    const chartW = Math.max(groupW * Math.max(series.length, 1), 240);
+    const svgW = padL + chartW + legendW + 24;
+    const svgH = padT + innerH + padB;
+    const chartLeft = padL;
+    const chartRight = padL + chartW;
+    const chartBottom = padT + innerH;
     const parts = [];
-    // Grid + Y labels
-    [0, 0.25, 0.5, 0.75, 1].forEach(r => {
-      const y = innerH - r * innerH;
-      parts.push(`<line x1="${padL}" y1="${y}" x2="${svgW - 10}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4,3"/>`);
-      parts.push(`<text x="${padL - 4}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(r * maxScore)}</text>`);
-    });
-    // Bars
+
+    const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(maxScore, Number(v) || 0)) / maxScore) * innerH;
+
+    // Grille (tous les 5 points en français)
+    if (isFr) {
+      for (let v = 0; v <= 55; v += 5) {
+        const y = yFromValue(v);
+        parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`);
+        if (v % 10 === 0 || v === 55) {
+          parts.push(`<text x="${chartLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b" font-weight="700">${v}</text>`);
+        }
+      }
+      const cefr = [
+        { v: 45, csc: 'A1', autre: 'A2' },
+        { v: 25, csc: 'A0.2', autre: 'A1.2' },
+        { v: 5, csc: 'A0.1', autre: 'A1.1' },
+      ];
+      cefr.forEach((m) => {
+        const y = yFromValue(m.v);
+        const txt = niveau === 'CSC' ? m.csc : m.autre;
+        parts.push(`<text x="${chartRight + 8}" y="${y + 4}" font-size="12" fill="#334155" font-weight="700">${txt}</text>`);
+      });
+    } else {
+      for (let v = 0; v <= maxScore; v += 5) {
+        const y = yFromValue(v);
+        parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="${v % 10 === 0 ? 1.2 : 1}" />`);
+        if (v % 10 === 0) parts.push(`<text x="${chartLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b" font-weight="700">${v}</text>`);
+      }
+    }
+
+    // Axes
+    parts.push(`<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    parts.push(`<line x1="${chartLeft}" y1="${padT}" x2="${chartLeft}" y2="${chartBottom}" stroke="#94a3b8" stroke-width="1.5"/>`);
+
+    // Barres + valeurs
     series.forEach((s, i) => {
-      const cx = padL + i * bgW + bgW / 2;
-      const bx1 = cx - 23, bx2 = cx + 3;
-      const h1 = Math.max(2, (s.v1 / maxScore) * innerH);
-      const h2 = Math.max(2, (s.v2 / maxScore) * innerH);
-      parts.push(`<rect x="${bx1}" y="${innerH - h1}" width="20" height="${h1}" fill="#60a5fa" rx="3"/>`);
-      parts.push(`<rect x="${bx2}" y="${innerH - h2}" width="20" height="${h2}" fill="#34d399" rx="3"/>`);
-      parts.push(`<text x="${cx}" y="${Math.min(innerH - h1, innerH - h2) - 5}" text-anchor="middle" font-size="10" fill="#475569">${s.v1}/${s.v2}</text>`);
-      parts.push(`<text x="${cx}" y="${innerH + 14}" text-anchor="middle" font-size="11" fill="#334155">${s.session}</text>`);
+      const baseX = chartLeft + i * groupW + (groupW - (barW * 2 + 8)) / 2;
+      const h1 = Math.max(2, ((Number(s.v1) || 0) / maxScore) * innerH);
+      const h2 = Math.max(2, ((Number(s.v2) || 0) / maxScore) * innerH);
+      const y1 = chartBottom - h1;
+      const y2 = chartBottom - h2;
+      parts.push(`<rect x="${baseX}" y="${y1}" width="${barW}" height="${h1}" fill="#60a5fa" rx="4"/>`);
+      parts.push(`<rect x="${baseX + barW + 8}" y="${y2}" width="${barW}" height="${h2}" fill="#34d399" rx="4"/>`);
+      parts.push(`<text x="${baseX + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
+      parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v2) || 0}</text>`);
+      parts.push(`<text x="${baseX + barW + 4}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(s.label || s.session || '')}</text>`);
     });
-    // Trend line
-    if (series.length > 1) {
+
+    // Ligne d'évolution
+    if (showTrend && series.length > 1) {
       const pts = series.map((s, i) => {
-        const moy = (s.v1 + s.v2) / 2;
-        return { x: padL + i * bgW + bgW / 2, y: innerH - (moy / maxScore) * innerH, moy };
+        const moy = (Number(s.v1 || 0) + Number(s.v2 || 0)) / 2;
+        const x = chartLeft + i * groupW + groupW / 2;
+        const y = yFromValue(moy);
+        return { x, y, moy };
       });
       parts.push(`<polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6,3" points="${pts.map(p => `${p.x},${p.y}`).join(' ')}"/>`);
-      pts.forEach(p => {
-        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="white" stroke-width="1.5"/>`);
-        parts.push(`<text x="${p.x}" y="${p.y - 9}" text-anchor="middle" font-size="10" fill="#92400e" font-weight="700">${p.moy.toFixed(1)}</text>`);
+      pts.forEach((p) => {
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>`);
+        parts.push(`<text x="${p.x}" y="${p.y - 8}" text-anchor="middle" font-size="11" fill="#92400e" font-weight="700">${p.moy.toFixed(1)}</text>`);
       });
     }
-    // Legend
-    parts.push(`<rect x="${padL}" y="${svgH - 4}" width="12" height="12" fill="#60a5fa" rx="2"/>`);
-    parts.push(`<text x="${padL + 16}" y="${svgH + 6}" font-size="10" fill="#475569">${label1}</text>`);
-    parts.push(`<rect x="${padL + 80}" y="${svgH - 4}" width="12" height="12" fill="#34d399" rx="2"/>`);
-    parts.push(`<text x="${padL + 96}" y="${svgH + 6}" font-size="10" fill="#475569">${label2}</text>`);
-    if (series.length > 1) {
-      parts.push(`<line x1="${padL + 160}" y1="${svgH + 2}" x2="${padL + 180}" y2="${svgH + 2}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);
-      parts.push(`<circle cx="${padL + 170}" cy="${svgH + 2}" r="3.5" fill="#f59e0b"/>`);
-      parts.push(`<text x="${padL + 185}" y="${svgH + 6}" font-size="10" fill="#475569">Moyenne</text>`);
+
+    // Légendes à droite
+    const lx = chartRight + 20;
+    const ly = padT + 24;
+    parts.push(`<rect x="${lx}" y="${ly}" width="14" height="14" fill="#60a5fa" rx="2"/>`);
+    parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
+    parts.push(`<rect x="${lx}" y="${ly + 28}" width="14" height="14" fill="#34d399" rx="2"/>`);
+    parts.push(`<text x="${lx + 22}" y="${ly + 39}" font-size="12" fill="#334155" font-weight="700">${label2}</text>`);
+    if (showTrend && series.length > 1) {
+      parts.push(`<line x1="${lx}" y1="${ly + 58}" x2="${lx + 18}" y2="${ly + 58}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);
+      parts.push(`<circle cx="${lx + 9}" cy="${ly + 58}" r="3.5" fill="#f59e0b"/>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Moyenne</text>`);
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH + 20}">${parts.join('')}</svg>`;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">${parts.join('')}</svg>`;
   };
 
   const printCharts = (charts, isFr, maxScore) => {
-    const matLabel = isFr ? 'Français' : 'Mathématiques';
+    const titleMain = isFr ? 'Test de connaissance du français' : 'Test de connaissance des math';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
     const logoFallbackUrl = `${window.location.origin}/build/logo-etat-du-valais.png`;
     const headerHtml = `<div class="page-header">
         <div class="header-left">
-          <div class="header-dept">Département de la santé, des affaires sociales et de la culture</div>
-          <div class="header-service">Service de l'action sociale</div>
-          <div class="header-office">Office de l'asile</div>
-          <div class="header-centre">Centre de formation "Le Botza"</div>
+          <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
+          <div class="header-admin">
+            <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+            <div>Service de l'action sociale</div>
+            <div>Office de l'asile</div>
+            <div>Centre de formation "Le Botza"</div>
+          </div>
         </div>
         <div class="header-right">
-          <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
+          <div class="header-scai">SCAI</div>
+          <div class="header-year">${anneeScolaire || '—'}</div>
+          <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>`;
-    const footerHtml = `<div class="page-footer">
-        <span>Zone Industrielle 4, 1963 Vétroz</span>
-        <span class="footer-sep">|</span>
-        <span>Tél. 027 606 18 60</span>
-      </div>`;
     const pagesWithLayout = charts.map(c => {
-      const svg = c.series.length > 0 ? buildChartSVG(c.series, maxScore, isFr) : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
+      const svg = c.series.length > 0
+        ? buildChartSVG(c.series, maxScore, isFr, { showTrend: c.showTrend !== false, niveau: c.niveau || '' })
+        : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
+      const nom = c.nom || '';
+      const prenom = c.prenom || '';
+      const classe = c.classe || '';
       return `<div class="page">
         ${headerHtml}
         <div class="page-content">
-          <div class="page-title">${c.label}</div>
-          <div class="page-sub">${matLabel}</div>
-          ${svg}
+          <div class="page-title">${titleMain}</div>
+          <div class="page-identite">NOM : ${nom}   Prénom : ${prenom}</div>
+          <div class="page-classe">Classe : ${classe}</div>
+          <div class="chart-frame">${svg}</div>
         </div>
-        ${footerHtml}
       </div>`;
     });
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Graphiques TCF</title>
@@ -1596,19 +1653,24 @@ export default function TCF() {
         body { font-family: Arial, sans-serif; margin: 0; }
         .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .page-header { border-bottom: 2px solid #6366f1; padding: 18px 32px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-        .header-dept { font-size: 11px; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .header-service { font-size: 11px; color: #475569; }
-        .header-office { font-size: 11px; color: #475569; }
-        .header-centre { font-size: 14px; font-weight: 800; color: #1e293b; margin-top: 4px; }
-        .header-right { margin-left: auto; }
-        .header-logo { height: 56px; width: auto; object-fit: contain; display: block; }
-        .page-content { flex: 1; padding: 28px 32px; }
-        .page-title { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-        .page-sub { font-size: 13px; color: #6366f1; margin-bottom: 24px; font-weight: 600; }
-        .page-footer { border-top: 1px solid #e2e8f0; padding: 10px 32px; font-size: 11px; color: #94a3b8; display: flex; gap: 12px; align-items: center; }
-        .footer-sep { color: #cbd5e1; }
-        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        .page-header { border-bottom: 2px solid #6366f1; padding: 12px 24px 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+        .header-left { display: flex; align-items: flex-start; gap: 10px; }
+        .header-logo { height: 54px; width: auto; object-fit: contain; display: block; }
+        .header-admin { font-size: 8pt; color: #334155; line-height: 1.25; font-weight: 600; }
+        .header-right { text-align: right; margin-left: auto; }
+        .header-scai { font-size: 20pt; font-weight: 800; color: #1e293b; line-height: 1; }
+        .header-year { font-size: 11pt; font-weight: 700; color: #374151; margin-top: 2px; }
+        .header-sub { font-size: 8pt; font-weight: 700; color: #475569; margin-top: 2px; }
+        .page-content { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; align-items: center; }
+        .page-title { font-size: 20pt; font-weight: 800; color: #111827; margin-bottom: 8px; text-align: center; }
+        .page-identite, .page-classe { width: 100%; max-width: 980px; font-size: 16pt; font-weight: 700; color: #1f2937; margin-bottom: 6px; }
+        .page-classe { margin-bottom: 14px; }
+        .chart-frame { background: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; width: fit-content; max-width: 100%; display: flex; justify-content: center; align-items: center; margin: 0 auto; }
+        .chart-frame svg { max-width: 100%; height: auto; display: block; }
+        @page { size: A4 portrait; margin: 10mm; }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
       </style></head><body>${pagesWithLayout.join('')}</body></html>`;
     const win = window.open('', '_blank');
     win.document.write(html);
@@ -1629,11 +1691,8 @@ export default function TCF() {
     const elevesFiltered = elevesNiveauGraph;
 
     const maxScore = isFr ? 60 : 40;
-    const barH = 220;
-    const innerBarH = barH - 22;
-    const barGroupW = 70;
-    const label1 = isFr ? 'Oral (CO+PO)' : 'CSC-CFR (P1+P2)';
-    const label2 = isFr ? 'Écrit (CE+PE)' : 'CAF-CAP (P3+P4)';
+    const label1 = isFr ? 'Oral' : 'CSC-CFR (P1+P2)';
+    const label2 = isFr ? 'Écrit' : 'CAF-CAP (P3+P4)';
 
     // Sessions cumulatives selon la sélection
     const sessionsToShowIds = graphSession === "2e semestre"
@@ -1666,10 +1725,27 @@ export default function TCF() {
       if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
         const e = eleves.find(ev => String(ev.id) === graphEleveId);
         const classe = classesMap[String(e?.classe_id)]?.nom || '';
-        printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv }], isFr, maxScore);
+        const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
+        printCharts([{
+          label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`,
+          series: sessionsIndiv.map(s => ({ ...s, label: s.session })),
+          nom: toDisplayNom(e?.nom || ''),
+          prenom: e?.prenom || '',
+          classe,
+          niveau,
+          showTrend: true,
+        }], isFr, maxScore);
       } else if (graphVue === 'classe' && graphClasseId && dataClasse.length > 0) {
         const cl = classes.find(c => String(c.id) === graphClasseId);
-        printCharts([{ label: `Classe ${cl?.nom || graphClasseId} — ${graphSession}`, series: dataClasse }], isFr, maxScore);
+        printCharts([{
+          label: `Classe ${cl?.nom || graphClasseId} — ${graphSession}`,
+          series: dataClasse,
+          nom: '',
+          prenom: '',
+          classe: cl?.nom || graphClasseId,
+          niveau: normaliserNiveau(cl?.niveau || ''),
+          showTrend: false,
+        }], isFr, maxScore);
       }
     };
 
@@ -1682,7 +1758,15 @@ export default function TCF() {
           const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
         }).filter(s => s.hasData);
         const classe = classesMap[String(e.classe_id)]?.nom || '';
-        return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series };
+        return {
+          label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`,
+          series: series.map(s => ({ ...s, label: s.session })),
+          nom: toDisplayNom(e.nom),
+          prenom: e.prenom || '',
+          classe,
+          niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''),
+          showTrend: true,
+        };
       }).filter(c => c.series.length > 0);
       if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
       printCharts(charts, isFr, maxScore);
@@ -1691,97 +1775,24 @@ export default function TCF() {
     const canPrintSelection = (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
       (graphVue === 'classe' && graphClasseId && dataClasse.length > 0);
 
-    // Rendu barres sans ligne de tendance (vue Classe)
-    const renderBars = (items, keyPrefix) => (
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: innerBarH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
-            {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
-              <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
-            ))}
-          </div>
-          <div style={{ flex: 1, position: 'relative' }}>
-            {[1, 0.75, 0.5, 0.25].map(ratio => (
-              <div key={ratio} style={{ position: 'absolute', bottom: ratio * innerBarH, left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
-            ))}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: innerBarH, padding: '0 8px' }}>
-              {items.map((item, idx) => (
-                <div key={`${keyPrefix}-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: barGroupW - 16, flex: '0 0 auto' }}>
-                  <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{item.v1}/{item.v2}</div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: innerBarH - 18 }}>
-                    <div style={{ width: 20, height: Math.max(2, (item.v1 / maxScore) * (innerBarH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${item.v1}`} />
-                    <div style={{ width: 20, height: Math.max(2, (item.v2 / maxScore) * (innerBarH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${item.v2}`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', marginLeft: 36, gap: 8, padding: '4px 8px' }}>
-          {items.map((item, idx) => (
-            <div key={`lbl-${keyPrefix}-${idx}`} style={{ minWidth: barGroupW - 16, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
-              {item.label || item.session}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    const niveauIndividuel = (() => {
+      const e = eleves.find(ev => String(ev.id) === String(graphEleveId));
+      const cl = classesMap[String(e?.classe_id)];
+      return normaliserNiveau(cl?.niveau || '');
+    })();
+    const niveauClasse = normaliserNiveau(classes.find(c => String(c.id) === String(graphClasseId))?.niveau || '');
 
-    // Rendu barres avec ligne de tendance (vue Individuelle)
-    const renderIndivBars = (series) => {
-      const chartW = series.length * barGroupW + 16;
-      const trendPoints = series.map((s, i) => {
-        const moy = (s.v1 + s.v2) / 2;
-        const x = i * barGroupW + barGroupW / 2;
-        const y = (innerBarH - 18) - (moy / maxScore) * (innerBarH - 18);
-        return { x, y, moy };
+    const renderSvgChart = (items, opts = {}) => {
+      const svg = buildChartSVG(items, maxScore, isFr, {
+        showTrend: opts.showTrend !== false,
+        niveau: opts.niveau || '',
       });
       return (
-        <div style={{ overflowX: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: innerBarH, minWidth: 28, paddingBottom: 2, textAlign: 'right', flexShrink: 0 }}>
-              {[maxScore, Math.round(maxScore * 0.75), Math.round(maxScore * 0.5), Math.round(maxScore * 0.25), 0].map(v => (
-                <span key={v} style={{ fontSize: 10, color: '#94a3b8', display: 'block', lineHeight: 1 }}>{v}</span>
-              ))}
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div style={{ background: '#ffffff', border: '2px solid #e5e7eb', borderRadius: 10, padding: 10, width: 'fit-content', maxWidth: '100%' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
-            <div style={{ position: 'relative', width: chartW, height: innerBarH, flexShrink: 0 }}>
-              {/* Lignes de grille */}
-              {[1, 0.75, 0.5, 0.25].map(ratio => (
-                <div key={ratio} style={{ position: 'absolute', bottom: ratio * (innerBarH - 18), left: 0, right: 0, borderTop: '1px dashed #e2e8f0', pointerEvents: 'none' }} />
-              ))}
-              {/* Barres */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', height: innerBarH, padding: '0 8px' }}>
-                {series.map((s, idx) => (
-                  <div key={`indiv-${idx}`} style={{ width: barGroupW, display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
-                    <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{s.v1}/{s.v2}</div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: innerBarH - 18 }}>
-                      <div style={{ width: 20, height: Math.max(2, (s.v1 / maxScore) * (innerBarH - 18)), background: '#60a5fa', borderRadius: '4px 4px 0 0' }} title={`${label1}: ${s.v1}`} />
-                      <div style={{ width: 20, height: Math.max(2, (s.v2 / maxScore) * (innerBarH - 18)), background: '#34d399', borderRadius: '4px 4px 0 0' }} title={`${label2}: ${s.v2}`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Ligne de tendance (moyenne) */}
-              {series.length > 1 && (
-                <svg style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none' }} width={chartW} height={innerBarH - 18} overflow="visible">
-                  <polyline fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6,3"
-                    points={trendPoints.map(p => `${p.x + 8},${p.y}`).join(' ')} />
-                  {trendPoints.map((p, i) => (
-                    <g key={i}>
-                      <circle cx={p.x + 8} cy={p.y} r="5" fill="#f59e0b" stroke="white" strokeWidth="1.5" />
-                      <text x={p.x + 8} y={p.y - 9} textAnchor="middle" fontSize="10" fill="#92400e" fontWeight="700">{p.moy.toFixed(1)}</text>
-                    </g>
-                  ))}
-                </svg>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', marginLeft: 36, padding: '4px 8px' }}>
-            {series.map((s, idx) => (
-              <div key={`lbl-indiv-${idx}`} style={{ width: barGroupW, flex: '0 0 auto', fontSize: 10, color: '#475569', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.3 }}>
-                {s.session}
-              </div>
-            ))}
           </div>
         </div>
       );
@@ -1841,18 +1852,9 @@ export default function TCF() {
             )}
           </div>
         </div>
-        {/* Légende + boutons impression */}
+        {/* Boutons impression */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#60a5fa' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label1}</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#34d399' }}></div><span style={{ fontSize: 12, color: '#475569' }}>{label2}</span></div>
-            {graphVue === 'individuelle' && sessionsIndiv.length > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5,3" /><circle cx="11" cy="5" r="3.5" fill="#f59e0b" /></svg>
-                <span style={{ fontSize: 12, color: '#475569' }}>Moyenne (évolution)</span>
-              </div>
-            )}
-          </div>
+          <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{isFr ? 'Graphique Français' : 'Graphique Mathématiques'}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={handlePrintSelection} disabled={!canPrintSelection}
               style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
@@ -1868,11 +1870,11 @@ export default function TCF() {
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
         {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderIndivBars(sessionsIndiv)}
+        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(sessionsIndiv.map(s => ({ ...s, label: s.session })), { showTrend: true, niveau: niveauIndividuel })}
         {graphVue === 'classe' && !graphClasseId && <div style={styles.empty}>Sélectionnez une classe.</div>}
         {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cette classe et cette session.</div>}
-        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderBars(dataClasse, 'classe')}
+        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(dataClasse, { showTrend: false, niveau: niveauClasse })}
       </div>
     );
   };
