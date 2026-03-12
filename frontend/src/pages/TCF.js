@@ -1522,7 +1522,7 @@ export default function TCF() {
     const padL = 48;
     const padT = 10;
     const padB = 70;
-    const legendW = 190;
+    const legendW = 360;
     const chartW = Math.max(groupW * Math.max(series.length, 1), 240);
     const svgW = padL + chartW + legendW + 24;
     const svgH = padT + innerH + padB;
@@ -1533,30 +1533,25 @@ export default function TCF() {
 
     const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(maxScore, Number(v) || 0)) / maxScore) * innerH;
 
-    // Grille (tous les 5 points en français)
+    // Grille (tous les 5 points) sans numérotation 0/10/20...
     if (isFr) {
       for (let v = 0; v <= 55; v += 5) {
         const y = yFromValue(v);
         parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`);
-        if (v % 10 === 0 || v === 55) {
-          parts.push(`<text x="${chartLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b" font-weight="700">${v}</text>`);
-        }
       }
       const cefr = [
-        { v: 45, csc: 'A1', autre: 'A2' },
-        { v: 25, csc: 'A0.2', autre: 'A1.2' },
-        { v: 5, csc: 'A0.1', autre: 'A1.1' },
+        { v: 45, text: 'Ligne 45 : A1 (CSC) / A2 (CFR-EPL)' },
+        { v: 25, text: 'Ligne 25 : A0.2 (CSC) / A1.2 (CFR-EPL)' },
+        { v: 5, text: 'Ligne 5 : A0.1 (CSC) / A1.1 (CFR-EPL)' },
       ];
       cefr.forEach((m) => {
         const y = yFromValue(m.v);
-        const txt = niveau === 'CSC' ? m.csc : m.autre;
-        parts.push(`<text x="${chartRight + 8}" y="${y + 4}" font-size="12" fill="#334155" font-weight="700">${txt}</text>`);
+        parts.push(`<text x="${chartRight + 10}" y="${y + 4}" font-size="12" fill="#334155" font-weight="700">${esc(m.text)}</text>`);
       });
     } else {
       for (let v = 0; v <= maxScore; v += 5) {
         const y = yFromValue(v);
         parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="${v % 10 === 0 ? 1.2 : 1}" />`);
-        if (v % 10 === 0) parts.push(`<text x="${chartLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b" font-weight="700">${v}</text>`);
       }
     }
 
@@ -1593,9 +1588,9 @@ export default function TCF() {
       });
     }
 
-    // Légendes à droite
-    const lx = chartRight + 20;
-    const ly = padT + 24;
+    // Légendes à droite, alignées en bas du cadre
+    const lx = chartRight + 18;
+    const ly = chartBottom - 64;
     parts.push(`<rect x="${lx}" y="${ly}" width="14" height="14" fill="#60a5fa" rx="2"/>`);
     parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
     parts.push(`<rect x="${lx}" y="${ly + 28}" width="14" height="14" fill="#34d399" rx="2"/>`);
@@ -1787,10 +1782,28 @@ export default function TCF() {
         showTrend: opts.showTrend !== false,
         niveau: opts.niveau || '',
       });
+      const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+      const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '2px solid #e5e7eb', borderRadius: 10, padding: 10, width: 'fit-content', maxWidth: '100%' }}>
-            <div style={{ overflowX: 'auto' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 1120, maxWidth: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+                <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.25, fontWeight: 600 }}>
+                  <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+                  <div>Service de l'action sociale</div>
+                  <div>Office de l'asile</div>
+                  <div>Centre de formation "Le Botza"</div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
           </div>
@@ -2091,7 +2104,6 @@ export default function TCF() {
             { id: 'pool', label: 'Pool' },
             { id: 'classes', label: 'Classes' },
             { id: 'roles', label: 'Rôles' },
-            { id: 'planning', label: 'Plannings' },
             { id: 'resultat', label: 'Résultats' },
             { id: 'statistique', label: 'Statistiques' },
             { id: 'graphique', label: 'Graphiques' },
@@ -2165,13 +2177,6 @@ export default function TCF() {
       )}
 
       {onglet === 'roles' && renderRoles()}
-
-      {onglet === 'planning' && (
-        <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Planning</h3>
-          <div style={styles.empty}>Le planning est basé sur les affectations et disponibilités du module emploi du temps.</div>
-        </div>
-      )}
 
       {onglet === 'resultat' && renderResultat()}
 
