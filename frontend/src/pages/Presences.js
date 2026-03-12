@@ -398,14 +398,20 @@ export default function Presences() {
       </div>
 
       {/* Onglets */}
-      <div style={{display:'flex',gap:10,marginBottom:12,alignItems:'center'}}>
-        <div style={{display:'flex',gap:10,alignItems:'center',flex:1}}>
+      <div style={s.tabsBar}>
+        <div style={s.tabsRow}>
         <select style={s.inp} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">- Sélectionner une classe -</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
         {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
-          <button key={k} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:onglet===k?'#6366f1':'white',color:onglet===k?'white':'#64748b',boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>{l}</button>
+          <button
+            key={k}
+            style={{ ...s.tabBtn, ...(onglet === k ? s.tabBtnActif : {}) }}
+            onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}
+          >
+            {l}
+          </button>
         ))}
         <div style={{display:'flex',alignItems:'center',gap:6}}>
           <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
@@ -736,6 +742,10 @@ export default function Presences() {
 
 const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
+  tabsBar:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:10,marginBottom:12,borderBottom:'1px solid #c4b5fd',paddingBottom:0,flexWrap:'wrap'},
+  tabsRow:{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',flex:1},
+  tabBtn:{padding:'9px 16px',borderRadius:'10px 10px 0 0',border:'1px solid #d1d5db',borderBottom:'1px solid #c4b5fd',background:'#f8fafc',cursor:'pointer',fontWeight:700,fontSize:13,color:'#64748b',outline:'none',lineHeight:'1',position:'relative',zIndex:1},
+  tabBtnActif:{background:'#6366f1',color:'white',borderColor:'#6366f1',borderBottom:'1px solid #6366f1',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
   td:{padding:'8px',fontSize:13,color:'#374151'},
