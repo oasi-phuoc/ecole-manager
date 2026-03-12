@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-const BASE_PERIODES_TAUX = 42;
+const BASE_PERIODES_TAUX = 40;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
   botza: ['Salle 1', 'Salle 2', 'Salle 3', 'Salle 4'],

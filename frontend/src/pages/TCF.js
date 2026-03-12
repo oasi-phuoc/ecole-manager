@@ -121,6 +121,10 @@ export default function TCF() {
   const [resultatNiveau, setResultatNiveau] = useState('');
   const [resultatMatiere, setResultatMatiere] = useState('francais');
   const [resultatSession, setResultatSession] = useState('');
+  const [resultatVue, setResultatVue] = useState('individuelle');
+  const [resultatClasseId, setResultatClasseId] = useState('');
+  const [resultatEleveId, setResultatEleveId] = useState('');
+  const [resultatEleveSearch, setResultatEleveSearch] = useState('');
   const [scores, setScores] = useState({});
 
   const [statSousOnglet, setStatSousOnglet] = useState('tri');
@@ -372,6 +376,16 @@ export default function TCF() {
       .filter(e => clsIds.has(String(e.classe_id)))
       .sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'));
   }, [eleves, classes, resultatNiveau]);
+
+  useEffect(() => {
+    if (resultatEleveId && !elevesNiveau.some(e => String(e.id) === String(resultatEleveId))) {
+      setResultatEleveId('');
+      setResultatEleveSearch('');
+    }
+    if (resultatClasseId && !elevesNiveau.some(e => String(e.classe_id) === String(resultatClasseId))) {
+      setResultatClasseId('');
+    }
+  }, [elevesNiveau, resultatEleveId, resultatClasseId]);
 
   const estBloqueDansAutreSite = (siteKey, profId) => {
     if (splitByProf[profId]) return false;
@@ -963,6 +977,12 @@ export default function TCF() {
     if (!niveaux.length) return <div style={styles.empty}>Aucun niveau de classe trouvé.</div>;
     const titreSession = resultatSession || 'Session non sélectionnée';
     const isFr = resultatMatiere === 'francais';
+    const classesNiveau = classes
+      .filter(c => normaliserNiveau(c.niveau) === resultatNiveau)
+      .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+    const elevesResultat = resultatVue === 'classe'
+      ? (resultatClasseId ? elevesNiveau.filter(e => String(e.classe_id) === String(resultatClasseId)) : [])
+      : (resultatEleveId ? elevesNiveau.filter(e => String(e.id) === String(resultatEleveId)) : []);
 
     return (
       <div style={styles.card}>
@@ -970,7 +990,12 @@ export default function TCF() {
           {niveaux.map(n => (
             <button
               key={n}
-              onClick={() => setResultatNiveau(n)}
+              onClick={() => {
+                setResultatNiveau(n);
+                setResultatClasseId('');
+                setResultatEleveId('');
+                setResultatEleveSearch('');
+              }}
               style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}
             >
               {n}
@@ -979,6 +1004,10 @@ export default function TCF() {
         </div>
 
         <div style={styles.filtersRow}>
+          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
+            <option value="">- Sélectionner la session -</option>
+            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
           <div style={styles.toggleWrap}>
             <button
               onClick={() => setResultatMatiere('francais')}
@@ -993,14 +1022,58 @@ export default function TCF() {
               Mathématiques
             </button>
           </div>
-          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner la session -</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div style={styles.toggleWrap}>
+            <button
+              onClick={() => { setResultatVue('individuelle'); setResultatClasseId(''); }}
+              style={{ ...styles.toggleBtn, ...(resultatVue === 'individuelle' ? styles.toggleBtnActif : {}) }}
+            >
+              Individuelle
+            </button>
+            <button
+              onClick={() => { setResultatVue('classe'); setResultatEleveId(''); setResultatEleveSearch(''); }}
+              style={{ ...styles.toggleBtn, ...(resultatVue === 'classe' ? styles.toggleBtnActif : {}) }}
+            >
+              Classe
+            </button>
+          </div>
+          {resultatVue === 'individuelle' && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="number" min="1" max={elevesNiveau.length}
+                value={resultatEleveSearch}
+                onChange={e => setResultatEleveSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const n = parseInt(resultatEleveSearch, 10);
+                    const found = elevesNiveau[n - 1];
+                    if (found) setResultatEleveId(String(found.id));
+                  }
+                }}
+                placeholder="N° élève (Entrée)"
+                style={{ ...styles.select, width: 150 }}
+              />
+              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
+                <option value="">- Sélectionner l'élève -</option>
+                {elevesNiveau.map((e, idx) => (
+                  <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {resultatVue === 'classe' && (
+            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.select}>
+              <option value="">- Sélectionner la classe -</option>
+              {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
+            </select>
+          )}
         </div>
 
         {!resultatSession ? (
           <div style={styles.empty}>Sélectionnez une session.</div>
+        ) : resultatVue === 'individuelle' && !resultatEleveId ? (
+          <div style={styles.empty}>Sélectionnez un élève.</div>
+        ) : resultatVue === 'classe' && !resultatClasseId ? (
+          <div style={styles.empty}>Sélectionnez une classe.</div>
         ) : (
           <>
             <h3 style={styles.tableTitleBig}>
@@ -1038,7 +1111,7 @@ export default function TCF() {
                   </tr>
                 </thead>
                 <tbody>
-                  {elevesNiveau.map((e, idx) => {
+                  {elevesResultat.map((e, idx) => {
                     const row = getScore(resultatMatiere, resultatSession, e.id);
                     const computed = isFr ? calculFr(row) : calculMath(row);
                     const total = computed.total === '' ? null : Number(computed.total);
@@ -1090,6 +1163,9 @@ export default function TCF() {
                       </tr>
                     );
                   })}
+                  {elevesResultat.length === 0 && (
+                    <tr><td colSpan={isFr ? 11 : 11} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
