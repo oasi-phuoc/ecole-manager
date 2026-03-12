@@ -466,11 +466,18 @@ export default function Presences() {
           ) : (
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                <colgroup>
+                  <col style={{width:170,minWidth:170,maxWidth:170}} />
+                  <col style={{width:150,minWidth:150,maxWidth:150}} />
+                  <col style={{width:74,minWidth:74,maxWidth:74}} />
+                  {PERIODES.map(i => <col key={`col-p-${i}`} style={{width:64,minWidth:64,maxWidth:64}} />)}
+                  <col style={{width:'auto'}} />
+                </colgroup>
                 <thead>
                   <tr style={{background:'#f8fafc'}}>
                     <th style={s.th} rowSpan={2}>NOM</th>
                     <th style={s.th} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,background:'#f0fdf4',color:'#166534',fontSize:10}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{...s.th,fontSize:10,textAlign:'center'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
                     <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>☀️ Matin</th>
                     <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>🌙 Après-midi</th>
                     <th style={s.th} rowSpan={2}>Remarques</th>
@@ -491,14 +498,14 @@ export default function Presences() {
                     <tr key={e.id} style={{borderBottom:'1px solid #f1f5f9',background:idx%2===0?'white':'#fafafa'}}>
                       <td style={{...s.td,fontWeight:800,color:'#0f172a'}}>{e.nom}</td>
                       <td style={{...s.td,color:'#374151'}}>{e.prenom}</td>
-                      <td style={{...s.td,padding:'6px 4px',background:isWeekend()?'#f1f5f9':'#f0fdf4'}}>
+                      <td style={{...s.td,padding:'6px 4px',textAlign:'center',background:isWeekend()?'#f1f5f9':'transparent'}}>
                         {isWeekend() ? (
                           <div style={{width:44,height:28,borderRadius:6,background:'#e2e8f0',margin:'0 auto'}}></div>
                         ) : (
                           <select
                             value=""
                             onChange={ev => { if(ev.target.value) setToutEleve(e.id, ev.target.value); ev.target.value=''; }}
-                            style={{width:50,padding:'4px 2px',borderRadius:6,border:'1px solid #86efac',background:'#f0fdf4',color:'#16a34a',fontWeight:800,fontSize:12,textAlign:'center',cursor:'pointer',outline:'none'}}
+                            style={{width:50,padding:'4px 2px',borderRadius:6,border:'1px solid #cbd5e1',background:'white',color:'#64748b',fontWeight:800,fontSize:12,textAlign:'center',textAlignLast:'center',cursor:'pointer',outline:'none',display:'block',margin:'0 auto'}}
                           >
                             <option value="">—</option>
                             {OPTS.filter(o=>o!=='').map(o => <option key={o} value={o}>{o}</option>)}
@@ -509,14 +516,14 @@ export default function Presences() {
                         const bloque = isBloque(i);
                         const val = presences[e.id]?.['p'+i] || '';
                         return (
-                          <td key={i} style={{...s.td,padding:'6px 4px',background:bloque?'#f1f5f9':'white'}}>
+                          <td key={i} style={{...s.td,padding:'6px 4px',textAlign:'center',background:bloque?'#f1f5f9':'white'}}>
                             {bloque ? (
                               <div style={{width:40,height:28,borderRadius:6,background:'#e2e8f0',margin:'0 auto'}}></div>
                             ) : (
                               <select
                                 value={val}
                                 onChange={ev => setCell(e.id, i, ev.target.value)}
-                                style={{width:44,padding:'4px 2px',borderRadius:6,border:'1px solid '+(val?OPTS_COLOR[val]+'66':'#e2e8f0'),background:val?OPTS_COLOR[val]+'18':'white',color:val?OPTS_COLOR[val]:'#94a3b8',fontWeight:700,fontSize:12,textAlign:'center',cursor:'pointer',outline:'none'}}
+                                style={{width:44,padding:'4px 2px',borderRadius:6,border:'1px solid '+(val?OPTS_COLOR[val]+'66':'#e2e8f0'),background:val?OPTS_COLOR[val]+'18':'white',color:val?OPTS_COLOR[val]:'#94a3b8',fontWeight:700,fontSize:12,textAlign:'center',textAlignLast:'center',cursor:'pointer',outline:'none',display:'block',margin:'0 auto'}}
                               >
                                 {OPTS.map(o => <option key={o} value={o}>{OPTS_LABEL[o]}</option>)}
                               </select>
@@ -526,7 +533,7 @@ export default function Presences() {
                       })}
                       <td style={{...s.td,padding:'6px 8px'}}>
                         <input
-                          style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,width:140,outline:'none'}}
+                          style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,width:'100%',minWidth:140,outline:'none'}}
                           type="text"
                           placeholder="Remarque..."
                           value={presences[e.id]?.remarque || ''}

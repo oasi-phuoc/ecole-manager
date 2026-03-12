@@ -237,10 +237,6 @@ export default function Eleves() {
 
   const confirmerSanction = async () => {
     if (!pendingCell) return;
-    if (!pendingCell.observation_ref) {
-      alert("Veuillez sélectionner une référence d'observation.");
-      return;
-    }
     try {
       await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle,
@@ -665,6 +661,13 @@ export default function Eleves() {
                             {echelle.infractions.map(infraction => {
                               const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau.id);
                               const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau.id;
+                              const niveauxSaisie = echelle.niveaux.filter(n => n.type !== 'section');
+                              const idxNiveau = niveauxSaisie.findIndex(n => n.id === niveau.id);
+                              const prevNiveau = idxNiveau > 0 ? niveauxSaisie[idxNiveau - 1] : null;
+                              const prevExiste = prevNiveau
+                                ? !!eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===prevNiveau.id)
+                                : true;
+                              const peutAjouter = idxNiveau === 0 || prevExiste;
                               return (
                                 <td key={infraction} style={{padding:'4px 4px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'middle'}}>
                                   {isPending ? (
@@ -757,16 +760,16 @@ export default function Eleves() {
                                   ) : (
                                     isAdmin() ? (
                                       <button onClick={() => {
-                                        const refs = sanctionsObservations.filter(o => o.reference_obs);
-                                        if (refs.length === 0) {
-                                          alert("Aucune observation avec référence n'est disponible pour cet élève.");
+                                        if (!peutAjouter) {
+                                          alert("Vous devez d'abord saisir la sanction du niveau précédent dans cette colonne.");
                                           return;
                                         }
+                                        const refs = sanctionsObservations.filter(o => o.reference_obs);
                                         const today = new Date().toISOString().split('T')[0];
                                         const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0].reference_obs});
+                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0]?.reference_obs || ''});
                                       }}
-                                      style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
+                                      style={{width:20,height:20,borderRadius:4,border:'2px solid '+(peutAjouter?'#d1d5db':'#e5e7eb'),background:peutAjouter?'white':'#f3f4f6',cursor:peutAjouter?'pointer':'not-allowed',display:'inline-block',opacity:peutAjouter?1:0.6}} title={peutAjouter ? "Ajouter" : "Saisir d'abord le niveau précédent"} />
                                     ) : (
                                       <span style={{width:20,height:20,borderRadius:4,border:'2px solid #e2e8f0',background:'#f9fafb',display:'inline-block'}} />
                                     )
