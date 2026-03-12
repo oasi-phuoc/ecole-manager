@@ -2071,7 +2071,7 @@ export default function TCF() {
   };
 
   const handleSaveAffectation = () => {
-    if (sousOngletAffectation === 'classes') {
+    if (onglet === 'classes') {
       const sitesSansDate = siteOrder.filter((siteKey) => {
         const d = String(affectationDateDebutBySite?.[siteKey] || '').trim();
         return !d;
