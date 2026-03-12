@@ -1516,8 +1516,8 @@ export default function TCF() {
     const label1 = isFr ? 'Oral' : 'CSC-CFR';
     const label2 = isFr ? 'Écrit' : 'CAF-CAP';
 
-    const barW = 26;
-    const groupW = 90;
+    const barW = 52;
+    const groupW = 180;
     const innerH = Number(options.innerH) > 0 ? Number(options.innerH) : 230;
     const padL = 48;
     const padT = 10;
@@ -1575,14 +1575,15 @@ export default function TCF() {
     if (showTrend && series.length > 1) {
       const pts = series.map((s, i) => {
         const moy = (Number(s.v1 || 0) + Number(s.v2 || 0)) / 2;
+        const total = Number(s.v1 || 0) + Number(s.v2 || 0);
         const x = chartLeft + i * groupW + groupW / 2;
         const y = yFromValue(moy);
-        return { x, y, moy };
+        return { x, y, moy, total };
       });
       parts.push(`<polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6,3" points="${pts.map(p => `${p.x},${p.y}`).join(' ')}"/>`);
       pts.forEach((p) => {
         parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>`);
-        parts.push(`<text x="${p.x}" y="${p.y - 8}" text-anchor="middle" font-size="11" fill="#92400e" font-weight="700">${p.moy.toFixed(1)}</text>`);
+        parts.push(`<text x="${p.x}" y="${p.y - 8}" text-anchor="middle" font-size="11" fill="#92400e" font-weight="700">${p.total}</text>`);
       });
     }
 
@@ -1785,8 +1786,8 @@ export default function TCF() {
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
-      const logoPiedSrc = `${window.location.origin}/build/logo-pied-page.png`;
-      const logoPiedFallbackSrc = `${publicBase}/logo-pied-page.png`;
+      const logoPiedSrc = `${publicBase}/logo-pied-page.png`;
+      const logoPiedFallbackSrc = `${window.location.origin}/build/logo-pied-page.png`;
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
       const titreGraph = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
       const nomMaj = String(opts.nom || '').toUpperCase();
@@ -1794,7 +1795,7 @@ export default function TCF() {
       const classeAff = String(opts.classe || '');
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 560, maxWidth: '100%' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 800, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
@@ -1812,7 +1813,9 @@ export default function TCF() {
               </div>
             </div>
             <div style={{ textAlign: 'left', marginTop: 10, marginBottom: 10 }}>
+              <div style={{ height: 36 }} />
               <div style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 10 }}>{titreGraph}</div>
+              <div style={{ height: 24 }} />
               <div style={{ fontSize: 12, color: '#1f2937', marginTop: 2, textAlign: 'left' }}>
                 <b>NOM Prénom :</b> {nomMaj} {prenomAff}
               </div>
