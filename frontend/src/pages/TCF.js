@@ -1784,7 +1784,8 @@ export default function TCF() {
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
-      const logoPiedSrc = `${publicBase}/logo-pied-page.png`;
+      const logoPiedSrc = `${window.location.origin}/build/logo-pied-page.png`;
+      const logoPiedFallbackSrc = `${publicBase}/logo-pied-page.png`;
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
       const titreGraph = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
       const nomMaj = String(opts.nom || '').toUpperCase();
@@ -1796,7 +1797,7 @@ export default function TCF() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-                <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.25 }}>
+                <div style={{ fontSize: '8pt', color: '#475569', lineHeight: 1.25 }}>
                   <div style={{ fontWeight: 700 }}>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
                   <div style={{ fontWeight: 400 }}>Service de l'action sociale</div>
                   <div style={{ fontWeight: 400 }}>Office de l'asile</div>
@@ -1809,22 +1810,35 @@ export default function TCF() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
               </div>
             </div>
-            <div style={{ textAlign: 'right', marginBottom: 8 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{titreGraph}</div>
-              <div style={{ fontSize: 12, color: '#1f2937', marginTop: 2 }}>
+            <div style={{ textAlign: 'left', marginTop: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 10 }}>{titreGraph}</div>
+              <div style={{ fontSize: 12, color: '#1f2937', marginTop: 2, textAlign: 'left' }}>
                 <b>NOM Prénom :</b> {nomMaj} {prenomAff}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
                 <div style={{ fontSize: 12, color: '#1f2937' }}><b>Classe :</b> {classeAff || '—'}</div>
                 <div style={{ fontSize: 12, color: '#374151' }}>{dateVetroz}</div>
               </div>
+              <div style={{ height: 12 }} />
             </div>
             <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
             <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img src={logoPiedSrc} alt="Logo pied de page" style={{ height: 26, width: 'auto', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.35 }}>
+              <img
+                src={logoPiedSrc}
+                alt="Logo pied de page"
+                style={{ height: 26, width: 'auto', objectFit: 'contain' }}
+                onError={(e) => {
+                  if (!e.currentTarget.dataset.fallback) {
+                    e.currentTarget.dataset.fallback = '1';
+                    e.currentTarget.src = logoPiedFallbackSrc;
+                    return;
+                  }
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div style={{ fontSize: '8pt', color: '#64748b', lineHeight: 1.35 }}>
                 <div>Zone Industrielle 4, 1963 Vétroz</div>
                 <div>Tél. 027 606 18 60</div>
               </div>
