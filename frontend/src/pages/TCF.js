@@ -1535,6 +1535,7 @@ export default function TCF() {
 
     // Grille (tous les 5 points) sans numérotation 0/10/20...
     const showFrenchLevelMarks = isFr && options.showFrenchLevelMarks !== false && !options.label1 && !options.label2;
+    const showMathLevelMarks = !isFr && options.showMathLevelMarks !== false && !options.label1 && !options.label2;
     if (showFrenchLevelMarks) {
       for (let v = 0; v <= 55; v += 5) {
         const y = yFromValue(v);
@@ -1551,6 +1552,15 @@ export default function TCF() {
       for (let v = 0; v <= maxScore; v += 5) {
         const y = yFromValue(v);
         parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="${v % 10 === 0 ? 1.2 : 1}" />`);
+      }
+      if (showMathLevelMarks) {
+        const marks = niveau === 'CSC'
+          ? [{ v: 45, label: 'CFR' }, { v: 35, label: 'CSC' }]
+          : [{ v: 45, label: 'CAF' }, { v: 40, label: 'CFR' }, { v: 20, label: 'CSC' }];
+        marks.forEach((m) => {
+          const y = yFromValue(m.v);
+          parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="700">${esc(m.label)}</text>`);
+        });
       }
     }
 
@@ -1710,9 +1720,9 @@ export default function TCF() {
       .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
     const elevesFiltered = elevesNiveauGraph;
 
-    const maxScore = isFr ? 60 : 40;
-    const label1 = isFr ? 'Oral' : 'CSC-CFR (P1+P2)';
-    const label2 = isFr ? 'Écrit' : 'CAF-CAP (P3+P4)';
+    const maxScore = isFr ? 60 : 50;
+    const label1 = isFr ? 'Oral' : 'Partie 1-2';
+    const label2 = isFr ? 'Écrit' : 'Partie 3-4';
 
     // Sessions cumulatives selon la sélection
     const sessionsToShowIds = graphSession === "2e semestre"
@@ -1861,6 +1871,7 @@ export default function TCF() {
         label1: opts.label1,
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
+        showMathLevelMarks: opts.showMathLevelMarks,
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
@@ -1940,16 +1951,29 @@ export default function TCF() {
                 <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
                   style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
               ))}
-              <button
-                type="button"
-                onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}
-              >
-                Moyenne
-              </button>
-              <button type="button" onClick={handlePrintAll} style={{ ...styles.btnSaveTop, marginLeft: 'auto' }}>
-                🖨 Tout imprimer
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (graphVue === 'moyenne') {
+                      setGraphVue('individuelle');
+                      return;
+                    }
+                    setGraphVue('moyenne');
+                    setGraphClasseId('');
+                    setGraphEleveId('');
+                    setGraphEleveSearch('');
+                  }}
+                  style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}
+                >
+                  Moyenne
+                </button>
+                {graphVue !== 'moyenne' && (
+                  <button type="button" onClick={handlePrintAll} style={styles.btnSaveTop}>
+                    🖨 Tout imprimer
+                  </button>
+                )}
+              </div>
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1963,12 +1987,10 @@ export default function TCF() {
                 <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
               </div>
             )}
-            {graphVue !== 'moyenne' && (
-              <div style={styles.toggleWrap}>
-                <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
-                <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
-              </div>
-            )}
+            <div style={styles.toggleWrap}>
+              <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
+              <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
+            </div>
             {graphVue === 'classe' && (
               <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
                 <option value="">- Sélectionner la classe -</option>
@@ -2000,26 +2022,33 @@ export default function TCF() {
           </div>
         </div>
         {/* Boutons impression */}
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{isFr ? 'Graphique Français' : 'Graphique Mathématiques'}</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={handlePrintSelection} disabled={!canPrintSelection}
-              style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
-              🖨 Imprimer sélection
-            </button>
+        {graphVue !== 'moyenne' && (
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{isFr ? 'Graphique Français' : 'Graphique Mathématiques'}</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={handlePrintSelection} disabled={!canPrintSelection}
+                style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
+                🖨 Imprimer sélection
+              </button>
+            </div>
           </div>
-        </div>
+        )}
         {/* Graphique */}
         {graphVue === 'moyenne' && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'moyenne' && graphSession && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 }}>
             <div style={styles.tableWrap}>
-              <table style={styles.tableRolesLeft}>
+              <table style={{ ...styles.tableRolesLeft, minWidth: 0, tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: 96, minWidth: 96, maxWidth: 96 }} />
+                  <col style={{ width: 86, minWidth: 86, maxWidth: 86 }} />
+                  <col style={{ width: 86, minWidth: 86, maxWidth: 86 }} />
+                </colgroup>
                 <thead>
                   <tr style={styles.thead}>
                     <th style={styles.thLeftFixed}>Classe</th>
-                    <th style={{ ...styles.thCenter, width: 88, minWidth: 88, maxWidth: 88 }}>Moy. Fr</th>
-                    <th style={{ ...styles.thCenter, width: 88, minWidth: 88, maxWidth: 88 }}>Moy. Math</th>
+                    <th style={{ ...styles.thCenter, width: 86, minWidth: 86, maxWidth: 86 }}>Français</th>
+                    <th style={{ ...styles.thCenter, width: 86, minWidth: 86, maxWidth: 86 }}>Mathématiques</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2052,6 +2081,7 @@ export default function TCF() {
                 label1: 'Français',
                 label2: 'Mathématiques',
                 showFrenchLevelMarks: false,
+                showMathLevelMarks: false,
                 maxScoreOverride: 100,
                 cardWidth: '100%',
               }
