@@ -1516,13 +1516,13 @@ export default function TCF() {
     const label1 = isFr ? 'Oral' : 'CSC-CFR';
     const label2 = isFr ? 'Écrit' : 'CAF-CAP';
 
-    const barW = 38;
-    const groupW = 120;
-    const innerH = 350;
+    const barW = 26;
+    const groupW = 90;
+    const innerH = 230;
     const padL = 48;
     const padT = 10;
     const padB = 70;
-    const legendW = 360;
+    const legendW = 130;
     const chartW = Math.max(groupW * Math.max(series.length, 1), 240);
     const svgW = padL + chartW + legendW + 24;
     const svgH = padT + innerH + padB;
@@ -1539,14 +1539,12 @@ export default function TCF() {
         const y = yFromValue(v);
         parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`);
       }
-      const cefr = [
-        { v: 45, text: 'Ligne 45 : A1 (CSC) / A2 (CFR-EPL)' },
-        { v: 25, text: 'Ligne 25 : A0.2 (CSC) / A1.2 (CFR-EPL)' },
-        { v: 5, text: 'Ligne 5 : A0.1 (CSC) / A1.1 (CFR-EPL)' },
-      ];
-      cefr.forEach((m) => {
+      const marks = niveau === 'CSC'
+        ? [{ v: 45, label: 'A1' }, { v: 25, label: 'A0.2' }, { v: 5, label: 'A0.1' }]
+        : [{ v: 45, label: 'A2' }, { v: 25, label: 'A1.2' }, { v: 5, label: 'A1.1' }];
+      marks.forEach((m) => {
         const y = yFromValue(m.v);
-        parts.push(`<text x="${chartRight + 10}" y="${y + 4}" font-size="12" fill="#334155" font-weight="700">${esc(m.text)}</text>`);
+        parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="700">${esc(m.label)}</text>`);
       });
     } else {
       for (let v = 0; v <= maxScore; v += 5) {
@@ -1775,6 +1773,8 @@ export default function TCF() {
       const cl = classesMap[String(e?.classe_id)];
       return normaliserNiveau(cl?.niveau || '');
     })();
+    const eleveIndividuel = eleves.find(ev => String(ev.id) === String(graphEleveId));
+    const classeIndividuelle = classesMap[String(eleveIndividuel?.classe_id)];
     const niveauClasse = normaliserNiveau(classes.find(c => String(c.id) === String(graphClasseId))?.niveau || '');
 
     const renderSvgChart = (items, opts = {}) => {
@@ -1784,17 +1784,23 @@ export default function TCF() {
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
+      const logoPiedSrc = `${publicBase}/logo-pied-page.png`;
+      const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      const titreGraph = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
+      const nomMaj = String(opts.nom || '').toUpperCase();
+      const prenomAff = String(opts.prenom || '');
+      const classeAff = String(opts.classe || '');
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 1120, maxWidth: '100%' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 12, width: 560, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-                <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.25, fontWeight: 600 }}>
-                  <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
-                  <div>Service de l'action sociale</div>
-                  <div>Office de l'asile</div>
-                  <div>Centre de formation "Le Botza"</div>
+                <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.25 }}>
+                  <div style={{ fontWeight: 700 }}>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+                  <div style={{ fontWeight: 400 }}>Service de l'action sociale</div>
+                  <div style={{ fontWeight: 400 }}>Office de l'asile</div>
+                  <div style={{ fontWeight: 400 }}>Centre de formation "Le Botza"</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -1803,8 +1809,25 @@ export default function TCF() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
               </div>
             </div>
+            <div style={{ textAlign: 'right', marginBottom: 8 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{titreGraph}</div>
+              <div style={{ fontSize: 12, color: '#1f2937', marginTop: 2 }}>
+                <b>NOM Prénom :</b> {nomMaj} {prenomAff}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: '#1f2937' }}><b>Classe :</b> {classeAff || '—'}</div>
+                <div style={{ fontSize: 12, color: '#374151' }}>{dateVetroz}</div>
+              </div>
+            </div>
             <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
               <div dangerouslySetInnerHTML={{ __html: svg }} />
+            </div>
+            <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <img src={logoPiedSrc} alt="Logo pied de page" style={{ height: 26, width: 'auto', objectFit: 'contain' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.35 }}>
+                <div>Zone Industrielle 4, 1963 Vétroz</div>
+                <div>Tél. 027 606 18 60</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1883,11 +1906,29 @@ export default function TCF() {
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
         {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(sessionsIndiv.map(s => ({ ...s, label: s.session })), { showTrend: true, niveau: niveauIndividuel })}
+        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(
+          sessionsIndiv.map(s => ({ ...s, label: s.session })),
+          {
+            showTrend: true,
+            niveau: niveauIndividuel,
+            nom: toDisplayNom(eleveIndividuel?.nom || ''),
+            prenom: eleveIndividuel?.prenom || '',
+            classe: classeIndividuelle?.nom || '',
+          }
+        )}
         {graphVue === 'classe' && !graphClasseId && <div style={styles.empty}>Sélectionnez une classe.</div>}
         {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cette classe et cette session.</div>}
-        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(dataClasse, { showTrend: false, niveau: niveauClasse })}
+        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
+          dataClasse,
+          {
+            showTrend: false,
+            niveau: niveauClasse,
+            nom: '',
+            prenom: '',
+            classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
+          }
+        )}
       </div>
     );
   };
