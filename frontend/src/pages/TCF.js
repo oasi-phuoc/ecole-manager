@@ -1004,7 +1004,7 @@ export default function TCF() {
         </div>
 
         <div style={styles.filtersRow}>
-          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
+          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.selectOnglet}>
             <option value="">- Sélectionner la session -</option>
             {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -1050,9 +1050,9 @@ export default function TCF() {
                   }
                 }}
                 placeholder="N° élève (Entrée)"
-                style={{ ...styles.select, width: 150 }}
+                style={{ ...styles.selectOnglet, width: 150 }}
               />
-              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
+              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.selectOnglet}>
                 <option value="">- Sélectionner l'élève -</option>
                 {elevesNiveau.map((e, idx) => (
                   <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
@@ -1061,7 +1061,7 @@ export default function TCF() {
             </div>
           )}
           {resultatVue === 'classe' && (
-            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.select}>
+            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.selectOnglet}>
               <option value="">- Sélectionner la classe -</option>
               {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
             </select>
@@ -2075,7 +2075,7 @@ export default function TCF() {
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.select}>
+            <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.selectOnglet}>
               <option value="">- Sélectionner la session -</option>
               {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -2089,7 +2089,7 @@ export default function TCF() {
               <button onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'moyenne' ? styles.toggleBtnActif : {}) }}>Moyenne</button>
             </div>
             {graphVue === 'classe' && (
-              <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
+              <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.selectOnglet}>
                 <option value="">- Sélectionner la classe -</option>
                 {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
               </select>
@@ -2108,9 +2108,9 @@ export default function TCF() {
                     }
                   }}
                   placeholder="N° élève (Entrée)"
-                  style={{ ...styles.select, width: 150 }}
+                  style={{ ...styles.selectOnglet, width: 150 }}
                 />
-                <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.select}>
+                <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.selectOnglet}>
                   <option value="">- Sélectionner l'élève -</option>
                   {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
                 </select>
@@ -2270,7 +2270,7 @@ export default function TCF() {
             </div>
           )}
           <div style={styles.filtersRow}>
-            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
+            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.selectOnglet}>
               <option value="">- Sélectionner la session -</option>
               {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -2552,8 +2552,8 @@ const styles = {
   tabsBar: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginBottom: 14, borderBottom: '1px solid #c4b5fd', paddingBottom: 0 },
   tabsRow: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' },
   topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: '1px solid #d1d5db', borderBottom: '1px solid #c4b5fd', background: '#f8fafc', cursor: 'pointer', fontWeight: 700, color: '#64748b', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1', position: 'relative', zIndex: 1 },
-  tabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1', borderBottom: '1px solid #6366f1', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
+  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1', position: 'relative', zIndex: 1 },
+  tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
@@ -2650,8 +2650,8 @@ const styles = {
   noticeBand: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
 
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
-  subTabBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', lineHeight: '1' },
-  subTabBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1' },
+  subTabBtn: { padding: '8px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', boxShadow: 'none' },
+  subTabBtnActif: { background: '#6366f1', color: 'white', border: 'none', boxShadow: '0 -1px 6px rgba(99,102,241,0.22)' },
   poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   btnAddSitePoolTabs: { marginLeft: 'auto', padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: '1' },
   rolesTopRight: { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
@@ -2666,6 +2666,7 @@ const styles = {
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white', lineHeight: '1' },
+  selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
   tdLeftRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'left', fontWeight: 700 },

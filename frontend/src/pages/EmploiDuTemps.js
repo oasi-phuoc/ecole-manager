@@ -1644,7 +1644,7 @@ export default function EmploiDuTemps() {
             ))}
             {sousOngletPlanning === 'classes' && (
               <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
                 value={classePlanningId || ''}
                 onChange={e => {
                   const classeId = e.target.value;
@@ -1666,7 +1666,7 @@ export default function EmploiDuTemps() {
             )}
             {sousOngletPlanning === 'professeurs' && (
               <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
                 value={profPlanningId || ''}
                 onChange={e => {
                   const id = e.target.value;
@@ -1685,7 +1685,7 @@ export default function EmploiDuTemps() {
             )}
             {sousOngletPlanning === 'general' && (
               <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
                 value={planningPoolId}
                 onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}
               >
@@ -1696,7 +1696,7 @@ export default function EmploiDuTemps() {
             {sousOngletPlanning === 'salle' && (
               <>
                 <select
-                  style={styles.sel}
+                  style={styles.selOnglet}
                   value={sallesLieuTravailId}
                   onChange={e => setSallesLieuTravailId(e.target.value)}
                 >
@@ -1704,7 +1704,7 @@ export default function EmploiDuTemps() {
                   {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
                 </select>
                 <select
-                  style={styles.sel}
+                  style={styles.selOnglet}
                   value={salleSelectionnee}
                   disabled={!sallesLieuTravailId}
                   onChange={e => setSalleSelectionnee(e.target.value)}
@@ -1741,7 +1741,7 @@ export default function EmploiDuTemps() {
             <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
               <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
               <select
-                style={{...styles.sel, width: 320, maxWidth:'100%'}}
+                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
@@ -2117,7 +2117,7 @@ export default function EmploiDuTemps() {
               ))}
               {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
                 <select
-                  style={styles.sel}
+                  style={styles.selOnglet}
                   value={poolAffId}
                   onChange={e => {
                     if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
@@ -2132,7 +2132,7 @@ export default function EmploiDuTemps() {
               {sousOngletAff === 'branches' && (
                 <>
                   <select
-                    style={styles.sel}
+                    style={styles.selOnglet}
                     value={classePlanningPoolId}
                     onChange={e => {
                       if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
@@ -2146,7 +2146,7 @@ export default function EmploiDuTemps() {
                     {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
                   </select>
                   <select
-                    style={styles.sel}
+                    style={styles.selOnglet}
                     value={classePlanningId || ''}
                     disabled={!classePlanningPoolId}
                     onChange={e => {
@@ -2166,7 +2166,7 @@ export default function EmploiDuTemps() {
               {sousOngletAff === 'salles' && (
                 <>
                   <select
-                    style={styles.sel}
+                    style={styles.selOnglet}
                     value={sallesLieuTravailId}
                     onChange={e => setSallesLieuTravailId(e.target.value)}
                   >
@@ -2174,7 +2174,7 @@ export default function EmploiDuTemps() {
                     {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
                   </select>
                   <select
-                    style={styles.sel}
+                    style={styles.selOnglet}
                     value={salleSelectionnee}
                     disabled={!sallesLieuTravailId}
                     onChange={e => setSalleSelectionnee(e.target.value)}
@@ -3367,12 +3367,12 @@ const styles = {
   noticeBandInfo:{background:'#d1fae5',color:'#065f46'},
   noticeBandError:{background:'#fee2e2',color:'#991b1b'},
   onglets:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'1px solid #c4b5fd',paddingBottom:0},
-  onglet:{padding:'9px 14px',background:'#f8fafc',border:'1px solid #d1d5db',borderBottom:'1px solid #c4b5fd',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:13,color:'#64748b',lineHeight:1,position:'relative',zIndex:1},
-  ongletActif:{background:'#6366f1',color:'white',borderColor:'#6366f1',borderBottom:'1px solid #6366f1',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
+  onglet:{padding:'9px 14px',background:'#ede9fe',border:'none',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:13,color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
+  ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
-  affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'1px solid #d1d5db',borderBottom:'1px solid #c4b5fd',cursor:'pointer',fontWeight:700,fontSize:13,background:'#f8fafc',color:'#64748b',lineHeight:1,position:'relative',zIndex:1},
-  affTabBtnActif:{background:'#6366f1',color:'white',borderColor:'#6366f1',borderBottom:'1px solid #6366f1',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
+  affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
+  affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
   btnSauvegarderAff:{marginLeft:'auto',padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
@@ -3428,6 +3428,7 @@ const styles = {
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
+  selOnglet:{padding:'8px 12px',border:'none',borderRadius:'10px 10px 0 0',fontSize:13,fontWeight:700,background:'#ede9fe',color:'#5b21b6',outline:'none',boxShadow:'none'},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
   modal:{background:'white',padding:30,borderRadius:16,maxHeight:'85vh',overflowY:'auto'},
   modalTitre:{fontSize:20,fontWeight:700,marginBottom:20},
