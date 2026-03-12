@@ -150,8 +150,7 @@ export default function Professeurs({
       setBranchesDisponibles(options);
     } catch(err) { setBranchesDisponibles([]); }
   };
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerProfs(); }, []);
   useEffect(() => {

@@ -1,22 +1,36 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { setSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaToken, setMfaToken] = useState('');
   const [erreur, setErreur] = useState('');
   const navigate = useNavigate();
+  const mfaRequired = Boolean(mfaToken);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErreur('');
     try {
-      const res = await axios.post(API + '/auth/login', { email, mot_de_passe: motDePasse });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('utilisateur', JSON.stringify(res.data.utilisateur));
+      if (!mfaRequired) {
+        const res = await axios.post(API + '/auth/login', { email, mot_de_passe: motDePasse });
+        if (res.data?.mfa_required) {
+          setMfaToken(res.data.mfa_token || '');
+          setMfaCode('');
+          return;
+        }
+        setSessionUser(res.data.utilisateur || null);
+        navigate('/dashboard');
+        return;
+      }
+      const res = await axios.post(API + '/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
+      setSessionUser(res.data.utilisateur || null);
       navigate('/dashboard');
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur de connexion');
@@ -42,6 +56,7 @@ export default function Login() {
               type="email"
               required
               value={email}
+              disabled={mfaRequired}
               onChange={e => setEmail(e.target.value)}
               placeholder="admin@ecole.com"
             />
@@ -53,11 +68,37 @@ export default function Login() {
               type="password"
               required
               value={motDePasse}
+              disabled={mfaRequired}
               onChange={e => setMotDePasse(e.target.value)}
               placeholder="••••••••"
             />
           </div>
-          <button type="submit" style={styles.btn}>Se connecter</button>
+          {mfaRequired && (
+            <div style={styles.champ}>
+              <label style={styles.label}>Code Google Authenticator ou code de secours</label>
+              <input
+                style={styles.input}
+                type="text"
+                inputMode="text"
+                pattern="[A-Za-z0-9]{6,12}"
+                maxLength={12}
+                required
+                value={mfaCode}
+                onChange={e => setMfaCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12))}
+                placeholder="123456 ou ABCD2345"
+              />
+            </div>
+          )}
+          <button type="submit" style={styles.btn}>{mfaRequired ? 'Valider le code' : 'Se connecter'}</button>
+          {mfaRequired && (
+            <button
+              type="button"
+              style={{ ...styles.btn, background: '#9ca3af', marginTop: 0 }}
+              onClick={() => { setMfaToken(''); setMfaCode(''); setErreur(''); }}
+            >
+              Revenir
+            </button>
+          )}
         </form>
       </div>
     </div>

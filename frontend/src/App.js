@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { fetchSessionUser, clearSessionUser } from './utils/session';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Eleves from './pages/Eleves';
@@ -19,8 +20,27 @@ import DocumentsAdministratifs from './pages/DocumentsAdministratifs';
 import ClasseInventaire from './pages/ClasseInventaire';
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  const [checking, setChecking] = useState(true);
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        await fetchSessionUser();
+        if (active) setOk(true);
+      } catch {
+        clearSessionUser();
+        if (active) setOk(false);
+      } finally {
+        if (active) setChecking(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  if (checking) return null;
+  return ok ? children : <Navigate to="/login" replace />;
 };
 
 function App() {

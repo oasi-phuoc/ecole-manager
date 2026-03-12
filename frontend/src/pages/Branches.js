@@ -15,8 +15,7 @@ export default function Branches() {
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerBranches(); }, []);
 

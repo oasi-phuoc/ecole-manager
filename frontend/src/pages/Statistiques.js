@@ -8,8 +8,7 @@ export default function Statistiques() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerStats(); }, []);
 

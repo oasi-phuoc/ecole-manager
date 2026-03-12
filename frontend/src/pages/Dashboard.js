@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { T, colors } from '../styles/theme';
+import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
@@ -11,13 +12,19 @@ export default function Dashboard() {
   const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [observationDetail, setObservationDetail] = useState(null);
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => {
-    const u = localStorage.getItem('utilisateur');
-    if (u) setUser(JSON.parse(u));
-    chargerStats();
+    const chargerUtilisateurEtStats = async () => {
+      const enMemoire = getSessionUser();
+      if (enMemoire) setUser(enMemoire);
+      try {
+        const u = await fetchSessionUser();
+        setUser(u || null);
+      } catch {}
+      chargerStats();
+    };
+    chargerUtilisateurEtStats();
   }, []);
 
   const chargerStats = async () => {
@@ -39,10 +46,10 @@ export default function Dashboard() {
     } catch (err) { console.error(err); }
   };
 
-  const deconnexion = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
+  const deconnexion = async () => {
+    try { await axios.post(API + '/auth/logout'); } catch {}
+    clearSessionUser();
+    navigate('/login', { replace: true });
   };
 
   const isAdmin = user?.role === 'admin';
@@ -59,7 +66,7 @@ export default function Dashboard() {
     { icon: '🗣️', label: 'TCF', path: '/tcf', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: false },
     { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#14b8a6', bg: '#ccfbf1', stat: null, statLabel: '', admin: false },
     { icon: '💰', label: 'Comptabilité', path: '/comptabilite', color: '#84cc16', bg: '#ecfccb', stat: null, statLabel: '', admin: true },
-    { icon: '🗂️', label: 'Documents administratifs', path: '/documents-administratifs', color: '#7c3aed', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
+    { icon: '🗂️', label: 'Documents', path: '/documents-administratifs', color: '#7c3aed', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
     { icon: '📊', label: 'Statistiques', path: '/statistiques', color: '#f97316', bg: '#ffedd5', stat: null, statLabel: '', admin: true },
     { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#64748b', bg: '#f1f5f9', stat: null, statLabel: '', admin: true },
   ].filter(m => !m.admin || isAdmin);

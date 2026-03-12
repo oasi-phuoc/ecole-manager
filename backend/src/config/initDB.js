@@ -33,6 +33,10 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS priorite_pref VARCHAR(20)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_disponibilites TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS doit_changer_mdp BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_secret TEXT`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
 
     // Table documents professeurs
     await pool.query(`CREATE TABLE IF NOT EXISTS documents_profs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);
@@ -60,6 +64,21 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL`);
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+
+    // Table état module TCF (pool, affectation, résultats)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tcf_state (
+        id SERIAL PRIMARY KEY,
+        cle VARCHAR(50) UNIQUE NOT NULL,
+        donnees JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_by INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE tcf_state ADD COLUMN IF NOT EXISTS cle VARCHAR(50)`);
+    await pool.query(`ALTER TABLE tcf_state ADD COLUMN IF NOT EXISTS donnees JSONB NOT NULL DEFAULT '{}'::jsonb`);
+    await pool.query(`ALTER TABLE tcf_state ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL`);
+    await pool.query(`ALTER TABLE tcf_state ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
 
     // Table inventaire des branches par classe
     await pool.query(`

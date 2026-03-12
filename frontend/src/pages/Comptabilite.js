@@ -44,8 +44,7 @@ export default function Comptabilite() {
   const [form, setForm] = useState({ eleve_id: '', montant: '', type: 'Ecolage', statut: 'en_attente', date_paiement: '', commentaire: '' });
   const [materielForm, setMaterielForm] = useState({ nom: '', section: 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' });
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerPaiements(); chargerStats(); chargerEleves(); chargerClasses(); chargerMateriels(); }, []);
   useEffect(() => { chargerPaiements(); }, [filtreStatut, filtreClasse]);

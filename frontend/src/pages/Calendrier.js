@@ -37,8 +37,7 @@ export default function Calendrier() {
   const [jourPopup, setJourPopup] = useState(null);
   const [evtsPopup, setEvtsPopup] = useState([]);
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerTout(); }, []);
 

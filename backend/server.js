@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
@@ -17,12 +18,39 @@ app.use(cors({
     if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(helmet());
+const cspConnectSrc = ["'self'", ...allowedOrigins];
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: cspConnectSrc,
+      upgradeInsecureRequests: [],
+    },
+  },
+  referrerPolicy: { policy: 'no-referrer' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+}));
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const proto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+    if (req.secure || proto === 'https') return next();
+    return res.status(426).json({ message: 'HTTPS requis' });
+  });
+}
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -56,6 +84,7 @@ app.use('/api/observations', require('./src/routes/observations'));
 app.use('/api/planning', require('./src/routes/planning'));
 app.use('/api/documents-administratifs', require('./src/routes/documentsAdministratifs'));
 app.use('/api/inventaire-branches', require('./src/routes/inventaireBranches'));
+app.use('/api/tcf-state', require('./src/routes/tcfState'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

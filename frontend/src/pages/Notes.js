@@ -2,6 +2,7 @@ import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
@@ -88,9 +89,8 @@ export default function Notes() {
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
   const printRef = useRef();
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-  const currentUser = JSON.parse(localStorage.getItem('utilisateur') || '{}');
+  const headers = {};
+  const currentUser = getSessionUser() || {};
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
 

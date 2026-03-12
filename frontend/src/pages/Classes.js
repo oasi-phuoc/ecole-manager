@@ -2,6 +2,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
@@ -26,10 +27,8 @@ export default function Classes() {
   const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
   const [obsForm, setObsForm] = useState({ titre:'', contenu:'', mesure_prise:'', intervention_responsable:false, demande_entretien:false });
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-  const userStr = localStorage.getItem('utilisateur');
-  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const headers = {};
+  const currentUser = getSessionUser() || null;
 
   useEffect(() => { chargerTout(); }, []);
 

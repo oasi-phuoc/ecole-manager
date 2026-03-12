@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function DocumentsAdministratifs() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-  const currentUser = JSON.parse(localStorage.getItem('utilisateur') || '{}');
+  const headers = {};
+  const currentUser = getSessionUser() || {};
   const isAdmin = currentUser?.role === 'admin';
 
   const [documents, setDocuments] = useState([]);
@@ -161,7 +161,7 @@ export default function DocumentsAdministratifs() {
         >
           ← Retour
         </button>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents administratifs</h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents</h2>
       </div>
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -256,7 +256,7 @@ export default function DocumentsAdministratifs() {
         {loading ? (
           <div style={{ color: '#94a3b8', padding: 12 }}>Chargement...</div>
         ) : documentsTries.length === 0 ? (
-          <div style={{ color: '#94a3b8', padding: 12 }}>Aucun document administratif</div>
+          <div style={{ color: '#94a3b8', padding: 12 }}>Aucun document</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {documentsTries.map(doc => (

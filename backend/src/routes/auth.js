@@ -22,6 +22,13 @@ const registerLimiter = rateLimit({
 
 router.post('/register', registerLimiter, authController.register);
 router.post('/login', loginLimiter, authController.login);
+router.post('/login/mfa', loginLimiter, authController.loginMfa);
+router.post('/logout', authController.logout);
 router.get('/moi', verifierToken, authController.moi);
+router.get('/mfa/status', verifierToken, authController.mfaStatus);
+router.post('/mfa/setup', verifierToken, authController.mfaSetup);
+router.post('/mfa/enable', verifierToken, authController.mfaEnable);
+router.post('/mfa/backup/regenerate', verifierToken, authController.mfaRegenerateBackupCodes);
+router.post('/mfa/disable', verifierToken, authController.mfaDisable);
 
 module.exports = router;

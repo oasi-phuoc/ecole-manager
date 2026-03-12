@@ -2,6 +2,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -82,9 +83,8 @@ export default function Eleves() {
   const [obsForm, setObsForm] = useState({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
 
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-  const currentUser = JSON.parse(localStorage.getItem('utilisateur') || '{}');
+  const headers = {};
+  const currentUser = getSessionUser() || {};
 
   useEffect(() => { chargerTout(); }, []);
 
@@ -368,7 +368,7 @@ export default function Eleves() {
       const formData = new FormData();
       formData.append('fichier', importFile);
       const r = await axios.post(API+'/import/eleves', formData, {
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/form-data' }
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       });
       setImportResult(r.data); chargerTout();
     } catch(err) { setImportResult({ message: 'Erreur: '+(err.response?.data?.message||err.message) }); }

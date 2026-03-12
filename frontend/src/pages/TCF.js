@@ -81,10 +81,19 @@ const minutesToTime = (minutes) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+const TCF_STATE_KEYS = {
+  pool: 'pool',
+  affectation: 'affectation',
+  resultats: 'resultats',
+};
+
+const lireObjetLocal = () => {
+  return {};
+};
+
 export default function TCF() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = useMemo(() => ({ Authorization: 'Bearer ' + token }), [token]);
+  const headers = useMemo(() => ({}), []);
 
   const [onglet, setOnglet] = useState('pool');
   const [profs, setProfs] = useState([]);
@@ -139,6 +148,38 @@ export default function TCF() {
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
   const [anneeScolaire, setAnneeScolaire] = useState('');
 
+  const appliquerPoolState = (poolState = {}) => {
+    const savedOrder = Array.isArray(poolState?.siteOrder) && poolState.siteOrder.length
+      ? poolState.siteOrder
+      : Object.keys(poolState?.siteNames || {});
+    if (savedOrder.length) {
+      setSiteOrder(savedOrder);
+      const maxSuffix = savedOrder.reduce((acc, key) => {
+        const n = Number(String(key).replace('site', ''));
+        return Number.isFinite(n) ? Math.max(acc, n) : acc;
+      }, 0);
+      setSiteCounter(maxSuffix || 2);
+    }
+    if (poolState?.siteNames) setSiteNames(poolState.siteNames);
+    if (poolState?.siteLevels) setSiteLevels(poolState.siteLevels);
+    if (poolState?.selectedBySite) setSelectedBySite(poolState.selectedBySite);
+    if (poolState?.splitByProf) setSplitByProf(poolState.splitByProf);
+    if (poolState?.poolCellOverrides) setPoolCellOverrides(poolState.poolCellOverrides);
+  };
+
+  const appliquerAffectationState = (aff = {}) => {
+    setAffectationDateDebutBySite(aff?.dateDebutBySite || {});
+    setAffectationHorairesBySite(aff?.horairesBySite || {});
+    setAffectationClassesBySite(aff?.classesBySite || {});
+    setAffectationJoursActifsBySite(aff?.joursActifsBySite || {});
+    setRolesAffectesByPoolDemi(aff?.rolesByPoolDemi || {});
+    setOrganisationByPoolDemi(aff?.organisationByPoolDemi || {});
+  };
+
+  const sauvegarderEtatTCFServeur = async (cle, donnees) => {
+    await axios.put(API + '/tcf-state/' + cle, { donnees }, { headers });
+  };
+
   useEffect(() => {
     const charger = async () => {
       setChargement(true);
@@ -174,39 +215,31 @@ export default function TCF() {
         setDisposMap({});
       }
 
-      try {
-        const poolState = JSON.parse(localStorage.getItem('tcf_pool_state') || '{}');
-        const savedOrder = Array.isArray(poolState?.siteOrder) && poolState.siteOrder.length
-          ? poolState.siteOrder
-          : Object.keys(poolState?.siteNames || {});
-        if (savedOrder.length) {
-          setSiteOrder(savedOrder);
-          const maxSuffix = savedOrder.reduce((acc, key) => {
-            const n = Number(String(key).replace('site', ''));
-            return Number.isFinite(n) ? Math.max(acc, n) : acc;
-          }, 0);
-          setSiteCounter(maxSuffix || 2);
-        }
-        if (poolState?.siteNames) setSiteNames(poolState.siteNames);
-        if (poolState?.siteLevels) setSiteLevels(poolState.siteLevels);
-        if (poolState?.selectedBySite) setSelectedBySite(poolState.selectedBySite);
-        if (poolState?.splitByProf) setSplitByProf(poolState.splitByProf);
-        if (poolState?.poolCellOverrides) setPoolCellOverrides(poolState.poolCellOverrides);
-      } catch {}
+      const poolLocal = lireObjetLocal('tcf_pool_state');
+      const rsLocal = lireObjetLocal('tcf_resultats_scores');
+      const affLocal = lireObjetLocal('tcf_affectation_state');
+      appliquerPoolState(poolLocal);
+      if (rsLocal && typeof rsLocal === 'object') setScores(rsLocal);
+      appliquerAffectationState(affLocal);
 
       try {
-        const rs = JSON.parse(localStorage.getItem('tcf_resultats_scores') || '{}');
-        if (rs && typeof rs === 'object') setScores(rs);
-      } catch {}
-      try {
-        const aff = JSON.parse(localStorage.getItem('tcf_affectation_state') || '{}');
-        if (aff && typeof aff === 'object') {
-          if (aff.dateDebutBySite) setAffectationDateDebutBySite(aff.dateDebutBySite);
-          if (aff.horairesBySite) setAffectationHorairesBySite(aff.horairesBySite);
-          if (aff.classesBySite) setAffectationClassesBySite(aff.classesBySite);
-          if (aff.joursActifsBySite) setAffectationJoursActifsBySite(aff.joursActifsBySite);
-          if (aff.rolesByPoolDemi) setRolesAffectesByPoolDemi(aff.rolesByPoolDemi);
-          if (aff.organisationByPoolDemi) setOrganisationByPoolDemi(aff.organisationByPoolDemi);
+        const [poolSrv, affSrv, rsSrv] = await Promise.all([
+          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.pool, { headers }).catch(() => null),
+          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.affectation, { headers }).catch(() => null),
+          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.resultats, { headers }).catch(() => null),
+        ]);
+
+        if (poolSrv?.data?.updated_at) {
+          const donnees = poolSrv.data?.donnees || {};
+          appliquerPoolState(donnees);
+        }
+        if (affSrv?.data?.updated_at) {
+          const donnees = affSrv.data?.donnees || {};
+          appliquerAffectationState(donnees);
+        }
+        if (rsSrv?.data?.updated_at) {
+          const donnees = rsSrv.data?.donnees || {};
+          setScores(donnees && typeof donnees === 'object' ? donnees : {});
         }
       } catch {}
       setChargement(false);
@@ -978,7 +1011,7 @@ export default function TCF() {
                 <thead>
                   <tr style={styles.thead}>
                     <th style={styles.thCenter}>N°</th>
-                    <th style={styles.thLeft}>Classe</th>
+                    <th style={styles.thClasseFixe}>Classe</th>
                     <th style={styles.thLeft}>Nom</th>
                     <th style={styles.thLeft}>Prénom</th>
                     {isFr ? (
@@ -1013,7 +1046,7 @@ export default function TCF() {
                     return (
                       <tr key={e.id}>
                         <td style={styles.tdCenter}>{idx + 1}</td>
-                        <td style={styles.tdLeft}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
+                        <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
                         <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
                         <td style={styles.tdLeft}>{e.prenom || ''}</td>
 
@@ -1952,22 +1985,6 @@ export default function TCF() {
                   style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
               ))}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (graphVue === 'moyenne') {
-                      setGraphVue('individuelle');
-                      return;
-                    }
-                    setGraphVue('moyenne');
-                    setGraphClasseId('');
-                    setGraphEleveId('');
-                    setGraphEleveSearch('');
-                  }}
-                  style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}
-                >
-                  Moyenne
-                </button>
                 {graphVue !== 'moyenne' && (
                   <button type="button" onClick={handlePrintAll} style={styles.btnSaveTop}>
                     🖨 Tout imprimer
@@ -1981,15 +1998,14 @@ export default function TCF() {
               <option value="">- Sélectionner la session -</option>
               {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            {graphVue !== 'moyenne' && (
-              <div style={styles.toggleWrap}>
-                <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
-                <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
-              </div>
-            )}
+            <div style={styles.toggleWrap}>
+              <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
+              <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
+            </div>
             <div style={styles.toggleWrap}>
               <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
               <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
+              <button onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'moyenne' ? styles.toggleBtnActif : {}) }}>Moyenne</button>
             </div>
             {graphVue === 'classe' && (
               <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
@@ -2255,19 +2271,25 @@ export default function TCF() {
     }, 2000);
   };
 
-  const handleSavePool = () => {
+  const handleSavePool = async () => {
     const sitesSansNiveau = siteOrder.filter((siteKey) => !(siteLevels?.[siteKey] || []).length);
     if (sitesSansNiveau.length > 0) {
       const noms = sitesSansNiveau.map((siteKey, idx) => siteNames?.[siteKey] || `Site ${idx + 1}`).join(', ');
       alert(`Sélection du niveau obligatoire.\n\nVeuillez sélectionner au moins un niveau pour : ${noms}.`);
       return;
     }
-    localStorage.setItem('tcf_pool_state', JSON.stringify({ siteOrder, siteCounter, siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides }));
+    const payload = { siteOrder, siteCounter, siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides };
+    try {
+      await sauvegarderEtatTCFServeur(TCF_STATE_KEYS.pool, payload);
+    } catch (err) {
+      alert('Erreur sauvegarde serveur (Pool): ' + (err.response?.data?.message || err.message));
+      return;
+    }
     setPoolDirty(false);
     afficherSaveMsg('pool');
   };
 
-  const handleSaveAffectation = () => {
+  const handleSaveAffectation = async () => {
     if (onglet === 'classes') {
       const sitesSansDate = siteOrder.filter((siteKey) => {
         const d = String(affectationDateDebutBySite?.[siteKey] || '').trim();
@@ -2281,7 +2303,7 @@ export default function TCF() {
         return;
       }
     }
-    localStorage.setItem('tcf_affectation_state', JSON.stringify({
+    const payload = {
       updatedAt: new Date().toISOString(),
       dateDebutBySite: affectationDateDebutBySite,
       horairesBySite: affectationHorairesBySite,
@@ -2289,33 +2311,30 @@ export default function TCF() {
       joursActifsBySite: affectationJoursActifsBySite,
       rolesByPoolDemi: rolesAffectesByPoolDemi,
       organisationByPoolDemi: organisationByPoolDemi,
-    }));
+    };
+    try {
+      await sauvegarderEtatTCFServeur(TCF_STATE_KEYS.affectation, payload);
+    } catch (err) {
+      alert('Erreur sauvegarde serveur (Classes/Rôles): ' + (err.response?.data?.message || err.message));
+      return;
+    }
     setAffectationDirty(false);
     afficherSaveMsg(onglet === 'roles' ? 'roles' : 'classes');
   };
 
   const resetAffectationToSaved = () => {
-    try {
-      const aff = JSON.parse(localStorage.getItem('tcf_affectation_state') || '{}');
-      setAffectationDateDebutBySite(aff?.dateDebutBySite || {});
-      setAffectationHorairesBySite(aff?.horairesBySite || {});
-      setAffectationClassesBySite(aff?.classesBySite || {});
-      setAffectationJoursActifsBySite(aff?.joursActifsBySite || {});
-      setRolesAffectesByPoolDemi(aff?.rolesByPoolDemi || {});
-      setOrganisationByPoolDemi(aff?.organisationByPoolDemi || {});
-    } catch {
-      setAffectationDateDebutBySite({});
-      setAffectationHorairesBySite({});
-      setAffectationClassesBySite({});
-      setAffectationJoursActifsBySite({});
-      setRolesAffectesByPoolDemi({});
-      setOrganisationByPoolDemi({});
-    }
+    const aff = lireObjetLocal('tcf_affectation_state');
+    appliquerAffectationState(aff);
     setAffectationDirty(false);
   };
 
-  const handleSaveResultat = () => {
-    localStorage.setItem('tcf_resultats_scores', JSON.stringify(scores));
+  const handleSaveResultat = async () => {
+    try {
+      await sauvegarderEtatTCFServeur(TCF_STATE_KEYS.resultats, scores);
+    } catch (err) {
+      alert('Erreur sauvegarde serveur (Résultats): ' + (err.response?.data?.message || err.message));
+      return;
+    }
     setResultatDirty(false);
     afficherSaveMsg('resultat');
   };
@@ -2337,10 +2356,10 @@ export default function TCF() {
     setOnglet(nextTab);
   };
 
-  const handleSaveCurrentTab = () => {
-    if (onglet === 'pool') handleSavePool();
-    else if (onglet === 'classes' || onglet === 'roles') handleSaveAffectation();
-    else if (onglet === 'resultat') handleSaveResultat();
+  const handleSaveCurrentTab = async () => {
+    if (onglet === 'pool') await handleSavePool();
+    else if (onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
+    else if (onglet === 'resultat') await handleSaveResultat();
   };
 
   return (
@@ -2514,9 +2533,11 @@ const styles = {
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
   thead: { background: '#f8fafc' },
   thLeft: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left' },
+  thClasseFixe: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   thProfPool: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' },
   thCenter: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center' },
   tdLeft: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b' },
+  tdClasseFixe: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdProfPool: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 12px', fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdCenter: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', textAlign: 'center' },
   tdCenterCell: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 6px', fontSize: 13, color: '#1e293b', textAlign: 'center', cursor: 'pointer' },

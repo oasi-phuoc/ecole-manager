@@ -1,10 +1,29 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'ecole_manager_token';
+
+const parseCookies = (cookieHeader) => {
+  const out = {};
+  if (!cookieHeader) return out;
+  String(cookieHeader).split(';').forEach((part) => {
+    const [k, ...rest] = part.split('=');
+    const key = String(k || '').trim();
+    if (!key) return;
+    out[key] = decodeURIComponent(rest.join('=').trim());
+  });
+  return out;
+};
 
 const verifierToken = async (req, res, next) => {
   if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Configuration de securite manquante' });
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const headerTokenRaw = authHeader && authHeader.split(' ')[1];
+  const headerToken = (headerTokenRaw && headerTokenRaw !== 'null' && headerTokenRaw !== 'undefined')
+    ? headerTokenRaw
+    : '';
+  const cookies = parseCookies(req.headers.cookie);
+  const cookieToken = cookies[COOKIE_NAME] || '';
+  const token = headerToken || cookieToken;
   if (!token) return res.status(401).json({ message: 'Token manquant' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

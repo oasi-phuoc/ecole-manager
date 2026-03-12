@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const { getMailSettingsRow, getMailRuntimeConfig, sendEmail } = require('../services/mailer');
+const { encryptText } = require('../utils/crypto');
 
 const getProfil = async (req, res) => {
   try {
@@ -124,6 +125,7 @@ const modifierParametresMail = async (req, res) => {
     const fromEmailValue = (smtp_from_email || userValue).trim();
     const activeValue = smtp_active === true;
     const appPasswordValue = typeof smtp_app_password === 'string' ? smtp_app_password.trim() : '';
+    const encryptedPassword = appPasswordValue ? encryptText(appPasswordValue) : '';
 
     if (activeValue && (!userValue || (!appPasswordValue && !existe?.smtp_app_password))) {
       return res.status(400).json({
@@ -135,7 +137,7 @@ const modifierParametresMail = async (req, res) => {
       await pool.query(
         `UPDATE parametres_mail
          SET smtp_active=$1, smtp_host=$2, smtp_port=$3, smtp_secure=$4, smtp_user=$5,
-             smtp_app_password=COALESCE(NULLIF($6,''), smtp_app_password),
+            smtp_app_password=COALESCE(NULLIF($6,''), smtp_app_password),
              smtp_from_name=$7, smtp_from_email=$8, updated_at=NOW()
          WHERE id=$9`,
         [
@@ -144,7 +146,7 @@ const modifierParametresMail = async (req, res) => {
           portValue,
           secureValue,
           userValue,
-          appPasswordValue,
+          encryptedPassword,
           fromNameValue,
           fromEmailValue,
           existe.id,
@@ -155,7 +157,7 @@ const modifierParametresMail = async (req, res) => {
         `INSERT INTO parametres_mail
           (smtp_active, smtp_host, smtp_port, smtp_secure, smtp_user, smtp_app_password, smtp_from_name, smtp_from_email)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [activeValue, hostValue, portValue, secureValue, userValue, appPasswordValue, fromNameValue, fromEmailValue]
+        [activeValue, hostValue, portValue, secureValue, userValue, encryptedPassword, fromNameValue, fromEmailValue]
       );
     }
 

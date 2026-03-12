@@ -1,6 +1,7 @@
+import { getSessionUser } from './session';
+
 export const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('utilisateur')) || {}; }
-  catch { return {}; }
+  return getSessionUser() || {};
 };
 
 export const isAdmin = () => getUser().role === 'admin';

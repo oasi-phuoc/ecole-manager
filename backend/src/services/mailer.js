@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const pool = require('../config/database');
+const { decryptText } = require('../utils/crypto');
 
 const DEFAULT_HOST = 'smtp.office365.com';
 const DEFAULT_PORT = 587;
@@ -15,7 +16,7 @@ function buildRuntimeMailConfig(row) {
   const port = Number(row?.smtp_port || process.env.EMAIL_PORT || DEFAULT_PORT);
   const secure = row?.smtp_secure === true || String(process.env.EMAIL_SECURE || '').toLowerCase() === 'true';
   const user = row?.smtp_user || process.env.EMAIL_USER || '';
-  const appPassword = row?.smtp_app_password || process.env.EMAIL_PASS || '';
+  const appPassword = decryptText(row?.smtp_app_password || '') || process.env.EMAIL_PASS || '';
   const fromEmail = row?.smtp_from_email || process.env.EMAIL_FROM || user;
   const fromName = row?.smtp_from_name || process.env.EMAIL_FROM_NAME || 'Ecole Manager';
   const enabled = row ? row.smtp_active === true : Boolean(user && appPassword);

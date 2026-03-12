@@ -25,6 +25,15 @@ export default function Parametres() {
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaSetupToken, setMfaSetupToken] = useState('');
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [mfaOtpAuthUrl, setMfaOtpAuthUrl] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaBackupCodes, setMfaBackupCodes] = useState([]);
+  const [mfaBackupRemaining, setMfaBackupRemaining] = useState(0);
+  const [msgMfa, setMsgMfa] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
   const [msgPerms, setMsgPerms] = useState('');
   const [mail, setMail] = useState({
     smtp_active: false,
@@ -46,11 +55,11 @@ export default function Parametres() {
   const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetRentreeMsg, setResetRentreeMsg] = useState('');
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
   const isAdmin = profil.role === 'admin';
 
   useEffect(() => { chargerProfil(); }, []);
+  useEffect(() => { chargerMfaStatus(); }, []);
   useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); } }, [isAdmin]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
@@ -118,6 +127,86 @@ export default function Parametres() {
       setMdp({ ancien: '', nouveau: '', confirmation: '' });
       setTimeout(() => setMsgMdp(''), 3000);
     } catch (err) { setMsgMdp('error'); }
+  };
+
+  const chargerMfaStatus = async () => {
+    try {
+      const res = await axios.get(API + '/auth/mfa/status', { headers });
+      setMfaEnabled(res.data?.mfa_enabled === true);
+      setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || 0));
+    } catch {}
+  };
+
+  const handleGenererMfaSetup = async () => {
+    setMsgMfa('');
+    setMfaLoading(true);
+    try {
+      const res = await axios.post(API + '/auth/mfa/setup', {}, { headers });
+      setMfaSetupToken(res.data?.setup_token || '');
+      setMfaSecret(res.data?.secret || '');
+      setMfaOtpAuthUrl(res.data?.otpauth_url || '');
+      setMfaBackupCodes([]);
+      setMsgMfa('Scannez le QR code puis saisissez le code à 6 chiffres pour activer.');
+    } catch (err) {
+      setMsgMfa(err.response?.data?.message || 'Erreur génération setup MFA');
+    }
+    setMfaLoading(false);
+  };
+
+  const handleActiverMfa = async () => {
+    setMsgMfa('');
+    if (!mfaSetupToken || !mfaCode) return setMsgMfa('Token setup ou code manquant.');
+    setMfaLoading(true);
+    try {
+      const res = await axios.post(API + '/auth/mfa/enable', { setup_token: mfaSetupToken, code: mfaCode }, { headers });
+      setMfaEnabled(true);
+      setMfaBackupCodes(res.data?.backup_codes || []);
+      setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || (res.data?.backup_codes || []).length));
+      setMfaSetupToken('');
+      setMfaSecret('');
+      setMfaOtpAuthUrl('');
+      setMfaCode('');
+      setMsgMfa('✅ Double authentification activée. Conservez les codes de secours dans un endroit sûr.');
+    } catch (err) {
+      setMsgMfa(err.response?.data?.message || "Erreur d'activation MFA");
+    }
+    setMfaLoading(false);
+  };
+
+  const handleDesactiverMfa = async () => {
+    setMsgMfa('');
+    if (!mfaCode) return setMsgMfa('Veuillez saisir un code 2FA.');
+    setMfaLoading(true);
+    try {
+      await axios.post(API + '/auth/mfa/disable', { code: mfaCode }, { headers });
+      setMfaEnabled(false);
+      setMfaBackupCodes([]);
+      setMfaBackupRemaining(0);
+      setMfaCode('');
+      setMfaSetupToken('');
+      setMfaSecret('');
+      setMfaOtpAuthUrl('');
+      setMsgMfa('✅ Double authentification désactivée.');
+    } catch (err) {
+      setMsgMfa(err.response?.data?.message || 'Erreur désactivation MFA');
+    }
+    setMfaLoading(false);
+  };
+
+  const handleRegenererBackupCodes = async () => {
+    setMsgMfa('');
+    if (!mfaCode) return setMsgMfa('Veuillez saisir un code 2FA pour régénérer les codes de secours.');
+    setMfaLoading(true);
+    try {
+      const res = await axios.post(API + '/auth/mfa/backup/regenerate', { code: mfaCode }, { headers });
+      setMfaBackupCodes(res.data?.backup_codes || []);
+      setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || (res.data?.backup_codes || []).length));
+      setMfaCode('');
+      setMsgMfa('✅ Nouveaux codes de secours générés.');
+    } catch (err) {
+      setMsgMfa(err.response?.data?.message || 'Erreur génération des codes de secours');
+    }
+    setMfaLoading(false);
   };
 
   const handleSauverEcole = async (e) => {
@@ -227,13 +316,14 @@ export default function Parametres() {
   const ONGLETS = [
     { key: 'profil', label: '👤 Mon profil', show: true },
     { key: 'mdp', label: '🔒 Mot de passe', show: true },
+    { key: 'mfa', label: '📱 Double authentification', show: true },
     { key: 'ecole', label: '🏫 École', show: isAdmin },
     { key: 'mail', label: '✉️ Envoi des mails', show: isAdmin },
     { key: 'acces', label: '🔑 Gestion des accès', show: isAdmin },
     { key: 'danger', label: '⚠️ Réinitialisation', show: isAdmin },
   ].filter(o => o.show);
 
-  const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
+  const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', mfa: '#0f766e', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
 
   return (
     <div style={styles.page}>
@@ -301,6 +391,123 @@ export default function Parametres() {
                 </div>
                 <button type="submit" style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>🔒 Changer</button>
               </form>
+            </div>
+          )}
+
+          {onglet === 'mfa' && (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitre}>📱 Double authentification (Google Authenticator)</h3>
+              <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+                Activez un second facteur de connexion (code à 6 chiffres) pour sécuriser l'accès à votre compte.
+              </p>
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                marginBottom: 16,
+                fontWeight: 700,
+                background: mfaEnabled ? '#dcfce7' : '#fef3c7',
+                color: mfaEnabled ? '#166534' : '#92400e'
+              }}>
+                {mfaEnabled ? '✅ 2FA active' : '⚠️ 2FA désactivée'}
+              </div>
+              {msgMfa && (
+                <div style={{
+                  ...styles.msgInfo,
+                  background: msgMfa.startsWith('✅') ? '#dcfce7' : '#eff6ff',
+                  color: msgMfa.startsWith('✅') ? '#166534' : '#1e40af'
+                }}>
+                  {msgMfa}
+                </div>
+              )}
+
+              {!mfaEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {!mfaSetupToken && (
+                    <button type="button" style={{ ...styles.btnSauver, background: '#0f766e' }} onClick={handleGenererMfaSetup} disabled={mfaLoading}>
+                      {mfaLoading ? '⏳ Génération...' : 'Générer le setup 2FA'}
+                    </button>
+                  )}
+
+                  {mfaSetupToken && (
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#f8fafc' }}>
+                      <div style={{ fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>1) Scanner le QR code</div>
+                      {mfaOtpAuthUrl && (
+                        <img
+                          alt="QR code MFA"
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mfaOtpAuthUrl)}`}
+                          style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', marginBottom: 10 }}
+                        />
+                      )}
+                      <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                        En cas de problème de scan, clé manuelle:
+                      </div>
+                      <code style={{ display: 'inline-block', padding: '6px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                        {mfaSecret}
+                      </code>
+                      <div style={{ fontWeight: 700, marginTop: 14, marginBottom: 8, color: '#0f172a' }}>2) Saisir le code à 6 chiffres</div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          style={{ ...styles.input, maxWidth: 180 }}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          value={mfaCode}
+                          onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="123456"
+                        />
+                        <button type="button" style={{ ...styles.btnSauver, background: '#0f766e' }} onClick={handleActiverMfa} disabled={mfaLoading}>
+                          {mfaLoading ? '⏳ Activation...' : 'Activer 2FA'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mfaEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: '#334155', fontWeight: 700 }}>
+                    Codes de secours restants: {mfaBackupRemaining}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      style={{ ...styles.input, maxWidth: 180 }}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={mfaCode}
+                      onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Code 2FA"
+                    />
+                    <button type="button" style={{ ...styles.btnSauver, background: '#b45309' }} onClick={handleRegenererBackupCodes} disabled={mfaLoading}>
+                      {mfaLoading ? '⏳ Génération...' : 'Régénérer codes secours'}
+                    </button>
+                    <button type="button" style={{ ...styles.btnSauver, background: '#dc2626' }} onClick={handleDesactiverMfa} disabled={mfaLoading}>
+                      {mfaLoading ? '⏳ Désactivation...' : 'Désactiver 2FA'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {mfaBackupCodes.length > 0 && (
+                <div style={{ marginTop: 14, border: '1px solid #fde68a', borderRadius: 10, padding: 14, background: '#fffbeb' }}>
+                  <div style={{ fontWeight: 800, color: '#92400e', marginBottom: 8 }}>
+                    ⚠️ Codes de secours (affichés une seule fois)
+                  </div>
+                  <div style={{ fontSize: 12, color: '#92400e', marginBottom: 10 }}>
+                    Conservez-les hors ligne. Chaque code ne peut être utilisé qu'une seule fois.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
+                    {mfaBackupCodes.map((c, i) => (
+                      <code key={`backup-${i}`} style={{ padding: '8px 10px', background: 'white', border: '1px solid #fcd34d', borderRadius: 8, textAlign: 'center', fontWeight: 800 }}>
+                        {c}
+                      </code>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -688,6 +895,7 @@ const styles = {
   roleTag: { display: 'inline-block', background: '#e3f2fd', color: '#1a73e8', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', marginBottom: '20px' },
   msgSuccess: { background: '#e8f5e9', color: '#2e7d32', padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
   msgError: { background: '#ffebee', color: '#c62828', padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
+  msgInfo: { padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' },
   formChamp: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
   label: { fontSize: '13px', fontWeight: '600', marginBottom: '5px', color: '#555' },

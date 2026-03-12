@@ -11,6 +11,8 @@ const OPTS_LABEL = { '': '—', 'P': 'P', 'A': 'A', 'R': 'R', 'E': 'E', 'C': 'C'
 const OPTS_COLOR = { '': '#94a3b8', 'P': '#10b981', 'A': '#ef4444', 'R': '#f59e0b', 'E': '#3b82f6', 'C': '#8b5cf6' };
 const PERIODES = [1,2,3,4,5,6,7,8];
 const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const COL_NOM_WIDTH = 170;
+const COL_PRENOM_WIDTH = 150;
 
 function initPresences(eleves) {
   const p = {};
@@ -36,10 +38,11 @@ export default function Presences() {
   const [apercuMois, setApercuMois] = useState({});
   const [loadingApercu, setLoadingApercu] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [statsDateDebut, setStatsDateDebut] = useState('');
+  const [statsDateFin, setStatsDateFin] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);
   useEffect(() => {
@@ -54,7 +57,6 @@ export default function Presences() {
       const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
       setClasseInfo(cl || null);
       chargerEleves();
-      chargerStats();
       chargerClasseHoraires(classeSelectionnee);
     } else {
       setClasseInfo(null);
@@ -66,6 +68,10 @@ export default function Presences() {
       setValide(false);
     }
   }, [classeSelectionnee, date]);
+
+  useEffect(() => {
+    if (classeSelectionnee) chargerStats();
+  }, [classeSelectionnee, statsDateDebut, statsDateFin]);
 
   const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const STATUT_OASI = { 'P':'01 Présent', 'R':'02 Retard', 'A':'03 Absent', 'E':'04 Excusé', 'C':'05 Congé' };
@@ -259,7 +265,10 @@ export default function Presences() {
 
   const chargerStats = async () => {
     try {
-      const res = await axios.get(API + '/presences/statistiques?classe_id=' + classeSelectionnee, { headers });
+      const params = new URLSearchParams({ classe_id: String(classeSelectionnee) });
+      if (statsDateDebut) params.append('date_debut', statsDateDebut);
+      if (statsDateFin) params.append('date_fin', statsDateFin);
+      const res = await axios.get(API + '/presences/statistiques?' + params.toString(), { headers });
       setStatistiques(res.data);
     } catch (err) { console.error(err); }
   };
@@ -467,8 +476,8 @@ export default function Presences() {
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                 <colgroup>
-                  <col style={{width:170,minWidth:170,maxWidth:170}} />
-                  <col style={{width:150,minWidth:150,maxWidth:150}} />
+                  <col style={{width:COL_NOM_WIDTH,minWidth:COL_NOM_WIDTH,maxWidth:COL_NOM_WIDTH}} />
+                  <col style={{width:COL_PRENOM_WIDTH,minWidth:COL_PRENOM_WIDTH,maxWidth:COL_PRENOM_WIDTH}} />
                   <col style={{width:74,minWidth:74,maxWidth:74}} />
                   {PERIODES.map(i => <col key={`col-p-${i}`} style={{width:64,minWidth:64,maxWidth:64}} />)}
                   <col style={{width:'auto'}} />
@@ -551,11 +560,10 @@ export default function Presences() {
 
       {onglet === 'apercu' && (
         <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-          <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
             <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
               Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
             </span>
-            <button onClick={chargerApercuMois} style={{padding:'6px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12}}>🔄 Actualiser</button>
           </div>
           {loadingApercu ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Chargement...</div>
@@ -563,7 +571,7 @@ export default function Presences() {
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>
               {apercuMois.erreur
                 ? <span style={{color:'#ef4444'}}>❌ Erreur : {apercuMois.erreur}</span>
-                : 'Cliquez sur 🔄 Actualiser pour charger les données'}
+                : 'Aucune donnée pour ce mois'}
             </div>
           ) : (() => {
             const moisStr = apercuMois.mois;
@@ -599,9 +607,15 @@ export default function Presences() {
             return (
               <div style={{overflowX:'auto'}}>
                 <table style={{borderCollapse:'collapse',fontSize:11,minWidth:'100%'}}>
+                  <colgroup>
+                    <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
+                    <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH, maxWidth: COL_PRENOM_WIDTH }} />
+                    {jours.map((j) => <col key={`apercu-col-${j}`} style={{ width: 26, minWidth: 26, maxWidth: 26 }} />)}
+                  </colgroup>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:2,minWidth:150,whiteSpace:'nowrap'}}>Élève</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:3,whiteSpace:'nowrap'}}>NOM</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:COL_NOM_WIDTH,background:'#f8fafc',zIndex:3,whiteSpace:'nowrap'}}>Prénom</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
@@ -620,9 +634,8 @@ export default function Presences() {
                   <tbody>
                     {apercuMois.eleves.map((e, ri) => (
                       <tr key={e.id} style={{background:ri%2===0?'white':'#fafafa'}}>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:1,whiteSpace:'nowrap'}}>
-                          {e.nom} {e.prenom}
-                        </td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap'}}>{e.nom}</td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap'}}>{e.prenom}</td>
                         {jours.map(j => {
                           const wkd = isWkd(j);
                           const vac = isVac(j);
@@ -655,11 +668,32 @@ export default function Presences() {
 
       {onglet === 'stats' && (
         <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+            <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
+            <input
+              type="date"
+              value={statsDateDebut}
+              onChange={e => setStatsDateDebut(e.target.value)}
+              style={s.inp}
+            />
+            <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
+            <input
+              type="date"
+              value={statsDateFin}
+              onChange={e => setStatsDateFin(e.target.value)}
+              style={s.inp}
+            />
+          </div>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <colgroup>
+              <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
+              <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH, maxWidth: COL_PRENOM_WIDTH }} />
+              {Array.from({ length: 8 }).map((_, i) => <col key={`stats-col-${i}`} style={{ width: 96, minWidth: 96, maxWidth: 96 }} />)}
+            </colgroup>
             <thead>
               <tr style={{background:'#f8fafc'}}>
                 {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Taux présence %','Taux présence BN %'].map(h => (
-                  <th key={h} style={s.th}>{h}</th>
+                  <th key={h} style={{...s.th,textAlign:h==='NOM'||h==='Prénom'?'left':'center'}}>{h}</th>
                 ))}
               </tr>
             </thead>

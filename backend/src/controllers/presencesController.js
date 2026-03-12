@@ -96,7 +96,7 @@ const enregistrerPresences = async (req, res) => {
 
 const getStatistiques = async (req, res) => {
   try {
-    const { classe_id } = req.query;
+    const { classe_id, date_debut, date_fin } = req.query;
     const result = await pool.query(`
       SELECT
         e.id as eleve_id,
@@ -125,11 +125,14 @@ const getStatistiques = async (req, res) => {
         ) as conges
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
-      LEFT JOIN presences_v2 pv ON pv.eleve_id = e.id
+      LEFT JOIN presences_v2 pv
+        ON pv.eleve_id = e.id
+       AND ($2::date IS NULL OR pv.date >= $2::date)
+       AND ($3::date IS NULL OR pv.date <= $3::date)
       WHERE e.classe_id = $1
       GROUP BY e.id, u.nom, u.prenom, e.nom, e.prenom
       ORDER BY nom, prenom
-    `, [classe_id]);
+    `, [classe_id, date_debut || null, date_fin || null]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });

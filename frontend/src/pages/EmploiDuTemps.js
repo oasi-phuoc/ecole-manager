@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-const AFFECTATION_MODES_STORAGE_KEY = 'emploi_du_temps_affectation_modes';
 const BASE_PERIODES_TAUX = 42;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
@@ -75,13 +74,7 @@ export default function EmploiDuTemps() {
   const [titulariatsDraftByProf, setTitulariatsDraftByProf] = useState({});
   const [branchesMatiereDraftMap, setBranchesMatiereDraftMap] = useState({});
   const [hasBranchesUnsaved, setHasBranchesUnsaved] = useState(false);
-  const [affectationModes, setAffectationModes] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(AFFECTATION_MODES_STORAGE_KEY) || '{}');
-    } catch {
-      return {};
-    }
-  });
+  const [affectationModes, setAffectationModes] = useState({});
   const [couleursClassesMap, setCouleursClassesMap] = useState({});
   const [classeCouleurEditionId, setClasseCouleurEditionId] = useState('');
   const [couleursProfsMap, setCouleursProfsMap] = useState({});
@@ -117,8 +110,7 @@ export default function EmploiDuTemps() {
   const [poolAffId, setPoolAffId] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
+  const headers = {};
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -192,11 +184,6 @@ export default function EmploiDuTemps() {
       chargerDisposAffectations(poolAffId);
     }
   }, [onglet, sousOngletAff, poolAffId]);
-
-  useEffect(() => {
-    localStorage.setItem(AFFECTATION_MODES_STORAGE_KEY, JSON.stringify(affectationModes));
-  }, [affectationModes]);
-
 
   useEffect(() => {
     setSalleSelectionnee('');

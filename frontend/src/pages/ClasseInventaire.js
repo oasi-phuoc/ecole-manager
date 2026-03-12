@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { getSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
 export default function ClasseInventaire() {
   const navigate = useNavigate();
   const { classeId } = useParams();
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: 'Bearer ' + token };
-  const user = JSON.parse(localStorage.getItem('utilisateur') || '{}');
+  const headers = {};
+  const user = getSessionUser() || {};
   const canEdit = user?.role === 'admin' || user?.role === 'prof';
 
   const [classe, setClasse] = useState(null);
