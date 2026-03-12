@@ -442,13 +442,23 @@ export default function EmploiDuTemps() {
       matiere_nom: matiereDraft?.nom || null
     };
   });
+  const classePlanningHorairesSet = new Set(
+    (planningClasse?.horaires || []).map(h => `${h.jour}|${h.periode}`)
+  );
+  const classeAHorairePlanning = (jour, periode) => classePlanningHorairesSet.has(`${jour}|${periode}`);
+  const creneauxPlanningParId = new Map((planningClasse?.creneaux || []).map((c) => [String(c.id), c]));
+  const planningClasseAffectationsActives = planningClasseAffectations.filter((a) => {
+    const cr = creneauxPlanningParId.get(String(a.creneau_id));
+    if (!cr) return false;
+    return classeAHorairePlanning(cr.jour, cr.periode);
+  });
   const suiviBranchesClasse = planningClasse ? matieresPourPlanningClasse.map(m => {
-    const affectees = planningClasseAffectations.filter(a => String(a.matiere_id) === String(m.id)).length;
+    const affectees = planningClasseAffectationsActives.filter(a => String(a.matiere_id) === String(m.id)).length;
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
   const profsAffectesClasse = planningClasse ? Array.from(new Set(
-    planningClasseAffectations
+    planningClasseAffectationsActives
       .map(a => a.prof_id)
       .filter(Boolean)
       .map(id => String(id))
@@ -456,7 +466,7 @@ export default function EmploiDuTemps() {
   const suiviPreferencesBranches = profsAffectesClasse.map((profId) => {
     const prof = (profsPoolP || []).find(p => String(p.id) === String(profId)) || (profs || []).find(p => String(p.id) === String(profId));
     const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites);
-    const affectationsProf = planningClasseAffectations.filter(a => String(a.prof_id) === String(profId));
+    const affectationsProf = planningClasseAffectationsActives.filter(a => String(a.prof_id) === String(profId));
     const compteurParBranche = affectationsProf.reduce((acc, a) => {
       if (!a?.matiere_id) return acc;
       const key = String(a.matiere_id);
@@ -484,10 +494,6 @@ export default function EmploiDuTemps() {
       compteAutres
     };
   });
-  const classePlanningHorairesSet = new Set(
-    (planningClasse?.horaires || []).map(h => `${h.jour}|${h.periode}`)
-  );
-  const classeAHorairePlanning = (jour, periode) => classePlanningHorairesSet.has(`${jour}|${periode}`);
   const lieuxTravailMap = new Map([
     ['creuset', 'Creuset'],
     ['botza', 'Botza'],
@@ -2678,7 +2684,7 @@ export default function EmploiDuTemps() {
                       style={{...styles.affTabBtn, ...(modeAffectationRapideClasse ? styles.affTabBtnActif : {})}}
                       onClick={() => setModeAffectationRapideClasse(prev => !prev)}
                     >
-                      Classe
+                      Affecter automatiquement
                     </button>
                     {modeAffectationRapideClasse && (
                       <>
