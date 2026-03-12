@@ -1559,12 +1559,18 @@ export default function TCF() {
 
   const printCharts = (charts, isFr, maxScore) => {
     const matLabel = isFr ? 'Français' : 'Mathématiques';
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
+    const logoFallbackUrl = `${window.location.origin}/build/logo-etat-du-valais.png`;
     const headerHtml = `<div class="page-header">
         <div class="header-left">
           <div class="header-dept">Département de la santé, des affaires sociales et de la culture</div>
           <div class="header-service">Service de l'action sociale</div>
           <div class="header-office">Office de l'asile</div>
           <div class="header-centre">Centre de formation "Le Botza"</div>
+        </div>
+        <div class="header-right">
+          <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
         </div>
       </div>`;
     const footerHtml = `<div class="page-footer">
@@ -1590,11 +1596,13 @@ export default function TCF() {
         body { font-family: Arial, sans-serif; margin: 0; }
         .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .page-header { border-bottom: 2px solid #6366f1; padding: 18px 32px 12px; }
+        .page-header { border-bottom: 2px solid #6366f1; padding: 18px 32px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
         .header-dept { font-size: 11px; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .header-service { font-size: 11px; color: #475569; }
         .header-office { font-size: 11px; color: #475569; }
         .header-centre { font-size: 14px; font-weight: 800; color: #1e293b; margin-top: 4px; }
+        .header-right { margin-left: auto; }
+        .header-logo { height: 56px; width: auto; object-fit: contain; display: block; }
         .page-content { flex: 1; padding: 28px 32px; }
         .page-title { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .page-sub { font-size: 13px; color: #6366f1; margin-bottom: 24px; font-weight: 600; }
