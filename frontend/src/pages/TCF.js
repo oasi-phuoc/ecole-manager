@@ -1513,8 +1513,8 @@ export default function TCF() {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const showTrend = options.showTrend !== false;
     const niveau = normaliserNiveau(options.niveau || '');
-    const label1 = isFr ? 'Oral' : 'CSC-CFR';
-    const label2 = isFr ? 'Écrit' : 'CAF-CAP';
+    const label1 = options.label1 || (isFr ? 'Oral' : 'CSC-CFR');
+    const label2 = options.label2 || (isFr ? 'Écrit' : 'CAF-CAP');
 
     const barW = 52;
     const groupW = 180;
@@ -1534,7 +1534,8 @@ export default function TCF() {
     const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(maxScore, Number(v) || 0)) / maxScore) * innerH;
 
     // Grille (tous les 5 points) sans numérotation 0/10/20...
-    if (isFr) {
+    const showFrenchLevelMarks = isFr && options.showFrenchLevelMarks !== false && !options.label1 && !options.label2;
+    if (showFrenchLevelMarks) {
       for (let v = 0; v <= 55; v += 5) {
         const y = yFromValue(v);
         parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`);
@@ -1604,10 +1605,12 @@ export default function TCF() {
   };
 
   const printCharts = (charts, isFr, maxScore) => {
-    const titleMain = isFr ? 'Test de connaissance du français' : 'Test de connaissance des math';
+    const titleMain = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
     const logoFallbackUrl = `${window.location.origin}/build/logo-etat-du-valais.png`;
+    const logoPiedUrl = `${publicBase}/logo-pied-page.png`;
+    const logoPiedFallbackUrl = `${window.location.origin}/build/logo-pied-page.png`;
     const headerHtml = `<div class="page-header">
         <div class="header-left">
           <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
@@ -1631,13 +1634,29 @@ export default function TCF() {
       const nom = c.nom || '';
       const prenom = c.prenom || '';
       const classe = c.classe || '';
+      const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
       return `<div class="page">
-        ${headerHtml}
-        <div class="page-content">
-          <div class="page-title">${titleMain}</div>
-          <div class="page-identite">NOM : ${nom}   Prénom : ${prenom}</div>
-          <div class="page-classe">Classe : ${classe}</div>
-          <div class="chart-frame">${svg}</div>
+        <div class="screen-card">
+          ${headerHtml}
+          <div class="title-wrap">
+            <div class="spacer-top"></div>
+            <div class="page-title">${titleMain}</div>
+            <div class="spacer-mid"></div>
+            <div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>
+            <div class="ligne-classe-date">
+              <div class="page-classe"><b>Classe :</b> ${classe || '—'}</div>
+              <div class="page-date">${dateVetroz}</div>
+            </div>
+            <div class="spacer-bottom"></div>
+          </div>
+          <div class="chart-wrap">${svg}</div>
+          <div class="footer-line">
+            <img class="footer-logo" src="${logoPiedUrl}" alt="Logo pied de page" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoPiedFallbackUrl}';}else{this.style.display='none';}" />
+            <div class="footer-text">
+              <div>Zone Industrielle 4, 1963 Vétroz</div>
+              <div>Tél. 027 606 18 60</div>
+            </div>
+          </div>
         </div>
       </div>`;
     });
@@ -1645,22 +1664,29 @@ export default function TCF() {
       <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; }
-        .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; }
+        .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; align-items: center; justify-content: flex-start; }
         .page:last-child { page-break-after: auto; }
-        .page-header { border-bottom: 2px solid #6366f1; padding: 12px 24px 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+        .screen-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 12px 24px; width: 800px; max-width: 100%; margin-top: 8px; }
+        .page-header { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: flex-start; justify-content: flex-start; gap: 14px; }
         .header-left { display: flex; align-items: flex-start; gap: 10px; }
         .header-logo { height: 54px; width: auto; object-fit: contain; display: block; }
         .header-admin { font-size: 8pt; color: #334155; line-height: 1.25; font-weight: 600; }
-        .header-right { text-align: right; margin-left: auto; }
+        .header-right { text-align: left; margin-left: 10px; }
         .header-scai { font-size: 20pt; font-weight: 800; color: #1e293b; line-height: 1; }
         .header-year { font-size: 11pt; font-weight: 700; color: #374151; margin-top: 2px; }
         .header-sub { font-size: 8pt; font-weight: 700; color: #475569; margin-top: 2px; }
-        .page-content { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; align-items: center; }
-        .page-title { font-size: 20pt; font-weight: 800; color: #111827; margin-bottom: 8px; text-align: center; }
-        .page-identite, .page-classe { width: 100%; max-width: 980px; font-size: 16pt; font-weight: 700; color: #1f2937; margin-bottom: 6px; }
-        .page-classe { margin-bottom: 14px; }
-        .chart-frame { background: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; width: fit-content; max-width: 100%; display: flex; justify-content: center; align-items: center; margin: 0 auto; }
-        .chart-frame svg { max-width: 100%; height: auto; display: block; }
+        .title-wrap { text-align: left; margin-top: 10px; margin-bottom: 10px; }
+        .spacer-top { height: 36px; }
+        .spacer-mid { height: 24px; }
+        .spacer-bottom { height: 12px; }
+        .page-title { font-size: 26px; font-weight: 800; color: #111827; margin-bottom: 10px; text-align: left; }
+        .page-identite, .page-classe, .page-date { font-size: 16pt; color: #1f2937; }
+        .ligne-classe-date { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 2px; }
+        .chart-wrap { overflow-x: auto; display: flex; justify-content: center; }
+        .chart-wrap svg { max-width: 100%; height: auto; display: block; }
+        .footer-line { border-top: 1px solid #cbd5e1; margin-top: 10px; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
+        .footer-text { font-size: 6pt; color: #64748b; line-height: 1.35; }
         @page { size: A4 portrait; margin: 10mm; }
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1715,6 +1741,49 @@ export default function TCF() {
         }).filter(e => e.hasData)
       : [];
 
+    const buildChartsForClasse = () => {
+      if (!graphClasseId) return [];
+      const classe = classes.find(c => String(c.id) === graphClasseId);
+      const elevesClasseFiltres = eleves
+        .filter(e => String(e.classe_id) === String(graphClasseId))
+        .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+      return elevesClasseFiltres.map((e) => {
+        const series = sessionsToShowIds.map(session => {
+          const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
+          if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+          const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+        }).filter(s => s.hasData).map(s => ({ ...s, label: s.session }));
+        return {
+          label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`,
+          series,
+          nom: toDisplayNom(e.nom),
+          prenom: e.prenom || '',
+          classe: classe?.nom || '',
+          niveau: normaliserNiveau(classe?.niveau || ''),
+          showTrend: true,
+        };
+      }).filter(c => c.series.length > 0);
+    };
+
+    const getClassMoyennes = () => {
+      return classesNiveau.map((cl) => {
+        const elevesClasse = eleves.filter(e => String(e.classe_id) === String(cl.id));
+        const frTotals = elevesClasse
+          .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).total)
+          .filter((v) => v !== '' && v !== null && v !== undefined)
+          .map(Number);
+        const maTotals = elevesClasse
+          .map((e) => calculMath(getScore('math', graphSession, String(e.id))).total)
+          .filter((v) => v !== '' && v !== null && v !== undefined)
+          .map(Number);
+        const frAvg = frTotals.length ? frTotals.reduce((a, b) => a + b, 0) / frTotals.length : null;
+        const maAvg = maTotals.length ? maTotals.reduce((a, b) => a + b, 0) / maTotals.length : null;
+        const globalAvg = [frAvg, maAvg].filter(v => v != null);
+        const global = globalAvg.length ? globalAvg.reduce((a, b) => a + b, 0) / globalAvg.length : null;
+        return { id: cl.id, nom: cl.nom, frAvg, maAvg, global };
+      });
+    };
+
     const handlePrintSelection = () => {
       if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
         const e = eleves.find(ev => String(ev.id) === graphEleveId);
@@ -1729,17 +1798,10 @@ export default function TCF() {
           niveau,
           showTrend: true,
         }], isFr, maxScore);
-      } else if (graphVue === 'classe' && graphClasseId && dataClasse.length > 0) {
-        const cl = classes.find(c => String(c.id) === graphClasseId);
-        printCharts([{
-          label: `Classe ${cl?.nom || graphClasseId} — ${graphSession}`,
-          series: dataClasse,
-          nom: '',
-          prenom: '',
-          classe: cl?.nom || graphClasseId,
-          niveau: normaliserNiveau(cl?.niveau || ''),
-          showTrend: false,
-        }], isFr, maxScore);
+      } else if (graphVue === 'classe' && graphClasseId && graphSession) {
+        const charts = buildChartsForClasse();
+        if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
+        printCharts(charts, isFr, maxScore);
       }
     };
 
@@ -1767,7 +1829,7 @@ export default function TCF() {
     };
 
     const canPrintSelection = (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
-      (graphVue === 'classe' && graphClasseId && dataClasse.length > 0);
+      (graphVue === 'classe' && graphClasseId && graphSession);
 
     const niveauIndividuel = (() => {
       const e = eleves.find(ev => String(ev.id) === String(graphEleveId));
@@ -1777,25 +1839,42 @@ export default function TCF() {
     const eleveIndividuel = eleves.find(ev => String(ev.id) === String(graphEleveId));
     const classeIndividuelle = classesMap[String(eleveIndividuel?.classe_id)];
     const niveauClasse = normaliserNiveau(classes.find(c => String(c.id) === String(graphClasseId))?.niveau || '');
+    const moyenneRows = getClassMoyennes();
+    const moyenneRowsClassees = moyenneRows.filter(r => r.global != null).sort((a, b) => a.global - b.global);
+    const lowSet = new Set(moyenneRowsClassees.slice(0, 3).map(r => String(r.id)));
+    const highSet = new Set(moyenneRowsClassees.slice(-3).map(r => String(r.id)));
+    const moyenneSeries = moyenneRows
+      .filter(r => r.frAvg != null || r.maAvg != null)
+      .map(r => ({
+        label: r.nom,
+        v1: Math.round(Number(r.frAvg || 0) * 10) / 10,
+        v2: Math.round(Number(r.maAvg || 0) * 10) / 10,
+      }));
+    const classesRangeLabel = classesNiveau.length ? `${classesNiveau[0].nom} à ${classesNiveau[classesNiveau.length - 1].nom}` : '—';
 
     const renderSvgChart = (items, opts = {}) => {
-      const svg = buildChartSVG(items, maxScore, isFr, {
+      const chartMax = Number(opts.maxScoreOverride) > 0 ? Number(opts.maxScoreOverride) : maxScore;
+      const svg = buildChartSVG(items, chartMax, isFr, {
         showTrend: opts.showTrend !== false,
         niveau: opts.niveau || '',
         innerH: 320,
+        label1: opts.label1,
+        label2: opts.label2,
+        showFrenchLevelMarks: opts.showFrenchLevelMarks,
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
       const logoPiedSrc = `${publicBase}/logo-pied-page.png`;
       const logoPiedFallbackSrc = `${window.location.origin}/build/logo-pied-page.png`;
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-      const titreGraph = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
+      const titreGraph = opts.title || (isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques');
       const nomMaj = String(opts.nom || '').toUpperCase();
       const prenomAff = String(opts.prenom || '');
       const classeAff = String(opts.classe || '');
+      const identiteLabel = opts.identiteLabel || 'NOM Prénom';
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '12px 24px', width: 800, maxWidth: '100%' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '12px 24px', width: opts.cardWidth || 800, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
@@ -1816,11 +1895,11 @@ export default function TCF() {
               <div style={{ height: 36 }} />
               <div style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 10 }}>{titreGraph}</div>
               <div style={{ height: 24 }} />
-              <div style={{ fontSize: 12, color: '#1f2937', marginTop: 2, textAlign: 'left' }}>
-                <b>NOM Prénom :</b> {nomMaj} {prenomAff}
+              <div style={{ fontSize: 16, color: '#1f2937', marginTop: 2, textAlign: 'left' }}>
+                <b>{identiteLabel} :</b> {nomMaj} {prenomAff}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-                <div style={{ fontSize: 12, color: '#1f2937' }}><b>Classe :</b> {classeAff || '—'}</div>
+                <div style={{ fontSize: 16, color: '#1f2937' }}><b>Classe :</b> {classeAff || '—'}</div>
                 <div style={{ fontSize: 12, color: '#374151' }}>{dateVetroz}</div>
               </div>
               <div style={{ height: 12 }} />
@@ -1861,6 +1940,16 @@ export default function TCF() {
                 <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
                   style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
               ))}
+              <button
+                type="button"
+                onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}
+              >
+                Moyenne
+              </button>
+              <button type="button" onClick={handlePrintAll} style={{ ...styles.btnSaveTop, marginLeft: 'auto' }}>
+                🖨 Tout imprimer
+              </button>
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1868,14 +1957,18 @@ export default function TCF() {
               <option value="">- Sélectionner la session -</option>
               {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
-              <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
-            </div>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
-              <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
-            </div>
+            {graphVue !== 'moyenne' && (
+              <div style={styles.toggleWrap}>
+                <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
+                <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
+              </div>
+            )}
+            {graphVue !== 'moyenne' && (
+              <div style={styles.toggleWrap}>
+                <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
+                <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
+              </div>
+            )}
             {graphVue === 'classe' && (
               <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
                 <option value="">- Sélectionner la classe -</option>
@@ -1914,13 +2007,57 @@ export default function TCF() {
               style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
               🖨 Imprimer sélection
             </button>
-            <button type="button" onClick={handlePrintAll}
-              style={styles.btnSaveTop}>
-              🖨 Tout imprimer
-            </button>
           </div>
         </div>
         {/* Graphique */}
+        {graphVue === 'moyenne' && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
+        {graphVue === 'moyenne' && graphSession && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 }}>
+            <div style={styles.tableWrap}>
+              <table style={styles.tableRolesLeft}>
+                <thead>
+                  <tr style={styles.thead}>
+                    <th style={styles.thLeftFixed}>Classe</th>
+                    <th style={{ ...styles.thCenter, width: 88, minWidth: 88, maxWidth: 88 }}>Moy. Fr</th>
+                    <th style={{ ...styles.thCenter, width: 88, minWidth: 88, maxWidth: 88 }}>Moy. Math</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moyenneRows.map((r) => {
+                    const isLow = lowSet.has(String(r.id));
+                    const isHigh = highSet.has(String(r.id));
+                    const bg = isLow ? '#fee2e2' : isHigh ? '#dcfce7' : 'white';
+                    const color = isLow ? '#991b1b' : isHigh ? '#166534' : '#334155';
+                    return (
+                      <tr key={`moy-row-${r.id}`} style={{ background: bg }}>
+                        <td style={{ ...styles.tdLeft, color, fontWeight: 700 }}>{r.nom}</td>
+                        <td style={{ ...styles.tdCenter, color, fontWeight: 700 }}>{r.frAvg == null ? '—' : r.frAvg.toFixed(1)}</td>
+                        <td style={{ ...styles.tdCenter, color, fontWeight: 700 }}>{r.maAvg == null ? '—' : r.maAvg.toFixed(1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {renderSvgChart(
+              moyenneSeries,
+              {
+                showTrend: false,
+                niveau: niveauActif,
+                nom: niveauActif,
+                prenom: '',
+                classe: classesRangeLabel,
+                identiteLabel: 'Niveau',
+                title: 'Moyennes des classes',
+                label1: 'Français',
+                label2: 'Mathématiques',
+                showFrenchLevelMarks: false,
+                maxScoreOverride: 100,
+                cardWidth: '100%',
+              }
+            )}
+          </div>
+        )}
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
         {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
@@ -1959,23 +2096,40 @@ export default function TCF() {
     const classesNiveauStat = niveauActifStat
       ? new Set(classes.filter(c => normaliserNiveau(c.niveau) === niveauActifStat).map(c => String(c.id)))
       : null;
+    const sessionsColonnes = session === '2e semestre'
+      ? ["Test d'août", '1e semestre', '2e semestre']
+      : session === '1e semestre'
+        ? ["Test d'août", '1e semestre']
+        : ["Test d'août"];
+    const labelSession = {
+      "Test d'août": 'Août',
+      '1e semestre': 'Décembre',
+      '2e semestre': 'Mai',
+    };
+
     const rows = eleves
       .filter(e => !classesNiveauStat || classesNiveauStat.has(String(e.classe_id)))
       .map(e => {
-        const sc = getScore(matiere, session, e.id);
-        const total = matiere === 'francais' ? calculFr(sc).total : calculMath(sc).total;
+        const totalsBySession = {};
+        sessionsColonnes.forEach((s) => {
+          const sc = getScore(matiere, s, e.id);
+          const total = matiere === 'francais' ? calculFr(sc).total : calculMath(sc).total;
+          totalsBySession[s] = total === '' ? null : Number(total);
+        });
+        const totalSessionChoisie = totalsBySession[session] ?? null;
         return {
           id: e.id,
           nom: e.nom || '',
           prenom: e.prenom || '',
           classe: classesMap[String(e.classe_id)]?.nom || '—',
-          total: total === '' ? null : Number(total),
+          totalSessionChoisie,
+          totalsBySession,
         };
       })
-      .filter(r => r.total != null);
+      .filter(r => r.totalSessionChoisie != null);
 
-    const filtres = rows.filter(r => (statSens === 'fort' ? r.total >= seuil : r.total <= seuil));
-    filtres.sort((a, b) => (statOrdre === 'croissant' ? a.total - b.total : b.total - a.total));
+    const filtres = rows.filter(r => (statSens === 'fort' ? r.totalSessionChoisie >= seuil : r.totalSessionChoisie <= seuil));
+    filtres.sort((a, b) => (statOrdre === 'croissant' ? a.totalSessionChoisie - b.totalSessionChoisie : b.totalSessionChoisie - a.totalSessionChoisie));
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2018,7 +2172,7 @@ export default function TCF() {
                 <col style={{ width: 95, minWidth: 95, maxWidth: 95 }} />
                 <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
                 <col style={{ width: 160, minWidth: 160, maxWidth: 160 }} />
-                <col style={{ width: 'auto' }} />
+                {sessionsColonnes.map((s) => <col key={`col-stat-${s}`} style={{ width: 98, minWidth: 98, maxWidth: 98 }} />)}
               </colgroup>
               <thead>
                 <tr style={styles.thead}>
@@ -2026,24 +2180,33 @@ export default function TCF() {
                   <th style={styles.thCenter}>Classe</th>
                   <th style={styles.thLeft}>Nom</th>
                   <th style={styles.thLeft}>Prénom</th>
-                  <th style={styles.thCenter}>Total</th>
+                  {sessionsColonnes.map((s) => (
+                    <th key={`th-stat-${s}`} style={styles.thCenter}>{labelSession[s] || s}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {filtres.map((r, i) => {
-                  const c = couleurTotale(r.total);
                   return (
                     <tr key={r.id}>
                       <td style={styles.tdCenter}>{i + 1}</td>
                       <td style={styles.tdCenter}>{r.classe}</td>
                       <td style={styles.tdLeft}>{toDisplayNom(r.nom)}</td>
                       <td style={styles.tdLeft}>{r.prenom}</td>
-                      <td style={{ ...styles.tdLeftRead, background: c.bg, color: c.text }}>{r.total}</td>
+                      {sessionsColonnes.map((s) => {
+                        const v = r.totalsBySession[s];
+                        const c = v == null ? {} : couleurTotale(v);
+                        return (
+                          <td key={`td-stat-${r.id}-${s}`} style={{ ...styles.tdCenterRead, background: c.bg, color: c.text }}>
+                            {v == null ? '—' : v}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
                 {filtres.length === 0 && (
-                  <tr><td colSpan={5} style={styles.empty}>Aucun élève ne correspond au tri.</td></tr>
+                  <tr><td colSpan={4 + sessionsColonnes.length} style={styles.empty}>Aucun élève ne correspond au tri.</td></tr>
                 )}
               </tbody>
             </table>
