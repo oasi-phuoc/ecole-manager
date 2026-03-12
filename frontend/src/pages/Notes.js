@@ -956,11 +956,13 @@ export default function Notes() {
               return (
                 <div key={bulletin.eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < bulletinsAImprimer.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                    <img
-                      src="/logo-etat-du-valais.png"
-                      alt="Logo État du Valais"
-                      style={{ width: 90, height: 'auto', objectFit: 'contain', flexShrink: 0 }}
-                    />
+                    <div style={{ background: '#fff', borderRadius: 6, padding: 4, flexShrink: 0 }}>
+                      <img
+                        src="/logo-etat-du-valais.png"
+                        alt="Logo État du Valais"
+                        style={{ width: 90, height: 'auto', objectFit: 'contain', display: 'block' }}
+                      />
+                    </div>
                     <div style={{ fontSize: 12, lineHeight: 1.35 }}>
                       <div>Département de la santé, des affaires sociales et de la culture</div>
                       <div>Service de l'action sociale</div>

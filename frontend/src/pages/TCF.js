@@ -1656,7 +1656,9 @@ export default function TCF() {
     const logoPiedFallbackUrl = `${window.location.origin}/build/logo-pied-page.png`;
     const headerHtml = `<div class="page-header">
         <div class="header-left">
-          <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
+          <div class="header-logo-wrap">
+            <img class="header-logo" src="${logoUrl}" alt="Logo État du Valais" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoFallbackUrl}';}else{this.style.display='none';}" />
+          </div>
           <div class="header-admin">
             <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
             <div>Service de l'action sociale</div>
@@ -1712,6 +1714,7 @@ export default function TCF() {
         .screen-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 12px 24px; width: 800px; max-width: 100%; margin-top: 8px; }
         .page-header { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: flex-start; justify-content: flex-start; gap: 14px; }
         .header-left { display: flex; align-items: flex-start; gap: 10px; }
+        .header-logo-wrap { background: #ffffff; border-radius: 6px; padding: 4px; }
         .header-logo { height: 54px; width: auto; object-fit: contain; display: block; }
         .header-admin { font-size: 8pt; color: #334155; line-height: 1.25; font-weight: 600; }
         .header-right { text-align: left; margin-left: 10px; }
@@ -1921,7 +1924,9 @@ export default function TCF() {
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '12px 24px', width: opts.cardWidth || 800, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+                <div style={{ background: '#fff', borderRadius: 6, padding: 4 }}>
+                  <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain', display: 'block' }} />
+                </div>
                 <div style={{ fontSize: '6pt', color: '#475569', lineHeight: 1.25 }}>
                   <div style={{ fontWeight: 700 }}>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
                   <div style={{ fontWeight: 400 }}>Service de l'action sociale</div>
