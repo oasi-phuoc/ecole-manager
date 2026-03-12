@@ -1518,7 +1518,7 @@ export default function TCF() {
 
     const barW = 26;
     const groupW = 90;
-    const innerH = 230;
+    const innerH = Number(options.innerH) > 0 ? Number(options.innerH) : 230;
     const padL = 48;
     const padT = 10;
     const padB = 70;
@@ -1625,7 +1625,7 @@ export default function TCF() {
       </div>`;
     const pagesWithLayout = charts.map(c => {
       const svg = c.series.length > 0
-        ? buildChartSVG(c.series, maxScore, isFr, { showTrend: c.showTrend !== false, niveau: c.niveau || '' })
+        ? buildChartSVG(c.series, maxScore, isFr, { showTrend: c.showTrend !== false, niveau: c.niveau || '', innerH: 260 })
         : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
       const nom = c.nom || '';
       const prenom = c.prenom || '';
@@ -1781,6 +1781,7 @@ export default function TCF() {
       const svg = buildChartSVG(items, maxScore, isFr, {
         showTrend: opts.showTrend !== false,
         niveau: opts.niveau || '',
+        innerH: 320,
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
@@ -1797,7 +1798,7 @@ export default function TCF() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-                <div style={{ fontSize: '8pt', color: '#475569', lineHeight: 1.25 }}>
+                <div style={{ fontSize: '6pt', color: '#475569', lineHeight: 1.25 }}>
                   <div style={{ fontWeight: 700 }}>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
                   <div style={{ fontWeight: 400 }}>Service de l'action sociale</div>
                   <div style={{ fontWeight: 400 }}>Office de l'asile</div>
@@ -1824,7 +1825,11 @@ export default function TCF() {
             <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
-            <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: '6pt', color: '#64748b', lineHeight: 1.35 }}>
+                <div>Zone Industrielle 4, 1963 Vétroz</div>
+                <div>Tél. 027 606 18 60</div>
+              </div>
               <img
                 src={logoPiedSrc}
                 alt="Logo pied de page"
@@ -1838,10 +1843,6 @@ export default function TCF() {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <div style={{ fontSize: '8pt', color: '#64748b', lineHeight: 1.35 }}>
-                <div>Zone Industrielle 4, 1963 Vétroz</div>
-                <div>Tél. 027 606 18 60</div>
-              </div>
             </div>
           </div>
         </div>
