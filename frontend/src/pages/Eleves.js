@@ -237,6 +237,10 @@ export default function Eleves() {
 
   const confirmerSanction = async () => {
     if (!pendingCell) return;
+    if (!String(pendingCell.observation_ref || '').trim()) {
+      alert("Référence d'observation obligatoire pour valider la sanction.");
+      return;
+    }
     try {
       await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle,
@@ -259,6 +263,10 @@ export default function Eleves() {
 
   const sauvegarderEditionSanction = async () => {
     if (!editSanction) return;
+    if (!String(editSanction.observation_ref || '').trim()) {
+      alert("Référence d'observation obligatoire pour valider la sanction.");
+      return;
+    }
     try {
       await axios.put(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
         date_sanction: editSanction.date_sanction || null,
@@ -885,12 +893,14 @@ export default function Eleves() {
                 ) : (
                   <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <span style={{fontSize:11,color:'#94a3b8'}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                        <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
+                        <span style={{fontSize:11,color:'#64748b'}}>
+                          {obs.reference_obs ? `${obs.reference_obs} - ` : ''}
                           {new Date(obs.created_at).toLocaleDateString('fr-CH')}
-                          {obs.reference_obs ? ` · ${obs.reference_obs}` : ''}
                         </span>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
                         {peutModifier && <>
                           <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Modifier">✏️</button>
                           <button onClick={async () => {

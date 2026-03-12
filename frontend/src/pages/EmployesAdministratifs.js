@@ -5,7 +5,7 @@ export default function EmployesAdministratifs() {
   return (
     <Professeurs
       apiBase="/employes-administratifs"
-      titre="Administratifs"
+      titre="Employés"
       nomEntite="employé administratif"
       hidePreferences={true}
       hidePeriodesSemaine={true}
