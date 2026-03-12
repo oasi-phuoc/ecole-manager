@@ -1105,19 +1105,31 @@ export default function TCF() {
     setOrganisationByPoolDemi(prev => {
       const key = `${poolId}::${demiId}`;
       const cur = { ...(prev[key] || {}) };
+      const demi = DEMI_JOURNEES.find(d => d.id === demiId);
+      const classesDemi = demi ? (affectationClassesBySite?.[String(poolId)]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
+      const maxParGroupe = Math.max(1, Math.ceil(classesDemi.length / 2));
       const wasInG1 = (cur.groups?.g1 || []).map(String).includes(String(classeId));
       const wasInG2 = (cur.groups?.g2 || []).map(String).includes(String(classeId));
       const groups = {
-        g1: [...(cur.groups?.g1 || [])],
-        g2: [...(cur.groups?.g2 || [])],
+        g1: [...(cur.groups?.g1 || [])].map(String),
+        g2: [...(cur.groups?.g2 || [])].map(String),
       };
       groups.g1 = groups.g1.filter(id => String(id) !== String(classeId));
       groups.g2 = groups.g2.filter(id => String(id) !== String(classeId));
       const target = groupId === 'g2' ? 'g2' : 'g1';
       const already = target === 'g1' ? wasInG1 : wasInG2;
-      groups[target] = already
-        ? groups[target].filter(id => String(id) !== String(classeId))
-        : [...groups[target], String(classeId)];
+      if (already) {
+        groups[target] = groups[target].filter(id => String(id) !== String(classeId));
+      } else {
+        let next = [...groups[target]];
+        if (next.length >= maxParGroupe) {
+          // Si la limite est atteinte, on remplace la dernière sélection.
+          next = next.slice(0, Math.max(0, maxParGroupe - 1));
+        }
+        next = [...next, String(classeId)];
+        // Limite de classes par groupe: moitié arrondie au supérieur.
+        groups[target] = next;
+      }
       cur.groups = groups;
       return { ...prev, [key]: cur };
     });
@@ -1127,14 +1139,23 @@ export default function TCF() {
     const siteKey = String(siteActif || '');
     const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
     const selectedProfIds = siteKey ? (selectedBySite[siteKey] || []) : [];
-    const profsPool = selectedProfIds
-      .map(id => profMap[String(id)])
-      .filter(Boolean);
     const reserveSet = new Set(
       demi
         ? selectedProfIds.filter((id) => statutCellule(siteKey, String(id), demi.jour, demi.moment) === 'rouge' && rActifCellule(siteKey, String(id), demi.jour, demi.moment))
         : []
     );
+    const profsPool = selectedProfIds
+      .map(id => profMap[String(id)])
+      .filter(Boolean)
+      .sort((a, b) => {
+        const aReserve = reserveSet.has(String(a.id));
+        const bReserve = reserveSet.has(String(b.id));
+        if (aReserve !== bReserve) return aReserve ? 1 : -1;
+        const aPrenom = String(a.prenom || '').toLowerCase();
+        const bPrenom = String(b.prenom || '').toLowerCase();
+        if (aPrenom !== bPrenom) return aPrenom.localeCompare(bPrenom, 'fr');
+        return String(toDisplayNom(a.nom) || '').toLowerCase().localeCompare(String(toDisplayNom(b.nom) || '').toLowerCase(), 'fr');
+      });
     const key = `${siteKey}::${rolesDemiJourneeSelect}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
     const org = organisationByPoolDemi[key] || {};
@@ -1228,29 +1249,27 @@ export default function TCF() {
                     Groupe 2
                   </button>
                 </div>
+                <div style={{ ...styles.pastillesWrap, marginLeft: 2 }}>
+                  {classesAffecteesObjs.map((cl) => {
+                    const actifDansG1 = savedGroups.g1.includes(String(cl.id));
+                    const actifDansG2 = savedGroups.g2.includes(String(cl.id));
+                    const actif = rolesGroupActif === 'g1' ? actifDansG1 : actifDansG2;
+                    return (
+                      <button
+                        key={`group-class-${cl.id}`}
+                        type="button"
+                        onClick={() => setRoleGroupClasse(siteKey, rolesDemiJourneeSelect, rolesGroupActif, cl.id)}
+                        style={{ ...styles.classChip, ...(actif ? styles.classChipActif : {}) }}
+                      >
+                        {cl.nom}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
         </div>
-        {useGroups && (
-          <div style={{ ...styles.pastillesWrap, marginBottom: 10 }}>
-            {classesAffecteesObjs.map((cl) => {
-              const actifDansG1 = savedGroups.g1.includes(String(cl.id));
-              const actifDansG2 = savedGroups.g2.includes(String(cl.id));
-              const actif = rolesGroupActif === 'g1' ? actifDansG1 : actifDansG2;
-              return (
-                <button
-                  key={`group-class-${cl.id}`}
-                  type="button"
-                  onClick={() => setRoleGroupClasse(siteKey, rolesDemiJourneeSelect, rolesGroupActif, cl.id)}
-                  style={{ ...styles.classChip, ...(actif ? styles.classChipActif : {}) }}
-                >
-                  {cl.nom}
-                </button>
-              );
-            })}
-          </div>
-        )}
         {!siteKey || !rolesDemiJourneeSelect ? (
           <div style={styles.empty}>Sélectionnez un site et une demi-journée.</div>
         ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
@@ -1268,10 +1287,14 @@ export default function TCF() {
                 <tbody>
                   {profsPool.map((p) => {
                     const selectedRole = rolesMap[String(p.id)] || '';
+                    const isReserve = reserveSet.has(String(p.id));
                     return (
                       <tr key={`role-prof-${p.id}`}>
-                        <td style={{ ...styles.tdLeft, ...(reserveSet.has(String(p.id)) ? styles.tdReserve : {}) }}>
-                          {p.prenom} {toDisplayNom(p.nom)}
+                        <td style={{ ...styles.tdLeft, ...(isReserve ? styles.tdReserve : {}) }}>
+                          <div style={styles.reserveCellWrap}>
+                            <span>{p.prenom} {toDisplayNom(p.nom)}</span>
+                            {isReserve ? <span style={styles.reserveBadge}>Réserve</span> : null}
+                          </div>
                         </td>
                         <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
                           <select
@@ -1327,6 +1350,11 @@ export default function TCF() {
                     const estBlocBStart = lg.row === 8;
                     const estBlocBInner = lg.row === 9 || lg.row === 10;
                     const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
+                    const prevEnd =
+                      lg.row > 1
+                        ? (lignesHoraire[lg.row - 1]?.end || '')
+                        : (lignesHoraire[lg.row]?.start || '');
+                    const startValue = lg.row === 1 ? (lignesHoraire[lg.row]?.start || '') : prevEnd;
                     return (
                       <tr key={`ligne-${lg.row}`}>
                         {afficherHoraireTemps && (
@@ -1334,14 +1362,18 @@ export default function TCF() {
                             <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
                               <input
                                 style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
-                                value={lignesHoraire[lg.row]?.start || ''}
-                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '')}
+                                value={startValue}
+                                readOnly={lg.row > 1}
+                                onChange={(e) => {
+                                  if (lg.row > 1) return;
+                                  setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, e.target.value, lignesHoraire[lg.row]?.end || '');
+                                }}
                                 placeholder="Début"
                               />
                               <input
                                 style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
                                 value={lignesHoraire[lg.row]?.end || ''}
-                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, lignesHoraire[lg.row]?.start || '', e.target.value)}
+                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, startValue, e.target.value)}
                                 placeholder="Fin"
                               />
                             </div>
@@ -1949,12 +1981,31 @@ export default function TCF() {
   };
 
   const handleSavePool = () => {
+    const sitesSansNiveau = siteOrder.filter((siteKey) => !(siteLevels?.[siteKey] || []).length);
+    if (sitesSansNiveau.length > 0) {
+      const noms = sitesSansNiveau.map((siteKey, idx) => siteNames?.[siteKey] || `Site ${idx + 1}`).join(', ');
+      alert(`Sélection du niveau obligatoire.\n\nVeuillez sélectionner au moins un niveau pour : ${noms}.`);
+      return;
+    }
     localStorage.setItem('tcf_pool_state', JSON.stringify({ siteOrder, siteCounter, siteNames, siteLevels, selectedBySite, splitByProf, poolCellOverrides }));
     setPoolDirty(false);
     afficherSaveMsg('pool');
   };
 
   const handleSaveAffectation = () => {
+    if (sousOngletAffectation === 'classes') {
+      const sitesSansDate = siteOrder.filter((siteKey) => {
+        const d = String(affectationDateDebutBySite?.[siteKey] || '').trim();
+        return !d;
+      });
+      if (sitesSansDate.length > 0) {
+        const noms = sitesSansDate
+          .map((siteKey, idx) => siteNames?.[siteKey] || `Site ${idx + 1}`)
+          .join(', ');
+        alert(`Date de début des tests obligatoire.\n\nVeuillez renseigner la date pour : ${noms}.`);
+        return;
+      }
+    }
     localStorage.setItem('tcf_affectation_state', JSON.stringify({
       updatedAt: new Date().toISOString(),
       dateDebutBySite: affectationDateDebutBySite,
@@ -2261,7 +2312,9 @@ const styles = {
   tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 360 },
   tableRolesRight: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 },
   thLeftFixed: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 160, minWidth: 160, maxWidth: 160 },
-  tdReserve: { background: '#ede9fe', color: '#4c1d95', fontWeight: 700 },
+  tdReserve: { background: '#fee2e2', color: '#7f1d1d', fontWeight: 700 },
+  reserveCellWrap: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' },
+  reserveBadge: { marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#991b1b' },
   profChip: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 138, padding: '5px 9px', borderRadius: 999, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: 11, fontWeight: 700 },
   graphWrap: { display: 'flex', alignItems: 'flex-end', gap: 20, minHeight: 240, padding: '12px 8px' },
   graphSessionCol: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
