@@ -2475,10 +2475,11 @@ export default function TCF() {
           </div>
         )}
       </div>
-      {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
+      <div style={styles.tabContent}>
+        {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
 
-      {onglet === 'pool' && (
-        <div style={styles.poolPanel}>
+        {onglet === 'pool' && (
+          <div style={styles.poolPanel}>
           <div style={styles.panelTopWhite}>
             <div style={{ ...styles.poolSiteTabsBar, marginBottom: 0 }}>
               <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
@@ -2503,10 +2504,10 @@ export default function TCF() {
               {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
             </div>
           </div>
-        </div>
-      )}
+          </div>
+        )}
 
-      {onglet === 'classes' && (
+        {onglet === 'classes' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={styles.panelTopWhite}>
             <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
@@ -2526,15 +2527,16 @@ export default function TCF() {
             {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
           </div>
         </div>
-      )}
+        )}
 
-      {onglet === 'roles' && renderRoles()}
+        {onglet === 'roles' && renderRoles()}
 
-      {onglet === 'resultat' && renderResultat()}
+        {onglet === 'resultat' && renderResultat()}
 
-      {onglet === 'statistique' && renderStatistiques()}
+        {onglet === 'statistique' && renderStatistiques()}
 
-      {onglet === 'graphique' && renderGraphique()}
+        {onglet === 'graphique' && renderGraphique()}
+      </div>
     </div>
   );
 }
@@ -2549,10 +2551,11 @@ const styles = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
-  tabsBar: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginBottom: 14, borderBottom: '1px solid #c4b5fd', paddingBottom: 0 },
-  tabsRow: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' },
+  tabsBar: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginBottom: 0, borderBottom: '1px solid #c4b5fd', paddingBottom: 0 },
+  tabsRow: { display: 'flex', gap: 0, flexWrap: 'wrap', alignItems: 'flex-end' },
+  tabContent: { background: 'white', border: '1px solid #c4b5fd', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
   topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1', position: 'relative', zIndex: 1 },
+  tabBtn: { padding: '9px 0', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 15, width: 140, minWidth: 140, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },

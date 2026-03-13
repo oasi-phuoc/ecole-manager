@@ -21,8 +21,8 @@ export default function Eleves() {
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [filtreClasse, setFiltreClasse] = useState('');
-  const [showFiltreClasseSelect, setShowFiltreClasseSelect] = useState(false);
+  const [rechercheClasse, setRechercheClasse] = useState('');
+  const [sansClasse, setSansClasse] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
@@ -396,9 +396,9 @@ export default function Eleves() {
 
   const elevesFiltres = eleves.filter(el => {
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchC = !filtreClasse || filtreClasse==='sans_classe'
-      ? (filtreClasse==='sans_classe' ? !el.classe_id : true)
-      : String(el.classe_id)===String(filtreClasse);
+    if (sansClasse) return matchR && !el.classe_id;
+    const classeNom = classes.find(c => String(c.id) === String(el.classe_id))?.nom || '';
+    const matchC = !rechercheClasse || classeNom.toLowerCase().includes(rechercheClasse.toLowerCase());
     return matchR && matchC;
   });
 
@@ -431,36 +431,31 @@ export default function Eleves() {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
         <button style={{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'}} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>🎓 Élèves</h2>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Import OASI</button>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'1px solid #c4b5fd',paddingBottom:0}}>
+        <input
+          style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#f1f5f9',outline:'none',fontSize:14,width:220,color:'#475569',fontFamily:'inherit'}}
+          placeholder="Rechercher un élève..."
+          value={recherche}
+          onChange={e => setRecherche(e.target.value)}
+        />
+        <input
+          style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#f1f5f9',outline:'none',fontSize:14,width:220,color:'#475569',fontFamily:'inherit',marginLeft:2}}
+          placeholder="Rechercher une classe..."
+          value={rechercheClasse}
+          onChange={e => { setRechercheClasse(e.target.value); if (sansClasse) setSansClasse(false); }}
+        />
         <button
-          onClick={() => {
-            if (showFiltreClasseSelect) {
-              setShowFiltreClasseSelect(false);
-              setFiltreClasse('');
-            } else {
-              setShowFiltreClasseSelect(true);
-            }
-          }}
-          style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:showFiltreClasseSelect?'#eef2ff':'white',color:showFiltreClasseSelect?'#4338ca':'#475569',cursor:'pointer',fontWeight:600}}
+          style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:sansClasse?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:sansClasse?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:120,minWidth:120,textAlign:'center',marginLeft:2,marginBottom:sansClasse?-1:0,zIndex:sansClasse?2:1}}
+          onClick={() => { setSansClasse(!sansClasse); if (!sansClasse) setRechercheClasse(''); }}
         >
-          Classe
+          Sans classe
         </button>
-        {showFiltreClasseSelect && (
-          <select style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,background:'white'}} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-            <option value="">— Sélectionner une classe —</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-          </select>
-        )}
-        <div style={{position:'relative'}}>
-          <span style={{position:'absolute',left:10,top:9,fontSize:13}}>🔍</span>
-          <input style={{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200}} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-        </div>
       </div>
 
       {/* Modal Import */}
@@ -940,7 +935,8 @@ export default function Eleves() {
       )}
 
       {/* Tableau */}
-      <div style={{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
+      <div style={{background:'white',border:'1px solid #c4b5fd',borderTop:'none',borderRadius:'0 0 12px 12px',padding:14}}>
+        <div style={{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
@@ -1025,6 +1021,7 @@ export default function Eleves() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
