@@ -1739,7 +1739,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}}>
               <select
-                style={{padding:'9px 18px',borderRadius:99,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
+                style={{padding:'9px 18px',borderRadius:10,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
