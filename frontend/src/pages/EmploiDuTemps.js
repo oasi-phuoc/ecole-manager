@@ -1596,10 +1596,10 @@ export default function EmploiDuTemps() {
 
       <div style={styles.onglets}>
         {[
-          {id:'pools', label:'👥 Pools'},
-          {id:'disponibilites', label:'✅ Disponibilités'},
-          {id:'affectations', label:'📌 Affectations'},
-          {id:'plannings', label:'📊 Plannings'},
+          {id:'pools', label:'Pools'},
+          {id:'disponibilites', label:'Disponibilités'},
+          {id:'affectations', label:'Affectations'},
+          {id:'plannings', label:'Plannings'},
         ].map(o => (
           <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
             onClick={() => {
@@ -1829,7 +1829,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={styles.rowBetween}>
             <h3 style={styles.cardTitre}>Pools</h3>
-            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Nouveau pool</button>}
+            {isAdmin() && <button style={styles.btnVert} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Ajouter</button>}
           </div>
 
           {showPoolForm && (
@@ -2038,10 +2038,12 @@ export default function EmploiDuTemps() {
             {pools.map(pool => (
               <div key={pool.id} style={{...styles.poolCard,borderTop:'4px solid '+pool.couleur}}>
                 <div style={styles.rowBetween}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:16}}>{pool.nom}</div>
-                    {pool.niveau && <div style={{color:'#6366f1',fontSize:13,fontWeight:600}}>📚 {pool.niveau}</div>}
-                    {pool.site && <div style={{color:'#888',fontSize:13}}>📍 {pool.site}</div>}
+                  <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                    <div style={{fontWeight:700,fontSize:16,color:'#0f172a'}}>{pool.nom}</div>
+                    <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:2}}>
+                      {pool.niveau && <span style={{color:'#6366f1',fontSize:12,fontWeight:600}}>Niveau : {pool.niveau}</span>}
+                      {pool.site && <span style={{color:'#64748b',fontSize:12}}>Lieu : {pool.site}</span>}
+                    </div>
                   </div>
                   {isAdmin() && <div>
                     <button style={styles.btnIcon} onClick={() => {
@@ -2063,18 +2065,19 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={{marginTop:8}}>
                   <div style={styles.poolLabel}>CLASSES</div>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))',gap:6}}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
                     {pool.classes.map(c => (
                       <span
                         key={c.id}
                         style={{
                           ...styles.badge,
-                          display:'flex',
+                          display:'inline-flex',
                           alignItems:'center',
                           justifyContent:'center',
-                          minHeight:30,
-                          padding:'6px 10px',
-                          borderRadius:10,
+                          padding:'3px 8px',
+                          borderRadius:8,
+                          fontSize:11,
+                          fontWeight:600,
                           background:'#e8f0fe',
                           color:'#1a73e8'
                         }}
