@@ -1596,12 +1596,20 @@ export default function EmploiDuTemps() {
           <button style={{...styles.btnVert, marginLeft:'auto'}} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Ajouter</button>
         )}
         {onglet === 'affectations' && (
-          <button type="button" style={{...styles.btnSauvegarderAff, marginLeft:'auto'}} onClick={() => {
-            if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
-            if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
-            if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
-            showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
-          }}>💾 Sauvegarder</button>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {toast.message && (
+              <span style={{
+                fontSize:13, fontWeight:600, padding:'6px 14px', borderRadius:8,
+                ...(toast.type==='error' ? {background:'#fee2e2',color:'#991b1b'} : toast.type==='info' ? {background:'#e0e7ff',color:'#3730a3'} : {background:'#d1fae5',color:'#065f46'})
+              }}>{toast.message}</span>
+            )}
+            <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
+              if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
+              if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
+              if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
+              showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
+            }}>💾 Sauvegarder</button>
+          </div>
         )}
       </div>
 
@@ -1630,7 +1638,7 @@ export default function EmploiDuTemps() {
           </button>
         ))}
       </div>
-      {toast.message ? (
+      {toast.message && onglet !== 'affectations' ? (
         <div style={{ ...styles.noticeBand, ...(toast.type === 'error' ? styles.noticeBandError : toast.type === 'info' ? styles.noticeBandInfo : styles.noticeBandSuccess) }}>
           {toast.message}
         </div>
