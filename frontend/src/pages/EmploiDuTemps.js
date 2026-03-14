@@ -3381,7 +3381,7 @@ const styles = {
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
-  selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer'},
+  selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
   modal:{background:'white',padding:30,borderRadius:16,maxHeight:'85vh',overflowY:'auto'},
   modalTitre:{fontSize:20,fontWeight:700,marginBottom:20},
