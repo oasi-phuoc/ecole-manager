@@ -201,7 +201,7 @@ export default function Presences() {
   };
 
   const chargerApercuMois = async () => {
-    if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
+    if (!classeSelectionnee) return;
     setLoadingApercu(true);
     try {
       const mois = date.substring(0, 7);
@@ -415,11 +415,17 @@ export default function Presences() {
       </div>
 
       {/* Classe select — sous les onglets */}
-      <div style={{marginTop:15,marginBottom:15}}>
+      <div style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
+        {onglet === 'stats' && <>
+          <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
+          <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
+          <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
+          <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
+        </>}
       </div>
 
       {onglet === 'saisie' && (
@@ -672,12 +678,6 @@ export default function Presences() {
 
       {onglet === 'stats' && (
         <div>
-          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:15}}>
-            <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
-            <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
-            <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
-            <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
-          </div>
           <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <colgroup>
@@ -734,7 +734,7 @@ const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
   tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
-  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:120,minWidth:120,textAlign:'center'},
+  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:160,minWidth:160,textAlign:'center'},
   tabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
