@@ -1740,7 +1740,7 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:15}}>
               <select
                 style={{padding:'9px 18px',borderRadius:10,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
@@ -3370,7 +3370,7 @@ const styles = {
   noticeBandSuccess:{background:'#d1fae5',color:'#065f46'},
   noticeBandInfo:{background:'#d1fae5',color:'#065f46'},
   noticeBandError:{background:'#fee2e2',color:'#991b1b'},
-  onglets:{display:'flex',gap:0,marginBottom:12,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'2px solid #6366f1',paddingBottom:0},
+  onglets:{display:'flex',gap:0,marginBottom:15,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'2px solid #6366f1',paddingBottom:0},
   onglet:{padding:'9px 14px',background:'#ede9fe',border:'none',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none',width:120,minWidth:120,textAlign:'center'},
   ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
