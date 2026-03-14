@@ -21,7 +21,6 @@ export default function Eleves() {
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [rechercheClasse, setRechercheClasse] = useState('');
   const [sansClasse, setSansClasse] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -166,10 +165,24 @@ export default function Eleves() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Supprimer cet élève ?')) {
+    const el = eleves.find(e => e.id === id);
+    const nom = el ? `${el.prenom} ${el.nom}` : 'cet élève';
+    if (window.confirm(`⚠️ Supprimer définitivement ${nom} ?\n\nCette action supprimera TOUTES les données liées :\nprésences, notes, paiements, observations, absences, documents et sanctions.\n\nCette action est irréversible.`)) {
       await axios.delete(API+'/eleves/'+id, {headers});
       chargerTout();
     }
+  };
+
+  const handleToggleStatut = async (el) => {
+    if (!isAdmin()) return;
+    const newStatut = el.statut === 'actif' ? 'inactif' : 'actif';
+    try {
+      await axios.put(API+'/eleves/'+el.id, {
+        nom: el.nom, prenom: el.prenom, email: el.email,
+        classe_id: el.classe_id||null, statut: newStatut,
+      }, {headers});
+      chargerTout();
+    } catch(err) { alert('Erreur: '+err.message); }
   };
 
   const handleClasseChange = async (eleveId, cId) => {
@@ -395,11 +408,10 @@ export default function Eleves() {
   ];
 
   const elevesFiltres = eleves.filter(el => {
-    const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+(el.email||'')).toLowerCase().includes(recherche.toLowerCase());
-    if (sansClasse) return matchR && !el.classe_id;
     const classeNom = classes.find(c => String(c.id) === String(el.classe_id))?.nom || '';
-    const matchC = !rechercheClasse || classeNom.toLowerCase().includes(rechercheClasse.toLowerCase());
-    return matchR && matchC;
+    const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+classeNom).toLowerCase().includes(recherche.toLowerCase());
+    if (sansClasse) return !el.classe_id && matchR;
+    return matchR;
   });
 
   const referenceObservationPreview = (() => {
@@ -437,25 +449,21 @@ export default function Eleves() {
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'1px solid #c4b5fd',paddingBottom:0}}>
-        <input
-          style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#f1f5f9',outline:'none',fontSize:14,width:220,color:'#475569',fontFamily:'inherit'}}
-          placeholder="Rechercher un élève..."
-          value={recherche}
-          onChange={e => setRecherche(e.target.value)}
-        />
-        <input
-          style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#f1f5f9',outline:'none',fontSize:14,width:220,color:'#475569',fontFamily:'inherit',marginLeft:2}}
-          placeholder="Rechercher une classe..."
-          value={rechercheClasse}
-          onChange={e => { setRechercheClasse(e.target.value); if (sansClasse) setSansClasse(false); }}
-        />
+      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'1px solid #c4b5fd',paddingBottom:0,width:'100%',boxSizing:'border-box'}}>
         <button
-          style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:sansClasse?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:sansClasse?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:120,minWidth:120,textAlign:'center',marginLeft:2,marginBottom:sansClasse?-1:0,zIndex:sansClasse?2:1}}
-          onClick={() => { setSansClasse(!sansClasse); if (!sansClasse) setRechercheClasse(''); }}
+          style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:sansClasse?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:sansClasse?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:120,minWidth:120,textAlign:'center',marginBottom:sansClasse?-1:0,zIndex:sansClasse?2:1}}
+          onClick={() => setSansClasse(!sansClasse)}
         >
           Sans classe
         </button>
+      </div>
+      <div style={{marginTop:15,marginBottom:12}}>
+        <input
+          style={{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'#f1f5f9',outline:'none',fontSize:14,width:280,color:'#475569',fontFamily:'inherit'}}
+          placeholder="Rechercher un élève, une classe..."
+          value={recherche}
+          onChange={e => { setRecherche(e.target.value); if (sansClasse) setSansClasse(false); }}
+        />
       </div>
 
       {/* Modal Import */}
@@ -573,6 +581,13 @@ export default function Eleves() {
                 </div>
               </div>
 
+              <div style={{display:'flex',flexDirection:'column',marginBottom:16}}>
+                <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Statut</label>
+                <select style={inp} value={statut} onChange={e => setStatut(e.target.value)}>
+                  <option value="actif">✅ Actif</option>
+                  <option value="inactif">❌ Inactif</option>
+                </select>
+              </div>
               <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>
                 <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
                 <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
@@ -1007,9 +1022,12 @@ export default function Eleves() {
                 <td style={{padding:'10px 10px',width:92,minWidth:92,maxWidth:92,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
                 <td style={{padding:'10px 10px',width:96,minWidth:96,maxWidth:96,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
                 <td style={{padding:'10px 10px',width:122,minWidth:122,maxWidth:122,textAlign:'center'}}>
-                  <span style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
+                  <button
+                    onClick={() => handleToggleStatut(el)}
+                    style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:isAdmin()?'pointer':'default'}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:isAdmin()?'pointer':'default'}}
+                  >
                     {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
-                  </span>
+                  </button>
                 </td>
                 <td style={{padding:'10px 10px',width:86,minWidth:86,maxWidth:86,textAlign:'center'}}>
                   {isAdmin() && <>

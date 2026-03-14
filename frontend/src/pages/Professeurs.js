@@ -201,6 +201,7 @@ export default function Professeurs({
   };
 
   const handleDelete = async (id) => {
+    const target = profs.find(p => p.id === id); if (target?.role === 'admin') { alert('Le compte administrateur ne peut pas être supprimé.'); return; }
     if (window.confirm('Supprimer ce ' + nomEntite + ' ?')) { await axios.delete(apiUrl + '/' + id,{headers}); chargerProfs(); }
   };
 
@@ -211,6 +212,7 @@ export default function Professeurs({
   };
 
   const profsFiltres = profs.filter(p => {
+    if (p.role === 'admin') return false;
     const matchR = (
       (p.prenom+' '+p.nom+' '+p.email+' '+p.nom+' '+p.prenom)
         .toLowerCase()
@@ -248,11 +250,13 @@ export default function Professeurs({
       </div>
       <div style={s.tabsBar}>
         <div style={s.tabsRow}>
-          <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
           {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
             <button key={f.id} style={{...s.tabBtn,...(filtreStatut===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreStatut(f.id)}>{f.label}</button>
           ))}
         </div>
+      </div>
+      <div style={{marginTop:15,marginBottom:12}}>
+        <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 
       {showForm && (
@@ -645,12 +649,12 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '1px solid #c4b5fd', paddingBottom: 0 },
+  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '1px solid #c4b5fd', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
   tabsRow: { display: 'flex', gap: 0, alignItems: 'flex-end' },
-  tabSearch: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#f1f5f9', outline: 'none', fontSize: 14, width: 200, color: '#475569', fontFamily: 'inherit' },
+  tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', outline: 'none', fontSize: 14, width: 200, color: '#475569', fontFamily: 'inherit' },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 90, minWidth: 90, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
-  tabContent: { background: 'white', border: '1px solid #c4b5fd', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
+  tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
   tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
