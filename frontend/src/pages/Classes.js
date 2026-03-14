@@ -253,7 +253,7 @@ export default function Classes() {
   };
 
   const imprimerPlanClasse = () => {
-    const COLS = 10; const ROWS = 13;
+    const COLS = 7; const ROWS = 11;
     let cells = '';
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
@@ -298,18 +298,20 @@ export default function Classes() {
   const dropOnCell = (row, col) => {
     if (dragEleve === null) return;
     const key = row+'-'+col;
-    // Retirer élève de son ancienne position
     const newPos = {...planPositions};
-    Object.keys(newPos).forEach(k => { if (String(newPos[k]) === String(dragEleve)) delete newPos[k]; });
+    const isSpecial = ELEMENTS_SPECIAUX_PLAN.some(x => x.id === dragEleve);
+    if (!isSpecial) {
+      Object.keys(newPos).forEach(k => { if (String(newPos[k]) === String(dragEleve)) delete newPos[k]; });
+    }
     if (dragEleve !== 'VIDE') newPos[key] = dragEleve;
     setPlanPositions(newPos);
     setDragEleve(null);
   };
 
   const renderPlanClasseOnglet = () => {
-    const COLS = 10; const ROWS = 13;
+    const COLS = 7; const ROWS = 11;
     const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
-    const elementsSpeciauxNonPlaces = ELEMENTS_SPECIAUX_PLAN.filter(sp => !Object.values(planPositions).includes(sp.id));
+    const elementsSpeciaux = ELEMENTS_SPECIAUX_PLAN;
 
     return (
       <div>
@@ -344,7 +346,7 @@ export default function Classes() {
                             </div>
                           ) : special ? (
                             <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:6}}>
-                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:special.bg,color:special.text,fontSize:10,fontWeight:800,lineHeight:1.2}}>
+                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:special.bg,color:special.text,fontSize:10,fontWeight:800,lineHeight:1.2,overflow:'hidden',maxWidth:'100%',whiteSpace:'nowrap'}}>
                                 {special.icon} {special.label}
                               </div>
                               <button onClick={() => {
@@ -365,16 +367,16 @@ export default function Classes() {
 
           <div style={{width:160,flexShrink:0}}>
             <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.05em'}}>
-              Éléments à placer ({elevesNonPlaces.length + elementsSpeciauxNonPlaces.length})
+              Éléments à placer ({elevesNonPlaces.length})
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
-              {elementsSpeciauxNonPlaces.map(sp => (
+              {elementsSpeciaux.map(sp => (
                 <div key={sp.id} draggable onDragStart={() => setDragEleve(sp.id)}
-                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)',width:'100%',maxWidth:'100%',boxSizing:'border-box'}}>
                   <div style={{width:32,height:32,borderRadius:8,background:sp.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:sp.text,flexShrink:0}}>
                     {sp.icon}
                   </div>
-                  <div>
+                  <div style={{width:'100%',maxWidth:'100%',boxSizing:'border-box'}}>
                     <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.label}</div>
                   </div>
                 </div>
@@ -392,7 +394,7 @@ export default function Classes() {
                   </div>
                 </div>
               ))}
-              {elevesNonPlaces.length===0 && elementsSpeciauxNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
+              {elevesNonPlaces.length===0 && elementsSpeciaux.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
             </div>
           </div>
         </div>
@@ -846,7 +848,7 @@ export default function Classes() {
 
   // Vue PLAN DE CLASSE
   if (showPlanClasse && detailClasse) {
-    const COLS = 10; const ROWS = 13;
+    const COLS = 7; const ROWS = 11;
     const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
 
     return (
@@ -1102,49 +1104,27 @@ export default function Classes() {
       )}
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>
-        <h2 style={s.title}>🏫 Classe {detailClasse.nom}</h2>
-        {detailClasse.prof_prenom && <span style={{...s.chip,background:'#d1fae5',color:'#065f46'}}>Titulaire : {detailClasse.prof_prenom} {detailClasse.prof_nom}</span>}
+        <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
+        {classeVueTab === 'plan' && (
+          <div style={{display:'flex',gap:8,marginLeft:'auto'}}>
+            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>Sauvegarder</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer PDF</button>
+            <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>
+          </div>
+        )}
+        {classeVueTab === 'trombinoscope' && (
+          <button style={{...s.btnAdd,background:'#6366f1',marginLeft:'auto'}} onClick={imprimerTrombinoscope}>Imprimer</button>
+        )}
       </div>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-        <div style={{display:'flex',gap:8}}>
-          <button
-            style={{...s.btnAdd,...(classeVueTab==='eleves'?{}:s.btnGhost)}}
-            onClick={() => setClasseVueTab('eleves')}
-          >
-            📋 Liste des élèves
+      <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:15}}>
+        {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
+          <button key={k}
+            style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:155,minWidth:155,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
+            onClick={() => setClasseVueTab(k)}>
+            {l}
           </button>
-          <button
-            style={{...s.btnAdd,...(classeVueTab==='inventaire'?{}:s.btnGhost)}}
-            onClick={() => setClasseVueTab('inventaire')}
-          >
-            📦 Inventaire
-          </button>
-          <button
-            style={{...s.btnAdd,...(classeVueTab==='plan'?{}:s.btnGhost)}}
-            onClick={() => setClasseVueTab('plan')}
-          >
-            🪑 Plan de classe
-          </button>
-          <button
-            style={{...s.btnAdd,...(classeVueTab==='trombinoscope'?{}:s.btnGhost)}}
-            onClick={() => setClasseVueTab('trombinoscope')}
-          >
-            📸 Trombinoscope
-          </button>
-        </div>
-        <div style={{display:'flex',gap:8}}>
-          {classeVueTab === 'plan' && (
-            <>
-              <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
-              <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
-              <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
-            </>
-          )}
-          {classeVueTab === 'trombinoscope' && (
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerTrombinoscope}>🖨️ Imprimer PDF</button>
-          )}
-        </div>
+        ))}
       </div>
 
       {classeVueTab === 'eleves' ? (
@@ -1208,7 +1188,7 @@ export default function Classes() {
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
-                  <th style={s.th}>Branche</th>
+                  <th style={s.th}>Branches</th>
                 </tr>
               </thead>
               <tbody>
@@ -1222,7 +1202,6 @@ export default function Classes() {
                   >
                     <td style={{...s.td,cursor:'pointer'}}>
                       <div style={{fontWeight:700}}>{b.nom}</div>
-                      <div style={{fontSize:11,color:'#94a3b8'}}>{b.niveau || '—'}</div>
                     </td>
                   </tr>
                 ))}
@@ -1243,7 +1222,7 @@ export default function Classes() {
                     Pas de numéro
                   </label>
                   <input type="text" style={s.inp} placeholder="Remarques" value={inventaireForm.remarques} onChange={e => setInventaireForm({...inventaireForm,remarques:e.target.value})} />
-                  <button type="submit" style={s.btnAdd}>+ Ajouter</button>
+                  <button type="submit" style={s.btnAdd}>Valider</button>
                 </form>
 
                 <table style={s.table}>
