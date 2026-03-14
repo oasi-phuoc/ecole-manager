@@ -133,12 +133,14 @@ const styles = {
     marginBottom: '20px',
   },
   logoImage: {
-    width: '120px',
-    objectFit: 'contain',
+    width: '160px',
+    height: 'auto',
+    display: 'block',
   },
   logoOasis: {
-    width: '180px',
-    objectFit: 'contain',
+    width: '240px',
+    height: 'auto',
+    display: 'block',
   },
   sousTitre: {
     fontSize: '14px',

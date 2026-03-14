@@ -1356,15 +1356,12 @@ export default function Classes() {
           {[{id:'tous',label:'Toutes'},{id:'CSC',label:'CSC'},{id:'CFR',label:'CFR'},{id:'EPL',label:'EPL'},{id:'CPR',label:'CPR'}].map(f => (
             <button key={f.id} style={{...s.tabBtn,...(filtreNiveau===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
           ))}
+          {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
+            <button key={f.id} style={{...s.tabBtn,...(filtreActif===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
+          ))}
         </div>
       </div>
-      <div style={{marginTop:15,marginBottom:8,display:'flex',alignItems:'center',gap:12}}>
-        <button
-          onClick={() => setFiltreActif(filtreActif==='actif'?'inactif':'actif')}
-          style={{padding:'7px 16px',borderRadius:8,border:'none',background:filtreActif==='actif'?'#d1fae5':'#fee2e2',color:filtreActif==='actif'?'#065f46':'#991b1b',fontWeight:700,fontSize:13,cursor:'pointer'}}
-        >
-          {filtreActif==='actif'?'✅ Actives':'❌ Inactives'}
-        </button>
+      <div style={{marginTop:15,marginBottom:8}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 

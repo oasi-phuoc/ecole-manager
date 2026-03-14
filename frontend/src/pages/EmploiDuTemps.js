@@ -1356,7 +1356,7 @@ export default function EmploiDuTemps() {
   const imprimerPlanningSelection = async () => {
     try {
       if (sousOngletPlanning === 'classes') {
-        if (!classePlanningId || !planningClasse) return alert('Sélectionnez d’abord une classe.');
+        if (!classePlanningId || !planningClasse) return alert("Sélectionnez d'abord une classe.");
         const nomClasse = planningClasse?.classe?.nom || '';
         const titulaireClasse = planningClasse?.classe?.titulaire_nom || '';
         const titre = `Planning classe — ${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
@@ -1368,7 +1368,7 @@ export default function EmploiDuTemps() {
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
       }
       if (sousOngletPlanning === 'professeurs') {
-        if (!profPlanningId || !planningProf) return alert('Sélectionnez d’abord un professeur.');
+        if (!profPlanningId || !planningProf) return alert("Sélectionnez d'abord un professeur.");
         const titre = `Planning professeur — ${planningProf?.prof?.prenom || ''} ${planningProf?.prof?.nom || ''}`.trim();
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
@@ -1392,7 +1392,7 @@ export default function EmploiDuTemps() {
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
-        if (!sallesLieuTravailId || !salleSelectionnee) return alert('Sélectionnez d’abord un lieu de travail et une salle.');
+        if (!sallesLieuTravailId || !salleSelectionnee) return alert("Sélectionnez d'abord un lieu de travail et une salle.");
         const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
         const titre = `Planning salles — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
@@ -1515,7 +1515,7 @@ export default function EmploiDuTemps() {
         return openPrintWindow('Planning professeurs — tous les professeurs', sections.join(''), { paysage: true });
       }
       if (sousOngletPlanning === 'salle') {
-        if (!sallesLieuTravailId) return alert('Sélectionnez d’abord un lieu de travail.');
+        if (!sallesLieuTravailId) return alert("Sélectionnez d'abord un lieu de travail.");
         if (!sallesDisponiblesLieu.length) return alert('Aucune salle disponible pour ce lieu.');
         const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
         const sections = sallesDisponiblesLieu.map((salle) => {
@@ -1591,7 +1591,7 @@ export default function EmploiDuTemps() {
     <div style={styles.page}>
       <div style={styles.header}>
         <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={styles.titre}>📅 Emploi du Temps</h2>
+        <h2 style={styles.titre}>Emploi du temps</h2>
       </div>
 
       <div style={styles.onglets}>
@@ -1660,7 +1660,7 @@ export default function EmploiDuTemps() {
                   }
                 }}
               >
-                <option value="">— Sélectionner une classe —</option>
+                <option value="">Choisir une classe</option>
                 {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             )}
@@ -1675,7 +1675,7 @@ export default function EmploiDuTemps() {
                   else setPlanningProf(null);
                 }}
               >
-                <option value="">— Sélectionner un professeur —</option>
+                <option value="">Choisir un professeur</option>
                 {profsTriesPrenomNom.map(p => (
                   <option key={p.id} value={p.id}>
                     {p.prenom} {p.nom}
@@ -1689,7 +1689,7 @@ export default function EmploiDuTemps() {
                 value={planningPoolId}
                 onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}
               >
-                <option value="">Sélectionner un pool</option>
+                <option value="">Choisir un pool</option>
                 {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
               </select>
             )}
@@ -1700,7 +1700,7 @@ export default function EmploiDuTemps() {
                   value={sallesLieuTravailId}
                   onChange={e => setSallesLieuTravailId(e.target.value)}
                 >
-                  <option value="">— Sélectionner un lieu de travail —</option>
+                  <option value="">Choisir un lieu de travail</option>
                   {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
                 </select>
                 <select
@@ -1709,7 +1709,7 @@ export default function EmploiDuTemps() {
                   disabled={!sallesLieuTravailId}
                   onChange={e => setSalleSelectionnee(e.target.value)}
                 >
-                  <option value="">{sallesLieuTravailId ? '- Sélectionner une salle -' : '— Sélectionner d’abord un lieu —'}</option>
+                  <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
                   {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
                 </select>
               </>
@@ -1739,9 +1739,8 @@ export default function EmploiDuTemps() {
         <div>
           <div style={styles.card}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
-              <h3 style={{...styles.cardTitre, fontSize:18, marginBottom:0}}>Sélectionner un professeur :</h3>
               <select
-                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
+                style={{padding:'9px 18px',borderRadius:99,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
@@ -1754,7 +1753,7 @@ export default function EmploiDuTemps() {
                   await chargerDispos(profId);
                 }}
               >
-                <option value="">— Sélectionner un professeur —</option>
+                <option value="">Choisir un professeur</option>
                 {profsTriesPrenomNom.map(p => (
                   <option key={p.id} value={p.id}>
                     {p.prenom} {p.nom}
@@ -1846,7 +1845,7 @@ export default function EmploiDuTemps() {
                     <div style={styles.fc}>
                       <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
                       <select style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})}>
-                        <option value="">— Sélectionner —</option>
+                        <option value="">Choisir</option>
                         <option value="CSC">CSC</option>
                         <option value="CFR">CFR</option>
                         <option value="EPL">EPL</option>
@@ -1864,7 +1863,7 @@ export default function EmploiDuTemps() {
                     <div style={styles.fc}>
                       <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
                       <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
-                        <option value="">— Sélectionner —</option>
+                        <option value="">Choisir</option>
                         <option value="Synecom">Synecom</option>
                         <option value="Botza">Botza</option>
                         <option value="Creuset">Creuset</option>
@@ -2125,7 +2124,7 @@ export default function EmploiDuTemps() {
                     setPoolAffId(e.target.value);
                   }}
                 >
-                  <option value="">— Sélectionner un pool —</option>
+                  <option value="">Choisir un pool</option>
                   {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
                 </select>
               )}
@@ -2142,7 +2141,7 @@ export default function EmploiDuTemps() {
                       setPlanningClasse(null);
                     }}
                   >
-                    <option value="">— Sélectionner un pool —</option>
+                    <option value="">Choisir un pool</option>
                     {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
                   </select>
                   <select
@@ -2158,7 +2157,7 @@ export default function EmploiDuTemps() {
                       else setPlanningClasse(null);
                     }}
                   >
-                    <option value="">{classePlanningPoolId ? '— Sélectionner une classe —' : '— Sélectionner d’abord un pool —'}</option>
+                    <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
                     {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </>
@@ -2170,7 +2169,7 @@ export default function EmploiDuTemps() {
                     value={sallesLieuTravailId}
                     onChange={e => setSallesLieuTravailId(e.target.value)}
                   >
-                    <option value="">— Sélectionner un lieu de travail —</option>
+                    <option value="">Choisir un lieu de travail</option>
                     {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
                   </select>
                   <select
@@ -2179,7 +2178,7 @@ export default function EmploiDuTemps() {
                     disabled={!sallesLieuTravailId}
                     onChange={e => setSalleSelectionnee(e.target.value)}
                   >
-                    <option value="">{sallesLieuTravailId ? '- Sélectionner une salle -' : '— Sélectionner d’abord un lieu —'}</option>
+                    <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
                     {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
                   </select>
                 </>
@@ -2694,7 +2693,7 @@ export default function EmploiDuTemps() {
                           onChange={e => setClasseRapideId(e.target.value)}
                           disabled={!sallesLieuTravailId}
                         >
-                          <option value="">— Sélectionner classe 1 —</option>
+                          <option value="">Choisir classe 1</option>
                           {classesPourSalles
                           .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
                           .map(cl => (
@@ -2707,7 +2706,7 @@ export default function EmploiDuTemps() {
                           onChange={e => setClasseRapideId2(e.target.value)}
                           disabled={!sallesLieuTravailId}
                         >
-                          <option value="">— Sélectionner classe 2 (optionnel) —</option>
+                          <option value="">Choisir classe 2 (optionnel)</option>
                           {classesPourSalles
                           .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
                           .map(cl => (
@@ -3366,7 +3365,7 @@ const styles = {
   noticeBandSuccess:{background:'#d1fae5',color:'#065f46'},
   noticeBandInfo:{background:'#d1fae5',color:'#065f46'},
   noticeBandError:{background:'#fee2e2',color:'#991b1b'},
-  onglets:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'1px solid #c4b5fd',paddingBottom:0},
+  onglets:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'2px solid #6366f1',paddingBottom:0},
   onglet:{padding:'9px 14px',background:'#ede9fe',border:'none',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:13,color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},

@@ -12,6 +12,8 @@ export default function EmployesAdministratifs() {
       hidePreferencesLieu={true}
       hideRemarque={true}
       singleColumnForm={true}
+      excludeSessionUser={true}
+      searchPlaceholder="Rechercher un employé..."
     />
   );
 }

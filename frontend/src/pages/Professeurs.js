@@ -1,4 +1,4 @@
-import { isAdmin } from '../utils/permissions';
+import { isAdmin, getUser } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +39,8 @@ export default function Professeurs({
   hidePreferencesLieu = false,
   hideRemarque = false,
   singleColumnForm = false,
+  excludeSessionUser = false,
+  searchPlaceholder = 'Rechercher un professeur...',
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -213,6 +215,7 @@ export default function Professeurs({
 
   const profsFiltres = profs.filter(p => {
     if (p.role === 'admin') return false;
+    if (excludeSessionUser && p.id === getUser()?.id) return false;
     const matchR = (
       (p.prenom+' '+p.nom+' '+p.email+' '+p.nom+' '+p.prenom)
         .toLowerCase()
@@ -256,7 +259,7 @@ export default function Professeurs({
         </div>
       </div>
       <div style={{marginTop:15,marginBottom:12}}>
-        <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+        <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 
       {showForm && (
@@ -649,7 +652,7 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '1px solid #c4b5fd', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
+  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
   tabsRow: { display: 'flex', gap: 0, alignItems: 'flex-end' },
   tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', outline: 'none', fontSize: 14, width: 280, color: '#475569', fontFamily: 'inherit' },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 90, minWidth: 90, textAlign: 'center' },
