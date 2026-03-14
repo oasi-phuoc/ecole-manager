@@ -2237,23 +2237,27 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-                <table style={{...styles.tbl, tableLayout:'auto', minWidth:860}}>
+                <table style={{...styles.tbl, tableLayout:'fixed', width:'100%'}}>
+                  <colgroup>
+                    <col style={{width:180}} />
+                    {JOURS.map(j => <col key={j} style={{width:'calc((100% - 180px) / 5)'}} />)}
+                  </colgroup>
                   <thead>
                     <tr style={styles.theadRow}>
-                      <th style={{...styles.th,width:180,minWidth:180,maxWidth:180}}>Classe</th>
-                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center',minWidth:140}}>{j}</th>)}
+                      <th style={{...styles.th,width:180}}>Classe</th>
+                      {JOURS.map(j => <th key={j} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {classesPool.map((cl,ri) => (
                       <tr key={cl.id} style={{background:ri%2===0?'white':'#fafbfc'}}>
-                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180,minWidth:180,maxWidth:180}}>
+                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180}}>
                           {cl.nom}
                         </td>
                         {JOURS.map(jour => {
                           const periode = getHoraireJourClasse(cl.id, jour);
                           return (
-                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9',minWidth:140}}>
+                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9'}}>
                               <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={{
                                 padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
                                 cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
@@ -3346,7 +3350,7 @@ const styles = {
   ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
-  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,borderTop:'2px solid #4f46e5',paddingTop:0,marginTop:-15,marginLeft:15},
+  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,paddingTop:0,marginTop:-15},
   affSubTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',border:'none',cursor:'pointer',fontWeight:700,fontSize:14,background:'#e0e7ff',color:'#3730a3',lineHeight:1,position:'relative',zIndex:1,outline:'none',width:120,minWidth:120,textAlign:'center'},
   affSubTabBtnActif:{background:'#4f46e5',color:'white',marginTop:-1,zIndex:2,boxShadow:'0 4px 8px rgba(79,70,229,0.22)'},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
