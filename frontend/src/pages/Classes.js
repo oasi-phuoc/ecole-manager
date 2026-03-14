@@ -1403,7 +1403,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={s.tableWrap}>
+      <div style={{...s.tableWrap, marginTop:15}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
