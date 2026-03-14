@@ -311,37 +311,25 @@ export default function Notes() {
   };
 
   const renderActionsBar = (className = '') => (
-    <div className={className} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-        <button
-          style={{ ...s.btnTopAction, background: vueClasseAction === 'evaluations' ? '#6366f1' : 'white', color: vueClasseAction === 'evaluations' ? 'white' : '#475569', border: vueClasseAction === 'evaluations' ? 'none' : '1px solid #e2e8f0' }}
-          onClick={() => { setVueClasseAction('evaluations'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('evaluations'); }}
-        >
-          📝 Évaluations
-        </button>
-        <button
-          style={{ ...s.btnTopAction, background: vueClasseAction === 'generale' ? '#6366f1' : 'white', color: vueClasseAction === 'generale' ? 'white' : '#475569', border: vueClasseAction === 'generale' ? 'none' : '1px solid #e2e8f0' }}
-          onClick={() => { setVueClasseAction('generale'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('generale'); }}
-        >
-          📊 Vue générale
-        </button>
-        <button
-          style={{ ...s.btnTopAction, background: vueClasseAction === 'bulletin' ? '#6366f1' : 'white', color: vueClasseAction === 'bulletin' ? 'white' : '#475569', border: vueClasseAction === 'bulletin' ? 'none' : '1px solid #e2e8f0' }}
-          onClick={() => { setVueClasseAction('bulletin'); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse('bulletin'); }}
-        >
-          📄 Bulletin
-        </button>
-        <select
-          style={{...s.select, minWidth:230, height:35}}
-          value={classeSelectionnee}
+    <div className={className}>
+      <div style={s.tabsBar}>
+        {[['evaluations','Évaluations'],['generale','Vue générale'],['bulletin','Bulletin']].map(([k,l]) => (
+          <button key={k}
+            style={{...s.tabBtn,...(vueClasseAction===k?s.tabBtnActif:{})}}
+            onClick={() => { setVueClasseAction(k); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse(k); }}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <div style={{marginTop:15,marginBottom:15}}>
+        <select style={s.tabSelect} value={classeSelectionnee}
           onChange={e => {
             const next = e.target.value;
             setClasseSelectionnee(next);
             if (!next) { setClasseObj(null); return; }
             ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
-          }}
-        >
-          <option value="">- Sélectionner une classe -</option>
+          }}>
+          <option value="">Sélectionner une classe</option>
           {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
         </select>
       </div>
@@ -365,7 +353,7 @@ export default function Notes() {
           <button style={{ ...s.btnSauver, opacity: peutModifierNotes() ? 1 : 0.4, cursor: peutModifierNotes() ? 'pointer' : 'not-allowed' }}
             disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>Enregistrer</button>
         </div>
-        {sauvegarde && <div style={s.successMsg}>✅ Notes enregistrées !</div>}
+        {sauvegarde && <div style={s.successMsg}>Notes enregistrées !</div>}
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
           <table style={s.tbl}>
@@ -455,36 +443,43 @@ export default function Notes() {
         `}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>📊 Vue générale — {classeNom}</h2>
-          <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
+          <h2 style={s.titre}>Vue générale — {classeNom}</h2>
+          <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
         {renderActionsBar('no-print')}
 
-        {/* Sélecteur de mode */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }} className="no-print">
-          {[['tous', 'Tous'], ['branche', 'Par branche'], ['eleve', 'Par élève']].map(([val, label]) => (
-            <button key={val} onClick={() => setVueGeneraleMode(val)}
-              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: vueGeneraleMode === val ? '#6366f1' : '#f1f5f9', color: vueGeneraleMode === val ? 'white' : '#555' }}>
-              {label}
-            </button>
-          ))}
-          {vueGeneraleMode === 'branche' && (
-            <select style={{ ...s.select, marginLeft: 8 }} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
-              <option value="">— Choisir une branche —</option>
-              {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
-            </select>
+        {/* Sous-onglets Vue générale */}
+        <div className="no-print">
+          <div style={s.subTabsBar}>
+            {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
+              <button key={val} onClick={() => setVueGeneraleMode(val)}
+                style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {(vueGeneraleMode === 'branche' || vueGeneraleMode === 'eleve') && (
+            <div style={{marginTop:15,marginBottom:15}}>
+              {vueGeneraleMode === 'branche' && (
+                <select style={s.tabSelect} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
+                  <option value="">Choisir une branche</option>
+                  {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
+                </select>
+              )}
+              {vueGeneraleMode === 'eleve' && (
+                <select style={s.tabSelect} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
+                  <option value="">Choisir un élève</option>
+                  {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
+                </select>
+              )}
+            </div>
           )}
-          {vueGeneraleMode === 'eleve' && (
-            <select style={{ ...s.select, marginLeft: 8 }} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
-              <option value="">— Choisir un élève —</option>
-              {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
-            </select>
-          )}
+          {vueGeneraleMode === 'tous' && <div style={{marginBottom:15}}></div>}
         </div>
 
         {/* Chargement / erreur */}
-        {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>⏳ Chargement des données…</div>}
-        {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>❌ Erreur : {rapportErreur}</div>}
+        {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>Chargement des données…</div>}
+        {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>Erreur : {rapportErreur}</div>}
 
         {/* ---- VUE TOUS ---- */}
         {vueGeneraleMode === 'tous' && rapport && (
@@ -691,7 +686,7 @@ export default function Notes() {
             <option value="">-- Choisir un élève --</option>
             {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
           </select>
-          <button style={s.btnImprimer} onClick={handleImprimer}>🖨️ Imprimer</button>
+          <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
         {bulletin ? (
           <div ref={printRef}>
@@ -815,10 +810,10 @@ export default function Notes() {
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>📄 Bulletin — {classeNom}</h2>
+          <h2 style={s.titre}>Bulletin — {classeNom}</h2>
           {bulletinOnglet === 'notes' && (
             <button style={s.btnImprimer} onClick={handleImprimer}>
-              🖨️ Imprimer
+              Imprimer
             </button>
           )}
         </div>
@@ -1070,7 +1065,7 @@ export default function Notes() {
       <div style={s.page}>
         <div style={s.header}>
           <button style={s.btnRetour} onClick={async () => { await chargerEvaluationsId(classeSelectionnee, null); setVue('matieres'); }}>← Retour</button>
-          <h2 style={s.titre}>📝 {matiereObj?.nom} — {classeNom}</h2>
+          <h2 style={s.titre}>{matiereObj?.nom} — {classeNom}</h2>
           {peutModifierNotes() && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
         </div>
 
@@ -1150,9 +1145,9 @@ export default function Notes() {
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                 <td style={s.td}>
-                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>📋</button>
-                  {peutModifierNotes() && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>✏️</button>}
-                  {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>🗑️</button>}
+                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>Saisir</button>
+                  {peutModifierNotes() && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
+                  {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
@@ -1189,7 +1184,7 @@ export default function Notes() {
       <div style={s.page}>
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>📚 Matières — {classeNom}</h2>
+          <h2 style={s.titre}>Matières — {classeNom}</h2>
         </div>
         {renderActionsBar()}
         <div style={s.tblWrap}>
@@ -1209,7 +1204,7 @@ export default function Notes() {
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={s.td}>
-                    <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>📋 Ouvrir</button>
+                    <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>Ouvrir</button>
                   </td>
                   <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{m.nom}</td>
                   <td style={{ ...s.td, textAlign: 'center' }}>
@@ -1232,22 +1227,32 @@ export default function Notes() {
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.titre}>📝 Notes & Bulletins</h2>
+        <h2 style={s.titre}>Notes & Bulletins</h2>
       </div>
       {renderActionsBar()}
-      <div style={s.tblWrap}>
-        <div style={s.vide}>
-          {classeSelectionnee
-            ? 'Chargement de la vue sélectionnée...'
-            : 'Sélectionnez une classe pour afficher les données.'}
+      {!classeSelectionnee && (
+        <div style={{background:'white',borderRadius:12,border:'1px solid #e2e8f0',padding:'24px 28px',color:'#64748b',fontSize:14,fontStyle:'italic',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+          Sélectionnez d'abord une classe pour afficher les données.
         </div>
-      </div>
+      )}
+      {classeSelectionnee && (
+        <div style={s.tblWrap}>
+          <div style={s.vide}>Chargement de la vue sélectionnée...</div>
+        </div>
+      )}
     </div>
   );
 }
 
 const s = {
   page: { padding: '24px 28px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
+  tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
+  tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:150,minWidth:150,textAlign:'center'},
+  tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
+  tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
+  subTabsBar: {display:'flex',gap:0,marginTop:-15},
+  subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none'},
+  subTabBtnActif: {background:'#4f46e5',color:'white',marginTop:-1},
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
@@ -1271,7 +1276,7 @@ const s = {
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },
   typeBadge: { background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   btnOuvrir: { padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, marginRight: 6 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 },
+  btnDelete: { padding: '4px 8px', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#64748b', fontWeight: 600, marginLeft: 4 },
   btnEdit: { padding: '4px 10px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },
