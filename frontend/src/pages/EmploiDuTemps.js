@@ -1204,7 +1204,7 @@ export default function EmploiDuTemps() {
           h1 { margin: 0 0 12px; font-size: 20px; }
           h2 { margin: 18px 0 8px; font-size: 16px; }
           table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; table-layout: fixed; }
-          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f3f4f6; }
           col.creneau-col { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; }
           col.day-col { width: auto; }
@@ -1291,7 +1291,7 @@ export default function EmploiDuTemps() {
       base.forEach((crBase, idx) => {
         const cellulesJours = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f5f5f5;height:${HAUTEUR_LIGNE_COURS}px;"></td>`;
+          if (!cr) return `<td style="background:#f5f5f5;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;"></td>`;
           const aCours = horairesSet.has(`${jour}|${periode}`);
           const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
           const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f5f5f5');
@@ -1299,7 +1299,7 @@ export default function EmploiDuTemps() {
           const contenu = aff
             ? `<b style="color:${fg};font-size:12px;">${escapeHtml(aff.prof_nom || '')}</b>${aff.matiere_nom ? `<div style="color:${fg};font-size:11px;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
             : (aCours ? '<span style="color:#dc2626;font-size:11px;font-weight:700;">Aucun professeur affecté</span>' : '');
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;">${contenu}</td>`;
+          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;">${contenu}</td>`;
         }).join('');
         rows.push(
           `<tr>
@@ -1359,7 +1359,7 @@ export default function EmploiDuTemps() {
         if (!classePlanningId || !planningClasse) return alert("Sélectionnez d'abord une classe.");
         const nomClasse = planningClasse?.classe?.nom || '';
         const titulaireClasse = planningClasse?.classe?.titulaire_nom || '';
-        const titre = `Planning classe — ${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
+        const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
         const table = buildPlanningClassesPrintTableHtml({
           creneauxListe: planningClasse.creneaux || [],
           affectationsListe: planningClasseAffectations || [],
@@ -1479,7 +1479,7 @@ export default function EmploiDuTemps() {
             affectationsListe: data?.affectations || [],
             horairesListe: data?.horaires || [],
           });
-          return `<div class="section"><h2>Classe : ${escapeHtml(nomClasse)}${titulaireClasse ? ` — Titulaire : ${escapeHtml(titulaireClasse)}` : ''}</h2>${table}</div>`;
+          return `<div class="section"><h2>${escapeHtml(nomClasse)}${titulaireClasse ? ` — Titulaire : ${escapeHtml(titulaireClasse)}` : ''}</h2>${table}</div>`;
         });
         return openPrintWindow('Planning classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true });
       }
