@@ -1742,7 +1742,7 @@ export default function EmploiDuTemps() {
         <div>
           <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:15}}>
               <select
-                style={{padding:'9px 18px',borderRadius:10,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
+                style={{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
                 onChange={async e => {
                   const profId = e.target.value;
@@ -3347,7 +3347,7 @@ const styles = {
   ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
-  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,borderTop:'2px solid #4f46e5',paddingTop:0},
+  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,borderTop:'2px solid #4f46e5',paddingTop:0,marginTop:-15,marginLeft:15},
   affSubTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',border:'none',cursor:'pointer',fontWeight:700,fontSize:14,background:'#e0e7ff',color:'#3730a3',lineHeight:1,position:'relative',zIndex:1,outline:'none',width:120,minWidth:120,textAlign:'center'},
   affSubTabBtnActif:{background:'#4f46e5',color:'white',marginTop:-1,zIndex:2,boxShadow:'0 4px 8px rgba(79,70,229,0.22)'},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
