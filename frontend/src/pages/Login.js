@@ -42,9 +42,8 @@ export default function Login() {
       <div style={styles.card}>
         <div style={styles.logoContainer}>
           <img src="/logo-image-oasis.webp" alt="Oasis" style={styles.logoImage} />
-          <img src="/logo-oasis.webp" alt="Le Botza" style={styles.logoOasis} />
         </div>
-        <p style={styles.sousTitre}>Connectez-vous à votre espace</p>
+        <p style={styles.sousTitre}>Connectez-vous à Oasis</p>
 
         {erreur && <div style={styles.erreur}>{erreur}</div>}
 
