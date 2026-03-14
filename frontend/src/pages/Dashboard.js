@@ -96,7 +96,6 @@ export default function Dashboard() {
               onMouseEnter={e => { e.currentTarget.style.background = '#6366f1'; e.currentTarget.querySelector('.nav-label').style.color = 'white'; }}
               onMouseLeave={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.querySelector('.nav-label').style.color = '#4c1d95'; }}
             >
-              <span style={{...styles.navIcon, background: m.bg, color: m.color}}>{m.icon}</span>
               <span className="nav-label" style={styles.navLabel}>{m.label}</span>
               {m.stat !== null && <span style={{...styles.navBadge, background: m.bg, color: m.color}}>{m.stat}</span>}
             </button>
