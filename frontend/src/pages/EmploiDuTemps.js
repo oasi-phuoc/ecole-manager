@@ -1745,6 +1745,9 @@ export default function EmploiDuTemps() {
               </select>
           </div>
 
+          {!profSelectionne && (
+            <div style={styles.msgVide}>Sélectionnez d'abord un professeur pour afficher les disponibilités.</div>
+          )}
           {profSelectionne && (
             <div style={styles.card}>
               <div style={styles.rowBetween}>
@@ -2148,7 +2151,7 @@ export default function EmploiDuTemps() {
           {sousOngletAff === 'classes' && (
             <div style={{marginTop:0}}>
               {!poolAffId ? (
-                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                <div style={styles.msgVide}>
                   Sélectionnez d'abord un pool pour afficher les classes.
                 </div>
               ) : (
@@ -2254,7 +2257,7 @@ export default function EmploiDuTemps() {
           {sousOngletAff === 'profs' && (
             <div style={{marginTop:12}}>
               {!poolAffId ? (
-                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                <div style={styles.msgVide}>
                   Sélectionnez d'abord un pool pour afficher les professeurs.
                 </div>
               ) : (
@@ -2599,7 +2602,7 @@ export default function EmploiDuTemps() {
           {sousOngletAff === 'salles' && (
             <div style={{marginTop:12}}>
               {!sallesLieuTravailId ? (
-                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                <div style={styles.msgVide}>
                   Sélectionnez d'abord un lieu de travail pour afficher les classes.
                 </div>
               ) : (
@@ -2675,7 +2678,7 @@ export default function EmploiDuTemps() {
                     )}
                   </div>
                   {!salleSelectionnee ? (
-                    <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                    <div style={styles.msgVide}>
                       Sélectionnez d'abord une salle pour afficher les classes à affecter par horaire.
                     </div>
                   ) : (
@@ -2767,9 +2770,12 @@ export default function EmploiDuTemps() {
           {sousOngletAff === 'branches' && (
             <div>
               {!classePlanningPoolId && (
-                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                <div style={styles.msgVide}>
                   Sélectionnez d'abord un pool pour afficher les classes.
                 </div>
+              )}
+              {classePlanningPoolId && !classePlanningId && (
+                <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher les branches.</div>
               )}
 
               {planningClasse && classePlanningId && (
@@ -2943,13 +2949,13 @@ export default function EmploiDuTemps() {
       {(onglet === 'plannings' && sousOngletPlanning === 'salle') && (
         <div>
           {!sallesLieuTravailId ? (
-            <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+            <div style={styles.msgVide}>
               Sélectionnez d'abord un lieu de travail pour afficher les classes.
             </div>
           ) : (
             <div>
               {!salleSelectionnee ? (
-                <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+                <div style={styles.msgVide}>
                   Sélectionnez d'abord une salle pour afficher son planning.
                 </div>
               ) : (
@@ -3025,6 +3031,9 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING PROFS ===== */}
       {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
         <div>
+          {!profPlanningId && (
+            <div style={styles.msgVide}>Sélectionnez d'abord un professeur pour afficher son planning.</div>
+          )}
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
@@ -3095,6 +3104,9 @@ export default function EmploiDuTemps() {
       {/* ===== PLANNING CLASSES ===== */}
       {(onglet === 'classe' || (onglet === 'plannings' && sousOngletPlanning === 'classes')) && (
         <div>
+          {!classePlanningId && (
+            <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher son planning.</div>
+          )}
           {planningClasse && classePlanningId && (
             <div>
               <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
@@ -3197,7 +3209,7 @@ export default function EmploiDuTemps() {
       {(onglet === 'general' || (onglet === 'plannings' && sousOngletPlanning === 'general')) && (
         <div>
           {!planningPoolId && (
-            <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
+            <div style={styles.msgVide}>
               Sélectionnez d'abord un pool pour afficher le planning général.
             </div>
           )}
@@ -3308,6 +3320,7 @@ const styles = {
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
   btnSauvegarderAff:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
+  msgVide:{background:'white',borderRadius:12,padding:'20px 24px',marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',color:'#64748b',fontSize:12,fontStyle:'italic',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
   flexWrap:{display:'flex',flexWrap:'wrap',gap:8},
