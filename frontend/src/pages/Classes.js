@@ -1348,22 +1348,24 @@ export default function Classes() {
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.title}>🏫 Classes</h2>
+        <h2 style={s.title}>Gestion des classes</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>}
       </div>
-      <div style={s.controlsRow}>
-        <div style={s.filtres}>
-          {[{id:'tous',label:'Toutes'},{id:'CSC',label:'CSC'},{id:'CFR',label:'CFR'},{id:'EPL',label:'EPL'}].map(f => (
-            <button key={f.id} style={{...s.filtrBtn,...(filtreNiveau===f.id?s.filtrActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
-          ))}
-          {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
-            <button key={f.id} style={{...s.filtrBtn,...(filtreActif===f.id?s.filtrActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
+      <div style={s.tabsBar}>
+        <div style={s.tabsRow}>
+          {[{id:'tous',label:'Toutes'},{id:'CSC',label:'CSC'},{id:'CFR',label:'CFR'},{id:'EPL',label:'EPL'},{id:'CPR',label:'CPR'}].map(f => (
+            <button key={f.id} style={{...s.tabBtn,...(filtreNiveau===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
           ))}
         </div>
-        <div style={s.searchBox}>
-          <span style={s.searchIcon}>🔍</span>
-          <input style={s.searchInput} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-        </div>
+      </div>
+      <div style={{marginTop:15,marginBottom:8,display:'flex',alignItems:'center',gap:12}}>
+        <button
+          onClick={() => setFiltreActif(filtreActif==='actif'?'inactif':'actif')}
+          style={{padding:'7px 16px',borderRadius:8,border:'none',background:filtreActif==='actif'?'#d1fae5':'#fee2e2',color:filtreActif==='actif'?'#065f46':'#991b1b',fontWeight:700,fontSize:13,cursor:'pointer'}}
+        >
+          {filtreActif==='actif'?'✅ Actives':'❌ Inactives'}
+        </button>
+        <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 
       {showForm && (
@@ -1383,6 +1385,7 @@ export default function Classes() {
                     <option value="CSC">CSC</option>
                     <option value="CFR">CFR</option>
                     <option value="EPL">EPL</option>
+                    <option value="CPR">CPR</option>
                   </select>
                 </div>
                 
@@ -1476,6 +1479,11 @@ const s = {
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
+  tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'},
+  tabsRow:{display:'flex',gap:0,alignItems:'flex-end'},
+  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,color:'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:90,minWidth:90,textAlign:'center'},
+  tabBtnActif:{background:'#6366f1',color:'white',marginBottom:-1,zIndex:2},
+  tabSearch:{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'#f1f5f9',outline:'none',fontSize:14,width:280,color:'#475569',fontFamily:'inherit'},
   chip:{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:600},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},

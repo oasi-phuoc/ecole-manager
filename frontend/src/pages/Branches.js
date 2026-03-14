@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
-const NIVEAUX = ['CSC','CFR','EPL'];
+const NIVEAUX = ['CSC','CFR','EPL','CPR'];
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
@@ -56,7 +56,7 @@ export default function Branches() {
     }
   };
 
-  const niveaux = ['tous', 'CSC', 'CFR', 'EPL'];
+  const niveaux = ['tous', 'CSC', 'CFR', 'EPL', 'CPR'];
 
   const branchesFiltrees = branches.filter(b => {
     const matchR = b.nom.toLowerCase().includes(recherche.toLowerCase());
@@ -103,7 +103,7 @@ export default function Branches() {
                   <input style={s.inp} type="text" required value={form.designation_courte} onChange={e => setForm({...form,designation_courte:e.target.value})} placeholder="Ex: MATH, FRA" />
                 </div>
                 <div style={s.field}>
-                  <label style={s.lbl}>Niveau * <span style={{color:'#9ca3af',fontWeight:400}}>(ex: CSC, CFR, EPL)</span></label>
+                  <label style={s.lbl}>Niveau * <span style={{color:'#9ca3af',fontWeight:400}}>(ex: CSC, CFR, EPL, CPR)</span></label>
                   <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
                     <option value="">-- Choisir --</option>
                     {NIVEAUX.map(n => <option key={n} value={n}>{n}</option>)}
