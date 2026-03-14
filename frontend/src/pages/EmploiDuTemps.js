@@ -2099,99 +2099,23 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          <div style={styles.affActionsWrap}>
-            <div style={styles.affActionsLeft}>
-              {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
-                <button key={o.id} style={{...styles.affTabBtn,...(sousOngletAff===o.id?styles.affTabBtnActif:{})}}
-                  onClick={async () => {
-                    if (sousOngletAff !== o.id && !confirmerQuitterSansSauvegarder()) return;
-                    if (sousOngletAff !== o.id) {
-                      abandonnerChangementsAffectationsCourants();
-                    }
-                    setSousOngletAff(o.id);
-                    if (o.id === 'profs') {
-                      await chargerTout();
-                    }
-                    if (o.id === 'branches' && classePlanningId) {
-                      await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-                    }
-                  }}>
-                  {o.label}
-                </button>
-              ))}
-              {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
-                <select
-                  style={styles.selOnglet}
-                  value={poolAffId}
-                  onChange={e => {
-                    if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                    if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
-                    setPoolAffId(e.target.value);
-                  }}
-                >
-                  <option value="">Choisir un pool</option>
-                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                </select>
-              )}
-              {sousOngletAff === 'branches' && (
-                <>
-                  <select
-                    style={styles.selOnglet}
-                    value={classePlanningPoolId}
-                    onChange={e => {
-                      if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                      if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
-                      setClassePlanningPoolId(e.target.value);
-                      setClassePlanningId('');
-                      setPlanningClasse(null);
-                    }}
-                  >
-                    <option value="">Choisir un pool</option>
-                    {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                  </select>
-                  <select
-                    style={styles.selOnglet}
-                    value={classePlanningId || ''}
-                    disabled={!classePlanningPoolId}
-                    onChange={e => {
-                      const classeId = e.target.value;
-                      if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
-                      if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
-                      setClassePlanningId(classeId);
-                      if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId);
-                      else setPlanningClasse(null);
-                    }}
-                  >
-                    <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
-                    {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                  </select>
-                </>
-              )}
-              {sousOngletAff === 'salles' && (
-                <>
-                  <select
-                    style={styles.selOnglet}
-                    value={sallesLieuTravailId}
-                    onChange={e => setSallesLieuTravailId(e.target.value)}
-                  >
-                    <option value="">Choisir un lieu de travail</option>
-                    {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
-                  </select>
-                  <select
-                    style={styles.selOnglet}
-                    value={salleSelectionnee}
-                    disabled={!sallesLieuTravailId}
-                    onChange={e => setSalleSelectionnee(e.target.value)}
-                  >
-                    <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
-                    {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
-                  </select>
-                </>
-              )}
-            </div>
+          {/* Sous-onglets inversés — collés sous les onglets principaux */}
+          <div style={styles.affSubTabsBar}>
+            {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
+              <button key={o.id} style={{...styles.affSubTabBtn,...(sousOngletAff===o.id?styles.affSubTabBtnActif:{})}}
+                onClick={async () => {
+                  if (sousOngletAff !== o.id && !confirmerQuitterSansSauvegarder()) return;
+                  if (sousOngletAff !== o.id) abandonnerChangementsAffectationsCourants();
+                  setSousOngletAff(o.id);
+                  if (o.id === 'profs') await chargerTout();
+                  if (o.id === 'branches' && classePlanningId) await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                }}>
+                {o.label}
+              </button>
+            ))}
             <button
               type="button"
-              style={styles.btnSauvegarderAff}
+              style={{...styles.btnSauvegarderAff, marginLeft:'auto'}}
               onClick={() => {
                 if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
                 if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
@@ -2203,9 +2127,57 @@ export default function EmploiDuTemps() {
             </button>
           </div>
 
+          {/* Listes déroulantes — hors cadre, 15px sous les sous-onglets */}
+          {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
+              <select style={styles.selOnglet} value={poolAffId} onChange={e => {
+                if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
+                setPoolAffId(e.target.value);
+              }}>
+                <option value="">Choisir un pool</option>
+                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+              </select>
+            </div>
+          )}
+          {sousOngletAff === 'branches' && (
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
+              <select style={styles.selOnglet} value={classePlanningPoolId} onChange={e => {
+                if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
+                setClassePlanningPoolId(e.target.value); setClassePlanningId(''); setPlanningClasse(null);
+              }}>
+                <option value="">Choisir un pool</option>
+                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+              </select>
+              <select style={styles.selOnglet} value={classePlanningId || ''} disabled={!classePlanningPoolId} onChange={e => {
+                const classeId = e.target.value;
+                if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
+                if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
+                setClassePlanningId(classeId);
+                if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
+              }}>
+                <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
+                {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+              </select>
+            </div>
+          )}
+          {sousOngletAff === 'salles' && (
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
+              <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+                <option value="">Choisir un lieu de travail</option>
+                {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
+              </select>
+              <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+                <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
+                {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
+              </select>
+            </div>
+          )}
+
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
-            <div style={{marginTop:12}}>
+            <div style={{marginTop:0}}>
               {!poolAffId ? (
                 <div style={{...styles.card, color:'#64748b', fontWeight:600}}>
                   Sélectionnez d'abord un pool pour afficher les classes.
@@ -3375,9 +3347,12 @@ const styles = {
   ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
+  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,borderTop:'2px solid #4f46e5',paddingTop:0},
+  affSubTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',border:'none',cursor:'pointer',fontWeight:700,fontSize:14,background:'#e0e7ff',color:'#3730a3',lineHeight:1,position:'relative',zIndex:1,outline:'none',width:120,minWidth:120,textAlign:'center'},
+  affSubTabBtnActif:{background:'#4f46e5',color:'white',marginTop:-1,zIndex:2,boxShadow:'0 4px 8px rgba(79,70,229,0.22)'},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
-  btnSauvegarderAff:{marginLeft:'auto',padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
+  btnSauvegarderAff:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
   cardTitre:{fontSize:16,fontWeight:700,margin:0},
@@ -3432,7 +3407,7 @@ const styles = {
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
-  selOnglet:{padding:'8px 12px',border:'none',borderRadius:'10px 10px 0 0',fontSize:13,fontWeight:700,background:'#ede9fe',color:'#5b21b6',outline:'none',boxShadow:'none'},
+  selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer'},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
   modal:{background:'white',padding:30,borderRadius:16,maxHeight:'85vh',overflowY:'auto'},
   modalTitre:{fontSize:20,fontWeight:700,marginBottom:20},
