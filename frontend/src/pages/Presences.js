@@ -38,6 +38,8 @@ export default function Presences() {
   const [apercuMois, setApercuMois] = useState({});
   const [loadingApercu, setLoadingApercu] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResultat, setImportResultat] = useState(null);
   const [statsDateDebut, setStatsDateDebut] = useState('');
   const [statsDateFin, setStatsDateFin] = useState('');
   const navigate = useNavigate();
@@ -81,6 +83,115 @@ export default function Presences() {
     const d = new Date(raw);
     if (isNaN(d)) return raw;
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+  };
+
+  const importerPresencesOASI = async (file) => {
+    if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
+    setImportLoading(true);
+    setImportResultat(null);
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      const header = rows[0];
+      const idxRef = header.indexOf('REF');
+      const idxDate = header.indexOf('PRESENCE_DATE');
+      const idxPeriode = header.indexOf('PRESENCE_PERIODE');
+      const idxType = header.indexOf('PRESENCE_TYPE');
+
+      if (idxRef < 0 || idxDate < 0 || idxType < 0) {
+        alert('Format de fichier incorrect — colonnes REF, PRESENCE_DATE ou PRESENCE_TYPE manquantes');
+        setImportLoading(false);
+        return;
+      }
+
+      // Charger les élèves OASI de la classe pour matcher par REF
+      const elevesRes = await axios.get(API + '/eleves/oasi?classe_id=' + classeSelectionnee, { headers });
+      const elevesOASI = elevesRes.data;
+      const refToId = {};
+      elevesOASI.forEach(e => { if (e.oasi_ref) refToId[String(e.oasi_ref)] = e.id; });
+
+      const parDate = {};
+      let nbLignes = 0, nbIgnorees = 0;
+
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row[idxRef] === undefined || row[idxRef] === null || row[idxRef] === '') continue;
+
+        const ref = String(row[idxRef]).trim();
+        const eleveId = refToId[ref];
+        if (!eleveId) { nbIgnorees++; continue; }
+
+        const dateRaw = row[idxDate];
+        if (!dateRaw) continue;
+
+        // Convertir DD.MM.YYYY → YYYY-MM-DD (ou numérique Excel)
+        let dateISO;
+        if (typeof dateRaw === 'string' && dateRaw.includes('.')) {
+          const parts = dateRaw.split('.');
+          dateISO = parts[2] + '-' + parts[1].padStart(2,'0') + '-' + parts[0].padStart(2,'0');
+        } else if (typeof dateRaw === 'number') {
+          const d = XLSX.SSF.parse_date_code(dateRaw);
+          dateISO = d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
+        } else { nbIgnorees++; continue; }
+
+        const periodeRaw = idxPeriode >= 0 ? row[idxPeriode] : null;
+        const type = String(row[idxType] || '').trim();
+
+        // Déterminer demi-journée : colonne PRESENCE_PERIODE ou horaire classe
+        let isMatin = true;
+        if (periodeRaw && String(periodeRaw).trim()) {
+          isMatin = String(periodeRaw).toLowerCase().includes('matin');
+        } else {
+          const jourIdx = new Date(dateISO + 'T12:00:00').getDay();
+          const nomJour = JOURS_FR[jourIdx];
+          const h = classeHoraires.find(h => h.jour === nomJour);
+          isMatin = !h || h.periode === 'Matin';
+        }
+
+        const ps = isMatin ? 1 : 5; // periodeStart
+
+        let p = {};
+        if (type.startsWith('01')) {
+          for (let i = ps; i < ps + 4; i++) p['p'+i] = 'P';
+        } else if (type.startsWith('02')) {
+          p['p'+ps] = 'R';
+          for (let i = ps+1; i < ps+4; i++) p['p'+i] = 'P';
+        } else if (type.startsWith('03')) {
+          for (let i = ps; i < ps+4; i++) p['p'+i] = 'A';
+        } else if (type.startsWith('04')) {
+          for (let i = ps; i < ps+4; i++) p['p'+i] = 'E';
+        } else if (type.startsWith('05')) {
+          for (let i = ps; i < ps+4; i++) p['p'+i] = 'C';
+        } else { nbIgnorees++; continue; }
+
+        if (!parDate[dateISO]) parDate[dateISO] = {};
+        if (!parDate[dateISO][eleveId]) {
+          parDate[dateISO][eleveId] = { p1:'',p2:'',p3:'',p4:'',p5:'',p6:'',p7:'',p8:'',remarque:'',valide:true };
+        }
+        Object.assign(parDate[dateISO][eleveId], p);
+        nbLignes++;
+      }
+
+      // Sauvegarder chaque date
+      const dates = Object.keys(parDate);
+      for (const dateISO of dates) {
+        const data = Object.entries(parDate[dateISO]).map(([eleve_id, vals]) => ({
+          eleve_id: Number(eleve_id), ...vals, valide: true
+        }));
+        await axios.post(API + '/presences', { presences: data, date: dateISO, classe_id: classeSelectionnee }, { headers });
+      }
+
+      setImportResultat({ ok: true, nbLignes, nbDates: dates.length, nbIgnorees });
+      chargerStats();
+      if (onglet === 'apercu') chargerApercuMois();
+    } catch(err) {
+      console.error(err);
+      setImportResultat({ ok: false, erreur: err.response?.data?.message || err.message });
+    }
+    setImportLoading(false);
   };
 
   const exporterLORA = async () => {
@@ -399,11 +510,30 @@ export default function Presences() {
           <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
           <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
           <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
+            {importLoading ? 'Import...' : 'Importer OASI'}
+            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
+              onChange={e => { if(e.target.files[0]) { importerPresencesOASI(e.target.files[0]); e.target.value=''; } }} />
+          </label>
           <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
             {exportLoading ? 'Export...' : 'Exporter LORA'}
           </button>
         </div>
       </div>
+
+      {/* Résultat import */}
+      {importResultat && (
+        <div style={{marginBottom:10,padding:'10px 16px',borderRadius:9,fontSize:13,fontWeight:600,
+          background:importResultat.ok?'#ecfdf5':'#fef2f2',
+          color:importResultat.ok?'#059669':'#dc2626',
+          border:'1px solid '+(importResultat.ok?'#a7f3d0':'#fecaca'),
+          display:'flex',alignItems:'center',gap:10}}>
+          {importResultat.ok
+            ? `Import réussi — ${importResultat.nbLignes} lignes importées sur ${importResultat.nbDates} jour(s)${importResultat.nbIgnorees>0?' · '+importResultat.nbIgnorees+' ligne(s) ignorées':''}`
+            : `Erreur import : ${importResultat.erreur}`}
+          <button onClick={() => setImportResultat(null)} style={{marginLeft:'auto',background:'none',border:'none',cursor:'pointer',fontSize:16,color:'inherit',opacity:0.6}}>✕</button>
+        </div>
+      )}
 
       {/* Onglets */}
       <div style={s.tabsBar}>
@@ -449,7 +579,7 @@ export default function Presences() {
           )}
           {!isWeekend() && getHoraireJour() && (
             <div style={{padding:'8px 20px',background:'#f0fdf4',borderBottom:'1px solid #bbf7d0',color:'#15803d',fontWeight:600,fontSize:12}}>
-              📅 {getNomJour()} — {getHoraireJour() === 'Matin' ? '☀️ Matin (P1–P4)' : '🌙 Après-midi (P5–P8)'}
+              {getNomJour()} — {getHoraireJour() === 'Matin' ? 'Matin (P1–P4)' : 'Après-midi (P1–P4)'}
             </div>
           )}
 
@@ -497,8 +627,8 @@ export default function Presences() {
                     <th style={s.th} rowSpan={2}>NOM</th>
                     <th style={s.th} rowSpan={2}>Prénom</th>
                     <th style={{...s.th,fontSize:10,textAlign:'center'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
-                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>☀️ Matin</th>
-                    <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>🌙 Après-midi</th>
+                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>Matin</th>
+                    <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>Après-midi</th>
                     <th style={s.th} rowSpan={2}>Remarques</th>
                   </tr>
                   <tr style={{background:'#f8fafc'}}>
@@ -508,7 +638,7 @@ export default function Presences() {
                         background: isBloque(i) ? '#f1f5f9' : i<=4 ? '#eff6ff' : '#fffbeb',
                         color: isBloque(i) ? '#cbd5e1' : i<=4 ? '#3b82f6' : '#f59e0b',
                         fontSize:11
-                      }}>P{i}</th>
+                      }}>P{i<=4 ? i : i-4}</th>
                     ))}
                   </tr>
                 </thead>
