@@ -1595,6 +1595,14 @@ export default function EmploiDuTemps() {
         {isAdmin() && onglet === 'pools' && (
           <button style={{...styles.btnVert, marginLeft:'auto'}} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Ajouter</button>
         )}
+        {onglet === 'affectations' && (
+          <button type="button" style={{...styles.btnSauvegarderAff, marginLeft:'auto'}} onClick={() => {
+            if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
+            if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
+            if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
+            showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
+          }}>💾 Sauvegarder</button>
+        )}
       </div>
 
       <div style={styles.onglets}>
@@ -2113,18 +2121,6 @@ export default function EmploiDuTemps() {
                 {o.label}
               </button>
             ))}
-            <button
-              type="button"
-              style={{...styles.btnSauvegarderAff, marginLeft:'auto'}}
-              onClick={() => {
-                if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
-                if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
-                if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
-                showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
-              }}
-            >
-              💾 Sauvegarder
-            </button>
           </div>
 
           {/* Listes déroulantes — hors cadre, 15px sous les sous-onglets */}
