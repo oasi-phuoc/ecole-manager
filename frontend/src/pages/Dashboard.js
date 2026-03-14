@@ -89,9 +89,15 @@ export default function Dashboard() {
         </div>
         <nav style={styles.nav}>
           {modules.map(m => (
-            <button key={m.path} style={styles.navItem} onClick={() => navigate(m.path)}>
+            <button
+              key={m.path}
+              style={styles.navItem}
+              onClick={() => navigate(m.path)}
+              onMouseEnter={e => { e.currentTarget.style.background = '#6366f1'; e.currentTarget.querySelector('.nav-label').style.color = 'white'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.querySelector('.nav-label').style.color = '#4c1d95'; }}
+            >
               <span style={{...styles.navIcon, background: m.bg, color: m.color}}>{m.icon}</span>
-              <span style={styles.navLabel}>{m.label}</span>
+              <span className="nav-label" style={styles.navLabel}>{m.label}</span>
               {m.stat !== null && <span style={{...styles.navBadge, background: m.bg, color: m.color}}>{m.stat}</span>}
             </button>
           ))}
@@ -248,20 +254,20 @@ export default function Dashboard() {
 
 const styles = {
   page: { display: 'flex', minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  sidebar: { width: 240, background: '#0f172a', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100 },
-  logo: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #1e293b' },
+  sidebar: { width: 240, background: 'white', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, borderRight: '1px solid #ddd6fe', boxShadow: '2px 0 12px rgba(99,102,241,0.07)' },
+  logo: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #ede9fe' },
   logoImg: { width: 180, height: 'auto', display: 'block' },
   nav: { flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 },
-  navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.15s' },
+  navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.15s' },
   navIcon: { width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
-  navLabel: { fontSize: 13, fontWeight: 500, color: '#cbd5e1', flex: 1 },
+  navLabel: { fontSize: 13, fontWeight: 500, color: '#4c1d95', flex: 1 },
   navBadge: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99 },
-  sidebarFooter: { padding: '16px', borderTop: '1px solid #1e293b' },
+  sidebarFooter: { padding: '16px', borderTop: '1px solid #ede9fe' },
   userInfo: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
   avatar: { width: 36, height: 36, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
-  userName: { fontSize: 13, fontWeight: 600, color: '#f1f5f9' },
-  userRole: { fontSize: 11, color: '#64748b', marginTop: 1 },
-  btnLogout: { width: '100%', padding: '8px', background: '#1e293b', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#94a3b8', fontWeight: 500 },
+  userName: { fontSize: 13, fontWeight: 600, color: '#1e1b4b' },
+  userRole: { fontSize: 11, color: '#7c3aed', marginTop: 1 },
+  btnLogout: { width: '100%', padding: '8px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600 },
   main: { marginLeft: 240, flex: 1, padding: '32px 36px' },
   topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   greeting: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
