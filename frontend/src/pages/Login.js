@@ -41,9 +41,9 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.logoContainer}>
-          <span style={styles.logoIcon}>🏫</span>
+          <img src="/logo-image-oasis.webp" alt="Oasis" style={styles.logoImage} />
+          <img src="/logo-oasis.webp" alt="Le Botza" style={styles.logoOasis} />
         </div>
-        <h1 style={styles.titre}>École Manager</h1>
         <p style={styles.sousTitre}>Connectez-vous à votre espace</p>
 
         {erreur && <div style={styles.erreur}>{erreur}</div>}
@@ -108,7 +108,7 @@ export default function Login() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%)',
+    background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -126,17 +126,19 @@ const styles = {
     alignItems: 'center',
   },
   logoContainer: {
-    marginBottom: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '20px',
   },
-  logoIcon: {
-    fontSize: '52px',
+  logoImage: {
+    width: '120px',
+    objectFit: 'contain',
   },
-  titre: {
-    fontSize: '26px',
-    fontWeight: '700',
-    color: '#1a73e8',
-    margin: '0 0 6px 0',
-    textAlign: 'center',
+  logoOasis: {
+    width: '180px',
+    objectFit: 'contain',
   },
   sousTitre: {
     fontSize: '14px',
@@ -183,7 +185,7 @@ const styles = {
   },
   btn: {
     padding: '14px',
-    background: '#1a73e8',
+    background: '#6366f1',
     color: 'white',
     border: 'none',
     borderRadius: '8px',
