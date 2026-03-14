@@ -950,7 +950,7 @@ export default function Eleves() {
       )}
 
       {/* Tableau */}
-      <div style={{background:'white',border:'1px solid #c4b5fd',borderTop:'none',borderRadius:'0 0 12px 12px',padding:14}}>
+      <div style={{marginTop:14}}>
         <div style={{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>

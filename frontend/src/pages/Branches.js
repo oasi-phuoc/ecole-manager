@@ -158,7 +158,7 @@ export default function Branches() {
         </div>
       )}
 
-      <div style={s.tabContent}>
+      <div style={{marginTop:14}}>
         <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>

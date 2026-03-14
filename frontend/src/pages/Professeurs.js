@@ -567,7 +567,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={s.tabContent}>
+      <div style={{marginTop:14}}>
         <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>
