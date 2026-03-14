@@ -1595,6 +1595,12 @@ export default function EmploiDuTemps() {
         {isAdmin() && onglet === 'pools' && (
           <button style={{...styles.btnVert, marginLeft:'auto'}} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Ajouter</button>
         )}
+        {onglet === 'plannings' && (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>🖨️ Imprimer sélection</button>
+            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>🖨️ Tout imprimer</button>
+          </div>
+        )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {toast.message && (
@@ -1645,8 +1651,8 @@ export default function EmploiDuTemps() {
       ) : null}
 
       {onglet === 'plannings' && (
-        <div style={{...styles.affActionsWrap, marginBottom:12}}>
-          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',width:'100%'}}>
+        <>
+          <div style={styles.affSubTabsBar}>
             {[
               {id:'classes', label:'Classes'},
               {id:'salle', label:'Salles'},
@@ -1655,7 +1661,7 @@ export default function EmploiDuTemps() {
             ].map(o => (
               <button
                 key={o.id}
-                style={{...styles.affTabBtn,...(sousOngletPlanning===o.id?styles.affTabBtnActif:{})}}
+                style={{...styles.affSubTabBtn,...(sousOngletPlanning===o.id?styles.affSubTabBtnActif:{})}}
                 onClick={() => {
                   setSousOngletPlanning(o.id);
                   if (o.id === 'general') chargerPlanningGeneral(planningPoolId || '');
@@ -1664,96 +1670,53 @@ export default function EmploiDuTemps() {
                 {o.label}
               </button>
             ))}
+          </div>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
             {sousOngletPlanning === 'classes' && (
-              <select
-                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
-                value={classePlanningId || ''}
-                onChange={e => {
-                  const classeId = e.target.value;
-                  setClassePlanningId(classeId);
-                  if (classeId) {
-                    const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
-                    const poolId = poolTrouve ? String(poolTrouve.id) : '';
-                    setClassePlanningPoolId(poolId);
-                    chargerPlanningClasse(classeId, poolId);
-                  } else {
-                    setClassePlanningPoolId('');
-                    setPlanningClasse(null);
-                  }
-                }}
-              >
+              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={classePlanningId || ''} onChange={e => {
+                const classeId = e.target.value;
+                setClassePlanningId(classeId);
+                if (classeId) {
+                  const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
+                  const poolId = poolTrouve ? String(poolTrouve.id) : '';
+                  setClassePlanningPoolId(poolId);
+                  chargerPlanningClasse(classeId, poolId);
+                } else { setClassePlanningPoolId(''); setPlanningClasse(null); }
+              }}>
                 <option value="">Choisir une classe</option>
                 {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             )}
             {sousOngletPlanning === 'professeurs' && (
-              <select
-                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
-                value={profPlanningId || ''}
-                onChange={e => {
-                  const id = e.target.value;
-                  setProfPlanningId(id);
-                  if (id) chargerPlanningProf(id);
-                  else setPlanningProf(null);
-                }}
-              >
+              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={profPlanningId || ''} onChange={e => {
+                const id = e.target.value;
+                setProfPlanningId(id);
+                if (id) chargerPlanningProf(id); else setPlanningProf(null);
+              }}>
                 <option value="">Choisir un professeur</option>
-                {profsTriesPrenomNom.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.prenom} {p.nom}
-                  </option>
-                ))}
+                {profsTriesPrenomNom.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
               </select>
             )}
             {sousOngletPlanning === 'general' && (
-              <select
-                style={{...styles.selOnglet, width: 320, maxWidth:'100%'}}
-                value={planningPoolId}
-                onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}
-              >
+              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
                 <option value="">Choisir un pool</option>
                 {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
               </select>
             )}
             {sousOngletPlanning === 'salle' && (
               <>
-                <select
-                  style={styles.selOnglet}
-                  value={sallesLieuTravailId}
-                  onChange={e => setSallesLieuTravailId(e.target.value)}
-                >
+                <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
                   <option value="">Choisir un lieu de travail</option>
                   {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
                 </select>
-                <select
-                  style={styles.selOnglet}
-                  value={salleSelectionnee}
-                  disabled={!sallesLieuTravailId}
-                  onChange={e => setSalleSelectionnee(e.target.value)}
-                >
+                <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
                   <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
                   {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
                 </select>
               </>
             )}
-            <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center'}}>
-              <button
-                type="button"
-                style={styles.btnImprimer}
-                onClick={imprimerPlanningSelection}
-              >
-                🖨️ Imprimer sélection
-              </button>
-              <button
-                type="button"
-                style={styles.btnImprimer}
-                onClick={imprimerPlanningTout}
-              >
-                🖨️ Tout imprimer
-              </button>
-            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ===== DISPONIBILITÉS ===== */}
