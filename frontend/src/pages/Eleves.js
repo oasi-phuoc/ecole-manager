@@ -168,8 +168,10 @@ export default function Eleves() {
     const el = eleves.find(e => e.id === id);
     const nom = el ? `${el.prenom} ${el.nom}` : 'cet élève';
     if (window.confirm(`⚠️ Supprimer définitivement ${nom} ?\n\nCette action supprimera TOUTES les données liées :\nprésences, notes, paiements, observations, absences, documents et sanctions.\n\nCette action est irréversible.`)) {
-      await axios.delete(API+'/eleves/'+id, {headers});
-      chargerTout();
+      try {
+        await axios.delete(API+'/eleves/'+id, {headers});
+        chargerTout();
+      } catch(err) { alert('Erreur lors de la suppression : '+(err.response?.data?.message||err.message)); }
     }
   };
 

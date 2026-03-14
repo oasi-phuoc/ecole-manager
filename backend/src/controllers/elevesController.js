@@ -137,6 +137,8 @@ const supprimerEleve = async (req, res) => {
     await client.query('DELETE FROM paiements WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM observations WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM absences WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM sanctions_eleves WHERE eleve_id=$1', [req.params.id]);
+    await client.query('DELETE FROM documents_eleves WHERE eleve_id=$1', [req.params.id]);
     await client.query('DELETE FROM eleves WHERE id=$1', [req.params.id]);
 
     // Supprimer utilisateur et ses dépendances
