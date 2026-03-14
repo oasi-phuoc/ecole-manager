@@ -449,7 +449,7 @@ export default function Eleves() {
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'1px solid #c4b5fd',paddingBottom:0,width:'100%',boxSizing:'border-box'}}>
+      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'}}>
         <button
           style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:sansClasse?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:sansClasse?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:120,minWidth:120,textAlign:'center',marginBottom:sansClasse?-1:0,zIndex:sansClasse?2:1}}
           onClick={() => setSansClasse(!sansClasse)}
