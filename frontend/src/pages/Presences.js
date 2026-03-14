@@ -394,34 +394,32 @@ export default function Presences() {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>✅ Présences</h2>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+          <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
+            {exportLoading ? 'Export...' : 'Exporter LORA'}
+          </button>
+        </div>
       </div>
 
       {/* Onglets */}
       <div style={s.tabsBar}>
-        <div style={s.tabsRow}>
-        <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-          <option value="">- Sélectionner une classe -</option>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-        </select>
-        {[['saisie','📋 Saisie'],['apercu','📆 Aperçu du mois'],['stats','📊 Statistiques']].map(([k,l]) => (
-          <button
-            key={k}
-            style={{ ...s.tabBtn, ...(onglet === k ? s.tabBtnActif : {}) }}
-            onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}
-          >
+        {[['saisie','Saisie'],['apercu','Aperçu du mois'],['stats','Statistiques']].map(([k,l]) => (
+          <button key={k} style={{...s.tabBtn,...(onglet===k?s.tabBtnActif:{})}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>
             {l}
           </button>
         ))}
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-        </div>
-        <button onClick={exporterLORA} disabled={exportLoading} style={{marginLeft:'auto',padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',boxShadow:'0 1px 3px rgba(0,0,0,0.08)',opacity:exportLoading?0.7:1}}>
-          {exportLoading ? 'Export...' : 'Export LORA'}
-        </button>
       </div>
+
+      {/* Classe select — sous les onglets */}
+      <div style={{marginTop:15,marginBottom:15}}>
+        <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+          <option value="">Sélectionner une classe</option>
+          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+        </select>
       </div>
 
       {onglet === 'saisie' && (
@@ -673,23 +671,14 @@ export default function Presences() {
       )}
 
       {onglet === 'stats' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
-          <div style={{padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:15}}>
             <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
-            <input
-              type="date"
-              value={statsDateDebut}
-              onChange={e => setStatsDateDebut(e.target.value)}
-              style={s.inp}
-            />
+            <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
             <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
-            <input
-              type="date"
-              value={statsDateFin}
-              onChange={e => setStatsDateFin(e.target.value)}
-              style={s.inp}
-            />
+            <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
           </div>
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <colgroup>
               <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
@@ -734,6 +723,7 @@ export default function Presences() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -742,10 +732,9 @@ export default function Presences() {
 
 const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
-  tabsBar:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:10,marginBottom:12,borderBottom:'1px solid #c4b5fd',paddingBottom:0,flexWrap:'wrap'},
-  tabsRow:{display:'flex',gap:8,alignItems:'flex-end',flexWrap:'wrap',flex:1},
-  tabSelect:{padding:'9px 14px',border:'none',borderRadius:'10px 10px 0 0',fontSize:13,outline:'none',background:'#ede9fe',color:'#5b21b6',fontWeight:700,boxShadow:'none'},
-  tabBtn:{padding:'9px 16px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:13,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none'},
+  tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
+  tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
+  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:120,minWidth:120,textAlign:'center'},
   tabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
