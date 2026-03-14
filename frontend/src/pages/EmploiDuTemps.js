@@ -1737,8 +1737,7 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={styles.card}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}}>
               <select
                 style={{padding:'9px 18px',borderRadius:99,border:'2px solid #6366f1',background:'#ede9fe',color:'#5b21b6',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
@@ -1760,7 +1759,6 @@ export default function EmploiDuTemps() {
                   </option>
                 ))}
               </select>
-            </div>
           </div>
 
           {profSelectionne && (
