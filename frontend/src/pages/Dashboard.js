@@ -85,8 +85,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div style={styles.sidebar}>
         <div style={styles.logo}>
-          <span style={styles.logoIcon}>🏛️</span>
-          <span style={styles.logoText}>École Manager</span>
+          <img src="/logo-oasis.webp" alt="Oasis" style={styles.logoImg} />
         </div>
         <nav style={styles.nav}>
           {modules.map(m => (
@@ -250,9 +249,8 @@ export default function Dashboard() {
 const styles = {
   page: { display: 'flex', minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   sidebar: { width: 240, background: '#0f172a', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100 },
-  logo: { padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #1e293b' },
-  logoIcon: { fontSize: 24 },
-  logoText: { fontSize: 15, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.3px' },
+  logo: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #1e293b' },
+  logoImg: { width: 180, height: 'auto', display: 'block' },
   nav: { flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 },
   navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.15s' },
   navIcon: { width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
