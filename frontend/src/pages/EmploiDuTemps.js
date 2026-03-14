@@ -1622,6 +1622,9 @@ export default function EmploiDuTemps() {
               if (o.id === 'plannings') {
                 setSousOngletPlanning('classes');
               }
+              if (o.id === 'affectations') {
+                setSousOngletAff('classes');
+              }
             }}>
             {o.label}
           </button>
