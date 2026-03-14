@@ -3372,7 +3372,7 @@ const styles = {
   chipNom:{fontWeight:700,display:'block',lineHeight:1.15},
   chipPrenom:{fontWeight:500,display:'block',lineHeight:1.15,marginTop:2},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
-  suiviGrandTitre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:'0 0 10px'},
+  suiviGrandTitre:{fontSize:14,fontWeight:700,color:'#475569',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:'0.05em'},
   suiviJoursGrid:{display:'flex',flexWrap:'wrap',gap:8},
   suiviJourChip:{width:190,minWidth:190,maxWidth:190,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviJourNom:{fontSize:13,fontWeight:800,color:'#334155',lineHeight:1.2},
