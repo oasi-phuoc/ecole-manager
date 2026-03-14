@@ -1230,18 +1230,12 @@ export default function EmploiDuTemps() {
     </html>
   `;
   };
-  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, repeatPeriodeOnDays = false, showPauseRows = false }) => {
+  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = false }) => {
     const lignes = [];
-    ['Matin', 'Après-midi'].forEach((periode) => {
+    ['Matin', 'Après-midi'].forEach((periode, periodeIdx) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
       if (!base.length) return;
-      if (repeatPeriodeOnDays) {
-        lignes.push(
-          `<tr><td class="periode creneau">${escapeHtml(periode)}</td>${JOURS.map(() => `<td class="periode">${escapeHtml(periode)}</td>`).join('')}</tr>`
-        );
-      } else {
-        lignes.push(`<tr><td class="periode" colspan="6">${escapeHtml(periode)}</td></tr>`);
-      }
+      const numRows = base.length + (showPauseRows ? 1 : 0);
       base.forEach((crBase, idx) => {
         const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
@@ -1251,30 +1245,35 @@ export default function EmploiDuTemps() {
           const texte = escapeHtml(raw?.text || '').replace(/\n/g, '<br/>');
           const bg = toPrintColor(raw?.bg);
           const fg = toPrintColor(raw?.color);
-          const style = (bg || fg)
-            ? ` style="${bg ? `background:${bg};` : ''}${fg ? `color:${fg};` : ''}"`
-            : '';
+          const style = ` style="${bg ? `background:${bg};` : ''}${fg ? `color:${fg};` : ''}text-align:center;vertical-align:middle;"`;
           return `<td${style}>${texte}</td>`;
         }).join('');
+        const periodeCell = idx === 0
+          ? `<td rowspan="${numRows}" style="width:46px;min-width:46px;max-width:46px;padding:0;overflow:hidden;border-right:1px solid #e5e7eb;background:#f8fafc;vertical-align:middle;text-align:center;"><div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;"><span style="display:inline-block;transform:rotate(-90deg);font-weight:700;color:#334155;white-space:nowrap;line-height:1;">${escapeHtml(periode)}</span></div></td>`
+          : '';
         lignes.push(
-          `<tr><td class="creneau">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+          `<tr>${periodeCell}<td class="creneau" style="text-align:center;vertical-align:middle;">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
           const pause = pausesParPeriode[periode];
           lignes.push(
-            `<tr><td class="creneau" style="background:#e5e7eb;font-weight:700;">Pause — ${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td>${JOURS.map(() => '<td style="background:#e5e7eb;font-weight:700;text-align:center;">Pause</td>').join('')}</tr>`
+            `<tr><td class="creneau" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;">PAUSE</td></tr>`
           );
         }
       });
+      if (periodeIdx === 0) {
+        lignes.push(`<tr><td colspan="7" style="height:12px;background:white;border:none;padding:0;"></td></tr>`);
+      }
     });
     return `
       <table>
         <colgroup>
+          <col style="width:46px;min-width:46px;max-width:46px;" />
           <col class="creneau-col" />
           ${JOURS.map(() => '<col class="day-col" />').join('')}
         </colgroup>
         <thead>
-          <tr><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
+          <tr><th style="width:46px;min-width:46px;max-width:46px;"></th><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
         </thead>
         <tbody>${lignes.join('')}</tbody>
       </table>
@@ -2955,9 +2954,10 @@ export default function EmploiDuTemps() {
                 </div>
               ) : (
                 <div style={{overflowX:'auto'}}>
-                  <table style={{...styles.tbl,minWidth:760}}>
+                  <table style={{...styles.tbl,minWidth:760,tableLayout:'fixed',width:'100%'}}>
                     <thead>
                       <tr style={styles.theadRow}>
+                        <th style={{...styles.th,width:46,minWidth:46,maxWidth:46}}></th>
                         <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                         {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
                       </tr>
@@ -2965,22 +2965,26 @@ export default function EmploiDuTemps() {
                     <tbody>
                       {classesFiltreesSalles.length === 0 ? (
                         <tr>
-                          <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                          <td colSpan={7} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
                             Aucune classe trouvée pour cette sélection.
                           </td>
                         </tr>
                       ) : (
-                        ['Matin','Après-midi'].map(periode => {
+                        ['Matin','Après-midi'].map((periode, periodeIdx) => {
                           const crsBase = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
                           if (!crsBase.length) return null;
+                          const numRows = crsBase.length + 1;
                           return [
-                            <tr key={`planning-only-${periode}`}>
-                              <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
-                              {JOURS.map(j => <td key={`planning-only-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
-                            </tr>,
                             ...crsBase.flatMap((crBase, idx) => [
                               <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
-                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                                {idx === 0 && (
+                                  <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
+                                    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
+                                      <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
+                                    </div>
+                                  </td>
+                                )}
+                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'}}>
                                   P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
@@ -2989,52 +2993,24 @@ export default function EmploiDuTemps() {
                                   const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
                                   const classeNom = classes.find(cl => String(cl.id) === String(classeAffectee))?.nom || '';
                                   return (
-                                    <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td, textAlign:'left', verticalAlign:'top', minHeight:62}}>
-                                      <div style={{
-                                        ...styles.cellSel,
-                                        minWidth:160,
-                                        backgroundColor: couleurClasse,
-                                        fontWeight: classeNom ? 700 : 500,
-                                        color:'#1f2937',
-                                        textAlign:'center',
-                                        display:'flex',
-                                        alignItems:'center',
-                                        justifyContent:'center',
-                                        minHeight:30
-                                      }}>
-                                        {classeNom || '—'}
-                                      </div>
-                                      {classeNom && (
-                                        <div style={{
-                                          ...styles.cellSel,
-                                          marginTop: 6,
-                                          minWidth: 160,
-                                          background: '#f1f5f9',
-                                          color: '#334155',
-                                          fontWeight: 600,
-                                          textAlign: 'center',
-                                          cursor: 'default'
-                                        }}>
-                                          {profAffecte || 'Aucun professeur affecté'}
-                                        </div>
-                                      )}
+                                    <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle'}}>
+                                      <div style={{fontWeight:classeNom?700:500,color:classeNom?'#1f2937':'#94a3b8',background:couleurClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{classeNom||'—'}</div>
+                                      {classeNom&&<div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
                                     </td>
                                   );
                                 })}
-                              </tr>
-                              ,
+                              </tr>,
                               ...(idx === 1 ? [(
                                 <tr key={`planning-only-pause-${periode}`}>
-                                  <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
-                                    Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                                  <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle'}}>
+                                    {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                                   </td>
-                                  {JOURS.map(jour => (
-                                    <td key={`planning-only-pause-${periode}-${jour}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>
-                                  ))}
+                                  <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px'}}>PAUSE</td>
                                 </tr>
                               )] : [])
-                            ])
-                          ];
+                            ]),
+                            periodeIdx === 0 ? <tr key={`sep-salle-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
+                          ].filter(Boolean);
                         })
                       )}
                     </tbody>
@@ -3055,27 +3031,32 @@ export default function EmploiDuTemps() {
               <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
+                    <th style={{...styles.th,width:46,minWidth:46,maxWidth:46}}></th>
                     <th style={{...styles.th,...STYLE_COLONNE_CRENEAU}}>Horaire</th>
                     {JOURS.map(j => <th key={j} style={{...styles.th,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center'}}>{j}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {['Matin','Après-midi'].map(periode => {
+                  {['Matin','Après-midi'].map((periode, periodeIdx) => {
                     const crsBase = (planningProf.creneaux||[]).filter(c=>c.jour==='Lundi'&&c.periode===periode);
                     if (!crsBase.length) return null;
+                    const numRows = crsBase.length + 1;
                     return [
-                      <tr key={periode}>
-                        <td style={{...styles.periodeBandeCreneau, ...STYLE_COLONNE_CRENEAU}}>{periode}</td>
-                        {JOURS.map(j => <td key={`prof-band-${periode}-${j}`} style={styles.periodeBandeSpacer}></td>)}
-                      </tr>,
                       ...crsBase.flatMap((crBase,idx) => [
                         <tr key={crBase.id} style={styles.tr}>
-                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
+                          {idx === 0 && (
+                            <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
+                              <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
+                                <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
+                              </div>
+                            </td>
+                          )}
+                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'}}>
                             P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
                           </td>
                           {JOURS.map(jour => {
                             const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle'}}></td>;
                             const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
                             const indispo = dispo && !dispo.disponible;
@@ -3084,26 +3065,25 @@ export default function EmploiDuTemps() {
                             const couleurFondBranche = affBranche ? getCouleurBranche(aff.matiere_id) : '#ffffff';
                             const couleurTexteBranche = affBranche ? getCouleurTexteSurFond(couleurFondBranche) : '#111827';
                             return (
-                              <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:affBranche?couleurFondBranche:(!classeAffectee || indispo)?'#eeeeee':'#fff',
-                                color: affBranche ? couleurTexteBranche : undefined}}>
-                                {affBranche?<><b style={{color:couleurTexteBranche}}>{aff.classe_nom}</b><br/><span style={{color:couleurTexteBranche,fontSize:11}}>{aff.matiere_nom}</span></>:
-                                 ''}
+                              <td key={jour} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
+                                background:affBranche?couleurFondBranche:(!classeAffectee||indispo)?'#eeeeee':'#fff',
+                                color:affBranche?couleurTexteBranche:undefined}}>
+                                {affBranche?<><b style={{color:couleurTexteBranche}}>{aff.classe_nom}</b><br/><span style={{color:couleurTexteBranche,fontSize:11}}>{aff.matiere_nom}</span></>:''}
                               </td>
                             );
                           })}
-                        </tr>
-                        ,
+                        </tr>,
                         ...(idx === 1 ? [(
                           <tr key={`prof-pause-${periode}`}>
-                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#e5e7eb',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>
-                              Pause — {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle'}}>
+                              {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                             </td>
-                            {JOURS.map(j => <td key={`prof-pause-${periode}-${j}`} style={{...styles.td,background:'#e5e7eb',fontWeight:700,textAlign:'center'}}>Pause</td>)}
+                            <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px'}}>PAUSE</td>
                           </tr>
                         )] : [])
-                      ])
-                    ];
+                      ]),
+                      periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
+                    ].filter(Boolean);
                   })}
                 </tbody>
               </table>
