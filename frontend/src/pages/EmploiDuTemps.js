@@ -2056,7 +2056,13 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={{marginTop:10}}>
                   <div style={styles.poolLabel}>PROFS</div>
-                  {pool.profs.map(p => <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827'}}>{p.prenom} {p.nom}</span>)}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+                    {pool.profs.map(p => (
+                      <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827',display:'flex',alignItems:'center',justifyContent:'center',padding:'3px 8px',borderRadius:8,fontSize:11,fontWeight:600,textAlign:'center'}}>
+                        {p.prenom} {nomSansSuffixe(p.nom)}
+                      </span>
+                    ))}
+                  </div>
                   {pool.profs.length===0&&<span style={styles.aucun}>Aucun</span>}
                 </div>
                 <div style={{marginTop:8}}>
