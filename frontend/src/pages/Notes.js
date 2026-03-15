@@ -551,8 +551,8 @@ export default function Notes() {
           <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: 130, minWidth: 130 }} />
-                <col style={{ width: 110, minWidth: 110 }} />
+                <col style={{ width: 1 }} />
+                <col style={{ width: 1 }} />
                 {brPrin.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
                 <col style={{ width: 90, minWidth: 90 }} />
                 {brSec.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
