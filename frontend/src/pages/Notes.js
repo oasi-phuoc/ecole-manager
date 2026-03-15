@@ -310,7 +310,7 @@ export default function Notes() {
     }
   };
 
-  const renderActionsBar = (className = '') => (
+  const renderActionsBar = (className = '', hideSelect = false) => (
     <div className={className}>
       <div style={s.tabsBar}>
         {[['evaluations','Évaluations'],['generale','Vue générale'],['bulletin','Bulletin']].map(([k,l]) => (
@@ -321,18 +321,20 @@ export default function Notes() {
           </button>
         ))}
       </div>
-      <div style={{marginTop:15,marginBottom:15}}>
-        <select style={s.tabSelect} value={classeSelectionnee}
-          onChange={e => {
-            const next = e.target.value;
-            setClasseSelectionnee(next);
-            if (!next) { setClasseObj(null); return; }
-            ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
-          }}>
-          <option value="">Sélectionner une classe</option>
-          {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-        </select>
-      </div>
+      {!hideSelect && (
+        <div style={{marginTop:15,marginBottom:15}}>
+          <select style={s.tabSelect} value={classeSelectionnee}
+            onChange={e => {
+              const next = e.target.value;
+              setClasseSelectionnee(next);
+              if (!next) { setClasseObj(null); return; }
+              ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
+            }}>
+            <option value="">Sélectionner une classe</option>
+            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+          </select>
+        </div>
+      )}
     </div>
   );
 
@@ -446,36 +448,49 @@ export default function Notes() {
           <h2 style={s.titre}>Vue générale — {classeNom}</h2>
           <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
-        {renderActionsBar('no-print')}
+        {renderActionsBar('no-print', true)}
 
         {/* Sous-onglets Vue générale */}
-        <div className="no-print">
-          <div style={s.subTabsBar}>
-            {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
-              <button key={val} onClick={() => setVueGeneraleMode(val)}
-                style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
-                {label}
-              </button>
-            ))}
-          </div>
-          {(vueGeneraleMode === 'branche' || vueGeneraleMode === 'eleve') && (
-            <div style={{marginTop:15,marginBottom:15}}>
-              {vueGeneraleMode === 'branche' && (
-                <select style={s.tabSelect} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
-                  <option value="">Choisir une branche</option>
-                  {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
-                </select>
-              )}
-              {vueGeneraleMode === 'eleve' && (
-                <select style={s.tabSelect} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
-                  <option value="">Choisir un élève</option>
-                  {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
-                </select>
-              )}
-            </div>
-          )}
-          {vueGeneraleMode === 'tous' && <div style={{marginBottom:15}}></div>}
+        <div className="no-print" style={s.subTabsBar}>
+          {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
+            <button key={val} onClick={() => setVueGeneraleMode(val)}
+              style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
+              {label}
+            </button>
+          ))}
         </div>
+
+        {/* Classe dropdown */}
+        <div className="no-print" style={{marginTop:15,marginBottom:15}}>
+          <select style={s.tabSelect} value={classeSelectionnee}
+            onChange={e => {
+              const next = e.target.value;
+              setClasseSelectionnee(next);
+              if (!next) { setClasseObj(null); return; }
+              ouvrirVueDepuisSelectionClasse('generale', next);
+            }}>
+            <option value="">Sélectionner une classe</option>
+            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+          </select>
+        </div>
+
+        {/* Branche/élève dropdown */}
+        {(vueGeneraleMode === 'branche' || vueGeneraleMode === 'eleve') && (
+          <div className="no-print" style={{marginBottom:15}}>
+            {vueGeneraleMode === 'branche' && (
+              <select style={s.tabSelect} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
+                <option value="">Choisir une branche</option>
+                {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
+              </select>
+            )}
+            {vueGeneraleMode === 'eleve' && (
+              <select style={s.tabSelect} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
+                <option value="">Choisir un élève</option>
+                {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
+              </select>
+            )}
+          </div>
+        )}
 
         {/* Chargement / erreur */}
         {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>Chargement des données…</div>}
@@ -483,7 +498,8 @@ export default function Notes() {
 
         {/* ---- VUE TOUS ---- */}
         {vueGeneraleMode === 'tous' && rapport && (
-          <div ref={printRef} style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto' }}>
+          <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
@@ -562,12 +578,14 @@ export default function Notes() {
               </tbody>
             </table>
           </div>
+          </div>
         )}
 
         {/* ---- VUE PAR BRANCHE ---- */}
         {vueGeneraleMode === 'branche' && rapport && matiereRapport && (
-          <div ref={printRef} style={{ overflowX: 'auto' }}>
-            <h3 style={{ marginBottom: 12, fontSize: 15 }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
+          <div style={{ overflowX: 'auto' }}>
+          <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+            <h3 style={{ marginBottom: 12, fontSize: 15, padding: '12px 16px 0' }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
             <table style={{ ...s.tbl, fontSize: 12 }}>
               <colgroup>
                 <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
@@ -612,6 +630,7 @@ export default function Notes() {
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
         {vueGeneraleMode === 'branche' && !rapportMatiereId && <div style={s.vide}>Sélectionnez une branche</div>}
@@ -817,37 +836,54 @@ export default function Notes() {
             </button>
           )}
         </div>
-        {renderActionsBar('no-print')}
-        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, background: 'white', padding: '12px 16px', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {[{ id: 'criteres', label: 'Critères de comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
-              <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
-                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: bulletinOnglet === t.id ? '#6366f1' : '#f1f5f9', color: bulletinOnglet === t.id ? 'white' : '#555' }}>
-                {t.label}
+        {renderActionsBar('no-print', true)}
+
+        {/* Sous-onglets Bulletin */}
+        <div className="no-print" style={s.subTabsBar}>
+          {[{ id: 'criteres', label: 'Critères de comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
+            <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
+              style={{...s.subTabBtn, width:200, minWidth:200, ...(bulletinOnglet===t.id?s.subTabBtnActif:{})}}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Classe dropdown + Tout mettre au vert */}
+        <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <select style={s.tabSelect} value={classeSelectionnee}
+            onChange={e => {
+              const next = e.target.value;
+              setClasseSelectionnee(next);
+              if (!next) { setClasseObj(null); return; }
+              ouvrirVueDepuisSelectionClasse('bulletin', next);
+            }}>
+            <option value="">Sélectionner une classe</option>
+            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+          </select>
+          {bulletinOnglet === 'criteres' && (
+            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+              Tout mettre au vert
+            </button>
+          )}
+        </div>
+
+        {/* Pour Bulletin de notes : mode Tous/Par élève */}
+        {bulletinOnglet === 'notes' && (
+          <div className="no-print" style={{marginBottom:15,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+            {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
+              <button key={m.id} onClick={() => setBulletinMode(m.id)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
+                {m.label}
               </button>
             ))}
-            {bulletinOnglet === 'criteres' ? (
-              <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-                Tout mettre au vert
-              </button>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
-                <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                  style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
-                  {m.label}
-                </button>
-              ))}
-              {bulletinMode === 'eleve' && (
-                <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-                  <option value="">-- Choisir un élève --</option>
-                  {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
-                </select>
-              )}
-              </div>
+            {bulletinMode === 'eleve' && (
+              <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
+                <option value="">-- Choisir un élève --</option>
+                {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
+              </select>
             )}
           </div>
-        </div>
+        )}
 
         {bulletinOnglet === 'criteres' && (
           <>
