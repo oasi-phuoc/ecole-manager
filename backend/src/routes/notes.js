@@ -4,6 +4,7 @@ const c = require('../controllers/notesController');
 const { verifierToken } = require('../middleware/auth');
 
 router.use(verifierToken);
+router.get('/classes-responsables', c.getClassesResponsables);
 router.get('/semestre-config', c.getNotesSemConfig);
 router.put('/semestre-config', c.putNotesSemConfig);
 router.get('/bulletin', c.getBulletin);

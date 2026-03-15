@@ -326,4 +326,24 @@ const putNotesSemConfig = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres, getSuiviClasses, getNotesSemConfig, putNotesSemConfig };
+const getClassesResponsables = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.classe_id,
+        u.id as prof_id,
+        u.prenom as prof_prenom,
+        u.nom as prof_nom,
+        array_agg(DISTINCT m.nom ORDER BY m.nom) FILTER (WHERE m.nom IS NOT NULL) as matieres
+      FROM affectations a
+      JOIN utilisateurs u ON u.id = a.prof_id
+      LEFT JOIN matieres m ON m.id = a.matiere_id
+      GROUP BY a.classe_id, u.id, u.prenom, u.nom
+      ORDER BY a.classe_id, u.nom
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres, getSuiviClasses, getNotesSemConfig, putNotesSemConfig, getClassesResponsables };

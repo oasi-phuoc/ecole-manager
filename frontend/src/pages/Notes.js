@@ -90,6 +90,9 @@ export default function Notes() {
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
+  const [branches, setBranches] = useState([]);
+  const [classesResponsables, setClassesResponsables] = useState([]);
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -103,6 +106,14 @@ export default function Notes() {
 
   useEffect(() => {
     chargerClasses(); chargerMatieres(); chargerParametresEcole();
+    // Données pour le tableau des classes
+    axios.get(API + '/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
+    axios.get(API + '/notes/suivi-classes', { headers }).then(r => {
+      const map = {};
+      (r.data || []).forEach(x => { map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0; });
+      setSuiviNotesClasse(map);
+    }).catch(() => {});
+    axios.get(API + '/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
     axios.get(API + '/notes/semestre-config', { headers }).then(r => {
       const bloque = r.data?.sem1_bloque === true;
       setSem1Bloque(bloque);
@@ -1398,28 +1409,58 @@ export default function Notes() {
           <table style={s.tbl}>
             <thead>
               <tr style={s.theadRow}>
+                <th style={{ ...s.th, width: 80, textAlign: 'center' }}></th>
                 <th style={s.th}>Classe</th>
-                <th style={s.th}>Niveau</th>
-                <th style={s.th}>Année scolaire</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Action</th>
+                <th style={s.th}>Notes</th>
+                <th style={s.th}>Responsables</th>
               </tr>
             </thead>
             <tbody>
               {classesFiltrees.length === 0 ? (
                 <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
-              ) : classesFiltrees.map((cl, i) => (
-                <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc', cursor: 'pointer' }}
-                  onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#6366f1' }}>{cl.nom}</td>
-                  <td style={s.td}>{cl.niveau || '—'}</td>
-                  <td style={s.td}>{cl.annee_scolaire || '—'}</td>
-                  <td style={{ ...s.td, textAlign: 'center' }}>
-                    <button style={s.btnEdit} onClick={e => { e.stopPropagation(); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
-                      Ouvrir
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              ) : classesFiltrees.map((cl, i) => {
+                // Badges notes (même logique que Classes.js)
+                const niveauClasse = String(cl?.niveau || '').toUpperCase();
+                const branchesNiveau = branches.filter(b => String(b.niveau || '').toUpperCase() === niveauClasse && b.suivi_notes !== false);
+                const badgesNotes = branchesNiveau.map(b => ({
+                  id: b.id,
+                  label: (b.designation_courte || b.nom || '').toString().trim(),
+                  nb: suiviNotesClasse[`${cl.id}-${b.id}`] || 0
+                }));
+                // Responsables (prof → matieres) depuis affectations
+                const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
+                return (
+                  <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                    <td style={{ ...s.td, textAlign: 'center', width: 80 }}>
+                      <button style={s.btnDetail} onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                        👁 Détail
+                      </button>
+                    </td>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#1e293b' }}>{cl.nom}</td>
+                    <td style={s.td}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {badgesNotes.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : badgesNotes.map(b => (
+                          <span key={b.id} style={{ background: b.nb >= 3 ? '#dcfce7' : '#fee2e2', color: b.nb >= 3 ? '#166534' : '#991b1b', padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            {b.label} {b.nb}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={s.td}>
+                      {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {respClasse.map(r => (
+                            <span key={r.prof_id} style={{ fontSize: 12, color: '#334155' }}>
+                              <b>{r.prof_prenom} {r.prof_nom}</b>
+                              {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1461,6 +1502,7 @@ const s = {
   btnOuvrir: { padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, marginRight: 6 },
   btnDelete: { padding: '4px 8px', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#64748b', fontWeight: 600, marginLeft: 4 },
   btnEdit: { padding: '4px 10px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
+  btnDetail: { padding: '5px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },
   commentInput: { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: 160 },
