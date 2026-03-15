@@ -533,89 +533,67 @@ export default function Notes() {
         {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>Erreur : {rapportErreur}</div>}
 
         {/* ---- VUE TOUS ---- */}
-        {vueGeneraleMode === 'tous' && rapport && (
-          <div style={{ overflowX: 'auto' }}>
+        {vueGeneraleMode === 'tous' && rapport && (() => {
+          const niveauCl = String(classeObj?.niveau || '').toUpperCase();
+          const branchesClasse = branches.filter(b => String(b.niveau || '').toUpperCase() === niveauCl && b.suivi_notes !== false);
+          const brPrin = branchesClasse.filter(b => b.type_branche === 'principale');
+          const brSec  = branchesClasse.filter(b => b.type_branche !== 'principale');
+          const getMoy = (brId, eleveId) => {
+            const mat = rapport.matieres.find(m => m.matiere_id === brId);
+            return mat ? moyenneEleveMatiere(mat, eleveId) : null;
+          };
+          const moyPrin = (eleveId) => { const vals = brPrin.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
+          const moyGen  = (eleveId) => { const vals = branchesClasse.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
+          const colNom = (b) => (b.designation_courte || b.nom || '').trim();
+          return (
+          <div style={{ overflowX: 'auto', marginTop: 15 }}>
           <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
-                <col style={{ width: 140, minWidth: 140, maxWidth: 140 }} />
-                {modeMatieres.map(m => (
-                  <col
-                    key={`col-mat-${m.matiere_id}`}
-                    style={{
-                      width: `calc((100% - 610px) / ${Math.max(modeMatieres.length, 1)})`,
-                      minWidth: 90
-                    }}
-                  />
-                ))}
-                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
-                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
-                <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
+                <col style={{ width: 130, minWidth: 130 }} />
+                <col style={{ width: 110, minWidth: 110 }} />
+                {brPrin.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
+                <col style={{ width: 90, minWidth: 90 }} />
+                {brSec.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
+                <col style={{ width: 90, minWidth: 90 }} />
               </colgroup>
               <thead>
                 <tr style={s.theadRow}>
                   <th style={s.th}>Nom</th>
                   <th style={s.th}>Prénom</th>
-                  {modeMatieres.map(m => (
-                    <th key={m.matiere_id} style={{ ...s.th, textAlign: 'center', whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                      {abregerMatiere(m.matiere_nom)}
-                    </th>
-                  ))}
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>principales</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>secondaires</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moy.<br/>générale</th>
+                  {brPrin.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
+                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>princip.</th>
+                  {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
+                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>générale</th>
                 </tr>
               </thead>
               <tbody>
                 {rapport.eleves.map((eleve, i) => {
-                  const moys = modeMatieres.map(m => moyenneEleveMatiere(m, eleve.id));
-                  const valides = moys.filter(v => v !== null);
-                  const moyGen = valides.length > 0 ? Math.round(valides.reduce((a, v) => a + v, 0) / valides.length * 10) / 10 : null;
-                  const principales = modeMatieres.filter(m => Number(m?.coefficient || 1) >= 2);
-                  const secondaires = modeMatieres.filter(m => Number(m?.coefficient || 1) < 2);
-                  const moyPrinVals = (principales.length ? principales : modeMatieres).map(m => moyenneEleveMatiere(m, eleve.id)).filter(v => v !== null);
-                  const moySecVals = (secondaires.length ? secondaires : []).map(m => moyenneEleveMatiere(m, eleve.id)).filter(v => v !== null);
-                  const moyPrin = moyPrinVals.length ? Math.round(moyPrinVals.reduce((a, v) => a + v, 0) / moyPrinVals.length * 10) / 10 : null;
-                  const moySec = moySecVals.length ? Math.round(moySecVals.reduce((a, v) => a + v, 0) / moySecVals.length * 10) / 10 : null;
+                  const mp = moyPrin(eleve.id); const mg = moyGen(eleve.id);
                   return (
                     <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                       <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
                       <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
-                      {moys.map((moy, j) => (
-                        <td key={j} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>
-                          {moy !== null ? fmtNote(moy) : '—'}
-                        </td>
-                      ))}
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moyPrin !== null ? (moyPrin >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                        {moyPrin !== null ? fmtNote(moyPrin) : '—'}
-                      </td>
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moySec !== null ? (moySec >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                        {moySec !== null ? fmtNote(moySec) : '—'}
-                      </td>
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moyGen !== null ? (moyGen >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                        {moyGen !== null ? fmtNote(moyGen) : '—'}
-                      </td>
+                      {brPrin.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: mp !== null ? (mp >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mp !== null ? fmtNote(mp) : '—'}</td>
+                      {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, background: '#eef2ff', color: mg !== null ? (mg >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
                     </tr>
                   );
                 })}
-                {/* Ligne moyenne de classe par branche */}
                 <tr style={{ ...s.tr, background: '#e0e7ff', fontWeight: 700 }}>
-                  <td style={{ ...s.td, fontWeight: 700 }} colSpan={2}>Moyenne de la branche</td>
-                  {modeMatieres.map(m => {
-                    const vals = rapport.eleves.map(e => moyenneEleveMatiere(m, e.id)).filter(v => v !== null);
-                    const moy = vals.length > 0 ? Math.round(vals.reduce((a, v) => a + v, 0) / vals.length * 10) / 10 : null;
-                    return <td key={m.matiere_id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>;
-                  })}
+                  <td style={{ ...s.td, fontWeight: 700 }} colSpan={2}>Moyenne classe</td>
+                  {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={s.td}></td>
-                  <td style={s.td}></td>
+                  {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={s.td}></td>
                 </tr>
               </tbody>
             </table>
           </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ---- VUE PAR BRANCHE ---- */}
         {vueGeneraleMode === 'branche' && rapport && matiereRapport && (
@@ -1464,7 +1442,7 @@ const s = {
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:150,minWidth:150,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
-  tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
+  tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center',textAlignLast:'center'},
   subTabsBar: {display:'flex',gap:0,marginTop:0},
   subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
