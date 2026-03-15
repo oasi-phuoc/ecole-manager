@@ -6,7 +6,7 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: true, presences: true, notes: true, tcf: true, calendrier: true, comptabilite: false, documents: false, statistiques: false };
+const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);

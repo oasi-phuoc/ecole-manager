@@ -595,9 +595,9 @@ export default function Professeurs({
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:1}} onClick={() => ouvrirDocuments(p)} title="Documents">📁</button></td>
+                <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:isAdmin()?1:0.35}} disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)} title="Documents">📁</button></td>
                 <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center'}}>
-                  <button style={p.actif!==false?s.badgeActive:s.badgeInactive} onClick={() => toggleStatut(p)}>
+                  <button style={{...(p.actif!==false?s.badgeActive:s.badgeInactive),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleStatut(p)}>
                     {p.actif!==false?'✅ Actif':'❌ Inactif'}
                   </button>
                 </td>
