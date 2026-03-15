@@ -1455,9 +1455,18 @@ export default function Notes() {
                     </td>
                     <td style={s.td}>
                       {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {respClasse.map(r => (
-                            <span key={r.prof_id} style={{ fontSize: 12, color: '#334155' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {/* Titulaire en premier */}
+                          {respClasse.filter(r => r.est_titulaire).map(r => (
+                            <span key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
+                              <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, marginRight: 5 }}>Titulaire</span>
+                              <b>{r.prof_prenom} {r.prof_nom}</b>
+                              {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
+                            </span>
+                          ))}
+                          {/* Autres profs */}
+                          {respClasse.filter(r => !r.est_titulaire).map(r => (
+                            <span key={r.prof_id} style={{ fontSize: 12, color: '#475569' }}>
                               <b>{r.prof_prenom} {r.prof_nom}</b>
                               {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
                             </span>
