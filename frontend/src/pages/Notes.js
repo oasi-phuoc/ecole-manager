@@ -1381,13 +1381,13 @@ export default function Notes() {
 
         {/* Tableau des classes */}
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
-          <table style={s.tbl}>
+          <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
               <tr style={s.theadRow}>
-                <th style={{ ...s.th, width: 80, textAlign: 'center' }}></th>
-                <th style={s.th}>Classe</th>
-                <th style={s.th}>Notes</th>
-                <th style={s.th}>Responsables</th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
+                <th style={{ ...s.th, whiteSpace: 'nowrap' }}>Notes</th>
+                <th style={{ ...s.th, width: '100%' }}>Responsables</th>
               </tr>
             </thead>
             <tbody>
@@ -1404,41 +1404,48 @@ export default function Notes() {
                 }));
                 // Responsables (prof → matieres) depuis affectations
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
+                const titulaires = respClasse.filter(r => r.est_titulaire);
+                const autresProfs = respClasse.filter(r => !r.est_titulaire);
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                    <td style={{ ...s.td, textAlign: 'center', width: 80 }}>
+                    <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                       <button style={s.btnDetail} onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
                         👁 Détail
                       </button>
                     </td>
-                    <td style={{ ...s.td, fontWeight: 700, color: '#1e293b' }}>{cl.nom}</td>
-                    <td style={s.td}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{cl.nom}</td>
+                    <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 5 }}>
                         {badgesNotes.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : badgesNotes.map(b => (
-                          <span key={b.id} style={{ background: b.nb >= 3 ? '#dcfce7' : '#fee2e2', color: b.nb >= 3 ? '#166534' : '#991b1b', padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                          <span key={b.id} style={{ background: b.nb >= 3 ? '#dcfce7' : '#fee2e2', color: b.nb >= 3 ? '#166534' : '#991b1b', padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
                             {b.label} {b.nb}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td style={s.td}>
+                    <td style={{ ...s.td, width: '100%' }}>
                       {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {/* Titulaire en premier */}
-                          {respClasse.filter(r => r.est_titulaire).map(r => (
+                          {/* Ligne 1 : titulaire */}
+                          {titulaires.map(r => (
                             <span key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
                               <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, marginRight: 5 }}>Titulaire</span>
                               <b>{r.prof_prenom} {r.prof_nom}</b>
                               {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
                             </span>
                           ))}
-                          {/* Autres profs */}
-                          {respClasse.filter(r => !r.est_titulaire).map(r => (
-                            <span key={r.prof_id} style={{ fontSize: 12, color: '#475569' }}>
-                              <b>{r.prof_prenom} {r.prof_nom}</b>
-                              {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
+                          {/* Ligne 2 : tous les autres profs sur une seule ligne */}
+                          {autresProfs.length > 0 && (
+                            <span style={{ fontSize: 12, color: '#475569' }}>
+                              {autresProfs.map((r, idx) => (
+                                <span key={r.prof_id}>
+                                  {idx > 0 && <span style={{ color: '#cbd5e1', margin: '0 6px' }}>|</span>}
+                                  <b>{r.prof_prenom} {r.prof_nom}</b>
+                                  {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
+                                </span>
+                              ))}
                             </span>
-                          ))}
+                          )}
                         </div>
                       )}
                     </td>
