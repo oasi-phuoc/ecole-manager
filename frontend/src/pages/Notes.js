@@ -154,12 +154,13 @@ export default function Notes() {
     } catch (err) { console.error(err); return []; }
   };
 
-  const chargerRapport = async (classeId) => {
+  const chargerRapport = async (classeId, sem) => {
     setRapport(null);
     setRapportErreur('');
     setRapportChargement(true);
+    const semVal = sem !== undefined ? sem : generaleSemestre;
     try {
-      const res = await axios.get(API + '/notes/rapport?classe_id=' + classeId, { headers });
+      const res = await axios.get(API + '/notes/rapport?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers });
       setRapport(res.data);
     } catch (err) {
       console.error(err);
@@ -501,7 +502,7 @@ export default function Notes() {
           ))}
           <div style={{ width: 16 }} />
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-            <button key={sem.id} onClick={() => setGeneraleSemestre(sem.id)}
+            <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
               style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>

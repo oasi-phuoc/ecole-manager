@@ -209,7 +209,7 @@ const getBulletin = async (req, res) => {
 };
 
 const getRapportClasse = async (req, res) => {
-  const { classe_id } = req.query;
+  const { classe_id, semestre } = req.query;
   try {
     const elevesRes = await pool.query(`
       SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom
@@ -219,6 +219,10 @@ const getRapportClasse = async (req, res) => {
       ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
     `, [classe_id]);
 
+    const evalsParams = [classe_id];
+    let evalsWhere = 'WHERE ev.classe_id = $1';
+    if (semestre) { evalsParams.push(parseInt(semestre)); evalsWhere += ` AND ev.semestre = $${evalsParams.length}`; }
+
     const evalsRes = await pool.query(`
       SELECT ev.id, ev.nom, ev.date, ev.type, ev.coefficient, ev.points_max,
         m.id as matiere_id, m.nom as matiere_nom,
@@ -226,16 +230,16 @@ const getRapportClasse = async (req, res) => {
       FROM evaluations ev
       JOIN matieres m ON ev.matiere_id = m.id
       LEFT JOIN utilisateurs u ON ev.prof_id = u.id
-      WHERE ev.classe_id = $1
+      ${evalsWhere}
       ORDER BY m.nom, ev.date
-    `, [classe_id]);
+    `, evalsParams);
 
     const notesRes = await pool.query(`
       SELECT n.eleve_id, n.evaluation_id, n.valeur, n.absent, n.dispense
       FROM notes n
       JOIN evaluations ev ON n.evaluation_id = ev.id
-      WHERE ev.classe_id = $1
-    `, [classe_id]);
+      WHERE ev.classe_id = $1${semestre ? ' AND ev.semestre = $2' : ''}
+    `, semestre ? [classe_id, parseInt(semestre)] : [classe_id]);
 
     const matiereMap = {};
     for (const ev of evalsRes.rows) {
