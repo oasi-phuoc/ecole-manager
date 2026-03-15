@@ -556,11 +556,14 @@ export default function Presences() {
             <button key={p.id} style={{...s.subTabBtn, width:140, minWidth:140, ...(statsPeriode===p.id?s.subTabBtnActif:{})}}
               onClick={() => {
                 setStatsPeriode(p.id);
-                if (p.id !== 'libre') {
-                  const now = new Date();
-                  const y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-                  if (p.id === '1sem') { setStatsDateDebut(`${y}-08-01`); setStatsDateFin(`${y+1}-01-31`); }
-                  else { setStatsDateDebut(`${y+1}-02-01`); setStatsDateFin(`${y+1}-07-31`); }
+                const now = new Date();
+                const y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+                if (p.id === '1sem') { setStatsDateDebut(`${y}-08-01`); setStatsDateFin(`${y+1}-01-31`); }
+                else if (p.id === '2sem') { setStatsDateDebut(`${y+1}-02-01`); setStatsDateFin(`${y+1}-07-31`); }
+                else {
+                  const yy = now.getFullYear(), mm = String(now.getMonth()+1).padStart(2,'0');
+                  const lastDay = new Date(yy, now.getMonth()+1, 0).getDate();
+                  setStatsDateDebut(`${yy}-${mm}-01`); setStatsDateFin(`${yy}-${mm}-${String(lastDay).padStart(2,'0')}`);
                 }
               }}>
               {p.label}
