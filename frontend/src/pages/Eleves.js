@@ -21,7 +21,7 @@ export default function Eleves() {
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [sansClasse, setSansClasse] = useState(false);
+  const [niveauOnglet, setNiveauOnglet] = useState('tous');
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
@@ -410,9 +410,12 @@ export default function Eleves() {
   ];
 
   const elevesFiltres = eleves.filter(el => {
-    const classeNom = classes.find(c => String(c.id) === String(el.classe_id))?.nom || '';
+    const classe = classes.find(c => String(c.id) === String(el.classe_id));
+    const classeNom = classe?.nom || '';
+    const niveau = classe?.niveau || '';
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+classeNom).toLowerCase().includes(recherche.toLowerCase());
-    if (sansClasse) return !el.classe_id && matchR;
+    if (niveauOnglet === 'sans') return !el.classe_id && matchR;
+    if (niveauOnglet !== 'tous') return niveau === niveauOnglet && matchR;
     return matchR;
   });
 
@@ -452,19 +455,23 @@ export default function Eleves() {
         </div>
       </div>
       <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'}}>
-        <button
-          style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:sansClasse?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:sansClasse?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:120,minWidth:120,textAlign:'center',marginBottom:sansClasse?-1:0,zIndex:sansClasse?2:1}}
-          onClick={() => setSansClasse(!sansClasse)}
-        >
-          Sans classe
-        </button>
+        {['tous','CSC','CFR','EPL','CPR','sans'].map(k => {
+          const actif = niveauOnglet === k;
+          const label = k === 'tous' ? 'Tous' : k === 'sans' ? 'Sans classe' : k;
+          return (
+            <button key={k}
+              style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:actif?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:actif?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:k==='sans'?120:90,minWidth:k==='sans'?120:90,textAlign:'center',marginBottom:actif?-1:0,zIndex:actif?2:1}}
+              onClick={() => { setNiveauOnglet(k); setRecherche(''); }}
+            >{label}</button>
+          );
+        })}
       </div>
       <div style={{marginTop:15,marginBottom:12}}>
         <input
           style={{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'#f1f5f9',outline:'none',fontSize:14,width:280,color:'#475569',fontFamily:'inherit'}}
           placeholder="Rechercher un élève, une classe..."
           value={recherche}
-          onChange={e => { setRecherche(e.target.value); if (sansClasse) setSansClasse(false); }}
+          onChange={e => { setRecherche(e.target.value); }}
         />
       </div>
 
@@ -1022,7 +1029,7 @@ export default function Eleves() {
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'10px 10px',width:110,minWidth:110,maxWidth:110,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁 Détail</button></td>
                 <td style={{padding:'10px 10px',width:92,minWidth:92,maxWidth:92,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
-                <td style={{padding:'10px 10px',width:96,minWidth:96,maxWidth:96,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.35}} disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                <td style={{padding:'10px 10px',width:96,minWidth:96,maxWidth:96,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
                 <td style={{padding:'10px 10px',width:122,minWidth:122,maxWidth:122,textAlign:'center'}}>
                   <button
                     onClick={() => handleToggleStatut(el)}
