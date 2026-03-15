@@ -945,7 +945,7 @@ export default function Notes() {
                     const totalPeriodes = presents + absents + retards + excuses + conges;
                     const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
                     const allFilled = [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
-                    const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {color:'#b91c1c'} : tauxBN < 80 ? {color:'#c2410c'} : {color:'#166534'};
+                    const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {color:'#b91c1c'} : tauxBN < 80 ? {color:'#c2410c'} : {};
                     const retardsBg = retards > 6 ? {color:'#b91c1c'} : retards > 3 ? {color:'#c2410c'} : {};
                     return (
                       <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
@@ -953,9 +953,8 @@ export default function Notes() {
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
                           const key = 'c' + n;
                           const val = cr[key] || '';
-                          const bg = val === 'vert' ? '#dcfce7' : val === 'orange' ? '#ffedd5' : val === 'rouge' ? '#fee2e2' : '#f8fafc';
                           return (
-                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', background: bg, cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
+                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
                               onClick={async () => { const next = cycleCouleur(val); await sauvegarderCriteres(b.eleve.id, { [key]: next }); }}>
                               {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
                             </td>
