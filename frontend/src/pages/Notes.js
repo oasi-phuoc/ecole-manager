@@ -1324,9 +1324,9 @@ export default function Notes() {
             </tr>
           </thead>
           <tbody>
-            {matieres.filter(m => !classeObj?.niveau || m.niveau === classeObj.niveau).length === 0 ? (
+            {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
               <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
-            ) : matieres.filter(m => !classeObj?.niveau || m.niveau === classeObj.niveau).map((m, i) => {
+            ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
               const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
