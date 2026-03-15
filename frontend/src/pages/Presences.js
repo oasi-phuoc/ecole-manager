@@ -42,6 +42,7 @@ export default function Presences() {
   const [importResultat, setImportResultat] = useState(null);
   const [statsDateDebut, setStatsDateDebut] = useState('');
   const [statsDateFin, setStatsDateFin] = useState('');
+  const [statsPeriode, setStatsPeriode] = useState('1sem');
   const navigate = useNavigate();
   const location = useLocation();
   const headers = {};
@@ -544,13 +545,37 @@ export default function Presences() {
         ))}
       </div>
 
+      {/* Sous-onglets période — Statistiques uniquement */}
+      {onglet === 'stats' && (
+        <div style={s.subTabsBar}>
+          {[
+            { id: '1sem', label: '1er semestre' },
+            { id: '2sem', label: '2e semestre' },
+            { id: 'libre', label: 'Date libre' },
+          ].map(p => (
+            <button key={p.id} style={{...s.subTabBtn, width:140, minWidth:140, ...(statsPeriode===p.id?s.subTabBtnActif:{})}}
+              onClick={() => {
+                setStatsPeriode(p.id);
+                if (p.id !== 'libre') {
+                  const now = new Date();
+                  const y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+                  if (p.id === '1sem') { setStatsDateDebut(`${y}-08-01`); setStatsDateFin(`${y+1}-01-31`); }
+                  else { setStatsDateDebut(`${y+1}-02-01`); setStatsDateFin(`${y+1}-07-31`); }
+                }
+              }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Classe select — sous les onglets */}
       <div style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
-        {onglet === 'stats' && <>
+        {onglet === 'stats' && statsPeriode === 'libre' && <>
           <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
           <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
           <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
@@ -866,6 +891,9 @@ const s = {
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:160,minWidth:160,textAlign:'center'},
   tabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
+  subTabsBar:{display:'flex',gap:0,marginTop:0},
+  subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
+  subTabBtnActif:{background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
   td:{padding:'8px',fontSize:13,color:'#374151'},
