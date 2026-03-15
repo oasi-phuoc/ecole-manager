@@ -5,6 +5,14 @@ import { setSessionUser } from '../utils/session';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
+const CRITERES = [
+  { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
+  { id: 'maj',     label: '1 lettre majuscule',            test: (p) => /[A-Z]/.test(p) },
+  { id: 'min',     label: '1 lettre minuscule',            test: (p) => /[a-z]/.test(p) },
+  { id: 'chiffre', label: '1 chiffre',                     test: (p) => /[0-9]/.test(p) },
+  { id: 'special', label: '1 caractère spécial (!@#...)',  test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -13,6 +21,15 @@ export default function Login() {
   const [erreur, setErreur] = useState('');
   const navigate = useNavigate();
   const mfaRequired = Boolean(mfaToken);
+
+  // Changement de mot de passe obligatoire
+  const [showChangeMdp, setShowChangeMdp] = useState(false);
+  const [newMdp, setNewMdp] = useState('');
+  const [confirmMdp, setConfirmMdp] = useState('');
+  const [changeMdpErreur, setChangeMdpErreur] = useState('');
+  const [changeMdpLoading, setChangeMdpLoading] = useState(false);
+  const [showNewMdp, setShowNewMdp] = useState(false);
+  const [showConfirmMdp, setShowConfirmMdp] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,17 +42,119 @@ export default function Login() {
           setMfaCode('');
           return;
         }
-        setSessionUser(res.data.utilisateur || null);
+        const utilisateur = res.data.utilisateur || null;
+        setSessionUser(utilisateur);
+        if (utilisateur?.doit_changer_mdp) {
+          setShowChangeMdp(true);
+          return;
+        }
         navigate('/dashboard');
         return;
       }
       const res = await axios.post(API + '/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
-      setSessionUser(res.data.utilisateur || null);
+      const utilisateur = res.data.utilisateur || null;
+      setSessionUser(utilisateur);
+      if (utilisateur?.doit_changer_mdp) {
+        setShowChangeMdp(true);
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur de connexion');
     }
   };
+
+  const handleChangerMdp = async (e) => {
+    e.preventDefault();
+    setChangeMdpErreur('');
+    const tousOk = CRITERES.every(c => c.test(newMdp));
+    if (!tousOk) { setChangeMdpErreur('Le mot de passe ne remplit pas tous les critères.'); return; }
+    if (newMdp !== confirmMdp) { setChangeMdpErreur('Les mots de passe ne correspondent pas.'); return; }
+    setChangeMdpLoading(true);
+    try {
+      await axios.post(API + '/auth/changer-mdp', { nouveau_mdp: newMdp });
+      navigate('/dashboard');
+    } catch (err) {
+      setChangeMdpErreur(err.response?.data?.message || 'Erreur lors du changement de mot de passe.');
+    } finally {
+      setChangeMdpLoading(false);
+    }
+  };
+
+  if (showChangeMdp) return (
+    <div style={styles.page}>
+      <div style={{...styles.card, maxWidth: 460}}>
+        <div style={styles.logoContainer}>
+          <img src="/logo-image-oasis.webp" alt="Oasis" style={styles.logoImage} />
+        </div>
+        <h2 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:6,textAlign:'center'}}>Changement de mot de passe obligatoire</h2>
+        <p style={{fontSize:13,color:'#64748b',marginBottom:20,textAlign:'center',lineHeight:1.5}}>
+          Pour des raisons de sécurité, vous devez définir un nouveau mot de passe avant de continuer.
+        </p>
+
+        {changeMdpErreur && <div style={styles.erreur}>{changeMdpErreur}</div>}
+
+        <form onSubmit={handleChangerMdp} style={styles.form}>
+          <div style={styles.champ}>
+            <label style={styles.label}>Nouveau mot de passe</label>
+            <div style={{position:'relative'}}>
+              <input
+                style={styles.input}
+                type={showNewMdp ? 'text' : 'password'}
+                required
+                value={newMdp}
+                onChange={e => setNewMdp(e.target.value)}
+                placeholder="••••••••••••"
+                autoComplete="new-password"
+              />
+              <button type="button" onClick={() => setShowNewMdp(v => !v)}
+                style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:15,color:'#64748b',padding:4}}>
+                {showNewMdp ? '🙈' : '👁'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:4}}>
+            {CRITERES.map(c => {
+              const ok = c.test(newMdp);
+              return (
+                <div key={c.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
+                  <span style={{fontSize:13,color:ok?'#10b981':'#cbd5e1',lineHeight:1}}>{ok ? '✓' : '○'}</span>
+                  <span style={{color:ok?'#059669':'#64748b',fontWeight:ok?600:400}}>{c.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={styles.champ}>
+            <label style={styles.label}>Confirmer le mot de passe</label>
+            <div style={{position:'relative'}}>
+              <input
+                style={{...styles.input, borderColor: confirmMdp && newMdp !== confirmMdp ? '#ef4444' : undefined}}
+                type={showConfirmMdp ? 'text' : 'password'}
+                required
+                value={confirmMdp}
+                onChange={e => setConfirmMdp(e.target.value)}
+                placeholder="••••••••••••"
+                autoComplete="new-password"
+              />
+              <button type="button" onClick={() => setShowConfirmMdp(v => !v)}
+                style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:15,color:'#64748b',padding:4}}>
+                {showConfirmMdp ? '🙈' : '👁'}
+              </button>
+            </div>
+            {confirmMdp && newMdp !== confirmMdp && (
+              <span style={{fontSize:11,color:'#ef4444',marginTop:2}}>Les mots de passe ne correspondent pas</span>
+            )}
+          </div>
+
+          <button type="submit" style={{...styles.btn, opacity: changeMdpLoading ? 0.7 : 1}} disabled={changeMdpLoading}>
+            {changeMdpLoading ? 'Enregistrement...' : 'Définir mon mot de passe'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 
   return (
     <div style={styles.page}>
@@ -133,11 +252,6 @@ const styles = {
   },
   logoImage: {
     width: '160px',
-    height: 'auto',
-    display: 'block',
-  },
-  logoOasis: {
-    width: '240px',
     height: 'auto',
     display: 'block',
   },

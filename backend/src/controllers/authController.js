@@ -107,7 +107,7 @@ const login = async (req, res) => {
     writeAuthCookie(res, userPayload(user));
     res.json({
       message: 'Connexion reussie',
-      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role }
+      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role, doit_changer_mdp: user.doit_changer_mdp || false }
     });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
@@ -151,7 +151,7 @@ const loginMfa = async (req, res) => {
     writeAuthCookie(res, userPayload(user));
     return res.json({
       message: 'Connexion reussie',
-      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role }
+      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role, doit_changer_mdp: user.doit_changer_mdp || false }
     });
   } catch {
     return res.status(401).json({ message: 'Token MFA invalide ou expire' });
@@ -236,6 +236,28 @@ const mfaDisable = async (req, res) => {
   }
 };
 
+const mdpFortValide = (mdp) => {
+  if (!mdp || String(mdp).length < 12) return 'Le mot de passe doit contenir au moins 12 caractères';
+  if (!/[A-Z]/.test(mdp)) return 'Au moins une lettre majuscule requise';
+  if (!/[a-z]/.test(mdp)) return 'Au moins une lettre minuscule requise';
+  if (!/[0-9]/.test(mdp)) return 'Au moins un chiffre requis';
+  if (!/[^A-Za-z0-9]/.test(mdp)) return 'Au moins un caractère spécial requis';
+  return null;
+};
+
+const changerMdp = async (req, res) => {
+  const { nouveau_mdp } = req.body || {};
+  const erreur = mdpFortValide(nouveau_mdp);
+  if (erreur) return res.status(400).json({ message: erreur });
+  try {
+    const hash = await bcrypt.hash(nouveau_mdp, 10);
+    await pool.query('UPDATE utilisateurs SET mot_de_passe=$1, doit_changer_mdp=false WHERE id=$2', [hash, req.user.id]);
+    return res.json({ message: 'Mot de passe changé avec succès' });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 const moi = async (req, res) => {
   try {
     const result = await pool.query(
@@ -248,4 +270,4 @@ const moi = async (req, res) => {
   }
 };
 
-module.exports = { register, login, loginMfa, logout, moi, mfaStatus, mfaSetup, mfaEnable, mfaRegenerateBackupCodes, mfaDisable };
+module.exports = { register, login, loginMfa, logout, moi, changerMdp, mfaStatus, mfaSetup, mfaEnable, mfaRegenerateBackupCodes, mfaDisable };

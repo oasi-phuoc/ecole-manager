@@ -25,6 +25,7 @@ router.post('/login', loginLimiter, authController.login);
 router.post('/login/mfa', loginLimiter, authController.loginMfa);
 router.post('/logout', authController.logout);
 router.get('/moi', verifierToken, authController.moi);
+router.post('/changer-mdp', verifierToken, authController.changerMdp);
 router.get('/mfa/status', verifierToken, authController.mfaStatus);
 router.post('/mfa/setup', verifierToken, authController.mfaSetup);
 router.post('/mfa/enable', verifierToken, authController.mfaEnable);
