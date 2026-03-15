@@ -1672,7 +1672,7 @@ export default function EmploiDuTemps() {
           </div>
           <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
             {sousOngletPlanning === 'classes' && (
-              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={classePlanningId || ''} onChange={e => {
+              <select style={styles.selOnglet} value={classePlanningId || ''} onChange={e => {
                 const classeId = e.target.value;
                 setClassePlanningId(classeId);
                 if (classeId) {
@@ -1687,7 +1687,7 @@ export default function EmploiDuTemps() {
               </select>
             )}
             {sousOngletPlanning === 'professeurs' && (
-              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={profPlanningId || ''} onChange={e => {
+              <select style={styles.selOnglet} value={profPlanningId || ''} onChange={e => {
                 const id = e.target.value;
                 setProfPlanningId(id);
                 if (id) chargerPlanningProf(id); else setPlanningProf(null);
@@ -1697,7 +1697,7 @@ export default function EmploiDuTemps() {
               </select>
             )}
             {sousOngletPlanning === 'general' && (
-              <select style={{...styles.selOnglet,width:320,maxWidth:'100%'}} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
+              <select style={styles.selOnglet} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
                 <option value="">Choisir un pool</option>
                 {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
               </select>
@@ -3374,7 +3374,7 @@ const styles = {
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
-  selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
+  selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center',width:220,minWidth:220},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
   modal:{background:'white',padding:30,borderRadius:16,maxHeight:'85vh',overflowY:'auto'},
   modalTitre:{fontSize:20,fontWeight:700,marginBottom:20},
