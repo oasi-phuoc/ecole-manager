@@ -328,6 +328,26 @@ const resetRentree = async (req, res) => {
   });
 };
 
+const getAccesProfs = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT acces_profs FROM parametres_ecole LIMIT 1');
+    res.json(r.rows[0]?.acces_profs || {});
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+};
+
+const modifierAccesProfs = async (req, res) => {
+  const { acces_profs } = req.body;
+  try {
+    const existe = await pool.query('SELECT id FROM parametres_ecole LIMIT 1');
+    if (existe.rows.length > 0) {
+      await pool.query('UPDATE parametres_ecole SET acces_profs=$1 WHERE id=$2', [JSON.stringify(acces_profs), existe.rows[0].id]);
+    } else {
+      await pool.query('INSERT INTO parametres_ecole (acces_profs) VALUES ($1)', [JSON.stringify(acces_profs)]);
+    }
+    res.json({ message: 'Accès professeurs mis à jour' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+};
+
 module.exports = {
   getProfil,
   modifierProfil,
@@ -342,4 +362,6 @@ module.exports = {
   getClassesProf,
   resetTout,
   resetRentree,
+  getAccesProfs,
+  modifierAccesProfs,
 };

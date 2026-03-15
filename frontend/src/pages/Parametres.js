@@ -4,9 +4,18 @@ import { useNavigate } from 'react-router-dom';
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
-const MODULES_PROF = [
-  { key: 'presences_modifier', label: 'Modifier les présences' },
-  { key: 'notes_modifier', label: 'Modifier les notes' },
+const MODULES_ACCES_PROFS = [
+  { key: 'eleves',            label: 'Élèves',         defaut: true },
+  { key: 'classes',           label: 'Classes',         defaut: false },
+  { key: 'branches',          label: 'Branches',        defaut: false },
+  { key: 'emploi_du_temps',   label: 'Emploi du Temps', defaut: true },
+  { key: 'presences',         label: 'Présences',       defaut: true },
+  { key: 'notes',             label: 'Notes',           defaut: true },
+  { key: 'tcf',               label: 'TCF',             defaut: true },
+  { key: 'calendrier',        label: 'Calendrier',      defaut: true },
+  { key: 'comptabilite',      label: 'Comptabilité',    defaut: false },
+  { key: 'documents',         label: 'Documents',       defaut: false },
+  { key: 'statistiques',      label: 'Statistiques',    defaut: false },
 ];
 
 export default function Parametres() {
@@ -22,6 +31,8 @@ export default function Parametres() {
   const [profs, setProfs] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [permissions, setPermissions] = useState({});
+  const [accesProfs, setAccesProfs] = useState({});
+  const [msgAccesProfs, setMsgAccesProfs] = useState('');
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
@@ -60,7 +71,7 @@ export default function Parametres() {
 
   useEffect(() => { chargerProfil(); }, []);
   useEffect(() => { chargerMfaStatus(); }, []);
-  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); } }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
   }, [isAdmin, profil?.email, mailTestTo]);
@@ -93,6 +104,16 @@ export default function Parametres() {
       const res = await axios.get(API + '/parametres/profs', { headers });
       setProfs(res.data);
     } catch (err) { console.error(err); }
+  };
+
+  const chargerAccesProfs = async () => {
+    try {
+      const res = await axios.get(API + '/parametres/acces-profs', { headers });
+      const data = res.data || {};
+      const init = {};
+      MODULES_ACCES_PROFS.forEach(m => { init[m.key] = data[m.key] !== undefined ? data[m.key] : m.defaut; });
+      setAccesProfs(init);
+    } catch {}
   };
 
   const chargerMail = async () => {
@@ -701,59 +722,50 @@ export default function Parametres() {
 
           {onglet === 'acces' && isAdmin && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>🔑 Gestion des accès professeurs</h3>
-              <p style={{ color: '#888', fontSize: '14px', marginBottom: '20px' }}>
-                Les professeurs peuvent toujours voir les élèves, classes, calendrier et modifier leur profil. Configurez ici leurs droits de modification.
-              </p>
+              <h3 style={styles.cardTitre}>🔑 Gestion des accès</h3>
 
-              {profSelectionne ? (
-                <div>
-                  <div style={styles.profHeader}>
-                    <button style={styles.btnBack} onClick={() => setProfSelectionne(null)}>← Retour</button>
-                    <div>
-                      <div style={styles.profNom}>{profSelectionne.prenom} {profSelectionne.nom}</div>
-                      <div style={styles.profEmail}>{profSelectionne.email}</div>
-                    </div>
-                  </div>
-                  {msgPerms === 'success' && <div style={styles.msgSuccess}>✅ Permissions mises à jour !</div>}
-                  {msgPerms === 'error' && <div style={styles.msgError}>❌ Erreur</div>}
-                  <div style={styles.permsGrid}>
-                    {MODULES_PROF.map(m => (
-                      <div key={m.key} style={styles.permRow}>
-                        <div style={styles.permLabel}>{m.label}</div>
-                        <label style={styles.toggle}>
-                          <input type="checkbox" checked={permissions[m.key] === true}
-                            onChange={e => setPermissions({ ...permissions, [m.key]: e.target.checked })} />
-                          <span style={{ ...styles.toggleSlider, background: permissions[m.key] ? '#34a853' : '#ccc' }}>
-                            <span style={{ ...styles.toggleThumb, left: permissions[m.key] ? '22px' : '2px' }} />
-                          </span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={handleSauverPermissions}>
-                    💾 Sauvegarder les permissions
-                  </button>
+              <div style={{marginBottom:24}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>Employés administratifs</div>
+                <p style={{color:'#64748b',fontSize:13,margin:'0 0 8px'}}>Les employés administratifs ont accès à tous les modules sans restriction.</p>
+                <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                  {MODULES_ACCES_PROFS.map(m => (
+                    <span key={m.key} style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ {m.label}</span>
+                  ))}
+                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Employés</span>
+                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Professeurs</span>
+                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Paramètres</span>
                 </div>
-              ) : (
-                <div>
-                  {profs.length === 0 ? (
-                    <div style={styles.vide}>Aucun professeur trouvé</div>
-                  ) : profs.map(p => (
-                    <div key={p.id} style={styles.profCard} onClick={() => ouvrirPermissions(p)}>
-                      <div style={styles.profAvatar}>{p.prenom[0]}{p.nom[0]}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.profNom}>{p.prenom} {p.nom}</div>
-                        <div style={styles.profEmail}>{p.email}</div>
-                      </div>
-                      <div style={styles.profPermsCount}>
-                        {Object.values(p.permissions || {}).filter(v => v === true).length} permission(s)
-                      </div>
-                      <div style={styles.chevron}>›</div>
+              </div>
+
+              <div style={{borderTop:'1px solid #e2e8f0',paddingTop:20}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>Professeurs — accès aux modules</div>
+                <p style={{color:'#64748b',fontSize:13,margin:'0 0 16px'}}>Ces paramètres s'appliquent à tous les professeurs.</p>
+                {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>✅ Accès mis à jour !</div>}
+                {msgAccesProfs === 'error' && <div style={styles.msgError}>❌ Erreur</div>}
+                <div style={styles.permsGrid}>
+                  {MODULES_ACCES_PROFS.map(m => (
+                    <div key={m.key} style={styles.permRow}>
+                      <div style={styles.permLabel}>{m.label}</div>
+                      <label style={styles.toggle}>
+                        <input type="checkbox" checked={accesProfs[m.key] === true}
+                          onChange={e => setAccesProfs({ ...accesProfs, [m.key]: e.target.checked })} />
+                        <span style={{ ...styles.toggleSlider, background: accesProfs[m.key] ? '#34a853' : '#ccc' }}>
+                          <span style={{ ...styles.toggleThumb, left: accesProfs[m.key] ? '22px' : '2px' }} />
+                        </span>
+                      </label>
                     </div>
                   ))}
                 </div>
-              )}
+                <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={async () => {
+                  try {
+                    await axios.put(API + '/parametres/acces-profs', { acces_profs: accesProfs }, { headers });
+                    setMsgAccesProfs('success');
+                    setTimeout(() => setMsgAccesProfs(''), 3000);
+                  } catch { setMsgAccesProfs('error'); }
+                }}>
+                  💾 Sauvegarder les accès
+                </button>
+              </div>
             </div>
           )}
           {onglet === 'danger' && isAdmin && (

@@ -33,6 +33,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS priorite_pref VARCHAR(20)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_disponibilites TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS doit_changer_mdp BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS acces_profs JSONB DEFAULT '{}'::jsonb`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_secret TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);

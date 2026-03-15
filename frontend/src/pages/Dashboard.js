@@ -6,13 +6,23 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
+const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: true, presences: true, notes: true, tcf: true, calendrier: true, comptabilite: false, documents: false, statistiques: false };
+
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
+  const [accesProfs, setAccesProfs] = useState({});
   const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [observationDetail, setObservationDetail] = useState(null);
   const navigate = useNavigate();
   const headers = {};
+
+  const chargerAccesProfs = async () => {
+    try {
+      const res = await axios.get(API + '/parametres/acces-profs');
+      setAccesProfs(res.data || {});
+    } catch {}
+  };
 
   useEffect(() => {
     const chargerUtilisateurEtStats = async () => {
@@ -23,6 +33,7 @@ export default function Dashboard() {
         setUser(u || null);
       } catch {}
       chargerStats();
+      chargerAccesProfs();
     };
     chargerUtilisateurEtStats();
   }, []);
@@ -55,21 +66,27 @@ export default function Dashboard() {
   const isAdmin = user?.role === 'admin';
 
   const modules = [
-    { icon: '🧑', label: 'Employés', path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: true },
-    { icon: '👨‍🏫', label: 'Professeurs', path: '/professeurs', color: '#6366f1', bg: '#e0e7ff', stat: null, statLabel: '', admin: true },
-    { icon: '🎓', label: 'Élèves', path: '/eleves', color: '#f59e0b', bg: '#fef3c7', stat: null, statLabel: '', admin: false },
-    { icon: '📚', label: 'Branches', path: '/branches', color: '#8b5cf6', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
-    { icon: '🏫', label: 'Classes', path: '/classes', color: '#10b981', bg: '#d1fae5', stat: null, statLabel: '', admin: true },
-    { icon: '📅', label: 'Emploi du Temps', path: '/emploi-du-temps', color: '#ef4444', bg: '#fee2e2', stat: null, statLabel: '', admin: false },
-    { icon: '✅', label: 'Présences', path: '/presences', color: '#06b6d4', bg: '#cffafe', stat: null, statLabel: '', admin: false },
-    { icon: '📝', label: 'Notes', path: '/notes', color: '#ec4899', bg: '#fce7f3', stat: null, statLabel: '', admin: false },
-    { icon: '🗣️', label: 'TCF', path: '/tcf', color: '#0ea5e9', bg: '#e0f2fe', stat: null, statLabel: '', admin: false },
-    { icon: '📆', label: 'Calendrier', path: '/calendrier', color: '#14b8a6', bg: '#ccfbf1', stat: null, statLabel: '', admin: false },
-    { icon: '💰', label: 'Comptabilité', path: '/comptabilite', color: '#84cc16', bg: '#ecfccb', stat: null, statLabel: '', admin: true },
-    { icon: '🗂️', label: 'Documents', path: '/documents-administratifs', color: '#7c3aed', bg: '#ede9fe', stat: null, statLabel: '', admin: true },
-    { icon: '📊', label: 'Statistiques', path: '/statistiques', color: '#f97316', bg: '#ffedd5', stat: null, statLabel: '', admin: true },
-    { icon: '⚙️', label: 'Paramètres', path: '/parametres', color: '#64748b', bg: '#f1f5f9', stat: null, statLabel: '', admin: true },
-  ].filter(m => !m.admin || isAdmin);
+    { label: 'Employés',         path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', adminOnly: true },
+    { label: 'Professeurs',      path: '/professeurs',             color: '#6366f1', bg: '#e0e7ff', adminOnly: true },
+    { label: 'Élèves',           path: '/eleves',                  color: '#f59e0b', bg: '#fef3c7', adminOnly: false, accentKey: 'eleves' },
+    { label: 'Branches',         path: '/branches',                color: '#8b5cf6', bg: '#ede9fe', adminOnly: false, accentKey: 'branches' },
+    { label: 'Classes',          path: '/classes',                 color: '#10b981', bg: '#d1fae5', adminOnly: false, accentKey: 'classes' },
+    { label: 'Emploi du Temps',  path: '/emploi-du-temps',         color: '#ef4444', bg: '#fee2e2', adminOnly: false, accentKey: 'emploi_du_temps' },
+    { label: 'Présences',        path: '/presences',               color: '#06b6d4', bg: '#cffafe', adminOnly: false, accentKey: 'presences' },
+    { label: 'Notes',            path: '/notes',                   color: '#ec4899', bg: '#fce7f3', adminOnly: false, accentKey: 'notes' },
+    { label: 'TCF',              path: '/tcf',                     color: '#0ea5e9', bg: '#e0f2fe', adminOnly: false, accentKey: 'tcf' },
+    { label: 'Calendrier',       path: '/calendrier',              color: '#14b8a6', bg: '#ccfbf1', adminOnly: false, accentKey: 'calendrier' },
+    { label: 'Comptabilité',     path: '/comptabilite',            color: '#84cc16', bg: '#ecfccb', adminOnly: false, accentKey: 'comptabilite' },
+    { label: 'Documents',        path: '/documents-administratifs',color: '#7c3aed', bg: '#ede9fe', adminOnly: false, accentKey: 'documents' },
+    { label: 'Statistiques',     path: '/statistiques',            color: '#f97316', bg: '#ffedd5', adminOnly: false, accentKey: 'statistiques' },
+    { label: 'Paramètres',       path: '/parametres',              color: '#64748b', bg: '#f1f5f9', adminOnly: true },
+  ].filter(m => {
+    if (isAdmin) return true;
+    if (m.adminOnly) return false;
+    if (!m.accentKey) return true;
+    const val = accesProfs[m.accentKey];
+    return val !== undefined ? val : (ACCES_DEFAUT_PROF[m.accentKey] !== false);
+  });
 
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
@@ -97,7 +114,14 @@ export default function Dashboard() {
               onMouseLeave={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.querySelector('.nav-label').style.color = '#4c1d95'; }}
             >
               <span className="nav-label" style={styles.navLabel}>{m.label}</span>
-              {m.stat !== null && <span style={{...styles.navBadge, background: m.bg, color: m.color}}>{m.stat}</span>}
+              {isAdmin && m.accentKey && (
+                <span style={{
+                  width:8, height:8, borderRadius:'50%', flexShrink:0,
+                  background: (accesProfs[m.accentKey] !== undefined ? accesProfs[m.accentKey] : (ACCES_DEFAUT_PROF[m.accentKey] !== false)) ? '#10b981' : '#e5e7eb',
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  display:'inline-block', marginLeft:4
+                }} title={(accesProfs[m.accentKey] !== undefined ? accesProfs[m.accentKey] : (ACCES_DEFAUT_PROF[m.accentKey] !== false)) ? 'Accessible aux profs' : 'Inaccessible aux profs'} />
+              )}
             </button>
           ))}
         </nav>

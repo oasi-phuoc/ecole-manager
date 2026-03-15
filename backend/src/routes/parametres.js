@@ -14,6 +14,8 @@ router.put('/mail', autoriser('admin'), c.modifierParametresMail);
 router.post('/mail/test', autoriser('admin'), c.envoyerMailTest);
 router.get('/profs', autoriser('admin'), c.getProfs);
 router.put('/permissions/:id', autoriser('admin'), c.modifierPermissions);
+router.get('/acces-profs', c.getAccesProfs);
+router.put('/acces-profs', autoriser('admin'), c.modifierAccesProfs);
 router.get('/mes-classes', c.getClassesProf);
 
 router.delete('/reset-tout', autoriser('admin'), c.resetTout);
