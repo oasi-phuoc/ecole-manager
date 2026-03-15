@@ -395,8 +395,10 @@ export default function Notes() {
             <div style={s.moyenneLabel}>Moyenne classe</div>
             <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</div>
           </div>
-          <button style={{ ...s.btnSauver, opacity: peutModifierNotes() ? 1 : 0.4, cursor: peutModifierNotes() ? 'pointer' : 'not-allowed' }}
-            disabled={!peutModifierNotes()} onClick={handleSauvegarderNotes}>Enregistrer</button>
+          {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
+            <button style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
+              disabled={!ok} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</button>
+          ); })()}
         </div>
         {sauvegarde && <div style={s.successMsg}>Notes enregistrées !</div>}
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
@@ -1169,17 +1171,7 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={async () => { await chargerEvaluationsId(classeSelectionnee, null); setVue('matieres'); }}>← Retour</button>
           <h2 style={s.titre}>{matiereObj?.nom} — {classeNom}</h2>
-          {isAdmin() && (
-            <button onClick={async () => {
-              const next = !sem1Bloque;
-              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
-              setSem1Bloque(next);
-              if (next) { setEvalSemestre('2'); await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee, '2'); }
-            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
-            </button>
-          )}
-          {peutModifierNotes() && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
+          {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
         </div>
 
         {/* Sous-onglets semestre */}
@@ -1274,7 +1266,7 @@ export default function Notes() {
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                 <td style={s.td}>
                   <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>Saisir</button>
-                  {peutModifierNotes() && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
+                  {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
                   {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
@@ -1313,14 +1305,18 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
+          {isAdmin() && (
+            <button onClick={async () => {
+              const next = !sem1Bloque;
+              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
+              setSem1Bloque(next);
+              if (next) setEvalSemestre('2');
+            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
+            </button>
+          )}
         </div>
         {renderActionsBar('')}
-        <div style={s.subTabsBar}>
-          {[['1','1er semestre'],['2','2e semestre']].map(([v,l]) => (
-            <button key={v} onClick={() => { setEvalSemestre(v); chargerEvaluationsId(classeSelectionnee, null, v); }}
-              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === v ? s.subTabBtnActif : {}) }}>{l}</button>
-          ))}
-        </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
         <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
           <thead>
@@ -1334,7 +1330,7 @@ export default function Notes() {
             {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
               <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
             ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
-              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
+              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}>
