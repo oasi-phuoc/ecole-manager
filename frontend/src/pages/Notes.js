@@ -1174,21 +1174,6 @@ export default function Notes() {
           {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
         </div>
 
-        {/* Sous-onglets semestre */}
-        <div style={s.subTabsBar}>
-          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
-            const disabled = sem.id === '1' && sem1Bloque && !isAdmin();
-            return (
-              <button key={sem.id}
-                disabled={disabled}
-                onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee, sem.id); }}
-                style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
-                {sem.label}
-              </button>
-            );
-          })}
-        </div>
-
         {showForm && (
           <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
             <div style={s.modal}>
@@ -1317,6 +1302,18 @@ export default function Notes() {
           )}
         </div>
         {renderActionsBar('')}
+        <div style={s.subTabsBar}>
+          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
+            const disabled = sem.id === '1' && sem1Bloque && !isAdmin();
+            return (
+              <button key={sem.id} disabled={disabled}
+                onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
+                style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
+                {sem.label}
+              </button>
+            );
+          })}
+        </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
         <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
           <thead>
@@ -1330,7 +1327,7 @@ export default function Notes() {
             {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
               <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
             ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
-              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id).length;
+              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}>
