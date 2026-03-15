@@ -333,7 +333,10 @@ const getClassesResponsables = async (req, res) => {
         u.id as prof_id,
         u.prenom as prof_prenom,
         u.nom as prof_nom,
-        array_agg(DISTINCT m.nom ORDER BY m.nom) FILTER (WHERE m.nom IS NOT NULL) as matieres
+        array_agg(
+          DISTINCT COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
+          ORDER BY COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
+        ) FILTER (WHERE m.nom IS NOT NULL AND (a.type_special IS NULL OR a.type_special = '')) as matieres
       FROM affectations a
       JOIN utilisateurs u ON u.id = a.prof_id
       LEFT JOIN matieres m ON m.id = a.matiere_id
