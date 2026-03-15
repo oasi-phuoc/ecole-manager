@@ -2228,38 +2228,55 @@ export default function TCF() {
     filtres.sort((a, b) => (statOrdre === 'croissant' ? a.totalSessionChoisie - b.totalSessionChoisie : b.totalSessionChoisie - a.totalSessionChoisie));
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={styles.panelTopWhite}>
-          {niveaux.length > 0 && (
-            <div style={{ ...styles.subTabsRow, marginBottom: 8 }}>
-              {niveaux.map(n => (
-                <button key={n} type="button" onClick={() => setStatNiveau(n)}
-                  style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
-              ))}
-            </div>
-          )}
-          <div style={styles.filtersRow}>
-            <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.selectOnglet}>
-              <option value="">- Sélectionner la session -</option>
-              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => setStatMatiere('francais')} style={{ ...styles.toggleBtn, ...(statMatiere === 'francais' ? styles.toggleBtnActif : {}) }}>Français</button>
-              <button onClick={() => setStatMatiere('math')} style={{ ...styles.toggleBtn, ...(statMatiere === 'math' ? styles.toggleBtnActif : {}) }}>Math</button>
-            </div>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => { setStatSens('fort'); setStatSeuil('80'); }} style={{ ...styles.toggleBtn, ...(statSens === 'fort' ? styles.toggleBtnActif : {}) }}>Fort</button>
-              <button onClick={() => { setStatSens('faible'); setStatSeuil('40'); }} style={{ ...styles.toggleBtn, ...(statSens === 'faible' ? styles.toggleBtnActif : {}) }}>Faible</button>
-            </div>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => setStatOrdre('croissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'croissant' ? styles.toggleBtnActif : {}) }}>Croissant</button>
-              <button onClick={() => setStatOrdre('decroissant')} style={{ ...styles.toggleBtn, ...(statOrdre === 'decroissant' ? styles.toggleBtnActif : {}) }}>Décroissant</button>
-            </div>
-            <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)} style={{ ...styles.select, width: 120 }} placeholder="Seuil" />
+      <div>
+        {/* Sous-onglets niveaux */}
+        {niveaux.length > 0 && (
+          <div style={{ display: 'flex', gap: 0 }}>
+            {niveaux.map(n => (
+              <button key={n} type="button" onClick={() => setStatNiveau(n)}
+                style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+            ))}
           </div>
+        )}
+
+        {/* Sous-onglets matière */}
+        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+          {[['francais','Français'],['math','Math']].map(([val,label]) => (
+            <button key={val} onClick={() => setStatMatiere(val)}
+              style={{ ...styles.subTabBtn, ...(statMatiere === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+          ))}
         </div>
+
+        {/* Sous-onglets Fort/Faible */}
+        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+          {[['fort','Fort'],['faible','Faible']].map(([val,label]) => (
+            <button key={val}
+              onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
+              style={{ ...styles.subTabBtn, ...(statSens === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Sous-onglets ordre */}
+        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+          {[['croissant','Croissant'],['decroissant','Décroissant']].map(([val,label]) => (
+            <button key={val} onClick={() => setStatOrdre(val)}
+              style={{ ...styles.subTabBtn, ...(statOrdre === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Dropdown session + seuil — 15px sous les sous-onglets */}
+        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
+            <option value="">- Sélectionner la session -</option>
+            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Points :</span>
+          <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)}
+            style={{ ...styles.select, width: 90 }} placeholder="Seuil" />
+        </div>
+
         {!statSession ? (
-          <div style={styles.empty}>Sélectionnez une session pour trier.</div>
+          <div style={styles.msgVide}>Sélectionnez une session pour afficher les statistiques.</div>
         ) : (
           <div style={styles.tableWrap}>
             <table style={styles.table}>
