@@ -20,7 +20,7 @@ const MODULES_ACCES_PROFS = [
 
 export default function Parametres() {
   const [onglet, setOnglet] = useState('profil');
-  const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '' });
+  const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '', telephone: '', adresse: '', npa: '', lieu: '', sexe: '', date_naissance: '', avs: '', taux_activite: '', periodes_semaine: '', type_contrat: '', type_permis: '', niveau_prefere: '', lieu_travail_prefere: '', remarque_lieu_travail: '', priorite_pref: 'niveau', specialite: '' });
   const [ecole, setEcole] = useState({
     nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
@@ -378,20 +378,155 @@ export default function Parametres() {
               {msgProfil === 'success' && <div style={styles.msgSuccess}>✅ Profil mis à jour !</div>}
               {msgProfil === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
               <form onSubmit={handleSauverProfil}>
-                <div style={styles.formGrid}>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Nom *</label>
-                    <input style={styles.input} type="text" required value={profil.nom} onChange={e => setProfil({ ...profil, nom: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Prénom *</label>
-                    <input style={styles.input} type="text" required value={profil.prenom} onChange={e => setProfil({ ...profil, prenom: e.target.value })} />
-                  </div>
-                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+
+                {/* Informations de connexion */}
+                <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
+                <div style={{...styles.formGrid, marginBottom:20}}>
+                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
                     <label style={styles.label}>Email *</label>
                     <input style={styles.input} type="email" required value={profil.email} onChange={e => setProfil({ ...profil, email: e.target.value })} />
                   </div>
                 </div>
+
+                {/* Informations personnelles */}
+                <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
+                <div style={{...styles.formGrid, marginBottom:20}}>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>NOM *</label>
+                    <input style={styles.input} type="text" required value={profil.nom} onChange={e => setProfil({ ...profil, nom: e.target.value.toUpperCase() })} placeholder="DUPONT" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Prénom *</label>
+                    <input style={styles.input} type="text" required value={profil.prenom} onChange={e => setProfil({ ...profil, prenom: e.target.value })} placeholder="Jean" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Date de naissance</label>
+                    <input style={styles.input} type="date" value={profil.date_naissance ? profil.date_naissance.slice(0,10) : ''} onChange={e => setProfil({ ...profil, date_naissance: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Sexe</label>
+                    <select style={styles.input} value={profil.sexe||''} onChange={e => setProfil({ ...profil, sexe: e.target.value })}>
+                      <option value="">--</option>
+                      <option value="M">Masculin</option>
+                      <option value="F">Féminin</option>
+                      <option value="Autre">Autre</option>
+                    </select>
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Téléphone</label>
+                    <input style={styles.input} type="text" value={profil.telephone||''} onChange={e => setProfil({ ...profil, telephone: e.target.value })} placeholder="079 123 45 67" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>N° AVS</label>
+                    <input style={styles.input} type="text" value={profil.avs||''} onChange={e => setProfil({ ...profil, avs: e.target.value })} placeholder="756.XXXX.XXXX.XX" />
+                  </div>
+                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
+                    <label style={styles.label}>Adresse</label>
+                    <input style={styles.input} type="text" value={profil.adresse||''} onChange={e => setProfil({ ...profil, adresse: e.target.value })} placeholder="Rue de la Paix 10" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>NPA</label>
+                    <input style={styles.input} type="text" value={profil.npa||''} onChange={e => setProfil({ ...profil, npa: e.target.value })} placeholder="1950" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Lieu</label>
+                    <input style={styles.input} type="text" value={profil.lieu||''} onChange={e => setProfil({ ...profil, lieu: e.target.value })} placeholder="Sion" />
+                  </div>
+                </div>
+
+                {/* Désidératas — uniquement pour les profs */}
+                {profil.role === 'prof' && (<>
+                  <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🧭 Désidératas</div>
+                  <div style={{marginBottom:20,display:'flex',flexDirection:'column',gap:12}}>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Niveaux préférés</label>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                        {['CSC','CFR','EPL'].map(n => {
+                          const niveaux = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
+                          const selected = niveaux.includes(n);
+                          return (
+                            <button key={n} type="button"
+                              onClick={() => {
+                                const curr = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
+                                const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
+                                setProfil({...profil, niveau_prefere: newNiv.join(',')});
+                              }}
+                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                              {n}
+                            </button>
+                          );
+                        })}
+                        <button type="button"
+                          onClick={() => setProfil({...profil, niveau_prefere:''})}
+                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.niveau_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.niveau_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                          Aucune préférence
+                        </button>
+                      </div>
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Remarques niveaux / branches</label>
+                      <input style={styles.input} type="text" value={profil.specialite||''} onChange={e => setProfil({...profil, specialite: e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Lieux de travail préférés</label>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                        {['BOTZA','SYNECOM','CREUSET'].map(l => {
+                          const lieux = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                          const selected = lieux.includes(l);
+                          return (
+                            <button key={l} type="button"
+                              onClick={() => {
+                                const curr = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                                const newL = selected ? curr.filter(x=>x!==l) : [...curr, l];
+                                setProfil({...profil, lieu_travail_prefere: newL.join(',')});
+                              }}
+                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                              {l}
+                            </button>
+                          );
+                        })}
+                        <button type="button"
+                          onClick={() => setProfil({...profil, lieu_travail_prefere:''})}
+                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.lieu_travail_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.lieu_travail_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                          Aucune préférence
+                        </button>
+                      </div>
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Remarques lieu de travail</label>
+                      <input style={styles.input} type="text" value={profil.remarque_lieu_travail||''} onChange={e => setProfil({...profil, remarque_lieu_travail: e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Priorité</label>
+                      <div style={{display:'flex',gap:8,marginTop:4}}>
+                        {[['niveau','Niveau'],['lieu','Lieu de travail']].map(([val,label]) => (
+                          <button key={val} type="button"
+                            onClick={() => setProfil({...profil, priorite_pref: val})}
+                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(profil.priorite_pref===val?'#6366f1':'#e2e8f0'),background:profil.priorite_pref===val?'#e0e7ff':'white',fontWeight:700,cursor:'pointer',fontSize:13,color:profil.priorite_pref===val?'#3730a3':'#64748b'}}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informations professionnelles (lecture seule) */}
+                  <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
+                  <div style={{...styles.formGrid, marginBottom:20}}>
+                    {[
+                      {label:"Taux d'activité (%)", value: profil.taux_activite ?? '—'},
+                      {label:"Périodes / semaine", value: profil.periodes_semaine ?? '—'},
+                      {label:"Type de contrat", value: profil.type_contrat || '—'},
+                      {label:"Type de permis", value: profil.type_permis || '—'},
+                    ].map(({label,value}) => (
+                      <div key={label} style={styles.formChamp}>
+                        <label style={styles.label}>{label}</label>
+                        <div style={{...styles.input, background:'#f1f5f9', color:'#64748b', cursor:'not-allowed', display:'flex', alignItems:'center', height:38}}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>)}
+
                 <button type="submit" style={styles.btnSauver}>💾 Sauvegarder</button>
               </form>
             </div>

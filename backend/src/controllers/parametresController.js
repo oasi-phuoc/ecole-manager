@@ -5,15 +5,21 @@ const { encryptText } = require('../utils/crypto');
 
 const getProfil = async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, nom, prenom, email, role, permissions FROM utilisateurs WHERE id=$1', [req.user.id]);
+    const result = await pool.query(
+      'SELECT id, nom, prenom, email, role, permissions, telephone, adresse, npa, lieu, sexe, date_naissance, avs, taux_activite, periodes_semaine, type_contrat, type_permis, niveau_prefere, branches_specialites, lieu_travail_prefere, remarque_lieu_travail, priorite_pref, specialite FROM utilisateurs WHERE id=$1',
+      [req.user.id]
+    );
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const modifierProfil = async (req, res) => {
-  const { nom, prenom, email } = req.body;
+  const { nom, prenom, email, telephone, adresse, npa, lieu, sexe, date_naissance, avs, niveau_prefere, lieu_travail_prefere, remarque_lieu_travail, priorite_pref, specialite } = req.body;
   try {
-    await pool.query('UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3 WHERE id=$4', [nom, prenom, email, req.user.id]);
+    await pool.query(
+      'UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, telephone=$4, adresse=$5, npa=$6, lieu=$7, sexe=$8, date_naissance=$9, avs=$10, niveau_prefere=$11, lieu_travail_prefere=$12, remarque_lieu_travail=$13, priorite_pref=$14, specialite=$15 WHERE id=$16',
+      [nom, prenom, email, telephone||null, adresse||null, npa||null, lieu||null, sexe||null, date_naissance||null, avs||null, niveau_prefere||null, lieu_travail_prefere||null, remarque_lieu_travail||null, priorite_pref||null, specialite||null, req.user.id]
+    );
     res.json({ message: 'Profil mis a jour' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
