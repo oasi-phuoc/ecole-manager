@@ -86,6 +86,10 @@ export default function Notes() {
   const [bulletinOnglet, setBulletinOnglet] = useState('criteres');
   const [bulletinNiveau, setBulletinNiveau] = useState('');
   const [bulletinSemestre, setBulletinSemestre] = useState('1');
+  const [bulletinsSem1, setBulletinsSem1] = useState([]);
+  const [bulletinsSem2, setBulletinsSem2] = useState([]);
+  const [criteresSem1, setCriteresSem1] = useState([]);
+  const [criteresSem2, setCriteresSem2] = useState([]);
   const [remarqueModal, setRemarqueModal] = useState(null);
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
@@ -173,14 +177,22 @@ export default function Notes() {
   const chargerBulletinId = async (classeId, sem) => {
     try {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
-      const [bulletinRes, statsRes, criteresRes] = await Promise.all([
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers }),
+      const [bulletinRes, statsRes, criteresRes, bS1Res, bS2Res, cr1Res, cr2Res] = await Promise.all([
+        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
         axios.get(API + '/presences/statistiques?classe_id=' + classeId, { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
+        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
+        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
+        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
+        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
       ]);
       setBulletins(bulletinRes.data);
       setBulletinStatsPresences(statsRes.data || []);
       setBulletinCriteres(criteresRes.data || []);
+      setBulletinsSem1(bS1Res.data || []);
+      setBulletinsSem2(bS2Res.data || []);
+      setCriteresSem1(cr1Res.data || []);
+      setCriteresSem2(cr2Res.data || []);
     } catch (err) { console.error(err); }
   };
 
@@ -1081,127 +1093,171 @@ export default function Notes() {
           </>
         )}
 
-        {bulletinOnglet === 'notes' && bulletinsAImprimer.length > 0 && (
+        {bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
           <div ref={printRef}>
-            {bulletinsAImprimer.map((bulletin, bi) => {
-              const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletin.eleve.id));
-              const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(bulletin.eleve.id)) || {};
-              const parMatiere = Object.entries(bulletin.parMatiere || {});
-              const principales = parMatiere.filter(([, d]) => Number(d.coefficient || 1) >= 2);
-              const secondaires = parMatiere.filter(([, d]) => Number(d.coefficient || 1) < 2);
-              const sourcePrincipales = principales.length ? principales : parMatiere;
-              const sourceSecondaires = secondaires.length ? secondaires : [];
-              const moyPrin = sourcePrincipales.length
-                ? sourcePrincipales.reduce((acc, [, d]) => acc + (parseFloat(d.moyenne) || 0), 0) / sourcePrincipales.length
-                : null;
-              const moySec = sourceSecondaires.length
-                ? sourceSecondaires.reduce((acc, [, d]) => acc + (parseFloat(d.moyenne) || 0), 0) / sourceSecondaires.length
-                : null;
-              return (
-                <div key={bulletin.eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < bulletinsAImprimer.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                    <div style={{ background: '#fff', borderRadius: 6, padding: 4, flexShrink: 0 }}>
-                      <img
-                        src="/logo-etat-du-valais.png"
-                        alt="Logo État du Valais"
-                        style={{ width: 90, height: 'auto', objectFit: 'contain', display: 'block' }}
-                      />
+            {(() => {
+              const seen = new Set();
+              const allEleves = [];
+              for (const b of [...bulletinsSem1, ...bulletinsSem2]) {
+                if (!seen.has(b.eleve.id)) { seen.add(b.eleve.id); allEleves.push(b.eleve); }
+              }
+              const elevesToShow = bulletinMode === 'tous' ? allEleves : allEleves.filter(el => el.id === parseInt(eleveSelectionne));
+              const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', border: `2px solid ${v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444'}` }} /> : <span style={{ color: '#aaa' }}>—</span>;
+              const moyBranches = (names, pm) => { const w = names.filter(n => pm[n]?.moyenne != null); return w.length ? w.reduce((a, n) => a + parseFloat(pm[n].moyenne || 0), 0) / w.length : null; };
+              return elevesToShow.map((eleve, bi) => {
+                const bdS1 = bulletinsSem1.find(b => b.eleve.id === eleve.id);
+                const bdS2 = bulletinsSem2.find(b => b.eleve.id === eleve.id);
+                const cr1 = criteresSem1.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
+                const cr2 = criteresSem2.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
+                const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(eleve.id));
+                const pm1 = bdS1?.parMatiere || {};
+                const pm2 = bdS2?.parMatiere || {};
+                const allNames = [...new Set([...Object.keys(pm1), ...Object.keys(pm2)])].sort();
+                const principales = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) >= 2);
+                const secondaires = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) < 2);
+                const moyP1 = moyBranches(principales, pm1); const moyP2 = moyBranches(principales, pm2);
+                const moyS1 = moyBranches(secondaires, pm1); const moyS2 = moyBranches(secondaires, pm2);
+                const allN = [...principales, ...secondaires];
+                const moyG1 = moyBranches(allN, pm1); const moyG2 = moyBranches(allN, pm2);
+                const moyAnn = moyG1 != null && moyG2 != null ? (moyG1 + moyG2) / 2 : null;
+                const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
+                const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
+                const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
+                const thStyle = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
+                const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
+                return (
+                  <div key={eleve.id} style={{ ...s.bulletinPDF, pageBreakAfter: bi < elevesToShow.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
+                    {/* En-tête */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <img src="/logo-etat-du-valais.png" alt="Logo État du Valais" style={{ width: 80, height: 'auto', objectFit: 'contain', display: 'block', backgroundColor: 'white', padding: 2 }} />
+                        <div style={{ fontSize: 11, lineHeight: 1.4, color: '#334155' }}>
+                          <div>Département de la santé, des affaires sociales et de la culture</div>
+                          <div>Service de l'action sociale — Office de l'asile</div>
+                          <div>Centre de formation "Le Botza"</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', fontSize: 13 }}>
+                        <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>BULLETIN DE NOTES</div>
+                        <div>Classe : <b>{classeNom}</b></div>
+                        <div>Date : Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                        <div style={{ marginTop: 4 }}><b>NOM Prénom :</b> {eleve.prenom} {eleve.nom}</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, lineHeight: 1.35 }}>
-                      <div>Département de la santé, des affaires sociales et de la culture</div>
-                      <div>Service de l'action sociale</div>
-                      <div>Office de l'asile</div>
-                      <div>Centre de formation "Le Botza"</div>
-                      <div>Zone Industrielle 4, 1963 Vétroz</div>
-                      <div>Tél. 027 606 18 60</div>
-                    </div>
-                  </div>
-                  <div style={s.bulletinPDFHeader}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 20 }}>BULLETIN DE NOTES</div>
-                      <div style={{ fontSize: 13, color: '#334155', marginTop: 5 }}>Classe : <b>{classeNom}</b></div>
-                      <div style={{ fontSize: 13, color: '#334155' }}>Date : Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
-                    </div>
-                    <div style={{ textAlign: 'right', fontSize: 13 }}>
-                      <div><b>NOM Prénom :</b> {bulletin.eleve.prenom} {bulletin.eleve.nom}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <table style={s.tbl}>
-                        <thead>
-                          <tr style={s.theadRow}>
+                    {/* 3 colonnes */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                      {/* Branches principales */}
+                      <div>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}>
                             <th style={s.th}>Branches principales</th>
-                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
-                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sourcePrincipales.map(([nom, d]) => (
-                            <tr key={'p-' + nom} style={s.tr}>
-                              <td style={s.td}>{nom}</td>
-                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
-                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                            <th style={thStyle}>S1</th><th style={thStyle}>S2</th>
+                          </tr></thead>
+                          <tbody>
+                            {principales.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {principales.map(nom => (
+                              <tr key={nom} style={s.tr}>
+                                <td style={s.td}>{nom}</td>
+                                <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                              </tr>
+                            ))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                              <td style={s.td}>Moyenne</td>
+                              <td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td>
+                              <td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div>
-                      <table style={s.tbl}>
-                        <thead>
-                          <tr style={s.theadRow}>
-                            <th style={s.th}>Branche secondaires</th>
-                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 1</th>
-                            <th style={{ ...s.th, textAlign: 'center' }}>Sem. 2</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(secondaires.length ? secondaires : []).map(([nom, d]) => (
-                            <tr key={'s-' + nom} style={s.tr}>
-                              <td style={s.td}>{nom}</td>
-                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
-                              <td style={{ ...s.td, textAlign: 'center' }}>{fmtNote(d.moyenne)}</td>
+                          </tbody>
+                        </table>
+                      </div>
+                      {/* Branches secondaires */}
+                      <div>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}>
+                            <th style={s.th}>Branches secondaires</th>
+                            <th style={thStyle}>S1</th><th style={thStyle}>S2</th>
+                          </tr></thead>
+                          <tbody>
+                            {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {secondaires.map(nom => (
+                              <tr key={nom} style={s.tr}>
+                                <td style={s.td}>{nom}</td>
+                                <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                              </tr>
+                            ))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                              <td style={s.td}>Moyenne</td>
+                              <td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td>
+                              <td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td>
                             </tr>
-                          ))}
-                          {secondaires.length === 0 && <tr><td colSpan="3" style={s.vide}>—</td></tr>}
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+                      </div>
+                      {/* Critères de comportement */}
+                      <div>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}>
+                            <th style={s.th}>Comportement</th>
+                            <th style={{ ...thStyle, width: 32 }}>S1</th>
+                            <th style={{ ...thStyle, width: 32 }}>S2</th>
+                          </tr></thead>
+                          <tbody>
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => {
+                              const key = 'c' + (idx + 1);
+                              return (
+                                <tr key={idx} style={s.tr}>
+                                  <td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td>
+                                  <td style={tdC}>{dot(cr1[key])}</td>
+                                  <td style={tdC}>{dot(cr2[key])}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    {/* Moyennes globales */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
+                      <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne 1er semestre</div>
+                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</div>
+                      </div>
+                      <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne 2e semestre</div>
+                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</div>
+                      </div>
+                      <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne annuelle</div>
+                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</div>
+                      </div>
+                    </div>
+                    {/* Absences + Observations */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                      <div style={{ ...s.card, padding: 10, fontSize: 13 }}>
+                        <span>Absences excusées : <b>{st?.excuses ?? 0}</b></span>
+                        <span style={{ marginLeft: 16 }}>Non excusées : <b>{st?.absents ?? 0}</b></span>
+                      </div>
+                      <div style={{ ...s.card, padding: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 2 }}>Observations</div>
+                        <div style={{ fontSize: 12 }}>{observations}</div>
+                      </div>
+                    </div>
+                    {/* Signatures */}
+                    <div style={s.signatures}>
+                      <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(classeObj?.prof_sexe)} titulaire</div></div>
+                      <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableNiveauSexe)} responsable de niveau{responsableNiveauNom ? ` (${responsableNiveauNom})` : ''}</div></div>
+                      <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableCoursSexe)} responsable des cours{responsableCoursNom ? ` (${responsableCoursNom})` : ''}</div></div>
+                    </div>
+                    {/* Pied de page */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 8, fontSize: 11, color: '#64748b' }}>
+                      <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                      <span>Zone Industrielle 4, 1963 Vétroz — Tél. 027 606 18 60</span>
                     </div>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 12 }}>
-                    <div style={{ ...s.card, padding: 12 }}>
-                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne branches principales : <b>{fmtNote(moyPrin)}</b></div>
-                    </div>
-                    <div style={{ ...s.card, padding: 12 }}>
-                      <div style={{ fontSize: 13, marginBottom: 5 }}>Moyenne branches secondaires : <b>{fmtNote(moySec)}</b></div>
-                    </div>
-                  </div>
-
-                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>Moyenne annuelle : <b>{fmtNote(bulletin.moyenneGenerale)}</b></div>
-                  </div>
-
-                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
-                    <div style={{ fontSize: 13, marginBottom: 5 }}>Absences excusées : <b>{st?.excuses ?? 0}</b></div>
-                    <div style={{ fontSize: 13 }}>Absences non excusées : <b>{st?.absents ?? 0}</b></div>
-                  </div>
-
-                  <div style={{ ...s.card, padding: 12, marginTop: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Observations</div>
-                    <div style={{ fontSize: 13 }}>{cr.remarques && String(cr.remarques).trim() ? cr.remarques : '—'}</div>
-                  </div>
-
-                  <div style={s.signatures}>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(classeObj?.prof_sexe)} titulaire</div></div>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableNiveauSexe)} responsable de niveau{responsableNiveauNom ? ` (${responsableNiveauNom})` : ''}</div></div>
-                    <div style={s.signatureBox}><div style={s.signatureLine}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableCoursSexe)} responsable des cours{responsableCoursNom ? ` (${responsableCoursNom})` : ''}</div></div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         )}
       </div>
