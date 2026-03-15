@@ -2,9 +2,10 @@ const pool = require('../config/database');
 
 const getEvaluations = async (req, res) => {
   try {
-    const { classe_id, matiere_id } = req.query;
+    await pool.query('ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS semestre INT DEFAULT 1');
+    const { classe_id, matiere_id, semestre } = req.query;
     let query = `
-      SELECT ev.id, ev.nom, ev.date, ev.type, ev.coefficient, ev.sur, ev.points_max, ev.publie, ev.created_at,
+      SELECT ev.id, ev.nom, ev.date, ev.type, ev.coefficient, ev.sur, ev.points_max, ev.publie, ev.created_at, ev.semestre,
         m.nom as matiere, m.id as matiere_id,
         c.nom as classe,
         u.nom as prof_nom, u.prenom as prof_prenom,
@@ -21,7 +22,8 @@ const getEvaluations = async (req, res) => {
       WHERE ev.classe_id = $1
     `;
     const params = [classe_id];
-    if (matiere_id) { query += ` AND ev.matiere_id = $2`; params.push(matiere_id); }
+    if (matiere_id) { query += ` AND ev.matiere_id = $${params.length + 1}`; params.push(matiere_id); }
+    if (semestre) { query += ` AND ev.semestre = $${params.length + 1}`; params.push(parseInt(semestre)); }
     query += ' GROUP BY ev.id, m.nom, m.id, c.nom, u.nom, u.prenom ORDER BY ev.date DESC';
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -31,11 +33,11 @@ const getEvaluations = async (req, res) => {
 };
 
 const creerEvaluation = async (req, res) => {
-  const { nom, classe_id, matiere_id, date, type, coefficient, sur, points_max } = req.body;
+  const { nom, classe_id, matiere_id, date, type, coefficient, sur, points_max, semestre } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO evaluations (nom, classe_id, matiere_id, prof_id, date, type, coefficient, sur, points_max) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
-      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max != null && points_max !== '' ? points_max : null]
+      'INSERT INTO evaluations (nom, classe_id, matiere_id, prof_id, date, type, coefficient, sur, points_max, semestre) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
+      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max != null && points_max !== '' ? points_max : null, semestre || 1]
     );
     res.status(201).json({ message: 'Evaluation creee', evaluation: result.rows[0] });
   } catch (err) {
@@ -300,4 +302,28 @@ const getSuiviClasses = async (req, res) => {
   }
 };
 
-module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres, getSuiviClasses };
+const getNotesSemConfig = async (req, res) => {
+  try {
+    await pool.query('CREATE TABLE IF NOT EXISTS app_settings (cle TEXT PRIMARY KEY, valeur TEXT)');
+    const result = await pool.query("SELECT valeur FROM app_settings WHERE cle = 'sem1_bloque' LIMIT 1");
+    res.json({ sem1_bloque: result.rows.length > 0 && result.rows[0].valeur === 'true' });
+  } catch (err) {
+    res.json({ sem1_bloque: false });
+  }
+};
+
+const putNotesSemConfig = async (req, res) => {
+  const { sem1_bloque } = req.body;
+  try {
+    await pool.query('CREATE TABLE IF NOT EXISTS app_settings (cle TEXT PRIMARY KEY, valeur TEXT)');
+    await pool.query(
+      "INSERT INTO app_settings (cle, valeur) VALUES ('sem1_bloque', $1) ON CONFLICT (cle) DO UPDATE SET valeur = EXCLUDED.valeur",
+      [sem1_bloque ? 'true' : 'false']
+    );
+    res.json({ message: 'OK' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = { getEvaluations, creerEvaluation, modifierEvaluation, supprimerEvaluation, getNotesEvaluation, sauvegarderNotes, getBulletin, getRapportClasse, getBulletinCriteres, putBulletinCriteres, getSuiviClasses, getNotesSemConfig, putNotesSemConfig };

@@ -4,6 +4,8 @@ const c = require('../controllers/notesController');
 const { verifierToken } = require('../middleware/auth');
 
 router.use(verifierToken);
+router.get('/semestre-config', c.getNotesSemConfig);
+router.put('/semestre-config', c.putNotesSemConfig);
 router.get('/bulletin', c.getBulletin);
 router.get('/bulletin-criteres', c.getBulletinCriteres);
 router.put('/bulletin-criteres/:eleve_id', c.putBulletinCriteres);

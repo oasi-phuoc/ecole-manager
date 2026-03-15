@@ -87,6 +87,9 @@ export default function Notes() {
   const [bulletinNiveau, setBulletinNiveau] = useState('');
   const [bulletinSemestre, setBulletinSemestre] = useState('1');
   const [remarqueModal, setRemarqueModal] = useState(null);
+  const [evalSemestre, setEvalSemestre] = useState('1');
+  const [sem1Bloque, setSem1Bloque] = useState(false);
+  const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
@@ -97,7 +100,14 @@ export default function Notes() {
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
 
-  useEffect(() => { chargerClasses(); chargerMatieres(); chargerParametresEcole(); }, []);
+  useEffect(() => {
+    chargerClasses(); chargerMatieres(); chargerParametresEcole();
+    axios.get(API + '/notes/semestre-config', { headers }).then(r => {
+      const bloque = r.data?.sem1_bloque === true;
+      setSem1Bloque(bloque);
+      if (bloque) { setEvalSemestre('2'); }
+    }).catch(() => {});
+  }, []);
 
   const chargerClasses = async () => {
     try {
@@ -120,10 +130,12 @@ export default function Notes() {
     } catch (err) { setEcoleParams({}); }
   };
 
-  const chargerEvaluationsId = async (classeId, matiereId) => {
+  const chargerEvaluationsId = async (classeId, matiereId, sem) => {
     try {
       let url = API + '/notes?classe_id=' + classeId;
       if (matiereId) url += '&matiere_id=' + matiereId;
+      const s = sem !== undefined ? sem : evalSemestre;
+      if (s) url += '&semestre=' + s;
       const res = await axios.get(url, { headers });
       setEvaluations(res.data);
       return res.data;
@@ -216,7 +228,8 @@ export default function Notes() {
         ...form,
         points_max: form.sans_points ? null : (form.points_max !== '' && form.points_max != null ? form.points_max : null),
         classe_id: classeSelectionnee,
-        prof_id: currentUser.id || null
+        prof_id: currentUser.id || null,
+        semestre: parseInt(evalSemestre) || 1
       };
       if (form.editId) {
         await axios.put(API + '/notes/' + form.editId, payload, { headers });
@@ -459,6 +472,13 @@ export default function Notes() {
             <button key={val} onClick={() => setVueGeneraleMode(val)}
               style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
               {label}
+            </button>
+          ))}
+          <div style={{ width: 16 }} />
+          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
+            <button key={sem.id} onClick={() => setGeneraleSemestre(sem.id)}
+              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
+              {sem.label}
             </button>
           ))}
         </div>
@@ -835,12 +855,19 @@ export default function Notes() {
         </div>
         {renderActionsBar('no-print', true)}
 
-        {/* Sous-onglets Bulletin */}
+        {/* Sous-onglets Bulletin — tous au même niveau */}
         <div className="no-print" style={s.subTabsBar}>
-          {[{ id: 'criteres', label: 'Critères de comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
+          {[{ id: 'criteres', label: 'Comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
             <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
-              style={{...s.subTabBtn, width:200, minWidth:200, ...(bulletinOnglet===t.id?s.subTabBtnActif:{})}}>
+              style={{...s.subTabBtn, width:180, minWidth:180, ...(bulletinOnglet===t.id?s.subTabBtnActif:{})}}>
               {t.label}
+            </button>
+          ))}
+          <div style={{ width: 16 }} />
+          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
+            <button key={sem.id} onClick={() => setBulletinSemestre(sem.id)}
+              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
+              {sem.label}
             </button>
           ))}
         </div>
@@ -852,17 +879,6 @@ export default function Notes() {
               <button key={m.id} onClick={() => setBulletinMode(m.id)}
                 style={{...s.subTabBtn, ...(bulletinMode===m.id?s.subTabBtnActif:{})}}>
                 {m.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* Sous-onglets 1er / 2e semestre (Critères uniquement) */}
-        {bulletinOnglet === 'criteres' && (
-          <div className="no-print" style={s.subTabsBar}>
-            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-              <button key={sem.id} onClick={() => setBulletinSemestre(sem.id)}
-                style={{...s.subTabBtn, width:150, minWidth:150, ...(bulletinSemestre===sem.id?s.subTabBtnActif:{})}}>
-                {sem.label}
               </button>
             ))}
           </div>
@@ -937,8 +953,8 @@ export default function Notes() {
                     const totalPeriodes = presents + absents + retards + excuses + conges;
                     const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
                     const allFilled = [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
-                    const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {background:'#fee2e2',color:'#b91c1c'} : tauxBN < 80 ? {background:'#ffedd5',color:'#c2410c'} : {background:'#dcfce7',color:'#166534'};
-                    const retardsBg = retards > 6 ? {background:'#fee2e2',color:'#b91c1c'} : retards > 3 ? {background:'#ffedd5',color:'#c2410c'} : {};
+                    const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {color:'#b91c1c'} : tauxBN < 80 ? {color:'#c2410c'} : {color:'#166534'};
+                    const retardsBg = retards > 6 ? {color:'#b91c1c'} : retards > 3 ? {color:'#c2410c'} : {};
                     return (
                       <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
                         <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
@@ -1133,7 +1149,32 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={async () => { await chargerEvaluationsId(classeSelectionnee, null); setVue('matieres'); }}>← Retour</button>
           <h2 style={s.titre}>{matiereObj?.nom} — {classeNom}</h2>
+          {isAdmin() && (
+            <button onClick={async () => {
+              const next = !sem1Bloque;
+              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
+              setSem1Bloque(next);
+              if (next) { setEvalSemestre('2'); await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee, '2'); }
+            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
+            </button>
+          )}
           {peutModifierNotes() && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
+        </div>
+
+        {/* Sous-onglets semestre */}
+        <div style={s.subTabsBar}>
+          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
+            const disabled = sem.id === '1' && sem1Bloque && !isAdmin();
+            return (
+              <button key={sem.id}
+                disabled={disabled}
+                onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee, sem.id); }}
+                style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
+                {sem.label}
+              </button>
+            );
+          })}
         </div>
 
         {showForm && (
@@ -1294,7 +1335,7 @@ export default function Notes() {
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.titre}>Notes & Bulletins</h2>
+        <h2 style={s.titre}>Saisie des notes</h2>
       </div>
       {renderActionsBar()}
       {!classeSelectionnee && (
