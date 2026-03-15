@@ -337,7 +337,7 @@ const getClassesResponsables = async (req, res) => {
         array_agg(
           DISTINCT COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
           ORDER BY COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
-        ) FILTER (WHERE m.nom IS NOT NULL AND (a.type_special IS NULL OR a.type_special = '')) as matieres
+        ) FILTER (WHERE m.nom IS NOT NULL AND (a.type_special IS NULL OR a.type_special = '') AND m.suivi_notes != false) as matieres
       FROM affectations a
       JOIN utilisateurs u ON u.id = a.prof_id
       JOIN classes c ON c.id = a.classe_id
