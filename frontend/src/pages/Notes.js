@@ -359,7 +359,14 @@ export default function Notes() {
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
               if (k === 'bulletin') setBulletinOnglet('notes');
-              if (classeSelectionnee) ouvrirVueDepuisSelectionClasse(k);
+              if (classeSelectionnee) {
+                ouvrirVueDepuisSelectionClasse(k);
+              } else {
+                // Navigation sans classe sélectionnée — les vues ont leur propre dropdown
+                if (k === 'evaluations') setVue('classes');
+                else if (k === 'generale') setVue('generale');
+                else if (k === 'comportements' || k === 'bulletin') setVue('bulletin');
+              }
             }}>
             {l}
           </button>
