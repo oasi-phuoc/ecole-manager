@@ -661,25 +661,15 @@ export default function Notes() {
             {modeMatieres.map(matiere => {
               const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
               return (
-                <div key={matiere.matiere_id} style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#e0e7ff', padding: '10px 16px', borderRadius: 8, marginBottom: 6 }}>
-                    <b style={{ fontSize: 15 }}>{matiere.matiere_nom}</b>
+                <div key={matiere.matiere_id} style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #6366f1', paddingBottom: 4, marginBottom: 6 }}>
+                    <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
                     {moy !== null
-                      ? <span style={{ fontWeight: 700, color: moy >= 4 ? '#2e7d32' : '#ef4444', fontSize: 15 }}>Moyenne : {fmtNote(moy)}</span>
+                      ? <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>Moyenne : {fmtNote(moy)}</span>
                       : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
                   </div>
                   {matiere.evaluations.length > 0 ? (
-                    <table style={{ ...s.tbl, fontSize: 13 }}>
-                      <thead>
-                        <tr style={s.theadRow}>
-                          <th style={s.th}>Évaluation</th>
-                          <th style={s.th}>Professeur</th>
-                          <th style={s.th}>Date</th>
-                          <th style={s.th}>Type</th>
-                          <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
-                          <th style={{ ...s.th, textAlign: 'center' }}>Note</th>
-                        </tr>
-                      </thead>
+                    <table style={{ ...s.tbl, fontSize: 13, borderCollapse: 'collapse' }}>
                       <tbody>
                         {matiere.evaluations.map((ev, j) => {
                           const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
@@ -687,12 +677,12 @@ export default function Notes() {
                           const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
                           return (
                             <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
-                              <td style={s.td}>{ev.nom}</td>
-                              <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
-                              <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                              <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
-                              <td style={{ ...s.td, textAlign: 'center' }}>{ev.coefficient}</td>
-                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: valeur !== null ? (parseFloat(valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
+                              <td style={{ ...s.td, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                              <td style={{ ...s.td, fontWeight: 600, color: '#1e293b' }}>{ev.nom}</td>
+                              <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
+                              <td style={{ ...s.td, color: '#64748b' }}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
+                              <td style={{ ...s.td, textAlign: 'center', color: '#64748b' }}>Coef. {ev.coefficient}</td>
+                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>
                                 {statut || (valeur !== null ? fmtNote(valeur) : '—')}
                               </td>
                             </tr>
@@ -700,7 +690,7 @@ export default function Notes() {
                         })}
                       </tbody>
                     </table>
-                  ) : <div style={{ color: '#aaa', fontSize: 13, padding: '6px 0' }}>Aucune évaluation</div>}
+                  ) : <div style={{ color: '#aaa', fontSize: 13, padding: '4px 0' }}>Aucune évaluation</div>}
                 </div>
               );
             })}
