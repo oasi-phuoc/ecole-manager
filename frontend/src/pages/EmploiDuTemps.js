@@ -1596,8 +1596,8 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'plannings' && (
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>🖨️ Imprimer sélection</button>
-            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>🖨️ Tout imprimer</button>
+            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer sélection</button>
+            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
           </div>
         )}
         {onglet === 'affectations' && (
