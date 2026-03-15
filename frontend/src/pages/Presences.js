@@ -76,6 +76,12 @@ export default function Presences() {
     if (classeSelectionnee) chargerStats();
   }, [classeSelectionnee, statsDateDebut, statsDateFin]);
 
+  useEffect(() => {
+    if (!classeSelectionnee) return;
+    if (onglet === 'apercu') chargerApercuMois();
+    if (onglet === 'stats') chargerStats();
+  }, [classeSelectionnee, onglet]);
+
   const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const STATUT_OASI = { 'P':'01 Présent', 'R':'02 Retard', 'A':'03 Absent', 'E':'04 Excusé', 'C':'05 Congé' };
 
