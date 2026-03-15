@@ -160,7 +160,7 @@ const sauvegarderNotes = async (req, res) => {
 
 const getBulletin = async (req, res) => {
   try {
-    const { classe_id } = req.query;
+    const { classe_id, semestre } = req.query;
     const eleves = await pool.query(`
       SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom, e.date_debut_cours
       FROM eleves e
@@ -174,12 +174,15 @@ const getBulletin = async (req, res) => {
     const bulletins = await Promise.all(eleves.rows.map(async (eleve) => {
       const parMatiere = {};
       for (const matiere of matieres.rows) {
+        const params = [eleve.id, matiere.id];
+        let semestreFilter = '';
+        if (semestre) { params.push(parseInt(semestre)); semestreFilter = ` AND ev.semestre = $${params.length}`; }
         const notes = await pool.query(`
           SELECT n.valeur, n.absent, n.dispense, ev.coefficient
           FROM notes n
           JOIN evaluations ev ON n.evaluation_id = ev.id
-          WHERE n.eleve_id = $1 AND ev.matiere_id = $2 AND n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL
-        `, [eleve.id, matiere.id]);
+          WHERE n.eleve_id = $1 AND ev.matiere_id = $2 AND n.absent = false AND n.dispense = false AND n.valeur IS NOT NULL${semestreFilter}
+        `, params);
 
         if (notes.rows.length > 0) {
           const moyenne = notes.rows.reduce((acc, n) => acc + parseFloat(n.valeur), 0) / notes.rows.length;

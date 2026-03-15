@@ -170,10 +170,11 @@ export default function Notes() {
     }
   };
 
-  const chargerBulletinId = async (classeId) => {
+  const chargerBulletinId = async (classeId, sem) => {
     try {
+      const semVal = sem !== undefined ? sem : bulletinSemestre;
       const [bulletinRes, statsRes, criteresRes] = await Promise.all([
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId, { headers }),
+        axios.get(API + '/notes/bulletin?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers }),
         axios.get(API + '/presences/statistiques?classe_id=' + classeId, { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId, { headers }),
       ]);
@@ -874,7 +875,7 @@ export default function Notes() {
         {/* Sous-onglets semestre (+ Tous/Par élève pour Bulletin de notes) */}
         <div className="no-print" style={s.subTabsBar}>
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-            <button key={sem.id} onClick={() => setBulletinSemestre(sem.id)}
+            <button key={sem.id} onClick={() => { setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
               style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
