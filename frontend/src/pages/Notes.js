@@ -84,6 +84,7 @@ export default function Notes() {
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [bulletinMode, setBulletinMode] = useState('tous');
   const [bulletinOnglet, setBulletinOnglet] = useState('criteres');
+  const [bulletinNiveau, setBulletinNiveau] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
@@ -842,42 +843,52 @@ export default function Notes() {
           ))}
         </div>
 
-        {/* Classe dropdown + Tout mettre au vert */}
-        <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-          <select style={s.tabSelect} value={classeSelectionnee}
-            onChange={e => {
-              const next = e.target.value;
-              setClasseSelectionnee(next);
-              if (!next) { setClasseObj(null); return; }
-              ouvrirVueDepuisSelectionClasse('bulletin', next);
-            }}>
-            <option value="">Sélectionner une classe</option>
-            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-          </select>
-          {bulletinOnglet === 'criteres' && (
-            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-              Tout mettre au vert
-            </button>
-          )}
-        </div>
-
-        {/* Pour Bulletin de notes : mode Tous/Par élève */}
+        {/* Sous-onglets Tous / Par élève (Bulletin de notes uniquement) */}
         {bulletinOnglet === 'notes' && (
-          <div className="no-print" style={{marginBottom:15,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          <div className="no-print" style={s.subTabsBar}>
             {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
               <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: bulletinMode === m.id ? '#6366f1' : '#f1f5f9', color: bulletinMode === m.id ? 'white' : '#555' }}>
+                style={{...s.subTabBtn, ...(bulletinMode===m.id?s.subTabBtnActif:{})}}>
                 {m.label}
               </button>
             ))}
-            {bulletinMode === 'eleve' && (
-              <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-                <option value="">-- Choisir un élève --</option>
-                {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
-              </select>
-            )}
           </div>
         )}
+
+        {/* Dropdowns : niveau + classe + élève/tout-vert */}
+        {(() => {
+          const niveaux = [...new Set(classes.map(c => c.niveau).filter(Boolean))].sort();
+          const classesFiltrees = bulletinNiveau ? classes.filter(c => c.niveau === bulletinNiveau) : classes;
+          return (
+            <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+              <select style={{...s.tabSelect, width:220}} value={bulletinNiveau} onChange={e => { setBulletinNiveau(e.target.value); setClasseSelectionnee(''); setClasseObj(null); }}>
+                <option value="">Sélectionner un niveau</option>
+                {niveaux.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <select style={{...s.tabSelect, width:220}} value={classeSelectionnee}
+                onChange={e => {
+                  const next = e.target.value;
+                  setClasseSelectionnee(next);
+                  if (!next) { setClasseObj(null); return; }
+                  ouvrirVueDepuisSelectionClasse('bulletin', next);
+                }}>
+                <option value="">Sélectionner une classe</option>
+                {classesFiltrees.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
+              </select>
+              {bulletinOnglet === 'notes' && bulletinMode === 'eleve' && (
+                <select style={{...s.tabSelect, width:220}} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
+                  <option value="">Choisir un élève</option>
+                  {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{nomSansSuffixe(b.eleve.nom)} {b.eleve.prenom}</option>)}
+                </select>
+              )}
+              {bulletinOnglet === 'criteres' && (
+                <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+                  Tout mettre au vert
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {bulletinOnglet === 'criteres' && (
           <>
@@ -1281,8 +1292,8 @@ const s = {
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   subTabsBar: {display:'flex',gap:0,marginTop:0},
-  subTabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
-  subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 -2px 6px rgba(79,70,229,0.18)'},
+  subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
+  subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
