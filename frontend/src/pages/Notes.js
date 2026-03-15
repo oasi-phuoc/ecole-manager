@@ -904,7 +904,9 @@ export default function Notes() {
                   <tr style={s.theadRow}>
                     <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
                     {BULLETIN_CRITERES_LABELS.map((label, i) => (
-                      <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'justify', textJustify: 'inter-word', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
+                      <th key={i} style={{ ...s.th, width: 36, minWidth: 36, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 130 }} title={label}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700, lineHeight: 1.2, margin: '0 auto' }}>{label}</div>
+                      </th>
                     ))}
                     <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
                     <th style={{ ...s.th, width: 52, textAlign: 'center' }}>Retards</th>
