@@ -989,29 +989,57 @@ export default function Notes() {
             </div>
 
             {/* Modal remarque */}
-            {remarqueModal && (
-              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 }}
-                onClick={() => setRemarqueModal(null)}>
-                <div style={{ width: 'min(480px, 92vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 20 }}
-                  onClick={e => e.stopPropagation()}>
-                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: '#1e293b' }}>
-                    Remarque — {remarqueModal.nom} {remarqueModal.prenom}
-                  </div>
-                  <textarea
-                    value={remarqueModal.value}
-                    onChange={e => setRemarqueModal(prev => ({ ...prev, value: e.target.value }))}
-                    style={{ width: '100%', height: 100, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
-                    placeholder="Saisir la remarque..."
-                    autoFocus
-                  />
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                    <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
-                    <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: remarqueModal.value }); setRemarqueModal(null); }}
-                      style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
+            {remarqueModal && (() => {
+              const REMARQUES_PREDEFINIES = [
+                'Arrêt de scolarité.',
+                'Transfert vers une autre classe.',
+                'Transfert depuis une autre classe suite au conseil de classe, au TCF, à la demande du titulaire.',
+                'Suspension de scolarité durant une période …',
+                'Participation aux ateliers, certaines évaluations n\'ont pas été effectuées.',
+              ];
+              return (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 }}
+                  onClick={() => setRemarqueModal(null)}>
+                  <div style={{ width: 'min(560px, 94vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 20 }}
+                    onClick={e => e.stopPropagation()}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, color: '#1e293b' }}>
+                      Remarque — {remarqueModal.nom} {remarqueModal.prenom}
+                    </div>
+                    {/* Avertissement */}
+                    <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#92400e', marginBottom: 14, fontStyle: 'italic' }}>
+                      ⚠ Seules les remarques prédéfinies ci-dessous sont autorisées. La saisie libre n'est pas permise.
+                    </div>
+                    {/* Remarques prédéfinies */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Remarques disponibles :</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {REMARQUES_PREDEFINIES.map((r, i) => (
+                          <button key={i} type="button"
+                            onClick={() => setRemarqueModal(prev => ({ ...prev, value: r }))}
+                            style={{ textAlign: 'left', padding: '7px 12px', borderRadius: 7, border: `1px solid ${remarqueModal.value === r ? '#6366f1' : '#e2e8f0'}`, background: remarqueModal.value === r ? '#ede9fe' : '#f8fafc', color: remarqueModal.value === r ? '#4c1d95' : '#334155', fontSize: 13, cursor: 'pointer', fontWeight: remarqueModal.value === r ? 700 : 400 }}>
+                            {i + 1}. {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Affichage de la sélection */}
+                    <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#475569', marginBottom: 14, minHeight: 36 }}>
+                      <span style={{ fontWeight: 700 }}>Sélectionné : </span>
+                      {remarqueModal.value ? <span style={{ color: '#1e293b' }}>{remarqueModal.value}</span> : <span style={{ fontStyle: 'italic' }}>Aucune remarque sélectionnée</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      {remarqueModal.value && (
+                        <button onClick={() => setRemarqueModal(prev => ({ ...prev, value: '' }))}
+                          style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer</button>
+                      )}
+                      <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
+                      <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: remarqueModal.value }); setRemarqueModal(null); }}
+                        style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
 
