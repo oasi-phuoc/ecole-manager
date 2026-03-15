@@ -1314,6 +1314,12 @@ export default function Notes() {
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
         </div>
         {renderActionsBar('')}
+        <div style={{ display: 'flex', gap: 0, marginTop: 12, marginBottom: 0 }}>
+          {[['1','1er semestre'],['2','2e semestre']].map(([v,l]) => (
+            <button key={v} onClick={() => { setEvalSemestre(v); chargerEvaluationsId(classeSelectionnee, null, v); }}
+              style={{ ...s.subTabBtn, ...(evalSemestre === v ? s.subTabBtnActif : {}) }}>{l}</button>
+          ))}
+        </div>
         <div style={s.tblWrap}>
         <table style={s.tbl}>
           <thead>
@@ -1327,7 +1333,7 @@ export default function Notes() {
             {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
               <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
             ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
-              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id).length;
+              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={s.td}>
