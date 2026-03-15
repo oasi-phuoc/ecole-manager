@@ -655,7 +655,7 @@ export default function Notes() {
                 <col style={{ width: 'auto' }} />
                 <col style={{ width: 80 }} />
                 <col style={{ width: 160 }} />
-                <col style={{ width: 70 }} />
+                <col style={{ width: 85 }} />
                 <col style={{ width: 60 }} />
               </colgroup>
               <tbody>
@@ -684,7 +684,7 @@ export default function Notes() {
                               <td style={{ ...s.td, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
                               <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
                               <td style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
-                              <td style={{ ...s.td, textAlign: 'center', color: '#64748b' }}>Coef. {ev.coefficient}</td>
+                              <td style={{ ...s.td, textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
                               <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
                             </tr>
                           );
@@ -1439,7 +1439,7 @@ const s = {
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:150,minWidth:150,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
-  tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center',textAlignLast:'center'},
+  tabSelect: {padding:'9px 14px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer'},
   subTabsBar: {display:'flex',gap:0,marginTop:0},
   subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
