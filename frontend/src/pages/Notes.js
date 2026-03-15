@@ -316,11 +316,22 @@ export default function Notes() {
       setVue('generale');
       return;
     }
+    if (mode === 'comportements') {
+      setClasseObj(cl);
+      setClasseSelectionnee(cl.id);
+      setBulletinOnglet('criteres');
+      setVueClasseAction('comportements');
+      await chargerBulletinId(cl.id);
+      setVue('bulletin');
+      return;
+    }
     if (mode === 'bulletin') {
       setClasseObj(cl);
       setClasseSelectionnee(cl.id);
+      setBulletinOnglet('notes');
       setBulletinMode('tous');
       setEleveSelectionne('');
+      setVueClasseAction('bulletin');
       await chargerBulletinId(cl.id);
       setVue('bulletin');
     }
@@ -329,10 +340,15 @@ export default function Notes() {
   const renderActionsBar = (className = '', hideSelect = false) => (
     <div className={className}>
       <div style={s.tabsBar}>
-        {[['evaluations','Évaluations'],['generale','Vue générale'],['bulletin','Bulletin']].map(([k,l]) => (
+        {[['evaluations','Évaluations'],['generale','Vue générale'],['comportements','Comportements'],['bulletin','Bulletin de notes']].map(([k,l]) => (
           <button key={k}
             style={{...s.tabBtn,...(vueClasseAction===k?s.tabBtnActif:{})}}
-            onClick={() => { setVueClasseAction(k); if (classeSelectionnee) ouvrirVueDepuisSelectionClasse(k); }}>
+            onClick={() => {
+              setVueClasseAction(k);
+              if (k === 'comportements') setBulletinOnglet('criteres');
+              if (k === 'bulletin') setBulletinOnglet('notes');
+              if (classeSelectionnee) ouvrirVueDepuisSelectionClasse(k);
+            }}>
             {l}
           </button>
         ))}
@@ -846,7 +862,7 @@ export default function Notes() {
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>Bulletin — {classeNom}</h2>
+          <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'notes' && (
             <button style={s.btnImprimer} onClick={handleImprimer}>
               Imprimer
@@ -855,34 +871,24 @@ export default function Notes() {
         </div>
         {renderActionsBar('no-print', true)}
 
-        {/* Sous-onglets Bulletin — tous au même niveau */}
+        {/* Sous-onglets semestre (+ Tous/Par élève pour Bulletin de notes) */}
         <div className="no-print" style={s.subTabsBar}>
-          {[{ id: 'criteres', label: 'Comportements' }, { id: 'notes', label: 'Bulletin de notes' }].map(t => (
-            <button key={t.id} onClick={() => setBulletinOnglet(t.id)}
-              style={{...s.subTabBtn, width:180, minWidth:180, ...(bulletinOnglet===t.id?s.subTabBtnActif:{})}}>
-              {t.label}
-            </button>
-          ))}
-          <div style={{ width: 16 }} />
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
             <button key={sem.id} onClick={() => setBulletinSemestre(sem.id)}
               style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
           ))}
-        </div>
-
-        {/* Sous-onglets Tous / Par élève (Bulletin de notes uniquement) */}
-        {bulletinOnglet === 'notes' && (
-          <div className="no-print" style={s.subTabsBar}>
+          {bulletinOnglet === 'notes' && <>
+            <div style={{ width: 16 }} />
             {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
               <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                style={{...s.subTabBtn, ...(bulletinMode===m.id?s.subTabBtnActif:{})}}>
+                style={{ ...s.subTabBtn, width: 120, minWidth: 120, ...(bulletinMode === m.id ? s.subTabBtnActif : {}) }}>
                 {m.label}
               </button>
             ))}
-          </div>
-        )}
+          </>}
+        </div>
 
         {/* Dropdowns : niveau + classe + élève/tout-vert */}
         {(() => {
