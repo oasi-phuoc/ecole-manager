@@ -114,14 +114,6 @@ export default function Dashboard() {
               onMouseLeave={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.querySelector('.nav-label').style.color = '#4c1d95'; }}
             >
               <span className="nav-label" style={styles.navLabel}>{m.label}</span>
-              {isAdmin && m.accentKey && (
-                <span style={{
-                  width:8, height:8, borderRadius:'50%', flexShrink:0,
-                  background: (accesProfs[m.accentKey] !== undefined ? accesProfs[m.accentKey] : (ACCES_DEFAUT_PROF[m.accentKey] !== false)) ? '#10b981' : '#e5e7eb',
-                  border: '1px solid rgba(0,0,0,0.1)',
-                  display:'inline-block', marginLeft:4
-                }} title={(accesProfs[m.accentKey] !== undefined ? accesProfs[m.accentKey] : (ACCES_DEFAUT_PROF[m.accentKey] !== false)) ? 'Accessible aux profs' : 'Inaccessible aux profs'} />
-              )}
             </button>
           ))}
         </nav>
