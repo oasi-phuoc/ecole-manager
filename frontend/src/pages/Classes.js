@@ -345,10 +345,9 @@ export default function Classes() {
                               }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
                             </div>
                           ) : special ? (
-                            <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:6}}>
-                              <div style={{display:'inline-block',padding:'6px 8px',borderRadius:8,background:special.bg,color:special.text,fontSize:10,fontWeight:800,lineHeight:1.2,overflow:'hidden',maxWidth:'100%',whiteSpace:'nowrap'}}>
-                                {special.icon} {special.label}
-                              </div>
+                            <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:'4px 2px',width:'100%',boxSizing:'border-box'}}>
+                              <div style={{width:36,height:36,borderRadius:8,background:special.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,margin:'0 auto'}}>{special.icon}</div>
+                              <div style={{fontSize:8,fontWeight:700,color:special.text,textAlign:'center',lineHeight:1.2,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:66,margin:'2px auto 0'}}>{special.label}</div>
                               <button onClick={() => {
                                 const np = {...planPositions}; delete np[key]; setPlanPositions(np);
                               }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
@@ -1431,7 +1430,7 @@ export default function Classes() {
                   </div>
                 </td>
                 <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
-                  <button style={c.actif!==false?s.badgeActive:s.badgeInactif} onClick={() => toggleActif(c)}>
+                  <button style={{...(c.actif!==false?s.badgeActive:s.badgeInactif),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}
                   </button>
                 </td>
