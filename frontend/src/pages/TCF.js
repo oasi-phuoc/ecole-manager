@@ -974,7 +974,7 @@ export default function TCF() {
   );
 
   const renderResultat = () => {
-    if (!niveaux.length) return <div style={styles.empty}>Aucun niveau de classe trouvé.</div>;
+    if (!niveaux.length) return <div style={styles.msgVide}>Aucun niveau de classe trouvé.</div>;
     const titreSession = resultatSession || 'Session non sélectionnée';
     const isFr = resultatMatiere === 'francais';
     const classesNiveau = classes
@@ -985,59 +985,52 @@ export default function TCF() {
       : (resultatEleveId ? elevesNiveau.filter(e => String(e.id) === String(resultatEleveId)) : []);
 
     return (
-      <div style={styles.card}>
-        <div style={styles.subTabsRow}>
+      <div>
+        {/* Sous-onglets niveaux */}
+        <div style={{ display: 'flex', gap: 0 }}>
           {niveaux.map(n => (
-            <button
-              key={n}
-              onClick={() => {
-                setResultatNiveau(n);
-                setResultatClasseId('');
-                setResultatEleveId('');
-                setResultatEleveSearch('');
-              }}
-              style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}
-            >
+            <button key={n}
+              onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
+              style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}>
               {n}
             </button>
           ))}
         </div>
 
-        <div style={styles.filtersRow}>
-          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.selectOnglet}>
+        {/* Sous-onglets matière */}
+        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+          {[['francais','Français'],['math','Math']].map(([val,label]) => (
+            <button key={val}
+              onClick={() => setResultatMatiere(val)}
+              style={{ ...styles.subTabBtn, ...(resultatMatiere === val ? styles.subTabBtnActif : {}) }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sous-onglets vue */}
+        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
+          {[['individuelle','Individuelle'],['classe','Classe']].map(([val,label]) => (
+            <button key={val}
+              onClick={() => {
+                setResultatVue(val);
+                if (val === 'individuelle') setResultatClasseId('');
+                else { setResultatEleveId(''); setResultatEleveSearch(''); }
+              }}
+              style={{ ...styles.subTabBtn, ...(resultatVue === val ? styles.subTabBtnActif : {}) }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Dropdowns 15px sous les sous-onglets */}
+        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
             <option value="">- Sélectionner la session -</option>
             {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <div style={styles.toggleWrap}>
-            <button
-              onClick={() => setResultatMatiere('francais')}
-              style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}
-            >
-              Français
-            </button>
-            <button
-              onClick={() => setResultatMatiere('math')}
-              style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}
-            >
-              Mathématiques
-            </button>
-          </div>
-          <div style={styles.toggleWrap}>
-            <button
-              onClick={() => { setResultatVue('individuelle'); setResultatClasseId(''); }}
-              style={{ ...styles.toggleBtn, ...(resultatVue === 'individuelle' ? styles.toggleBtnActif : {}) }}
-            >
-              Individuelle
-            </button>
-            <button
-              onClick={() => { setResultatVue('classe'); setResultatEleveId(''); setResultatEleveSearch(''); }}
-              style={{ ...styles.toggleBtn, ...(resultatVue === 'classe' ? styles.toggleBtnActif : {}) }}
-            >
-              Classe
-            </button>
-          </div>
           {resultatVue === 'individuelle' && (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <>
               <input
                 type="number" min="1" max={elevesNiveau.length}
                 value={resultatEleveSearch}
@@ -1050,18 +1043,18 @@ export default function TCF() {
                   }
                 }}
                 placeholder="N° élève (Entrée)"
-                style={{ ...styles.selectOnglet, width: 150 }}
+                style={{ ...styles.select, width: 150 }}
               />
-              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.selectOnglet}>
+              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
                 <option value="">- Sélectionner l'élève -</option>
                 {elevesNiveau.map((e, idx) => (
                   <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
                 ))}
               </select>
-            </div>
+            </>
           )}
           {resultatVue === 'classe' && (
-            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.selectOnglet}>
+            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.select}>
               <option value="">- Sélectionner la classe -</option>
               {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
             </select>
@@ -1069,11 +1062,11 @@ export default function TCF() {
         </div>
 
         {!resultatSession ? (
-          <div style={styles.empty}>Sélectionnez une session.</div>
+          <div style={styles.msgVide}>Sélectionnez une session pour afficher les résultats.</div>
         ) : resultatVue === 'individuelle' && !resultatEleveId ? (
-          <div style={styles.empty}>Sélectionnez un élève.</div>
+          <div style={styles.msgVide}>Sélectionnez un élève pour afficher ses résultats.</div>
         ) : resultatVue === 'classe' && !resultatClasseId ? (
-          <div style={styles.empty}>Sélectionnez une classe.</div>
+          <div style={styles.msgVide}>Sélectionnez une classe pour afficher les résultats.</div>
         ) : (
           <>
             <h3 style={styles.tableTitleBig}>
@@ -1122,19 +1115,13 @@ export default function TCF() {
                         <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
                         <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
                         <td style={styles.tdLeft}>{e.prenom || ''}</td>
-
                         {isFr ? (
                           <>
                             {['co', 'po', 'ce', 'pe'].map(f => (
                               <td key={f} style={styles.tdCenter}>
-                                <input
-                                  style={styles.scoreInput}
-                                  type="number"
-                                  min="0"
-                                  max="25"
+                                <input style={styles.scoreInput} type="number" min="0" max="25"
                                   value={row[f] ?? ''}
-                                  onChange={ev => setScore('francais', resultatSession, e.id, f, ev.target.value)}
-                                />
+                                  onChange={ev => setScore('francais', resultatSession, e.id, f, ev.target.value)} />
                               </td>
                             ))}
                             <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
@@ -1145,14 +1132,9 @@ export default function TCF() {
                           <>
                             {['p1', 'p2', 'p3', 'p4'].map(f => (
                               <td key={f} style={styles.tdCenter}>
-                                <input
-                                  style={styles.scoreInput}
-                                  type="number"
-                                  min="0"
-                                  max="25"
+                                <input style={styles.scoreInput} type="number" min="0" max="25"
                                   value={row[f] ?? ''}
-                                  onChange={ev => setScore('math', resultatSession, e.id, f, ev.target.value)}
-                                />
+                                  onChange={ev => setScore('math', resultatSession, e.id, f, ev.target.value)} />
                               </td>
                             ))}
                             <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
@@ -1164,7 +1146,7 @@ export default function TCF() {
                     );
                   })}
                   {elevesResultat.length === 0 && (
-                    <tr><td colSpan={isFr ? 11 : 11} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
+                    <tr><td colSpan={11} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -2542,6 +2524,7 @@ const styles = {
   panelContentWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
   empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
+  msgVide: { background: 'white', borderRadius: 12, padding: '20px 24px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', color: '#64748b', fontSize: 12, fontStyle: 'italic', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   affectationSiteLevelsBox: { border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', padding: 10, marginBottom: 10 },
   affectationSiteLevelsTitle: { fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 },
   affectationSiteLevelsRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
