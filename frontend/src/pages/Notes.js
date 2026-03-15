@@ -649,42 +649,51 @@ export default function Notes() {
         {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (
           <div ref={printRef}>
             <h3 style={{ marginBottom: 16, fontSize: 15 }}>{eleveRapport.prenom} {nomSansSuffixe(eleveRapport.nom)} — {classeNom}</h3>
-            {modeMatieres.map(matiere => {
-              const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
-              return (
-                <div key={matiere.matiere_id} style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #6366f1', paddingBottom: 4, marginBottom: 6 }}>
-                    <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
-                    {moy !== null
-                      ? <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>Moyenne : {fmtNote(moy)}</span>
-                      : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
-                  </div>
-                  {matiere.evaluations.length > 0 ? (
-                    <table style={{ ...s.tbl, fontSize: 13, borderCollapse: 'collapse' }}>
-                      <tbody>
-                        {matiere.evaluations.map((ev, j) => {
+            <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col style={{ width: 90 }} />
+                <col style={{ width: 'auto' }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 70 }} />
+                <col style={{ width: 60 }} />
+              </colgroup>
+              <tbody>
+                {modeMatieres.map(matiere => {
+                  const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
+                  return [
+                    <tr key={`sep-${matiere.matiere_id}`}>
+                      <td colSpan={6} style={{ padding: '12px 8px 4px', borderBottom: '2px solid #6366f1' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
+                          {moy !== null
+                            ? <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>Moyenne : {fmtNote(moy)}</span>
+                            : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
+                        </div>
+                      </td>
+                    </tr>,
+                    ...(matiere.evaluations.length === 0
+                      ? [<tr key={`empty-${matiere.matiere_id}`}><td colSpan={6} style={{ ...s.td, color: '#aaa', fontSize: 13 }}>Aucune évaluation</td></tr>]
+                      : matiere.evaluations.map((ev, j) => {
                           const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
                           const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
                           const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
                           return (
                             <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
                               <td style={{ ...s.td, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                              <td style={{ ...s.td, fontWeight: 600, color: '#1e293b' }}>{ev.nom}</td>
+                              <td style={{ ...s.td, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
                               <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
-                              <td style={{ ...s.td, color: '#64748b' }}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
+                              <td style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
                               <td style={{ ...s.td, textAlign: 'center', color: '#64748b' }}>Coef. {ev.coefficient}</td>
-                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>
-                                {statut || (valeur !== null ? fmtNote(valeur) : '—')}
-                              </td>
+                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
                             </tr>
                           );
-                        })}
-                      </tbody>
-                    </table>
-                  ) : <div style={{ color: '#aaa', fontSize: 13, padding: '4px 0' }}>Aucune évaluation</div>}
-                </div>
-              );
-            })}
+                        })
+                    )
+                  ];
+                })}
+              </tbody>
+            </table>
           </div>
         )}
         {vueGeneraleMode === 'eleve' && !rapportEleveId && <div style={s.vide}>Sélectionnez un élève</div>}
