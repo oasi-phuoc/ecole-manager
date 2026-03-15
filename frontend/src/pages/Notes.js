@@ -176,7 +176,7 @@ export default function Notes() {
       const [bulletinRes, statsRes, criteresRes] = await Promise.all([
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers }),
         axios.get(API + '/presences/statistiques?classe_id=' + classeId, { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId, { headers }),
+        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
       ]);
       setBulletins(bulletinRes.data);
       setBulletinStatsPresences(statsRes.data || []);
@@ -763,16 +763,16 @@ export default function Notes() {
 
   // ===================== VUE BULLETIN (tableau critères + PDF) =====================
   const BULLETIN_CRITERES_LABELS = [
-    "Venir à l'école",
-    "Être à l'heure",
-    "Respect des règles",
-    "Participer en classe",
-    "Écouter les consignes",
-    "Parler français",
-    "Travailler sans déranger",
-    "Faire les devoirs",
-    "Respecter le matériel",
-    "Organiser le classeur",
+    ["Venir", "à l'école"],
+    ["Être", "à l'heure"],
+    ["Respecter", "les règles"],
+    ["Participer", "en classe"],
+    ["Écouter", "les consignes"],
+    ["Parler", "français"],
+    ["Travailler", "sans déranger"],
+    ["Faire", "les devoirs"],
+    ["Respecter", "le matériel"],
+    ["Organiser", "le classeur"],
   ];
   const cycleCouleur = (v) => (v === '' ? 'vert' : v === 'vert' ? 'orange' : v === 'orange' ? 'rouge' : '');
 
@@ -814,9 +814,10 @@ export default function Notes() {
         c10: patch.c10 !== undefined ? patch.c10 : cr.c10,
         remarques: patch.remarques !== undefined ? patch.remarques : cr.remarques,
         valide: patch.valide !== undefined ? patch.valide : cr.valide,
+        semestre: bulletinSemestre,
       };
       await axios.put(API + '/notes/bulletin-criteres/' + eleveId, payload, { headers });
-      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee, { headers });
+      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee + '&semestre=' + bulletinSemestre, { headers });
       setBulletinCriteres(res.data || []);
     };
 
@@ -824,7 +825,7 @@ export default function Notes() {
       for (const b of bulletins) {
         await sauvegarderCriteres(b.eleve.id, { c1: 'vert', c2: 'vert', c3: 'vert', c4: 'vert', c5: 'vert', c6: 'vert', c7: 'vert', c8: 'vert', c9: 'vert', c10: 'vert' });
       }
-      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee, { headers });
+      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee + '&semestre=' + bulletinSemestre, { headers });
       setBulletinCriteres(res.data || []);
     };
 
@@ -899,8 +900,8 @@ export default function Notes() {
                   <tr style={s.theadRow}>
                     <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
                     {BULLETIN_CRITERES_LABELS.map((label, i) => (
-                      <th key={i} style={{ ...s.th, width: 36, minWidth: 36, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 130 }} title={label}>
-                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700, lineHeight: 1.2, margin: '0 auto' }}>{label}</div>
+                      <th key={i} style={{ ...s.th, width: 50, minWidth: 50, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 110 }} title={label.join(' ')}>
+                        <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'pre-line', fontSize: 11, fontWeight: 700, lineHeight: 1.6, margin: '0 auto' }}>{label[0] + '\n' + label[1]}</div>
                       </th>
                     ))}
                     <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
@@ -932,7 +933,7 @@ export default function Notes() {
                           const key = 'c' + n;
                           const val = cr[key] || '';
                           return (
-                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
+                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1].join(' ')}
                               onClick={async () => { const next = cycleCouleur(val); await sauvegarderCriteres(b.eleve.id, { [key]: next }); }}>
                               {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
                             </td>
@@ -942,7 +943,33 @@ export default function Notes() {
                         <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, ...retardsBg }}>{retards > 0 ? retards : (st?.retards != null ? st.retards : '—')}</td>
                         <td style={{ ...s.td, textAlign: 'center', padding: 4 }}>
                           <button type="button"
-                            onClick={() => setRemarqueModal({ eleveId: b.eleve.id, nom: b.eleve.nom, prenom: b.eleve.prenom, value: cr.remarques || '' })}
+                            onClick={() => {
+                              const existing = cr.remarques || '';
+                              const sel = [];
+                              const prm = { transfertVerseClasse: '', transfertDepuisSuite: 'au TCF', transfertDepuisDate: '', suspensionDu: '', suspensionAu: '' };
+                              if (existing.includes('Arrêt de scolarité')) sel.push('arret');
+                              if (existing.includes('Transfert vers une autre classe')) {
+                                sel.push('transfertVers');
+                                const m = existing.match(/Transfert vers une autre classe\s*:\s*([^.]+)/);
+                                if (m) prm.transfertVerseClasse = m[1].trim();
+                              }
+                              if (existing.includes('dans cette classe suite')) {
+                                sel.push('transfertDepuis');
+                                const sm = existing.match(/suite\s+(au TCF|au conseil de classe|à la demande du titulaire)/);
+                                if (sm) prm.transfertDepuisSuite = sm[1];
+                                const dm = existing.match(/suite.*le\s+(\d{2}\.\d{2}\.\d{4})/);
+                                if (dm) { const p = dm[1].split('.'); prm.transfertDepuisDate = `${p[2]}-${p[1]}-${p[0]}`; }
+                              }
+                              if (existing.includes('Suspension de scolarité')) {
+                                sel.push('suspension');
+                                const dm = existing.match(/du\s+(\d{2}\.\d{2}\.\d{4})/);
+                                const am = existing.match(/au\s+(\d{2}\.\d{2}\.\d{4})/);
+                                if (dm) { const p = dm[1].split('.'); prm.suspensionDu = `${p[2]}-${p[1]}-${p[0]}`; }
+                                if (am) { const p = am[1].split('.'); prm.suspensionAu = `${p[2]}-${p[1]}-${p[0]}`; }
+                              }
+                              if (existing.includes('Participation aux ateliers')) sel.push('ateliers');
+                              setRemarqueModal({ eleveId: b.eleve.id, nom: b.eleve.nom, prenom: b.eleve.prenom, selected: sel, params: prm });
+                            }}
                             style={{ padding: '3px 8px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.remarques ? '#ede9fe' : 'white', color: cr.remarques ? '#4c1d95' : '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             {cr.remarques ? 'Modifier' : '+ Ajouter'}
                           </button>
@@ -959,50 +986,92 @@ export default function Notes() {
 
             {/* Modal remarque */}
             {remarqueModal && (() => {
-              const REMARQUES_PREDEFINIES = [
-                'Arrêt de scolarité.',
-                'Transfert vers une autre classe.',
-                'Transfert depuis une autre classe suite au conseil de classe, au TCF, à la demande du titulaire.',
-                'Suspension de scolarité durant une période …',
-                'Participation aux ateliers, certaines évaluations n\'ont pas été effectuées.',
+              const REMARQUES_CONFIG = [
+                { key: 'arret', label: 'Arrêt de scolarité.' },
+                { key: 'transfertVers', label: 'Transfert vers une autre classe :', hasClassInput: true },
+                { key: 'transfertDepuis', label: 'Transféré(e) dans cette classe suite…', hasSuiteSelect: true, hasDate: true },
+                { key: 'suspension', label: 'Suspension de scolarité du … au …', hasDateDu: true, hasDateAu: true },
+                { key: 'ateliers', label: "Participation aux ateliers, certaines évaluations n'ont pas été effectuées." },
               ];
+              const { selected, params } = remarqueModal;
+              const toggle = (key) => setRemarqueModal(prev => ({ ...prev, selected: prev.selected.includes(key) ? prev.selected.filter(k => k !== key) : [...prev.selected, key] }));
+              const setParam = (key, val) => setRemarqueModal(prev => ({ ...prev, params: { ...prev.params, [key]: val } }));
+              const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-CH') : '___';
+              const buildText = () => {
+                const parts = [];
+                if (selected.includes('arret')) parts.push('Arrêt de scolarité.');
+                if (selected.includes('transfertVers')) parts.push(`Transfert vers une autre classe : ${params.transfertVerseClasse || '___'}.`);
+                if (selected.includes('transfertDepuis')) parts.push(`Transféré(e) dans cette classe suite ${params.transfertDepuisSuite} le ${fmtDate(params.transfertDepuisDate)}.`);
+                if (selected.includes('suspension')) parts.push(`Suspension de scolarité du ${fmtDate(params.suspensionDu)} au ${fmtDate(params.suspensionAu)}.`);
+                if (selected.includes('ateliers')) parts.push("Participation aux ateliers, certaines évaluations n'ont pas été effectuées.");
+                return parts.join(' ');
+              };
+              const previewText = buildText();
+              const inStyle = { padding: '6px 10px', borderRadius: 6, border: '1px solid #6366f1', fontSize: 13, outline: 'none', background: 'white' };
               return (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 }}
                   onClick={() => setRemarqueModal(null)}>
-                  <div style={{ width: 'min(560px, 94vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 20 }}
+                  <div style={{ width: 'min(580px, 94vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 20, maxHeight: '90vh', overflowY: 'auto' }}
                     onClick={e => e.stopPropagation()}>
                     <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, color: '#1e293b' }}>
-                      Remarque — {remarqueModal.nom} {remarqueModal.prenom}
+                      Remarques — {remarqueModal.nom} {remarqueModal.prenom}
                     </div>
-                    {/* Avertissement */}
                     <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#92400e', marginBottom: 14, fontStyle: 'italic' }}>
-                      ⚠ Seules les remarques prédéfinies ci-dessous sont autorisées. La saisie libre n'est pas permise.
+                      ⚠ Seules les remarques prédéfinies ci-dessous sont autorisées. Plusieurs peuvent être sélectionnées simultanément.
                     </div>
-                    {/* Remarques prédéfinies */}
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Remarques disponibles :</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {REMARQUES_PREDEFINIES.map((r, i) => (
-                          <button key={i} type="button"
-                            onClick={() => setRemarqueModal(prev => ({ ...prev, value: r }))}
-                            style={{ textAlign: 'left', padding: '7px 12px', borderRadius: 7, border: `1px solid ${remarqueModal.value === r ? '#6366f1' : '#e2e8f0'}`, background: remarqueModal.value === r ? '#ede9fe' : '#f8fafc', color: remarqueModal.value === r ? '#4c1d95' : '#334155', fontSize: 13, cursor: 'pointer', fontWeight: remarqueModal.value === r ? 700 : 400 }}>
-                            {i + 1}. {r}
-                          </button>
-                        ))}
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                      {REMARQUES_CONFIG.map(cfg => {
+                        const isSel = selected.includes(cfg.key);
+                        return (
+                          <div key={cfg.key}>
+                            <button type="button" onClick={() => toggle(cfg.key)}
+                              style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 7, border: `2px solid ${isSel ? '#6366f1' : '#e2e8f0'}`, background: isSel ? '#ede9fe' : '#f8fafc', color: isSel ? '#4c1d95' : '#334155', fontSize: 13, cursor: 'pointer', fontWeight: isSel ? 700 : 400, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${isSel ? '#6366f1' : '#cbd5e1'}`, background: isSel ? '#6366f1' : 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {isSel && <span style={{ color: 'white', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                              </span>
+                              {cfg.label}
+                            </button>
+                            {isSel && cfg.hasClassInput && (
+                              <div style={{ padding: '6px 12px 4px 36px' }}>
+                                <input type="text" placeholder="Nom de la classe..." value={params.transfertVerseClasse}
+                                  onChange={e => setParam('transfertVerseClasse', e.target.value)}
+                                  style={{ ...inStyle, width: '100%', boxSizing: 'border-box' }} />
+                              </div>
+                            )}
+                            {isSel && cfg.hasSuiteSelect && (
+                              <div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <select value={params.transfertDepuisSuite} onChange={e => setParam('transfertDepuisSuite', e.target.value)} style={inStyle}>
+                                  <option value="au TCF">au TCF</option>
+                                  <option value="au conseil de classe">au conseil de classe</option>
+                                  <option value="à la demande du titulaire">à la demande du titulaire</option>
+                                </select>
+                                <span style={{ fontSize: 13, color: '#475569' }}>le</span>
+                                <input type="date" value={params.transfertDepuisDate} onChange={e => setParam('transfertDepuisDate', e.target.value)} style={inStyle} />
+                              </div>
+                            )}
+                            {isSel && cfg.hasDateDu && (
+                              <div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13, color: '#475569' }}>Du</span>
+                                <input type="date" value={params.suspensionDu} onChange={e => setParam('suspensionDu', e.target.value)} style={inStyle} />
+                                <span style={{ fontSize: 13, color: '#475569' }}>au</span>
+                                <input type="date" value={params.suspensionAu} onChange={e => setParam('suspensionAu', e.target.value)} style={inStyle} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    {/* Affichage de la sélection */}
-                    <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#475569', marginBottom: 14, minHeight: 36 }}>
-                      <span style={{ fontWeight: 700 }}>Sélectionné : </span>
-                      {remarqueModal.value ? <span style={{ color: '#1e293b' }}>{remarqueModal.value}</span> : <span style={{ fontStyle: 'italic' }}>Aucune remarque sélectionnée</span>}
+                    <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#475569', marginBottom: 14, minHeight: 40 }}>
+                      <span style={{ fontWeight: 700 }}>Aperçu : </span>
+                      {previewText ? <span style={{ color: '#1e293b' }}>{previewText}</span> : <span style={{ fontStyle: 'italic' }}>Aucune remarque sélectionnée</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      {remarqueModal.value && (
-                        <button onClick={() => setRemarqueModal(prev => ({ ...prev, value: '' }))}
-                          style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer</button>
+                      {selected.length > 0 && (
+                        <button onClick={() => setRemarqueModal(prev => ({ ...prev, selected: [], params: { transfertVerseClasse: '', transfertDepuisSuite: 'au TCF', transfertDepuisDate: '', suspensionDu: '', suspensionAu: '' } }))}
+                          style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer tout</button>
                       )}
                       <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
-                      <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: remarqueModal.value }); setRemarqueModal(null); }}
+                      <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: previewText }); setRemarqueModal(null); }}
                         style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
                     </div>
                   </div>

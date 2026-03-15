@@ -269,11 +269,25 @@ const getRapportClasse = async (req, res) => {
 
 const getBulletinCriteres = async (req, res) => {
   try {
-    const { classe_id } = req.query;
+    const { classe_id, semestre } = req.query;
+    const sem = parseInt(semestre) || 1;
+    await pool.query(`
+      DO $$ BEGIN
+        ALTER TABLE bulletin_criteres ADD COLUMN IF NOT EXISTS semestre INT NOT NULL DEFAULT 1;
+        ALTER TABLE bulletin_criteres DROP CONSTRAINT IF EXISTS bulletin_criteres_classe_id_eleve_id_key;
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE table_name = 'bulletin_criteres' AND constraint_name = 'bulletin_criteres_classe_eleve_semestre_key'
+        ) THEN
+          ALTER TABLE bulletin_criteres ADD CONSTRAINT bulletin_criteres_classe_eleve_semestre_key
+            UNIQUE (classe_id, eleve_id, semestre);
+        END IF;
+      END $$
+    `);
     const result = await pool.query(`
-      SELECT eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide
-      FROM bulletin_criteres WHERE classe_id = $1
-    `, [classe_id]);
+      SELECT eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide, semestre
+      FROM bulletin_criteres WHERE classe_id = $1 AND semestre = $2
+    `, [classe_id, sem]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
@@ -283,13 +297,14 @@ const getBulletinCriteres = async (req, res) => {
 const putBulletinCriteres = async (req, res) => {
   try {
     const { eleve_id } = req.params;
-    const { classe_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide } = req.body;
+    const { classe_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide, semestre } = req.body;
+    const sem = parseInt(semestre) || 1;
     await pool.query(`
-      INSERT INTO bulletin_criteres (classe_id, eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      ON CONFLICT (classe_id, eleve_id) DO UPDATE SET
+      INSERT INTO bulletin_criteres (classe_id, eleve_id, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, remarques, valide, semestre)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (classe_id, eleve_id, semestre) DO UPDATE SET
         c1=$3, c2=$4, c3=$5, c4=$6, c5=$7, c6=$8, c7=$9, c8=$10, c9=$11, c10=$12, remarques=$13, valide=$14
-    `, [classe_id, eleve_id, c1||null, c2||null, c3||null, c4||null, c5||null, c6||null, c7||null, c8||null, c9||null, c10||null, remarques||null, valide === true || valide === 'true']);
+    `, [classe_id, eleve_id, c1||null, c2||null, c3||null, c4||null, c5||null, c6||null, c7||null, c8||null, c9||null, c10||null, remarques||null, valide === true || valide === 'true', sem]);
     res.json({ message: 'Critères bulletin enregistrés' });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
