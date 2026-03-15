@@ -460,8 +460,8 @@ export default function Notes() {
           ))}
         </div>
 
-        {/* Classe dropdown */}
-        <div className="no-print" style={{marginTop:15,marginBottom:15}}>
+        {/* Classe dropdown + branche/élève à droite */}
+        <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
           <select style={s.tabSelect} value={classeSelectionnee}
             onChange={e => {
               const next = e.target.value;
@@ -472,25 +472,19 @@ export default function Notes() {
             <option value="">Sélectionner une classe</option>
             {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
           </select>
+          {vueGeneraleMode === 'branche' && (
+            <select style={s.tabSelect} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
+              <option value="">Choisir une branche</option>
+              {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
+            </select>
+          )}
+          {vueGeneraleMode === 'eleve' && (
+            <select style={s.tabSelect} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
+              <option value="">Choisir un élève</option>
+              {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
+            </select>
+          )}
         </div>
-
-        {/* Branche/élève dropdown */}
-        {(vueGeneraleMode === 'branche' || vueGeneraleMode === 'eleve') && (
-          <div className="no-print" style={{marginBottom:15}}>
-            {vueGeneraleMode === 'branche' && (
-              <select style={s.tabSelect} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
-                <option value="">Choisir une branche</option>
-                {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
-              </select>
-            )}
-            {vueGeneraleMode === 'eleve' && (
-              <select style={s.tabSelect} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
-                <option value="">Choisir un élève</option>
-                {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
-              </select>
-            )}
-          </div>
-        )}
 
         {/* Chargement / erreur */}
         {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>Chargement des données…</div>}
@@ -1287,8 +1281,8 @@ const s = {
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   tabSelect: {padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   subTabsBar: {display:'flex',gap:0,marginTop:-15},
-  subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none'},
-  subTabBtnActif: {background:'#4f46e5',color:'white',marginTop:-1},
+  subTabBtn: {padding:'12px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1},
+  subTabBtnActif: {background:'#4f46e5',color:'white',marginTop:-1,zIndex:2,boxShadow:'0 4px 8px rgba(79,70,229,0.22)'},
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
