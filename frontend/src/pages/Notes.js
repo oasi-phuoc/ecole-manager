@@ -512,13 +512,13 @@ export default function Notes() {
         {/* Branche/élève dropdown */}
         <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
           {vueGeneraleMode === 'branche' && (
-            <select style={{...s.tabSelect, width:220}} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
+            <select style={{...s.tabSelect, width:'auto', minWidth:280}} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
               <option value="">Choisir une branche</option>
               {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
             </select>
           )}
           {vueGeneraleMode === 'eleve' && (
-            <select style={{...s.tabSelect, width:220}} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
+            <select style={{...s.tabSelect, width:'auto', minWidth:280}} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
               <option value="">Choisir un élève</option>
               {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
             </select>
