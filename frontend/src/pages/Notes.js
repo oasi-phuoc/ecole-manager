@@ -89,6 +89,7 @@ export default function Notes() {
   const [remarqueModal, setRemarqueModal] = useState(null);
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
+  const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -1365,23 +1366,63 @@ export default function Notes() {
   }
 
   // ===================== VUE CLASSES (point d'entrée) =====================
+  // Classes visibles : admin = toutes, prof = titulaire uniquement
+  const classesVisibles = isAdmin()
+    ? classes.filter(c => c.actif !== false)
+    : classes.filter(c => c.actif !== false && String(c.prof_principal_id) === String(currentUser.id));
+  const niveauxDispo = ['tous', ...([...new Set(classesVisibles.map(c => c.niveau).filter(Boolean))].sort())];
+  const classesFiltrees = evalNiveauFiltre === 'tous'
+    ? classesVisibles
+    : classesVisibles.filter(c => c.niveau === evalNiveauFiltre);
+
   return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={s.titre}>Saisie des notes</h2>
-      </div>
-      {renderActionsBar()}
-      {!classeSelectionnee && (
-        <div style={{background:'white',borderRadius:12,border:'1px solid #e2e8f0',padding:'24px 28px',color:'#64748b',fontSize:14,fontStyle:'italic',boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-          Sélectionnez d'abord une classe pour afficher les données.
+      <div style={s.page}>
+        <div style={s.header}>
+          <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
+          <h2 style={s.titre}>Saisie des notes</h2>
         </div>
-      )}
-      {classeSelectionnee && (
-        <div style={s.tblWrap}>
-          <div style={s.vide}>Chargement de la vue sélectionnée...</div>
+        {renderActionsBar('', true)}
+
+        {/* Sous-onglets niveaux */}
+        <div style={s.subTabsBar}>
+          {niveauxDispo.map(n => (
+            <button key={n} onClick={() => setEvalNiveauFiltre(n)}
+              style={{ ...s.subTabBtn, width: 90, minWidth: 90, ...(evalNiveauFiltre === n ? s.subTabBtnActif : {}) }}>
+              {n === 'tous' ? 'Toutes' : n}
+            </button>
+          ))}
         </div>
-      )}
+
+        {/* Tableau des classes */}
+        <div style={{ ...s.tblWrap, marginTop: 15 }}>
+          <table style={s.tbl}>
+            <thead>
+              <tr style={s.theadRow}>
+                <th style={s.th}>Classe</th>
+                <th style={s.th}>Niveau</th>
+                <th style={s.th}>Année scolaire</th>
+                <th style={{ ...s.th, textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classesFiltrees.length === 0 ? (
+                <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
+              ) : classesFiltrees.map((cl, i) => (
+                <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc', cursor: 'pointer' }}
+                  onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                  <td style={{ ...s.td, fontWeight: 700, color: '#6366f1' }}>{cl.nom}</td>
+                  <td style={s.td}>{cl.niveau || '—'}</td>
+                  <td style={s.td}>{cl.annee_scolaire || '—'}</td>
+                  <td style={{ ...s.td, textAlign: 'center' }}>
+                    <button style={s.btnEdit} onClick={e => { e.stopPropagation(); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                      Ouvrir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
     </div>
   );
 }
