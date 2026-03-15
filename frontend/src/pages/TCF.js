@@ -1325,64 +1325,51 @@ export default function TCF() {
     });
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={styles.panelTopWhite}>
-          <div style={styles.panelTopInner}>
-            <div style={{ ...styles.subTabsRow, marginBottom: 0, alignItems: 'center' }}>
-              {siteOrder.map((sKey, idx) => (
-                <button
-                  key={`roles-site-tab-${sKey}`}
-                  type="button"
-                  onClick={() => { if (sKey !== siteActif) { setSiteActif(sKey); setRolesDemiJourneeSelect(''); } }}
-                  style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
-                >
-                  {siteNames[sKey] || `Site ${idx + 1}`}
-                </button>
-              ))}
-              <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-                <option value="">- Sélectionner une demi-journée -</option>
-                {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-              </select>
-            </div>
-            {useGroups && (
-              <div style={styles.rolesTopRight}>
-                <div style={styles.toggleWrap}>
-                  <button
-                    type="button"
-                    onClick={() => setRolesGroupActif('g1')}
-                    style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g1' ? styles.toggleBtnActif : {}) }}
-                  >
-                    Groupe 1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRolesGroupActif('g2')}
-                    style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g2' ? styles.toggleBtnActif : {}) }}
-                  >
-                    Groupe 2
-                  </button>
-                </div>
-                <div style={{ ...styles.pastillesWrap, marginLeft: 2 }}>
-                  {classesAffecteesObjs.map((cl) => {
-                    const actifDansG1 = savedGroups.g1.includes(String(cl.id));
-                    const actifDansG2 = savedGroups.g2.includes(String(cl.id));
-                    const actif = rolesGroupActif === 'g1' ? actifDansG1 : actifDansG2;
-                    return (
-                      <button
-                        key={`group-class-${cl.id}`}
-                        type="button"
-                        onClick={() => setRoleGroupClasse(siteKey, rolesDemiJourneeSelect, rolesGroupActif, cl.id)}
-                        style={{ ...styles.classChip, ...(actif ? styles.classChipActif : {}) }}
-                      >
-                        {cl.nom}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+      <div>
+        {/* Site sub-tabs */}
+        <div style={{ display: 'flex', gap: 0 }}>
+          {siteOrder.map((sKey, idx) => (
+            <button
+              key={`roles-site-tab-${sKey}`}
+              type="button"
+              onClick={() => { if (sKey !== siteActif) { setSiteActif(sKey); setRolesDemiJourneeSelect(''); } }}
+              style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
+            >
+              {siteNames[sKey] || `Site ${idx + 1}`}
+            </button>
+          ))}
         </div>
+
+        {/* Demi-journée + groupes */}
+        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
+            <option value="">- Sélectionner une demi-journée -</option>
+            {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+          </select>
+          {useGroups && (
+            <div style={styles.rolesTopRight}>
+              <div style={styles.toggleWrap}>
+                <button type="button" onClick={() => setRolesGroupActif('g1')} style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g1' ? styles.toggleBtnActif : {}) }}>Groupe 1</button>
+                <button type="button" onClick={() => setRolesGroupActif('g2')} style={{ ...styles.toggleBtn, ...(rolesGroupActif === 'g2' ? styles.toggleBtnActif : {}) }}>Groupe 2</button>
+              </div>
+              <div style={{ ...styles.pastillesWrap, marginLeft: 2 }}>
+                {classesAffecteesObjs.map((cl) => {
+                  const actifDansG1 = savedGroups.g1.includes(String(cl.id));
+                  const actifDansG2 = savedGroups.g2.includes(String(cl.id));
+                  const actif = rolesGroupActif === 'g1' ? actifDansG1 : actifDansG2;
+                  return (
+                    <button key={`group-class-${cl.id}`} type="button"
+                      onClick={() => setRoleGroupClasse(siteKey, rolesDemiJourneeSelect, rolesGroupActif, cl.id)}
+                      style={{ ...styles.classChip, ...(actif ? styles.classChipActif : {}) }}>
+                      {cl.nom}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
         {!siteKey || !rolesDemiJourneeSelect ? (
           <div style={styles.empty}>Sélectionnez un site et une demi-journée.</div>
         ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
@@ -2448,6 +2435,14 @@ export default function TCF() {
       <div style={styles.header}>
         <button onClick={() => navigate('/dashboard')} style={styles.btnBack}>← Retour</button>
         <h2 style={styles.title}>Test de connaissance</h2>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {onglet === 'pool' && (
+            <button onClick={ajouterSite} style={styles.btnAjouter}>+ Ajouter</button>
+          )}
+          {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
+            <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
+          )}
+        </div>
       </div>
 
       <div style={styles.tabsBar}>
@@ -2469,51 +2464,16 @@ export default function TCF() {
             </button>
           ))}
         </div>
-        {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
-          <div style={styles.topSaveWrap}>
-            <button onClick={handleSaveCurrentTab} style={styles.btnSaveTop}>Sauvegarder</button>
-          </div>
-        )}
       </div>
       <div style={styles.tabContent}>
         {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
 
         {onglet === 'pool' && (
-          <div style={styles.poolPanel}>
-          <div style={styles.panelTopWhite}>
-            <div style={{ ...styles.poolSiteTabsBar, marginBottom: 0 }}>
-              <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
-                {siteOrder.map((siteKey, idx) => (
-                  <button
-                    key={`pool-site-tab-${siteKey}`}
-                    type="button"
-                    onClick={() => setSiteActif(siteKey)}
-                    style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
-                  >
-                    {siteNames[siteKey] || `Site ${idx + 1}`}
-                  </button>
-                ))}
-              </div>
-              <button type="button" style={styles.btnAddSitePoolTabs} onClick={ajouterSite}>
-                Ajouter un site
-              </button>
-            </div>
-          </div>
-          <div style={styles.panelContentWhite}>
-            <div style={styles.siteStack}>
-              {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
-            </div>
-          </div>
-          </div>
-        )}
-
-        {onglet === 'classes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={styles.panelTopWhite}>
-            <div style={{ ...styles.subTabsRow, marginBottom: 0 }}>
+          <div>
+            <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
               {siteOrder.map((siteKey, idx) => (
                 <button
-                  key={`classes-site-tab-${siteKey}`}
+                  key={`pool-site-tab-${siteKey}`}
                   type="button"
                   onClick={() => setSiteActif(siteKey)}
                   style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
@@ -2522,10 +2482,27 @@ export default function TCF() {
                 </button>
               ))}
             </div>
+            <div>
+              {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
+            </div>
           </div>
-          <div style={styles.panelContentWhite}>
-            {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
+        )}
+
+        {onglet === 'classes' && (
+        <div>
+          <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
+            {siteOrder.map((siteKey, idx) => (
+              <button
+                key={`classes-site-tab-${siteKey}`}
+                type="button"
+                onClick={() => setSiteActif(siteKey)}
+                style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
+              >
+                {siteNames[siteKey] || `Site ${idx + 1}`}
+              </button>
+            ))}
           </div>
+          {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
         </div>
         )}
 
@@ -2551,13 +2528,13 @@ const styles = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
-  tabsBar: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginBottom: 0, borderBottom: '1px solid #c4b5fd', paddingBottom: 0 },
+  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabsRow: { display: 'flex', gap: 0, flexWrap: 'wrap', alignItems: 'flex-end' },
-  tabContent: { background: 'white', border: '1px solid #c4b5fd', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
-  topSaveWrap: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' },
-  tabBtn: { padding: '9px 0', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', boxShadow: 'none', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 15, width: 140, minWidth: 140, textAlign: 'center' },
-  tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
-  btnSaveTop: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
+  tabContent: { paddingTop: 14 },
+  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 14, width: 150, minWidth: 150, textAlign: 'center' },
+  tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -2, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
+  btnAjouter: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
+  btnSauver: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
   panelTopWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, marginBottom: 10 },
