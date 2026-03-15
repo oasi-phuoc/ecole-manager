@@ -1314,13 +1314,13 @@ export default function Notes() {
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
         </div>
         {renderActionsBar('')}
-        <div style={{ display: 'flex', gap: 0, marginTop: 12, marginBottom: 0 }}>
+        <div style={s.subTabsBar}>
           {[['1','1er semestre'],['2','2e semestre']].map(([v,l]) => (
             <button key={v} onClick={() => { setEvalSemestre(v); chargerEvaluationsId(classeSelectionnee, null, v); }}
-              style={{ ...s.subTabBtn, ...(evalSemestre === v ? s.subTabBtnActif : {}) }}>{l}</button>
+              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === v ? s.subTabBtnActif : {}) }}>{l}</button>
           ))}
         </div>
-        <div style={s.tblWrap}>
+        <div style={{ ...s.tblWrap, marginTop: 15 }}>
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
