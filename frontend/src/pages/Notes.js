@@ -349,12 +349,17 @@ export default function Notes() {
     }
   };
 
-  const renderActionsBar = (className = '', hideSelect = false) => (
+  const renderActionsBar = (className = '') => (
     <div className={className}>
       <div style={s.tabsBar}>
-        {[['evaluations','Évaluations'],['generale','Vue générale'],['comportements','Comportements'],['bulletin','Bulletin de notes']].map(([k,l]) => (
+        {[
+          ['evaluations', classeNom ? `Évaluation — ${classeNom}` : 'Évaluations'],
+          ['generale','Vue générale'],
+          ['comportements','Comportements'],
+          ['bulletin','Bulletin de notes']
+        ].map(([k,l]) => (
           <button key={k}
-            style={{...s.tabBtn,...(vueClasseAction===k?s.tabBtnActif:{})}}
+            style={{...s.tabBtn, minWidth: k === 'evaluations' && classeNom ? 'auto' : 150, width: k === 'evaluations' && classeNom ? 'auto' : 150, padding: k === 'evaluations' && classeNom ? '9px 16px' : '9px 14px', ...(vueClasseAction===k?s.tabBtnActif:{})}}
             onClick={() => {
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
@@ -362,7 +367,6 @@ export default function Notes() {
               if (classeSelectionnee) {
                 ouvrirVueDepuisSelectionClasse(k);
               } else {
-                // Navigation sans classe sélectionnée — les vues ont leur propre dropdown
                 if (k === 'evaluations') setVue('classes');
                 else if (k === 'generale') setVue('generale');
                 else if (k === 'comportements' || k === 'bulletin') setVue('bulletin');
@@ -372,20 +376,6 @@ export default function Notes() {
           </button>
         ))}
       </div>
-      {!hideSelect && (
-        <div style={{marginTop:15,marginBottom:15}}>
-          <select style={s.tabSelect} value={classeSelectionnee}
-            onChange={e => {
-              const next = e.target.value;
-              setClasseSelectionnee(next);
-              if (!next) { setClasseObj(null); return; }
-              ouvrirVueDepuisSelectionClasse(vueClasseAction, next);
-            }}>
-            <option value="">Sélectionner une classe</option>
-            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-          </select>
-        </div>
-      )}
     </div>
   );
 
@@ -499,7 +489,7 @@ export default function Notes() {
           <h2 style={s.titre}>Vue générale — {classeNom}</h2>
           <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
-        {renderActionsBar('no-print', true)}
+        {renderActionsBar('no-print')}
 
         {/* Sous-onglets Vue générale */}
         <div className="no-print" style={s.subTabsBar}>
@@ -518,18 +508,8 @@ export default function Notes() {
           ))}
         </div>
 
-        {/* Classe dropdown + branche/élève à droite */}
+        {/* Branche/élève dropdown */}
         <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
-          <select style={{...s.tabSelect, width:220}} value={classeSelectionnee}
-            onChange={e => {
-              const next = e.target.value;
-              setClasseSelectionnee(next);
-              if (!next) { setClasseObj(null); return; }
-              ouvrirVueDepuisSelectionClasse('generale', next);
-            }}>
-            <option value="">Sélectionner une classe</option>
-            {classes.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-          </select>
           {vueGeneraleMode === 'branche' && (
             <select style={{...s.tabSelect, width:220}} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
               <option value="">Choisir une branche</option>
@@ -888,7 +868,7 @@ export default function Notes() {
             </button>
           )}
         </div>
-        {renderActionsBar('no-print', true)}
+        {renderActionsBar('no-print')}
 
         {/* Sous-onglets semestre (+ Tous/Par élève pour Bulletin de notes) */}
         <div className="no-print" style={s.subTabsBar}>
@@ -915,20 +895,6 @@ export default function Notes() {
           const classesFiltrees = bulletinNiveau ? classes.filter(c => c.niveau === bulletinNiveau) : classes;
           return (
             <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-              <select style={{...s.tabSelect, width:220}} value={bulletinNiveau} onChange={e => { setBulletinNiveau(e.target.value); setClasseSelectionnee(''); setClasseObj(null); }}>
-                <option value="">Sélectionner un niveau</option>
-                {niveaux.map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <select style={{...s.tabSelect, width:220}} value={classeSelectionnee}
-                onChange={e => {
-                  const next = e.target.value;
-                  setClasseSelectionnee(next);
-                  if (!next) { setClasseObj(null); return; }
-                  ouvrirVueDepuisSelectionClasse('bulletin', next);
-                }}>
-                <option value="">Sélectionner une classe</option>
-                {classesFiltrees.map(cl => <option key={cl.id} value={cl.id}>{cl.nom}</option>)}
-              </select>
               {bulletinOnglet === 'notes' && bulletinMode === 'eleve' && (
                 <select style={{...s.tabSelect, width:220}} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
                   <option value="">Choisir un élève</option>
@@ -1347,7 +1313,7 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>Matières — {classeNom}</h2>
         </div>
-        {renderActionsBar()}
+        {renderActionsBar('')}
         <div style={s.tblWrap}>
         <table style={s.tbl}>
           <thead>
@@ -1399,13 +1365,15 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
           <h2 style={s.titre}>Saisie des notes</h2>
         </div>
-        {renderActionsBar('', true)}
-
-        {/* Sous-onglets niveaux */}
-        <div style={s.subTabsBar}>
-          {niveauxDispo.map(n => (
+        {/* Onglets niveaux (remplacent les onglets détail) */}
+        <div style={s.tabsBar}>
+          {(['tous', ...([...new Set(classesVisibles.map(c => c.niveau).filter(Boolean))].sort().reduce((acc, n) => {
+            // CSC avant CFR
+            if (n === 'CSC') return [n, ...acc];
+            return [...acc, n];
+          }, []))]).map(n => (
             <button key={n} onClick={() => setEvalNiveauFiltre(n)}
-              style={{ ...s.subTabBtn, width: 90, minWidth: 90, ...(evalNiveauFiltre === n ? s.subTabBtnActif : {}) }}>
+              style={{ ...s.tabBtn, width: 90, minWidth: 90, ...(evalNiveauFiltre === n ? s.tabBtnActif : {}) }}>
               {n === 'tous' ? 'Toutes' : n}
             </button>
           ))}
