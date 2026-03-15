@@ -353,13 +353,13 @@ export default function Notes() {
     <div className={className}>
       <div style={s.tabsBar}>
         {[
-          ['evaluations', classeNom ? `Évaluation — ${classeNom}` : 'Évaluations'],
+          ['evaluations', 'Évaluations'],
           ['generale','Vue générale'],
           ['comportements','Comportements'],
           ['bulletin','Bulletin de notes']
         ].map(([k,l]) => (
           <button key={k}
-            style={{...s.tabBtn, minWidth: k === 'evaluations' && classeNom ? 'auto' : 150, width: k === 'evaluations' && classeNom ? 'auto' : 150, padding: k === 'evaluations' && classeNom ? '9px 16px' : '9px 14px', ...(vueClasseAction===k?s.tabBtnActif:{})}}
+            style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
             onClick={() => {
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
@@ -1311,7 +1311,7 @@ export default function Notes() {
       <div style={s.page}>
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
-          <h2 style={s.titre}>Matières — {classeNom}</h2>
+          <h2 style={s.titre}>Évaluations — {classeNom}</h2>
         </div>
         {renderActionsBar('')}
         <div style={s.tblWrap}>
