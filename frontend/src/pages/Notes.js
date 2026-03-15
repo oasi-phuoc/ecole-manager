@@ -85,6 +85,8 @@ export default function Notes() {
   const [bulletinMode, setBulletinMode] = useState('tous');
   const [bulletinOnglet, setBulletinOnglet] = useState('criteres');
   const [bulletinNiveau, setBulletinNiveau] = useState('');
+  const [bulletinSemestre, setBulletinSemestre] = useState('1');
+  const [remarqueModal, setRemarqueModal] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
@@ -854,6 +856,17 @@ export default function Notes() {
             ))}
           </div>
         )}
+        {/* Sous-onglets 1er / 2e semestre (Critères uniquement) */}
+        {bulletinOnglet === 'criteres' && (
+          <div className="no-print" style={s.subTabsBar}>
+            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
+              <button key={sem.id} onClick={() => setBulletinSemestre(sem.id)}
+                style={{...s.subTabBtn, width:150, minWidth:150, ...(bulletinSemestre===sem.id?s.subTabBtnActif:{})}}>
+                {sem.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Dropdowns : niveau + classe + élève/tout-vert */}
         {(() => {
@@ -904,16 +917,15 @@ export default function Notes() {
                     {BULLETIN_CRITERES_LABELS.map((label, i) => (
                       <th key={i} style={{ ...s.th, width: 58, minWidth: 52, textAlign: 'justify', textJustify: 'inter-word', fontSize: 9, lineHeight: 1.2, whiteSpace: 'normal' }} title={label}>{label}</th>
                     ))}
-                    <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Absences</th>
                     <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
-                    <th style={{ ...s.th, width: 60, textAlign: 'center' }}>Retards</th>
-                    <th style={{ ...s.th, width: 120, textAlign: 'justify', textJustify: 'inter-word' }}>Remarques</th>
-                    <th style={{ ...s.th, width: 100, textAlign: 'center' }}>Validation</th>
+                    <th style={{ ...s.th, width: 52, textAlign: 'center' }}>Retards</th>
+                    <th style={{ ...s.th, width: 90, textAlign: 'center' }}>Remarques</th>
+                    <th style={{ ...s.th, width: 36, minWidth: 36, maxWidth: 36, textAlign: 'center' }}>État</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bulletins.length === 0 ? (
-                    <tr><td colSpan={16} style={s.vide}>Aucun élève</td></tr>
+                    <tr><td colSpan={15} style={s.vide}>Aucun élève</td></tr>
                   ) : bulletins.map((b, idx) => {
                     const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
                     const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
@@ -924,6 +936,9 @@ export default function Notes() {
                     const conges = Number(st?.conges) || 0;
                     const totalPeriodes = presents + absents + retards + excuses + conges;
                     const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
+                    const allFilled = [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
+                    const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {background:'#fee2e2',color:'#b91c1c'} : tauxBN < 80 ? {background:'#ffedd5',color:'#c2410c'} : {background:'#dcfce7',color:'#166534'};
+                    const retardsBg = retards > 6 ? {background:'#fee2e2',color:'#b91c1c'} : retards > 3 ? {background:'#ffedd5',color:'#c2410c'} : {};
                     return (
                       <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
                         <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
@@ -933,36 +948,22 @@ export default function Notes() {
                           const bg = val === 'vert' ? '#dcfce7' : val === 'orange' ? '#ffedd5' : val === 'rouge' ? '#fee2e2' : '#f8fafc';
                           return (
                             <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', background: bg, cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1]}
-                              onClick={async () => {
-                                const next = cycleCouleur(val);
-                                await sauvegarderCriteres(b.eleve.id, { [key]: next });
-                              }}>
+                              onClick={async () => { const next = cycleCouleur(val); await sauvegarderCriteres(b.eleve.id, { [key]: next }); }}>
                               {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
                             </td>
                           );
                         })}
-                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.absents ?? '—'}</td>
-                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
-                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 600 }}>{st?.retards ?? '—'}</td>
-                        <td style={s.td}>
-                          <input type="text"
-                            value={bulletinRemarqueEdit[b.eleve.id] !== undefined ? bulletinRemarqueEdit[b.eleve.id] : (cr.remarques || '')}
-                            style={{ width: '100%', padding: '4px 6px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6 }}
-                            onFocus={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: cr.remarques || '' }))}
-                            onChange={e => setBulletinRemarqueEdit(prev => ({ ...prev, [b.eleve.id]: e.target.value }))}
-                            onBlur={async e => {
-                              const v = e.target.value;
-                              setBulletinRemarqueEdit(prev => { const p = { ...prev }; delete p[b.eleve.id]; return p; });
-                              if (v !== (cr.remarques || '')) await sauvegarderCriteres(b.eleve.id, { remarques: v });
-                            }}
-                            placeholder="Remarques"
-                          />
-                        </td>
-                        <td style={{ ...s.td, textAlign: 'center' }}>
-                          <button type="button" style={{ padding: '4px 10px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.valide ? '#dcfce7' : 'white', color: cr.valide ? '#166534' : '#475569', fontWeight: 600 }}
-                            onClick={() => toggleValide(b.eleve.id)}>
-                            {cr.valide ? 'Bulletin validé' : 'Valider bulletin'}
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, ...tauxBg }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
+                        <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, ...retardsBg }}>{retards > 0 ? retards : (st?.retards != null ? st.retards : '—')}</td>
+                        <td style={{ ...s.td, textAlign: 'center', padding: 4 }}>
+                          <button type="button"
+                            onClick={() => setRemarqueModal({ eleveId: b.eleve.id, nom: b.eleve.nom, prenom: b.eleve.prenom, value: cr.remarques || '' })}
+                            style={{ padding: '3px 8px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.remarques ? '#ede9fe' : 'white', color: cr.remarques ? '#4c1d95' : '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {cr.remarques ? 'Modifier' : '+ Ajouter'}
                           </button>
+                        </td>
+                        <td style={{ ...s.td, textAlign: 'center', padding: 4, width: 36, minWidth: 36, maxWidth: 36 }}>
+                          <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: allFilled ? '#22c55e' : '#ef4444' }} />
                         </td>
                       </tr>
                     );
@@ -970,6 +971,31 @@ export default function Notes() {
                 </tbody>
               </table>
             </div>
+
+            {/* Modal remarque */}
+            {remarqueModal && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 }}
+                onClick={() => setRemarqueModal(null)}>
+                <div style={{ width: 'min(480px, 92vw)', background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 15px 40px rgba(0,0,0,0.18)', padding: 20 }}
+                  onClick={e => e.stopPropagation()}>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: '#1e293b' }}>
+                    Remarque — {remarqueModal.nom} {remarqueModal.prenom}
+                  </div>
+                  <textarea
+                    value={remarqueModal.value}
+                    onChange={e => setRemarqueModal(prev => ({ ...prev, value: e.target.value }))}
+                    style={{ width: '100%', height: 100, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
+                    placeholder="Saisir la remarque..."
+                    autoFocus
+                  />
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                    <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
+                    <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: remarqueModal.value }); setRemarqueModal(null); }}
+                      style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
