@@ -1321,12 +1321,12 @@ export default function Notes() {
           ))}
         </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
-        <table style={s.tbl}>
+        <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
           <thead>
             <tr style={s.theadRow}>
-              <th style={s.th}>Actions</th>
-              <th style={s.th}>Matière</th>
-              <th style={{ ...s.th, textAlign: 'center' }}>Évaluations</th>
+              <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Actions</th>
+              <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Matière</th>
+              <th style={{ ...s.th, width: '100%', textAlign: 'center' }}>Évaluations</th>
             </tr>
           </thead>
           <tbody>
@@ -1336,11 +1336,11 @@ export default function Notes() {
               const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                  <td style={s.td}>
+                  <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}>
                     <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>Ouvrir</button>
                   </td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#0f172a' }}>{m.nom}</td>
-                  <td style={{ ...s.td, textAlign: 'center' }}>
+                  <td style={{ ...s.td, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', width: 1 }}>{m.nom}</td>
+                  <td style={{ ...s.td, textAlign: 'center', width: '100%' }}>
                     <span style={{ ...s.badge, background: nbEvals > 0 ? '#e0e7ff' : '#f1f5f9', color: nbEvals > 0 ? '#4338ca' : '#94a3b8' }}>
                       {nbEvals} éval{nbEvals !== 1 ? 's' : ''}
                     </span>
