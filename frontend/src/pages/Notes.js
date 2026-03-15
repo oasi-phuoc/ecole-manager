@@ -748,16 +748,16 @@ export default function Notes() {
 
   // ===================== VUE BULLETIN (tableau critères + PDF) =====================
   const BULLETIN_CRITERES_LABELS = [
-    "Je viens à l'école régulièrement.",
-    "Je suis à l'heure.",
-    "Je respecte le règlement et la charte de l'école.",
-    "Je participe activement en classe.",
-    "J'écoute les consignes.",
-    "Je parle français en classe.",
-    "Je travaille sans déranger la classe.",
-    "Je fais mon travail à la maison.",
-    "Je prends soin du matériel.",
-    "J'organise mon classeur.",
+    "Venir à l'école",
+    "Être à l'heure",
+    "Respect des règles",
+    "Participer en classe",
+    "Écouter les consignes",
+    "Parler français",
+    "Travailler sans déranger",
+    "Faire les devoirs",
+    "Respecter le matériel",
+    "Organiser le classeur",
   ];
   const cycleCouleur = (v) => (v === '' ? 'vert' : v === 'vert' ? 'orange' : v === 'orange' ? 'rouge' : '');
 
