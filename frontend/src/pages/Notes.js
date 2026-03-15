@@ -543,6 +543,7 @@ export default function Notes() {
             return mat ? moyenneEleveMatiere(mat, eleveId) : null;
           };
           const moyPrin = (eleveId) => { const vals = brPrin.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
+          const moySec  = (eleveId) => { const vals = brSec.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const moyGen  = (eleveId) => { const vals = branchesClasse.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const colNom = (b) => (b.designation_courte || b.nom || '').trim();
           return (
@@ -556,6 +557,7 @@ export default function Notes() {
                 <col style={{ width: 90, minWidth: 90 }} />
                 {brSec.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
                 <col style={{ width: 90, minWidth: 90 }} />
+                <col style={{ width: 90, minWidth: 90 }} />
               </colgroup>
               <thead>
                 <tr style={s.theadRow}>
@@ -564,12 +566,13 @@ export default function Notes() {
                   {brPrin.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>princip.</th>
                   {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
+                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>second.</th>
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>générale</th>
                 </tr>
               </thead>
               <tbody>
                 {rapport.eleves.map((eleve, i) => {
-                  const mp = moyPrin(eleve.id); const mg = moyGen(eleve.id);
+                  const mp = moyPrin(eleve.id); const ms = moySec(eleve.id); const mg = moyGen(eleve.id);
                   return (
                     <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                       <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
@@ -577,6 +580,7 @@ export default function Notes() {
                       {brPrin.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: mp !== null ? (mp >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mp !== null ? fmtNote(mp) : '—'}</td>
                       {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: ms !== null ? (ms >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{ms !== null ? fmtNote(ms) : '—'}</td>
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, background: '#eef2ff', color: mg !== null ? (mg >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
                     </tr>
                   );
@@ -586,6 +590,7 @@ export default function Notes() {
                   {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={s.td}></td>
                   {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                  <td style={s.td}></td>
                   <td style={s.td}></td>
                 </tr>
               </tbody>
