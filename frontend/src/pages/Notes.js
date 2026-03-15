@@ -549,20 +549,11 @@ export default function Notes() {
           return (
           <div style={{ overflowX: 'auto', marginTop: 15 }}>
           <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: 1 }} />
-                <col style={{ width: 1 }} />
-                {brPrin.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
-                <col style={{ width: 90, minWidth: 90 }} />
-                {brSec.map(b => <col key={b.id} style={{ width: 70, minWidth: 60 }} />)}
-                <col style={{ width: 90, minWidth: 90 }} />
-                <col style={{ width: 90, minWidth: 90 }} />
-              </colgroup>
+            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={s.th}>Nom</th>
-                  <th style={s.th}>Prénom</th>
+                  <th style={{ ...s.th, whiteSpace: 'nowrap', width: 1 }}>Nom</th>
+                  <th style={{ ...s.th, whiteSpace: 'nowrap', width: 1 }}>Prénom</th>
                   {brPrin.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>princip.</th>
                   {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
