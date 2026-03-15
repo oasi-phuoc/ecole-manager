@@ -2027,80 +2027,63 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={styles.panelTopWhite}>
-          {niveaux.length > 0 && (
-            <div style={{ ...styles.subTabsRow, marginBottom: 8 }}>
-              {niveaux.map(n => (
-                <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                  style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
-              ))}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-                {graphVue !== 'moyenne' && (
-                  <button type="button" onClick={handlePrintAll} style={styles.btnSaveTop}>
-                    🖨 Tout imprimer
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.selectOnglet}>
-              <option value="">- Sélectionner la session -</option>
-              {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.toggleBtn, ...(isFr ? styles.toggleBtnActif : {}) }}>Français</button>
-              <button onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.toggleBtn, ...(!isFr ? styles.toggleBtnActif : {}) }}>Math</button>
-            </div>
-            <div style={styles.toggleWrap}>
-              <button onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'individuelle' ? styles.toggleBtnActif : {}) }}>Individuelle</button>
-              <button onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'classe' ? styles.toggleBtnActif : {}) }}>Classe</button>
-              <button onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.toggleBtn, ...(graphVue === 'moyenne' ? styles.toggleBtnActif : {}) }}>Moyenne</button>
-            </div>
-            {graphVue === 'classe' && (
-              <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.selectOnglet}>
-                <option value="">- Sélectionner la classe -</option>
-                {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
-              </select>
-            )}
-            {graphVue === 'individuelle' && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input
-                  type="number" min="1" max={elevesNiveauGraph.length}
-                  value={graphEleveSearch}
-                  onChange={e => setGraphEleveSearch(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      const n = parseInt(graphEleveSearch, 10);
-                      const found = elevesNiveauGraph[n - 1];
-                      if (found) setGraphEleveId(String(found.id));
-                    }
-                  }}
-                  placeholder="N° élève (Entrée)"
-                  style={{ ...styles.selectOnglet, width: 150 }}
-                />
-                <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.selectOnglet}>
-                  <option value="">- Sélectionner l'élève -</option>
-                  {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Boutons impression */}
-        {graphVue !== 'moyenne' && (
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{isFr ? 'Graphique Français' : 'Graphique Mathématiques'}</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={handlePrintSelection} disabled={!canPrintSelection}
-                style={{ ...styles.btnSaveTop, opacity: canPrintSelection ? 1 : 0.4, cursor: canPrintSelection ? 'pointer' : 'not-allowed' }}>
-                🖨 Imprimer sélection
-              </button>
-            </div>
+        {/* Sous-onglets niveaux */}
+        {niveaux.length > 0 && (
+          <div style={styles.subTabsRow}>
+            {niveaux.map(n => (
+              <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+            ))}
           </div>
         )}
+        {/* Sous-onglets matière */}
+        <div style={styles.subTabsRow}>
+          <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.subTabBtn, ...(isFr ? styles.subTabBtnActif : {}) }}>Français</button>
+          <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.subTabBtn, ...(!isFr ? styles.subTabBtnActif : {}) }}>Math</button>
+        </div>
+        {/* Sous-onglets vue */}
+        <div style={styles.subTabsRow}>
+          <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'individuelle' ? styles.subTabBtnActif : {}) }}>Individuelle</button>
+          <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'classe' ? styles.subTabBtnActif : {}) }}>Classe</button>
+          <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne</button>
+        </div>
+        {/* Listes déroulantes */}
+        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.selectOnglet}>
+            <option value="">- Sélectionner la session -</option>
+            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {graphVue === 'classe' && (
+            <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.selectOnglet}>
+              <option value="">- Sélectionner la classe -</option>
+              {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
+            </select>
+          )}
+          {graphVue === 'individuelle' && (
+            <>
+              <input
+                type="number" min="1" max={elevesNiveauGraph.length}
+                value={graphEleveSearch}
+                onChange={e => setGraphEleveSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const n = parseInt(graphEleveSearch, 10);
+                    const found = elevesNiveauGraph[n - 1];
+                    if (found) setGraphEleveId(String(found.id));
+                  }
+                }}
+                placeholder="N° élève (Entrée)"
+                style={{ ...styles.selectOnglet, width: 150 }}
+              />
+              <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.selectOnglet}>
+                <option value="">- Sélectionner l'élève -</option>
+                {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
+              </select>
+            </>
+          )}
+        </div>
         {/* Graphique */}
-        {graphVue === 'moyenne' && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
+        {graphVue === 'moyenne' && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
         {graphVue === 'moyenne' && graphSession && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 }}>
             <div style={styles.tableWrap}>
@@ -2154,9 +2137,9 @@ export default function TCF() {
             )}
           </div>
         )}
-        {graphVue === 'individuelle' && !graphEleveId && <div style={styles.empty}>Sélectionnez un élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
-        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cet élève.</div>}
+        {graphVue === 'individuelle' && !graphEleveId && <div style={styles.msgVide}>Sélectionnez un élève.</div>}
+        {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cet élève.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(
           sessionsIndiv.map(s => ({ ...s, label: s.session })),
           {
@@ -2167,9 +2150,9 @@ export default function TCF() {
             classe: classeIndividuelle?.nom || '',
           }
         )}
-        {graphVue === 'classe' && !graphClasseId && <div style={styles.empty}>Sélectionnez une classe.</div>}
-        {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.empty}>Sélectionnez une session.</div>}
-        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.empty}>Aucun résultat saisi pour cette classe et cette session.</div>}
+        {graphVue === 'classe' && !graphClasseId && <div style={styles.msgVide}>Sélectionnez une classe.</div>}
+        {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cette classe et cette session.</div>}
         {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
           dataClasse,
           {
@@ -2440,6 +2423,51 @@ export default function TCF() {
           )}
           {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
             <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
+          )}
+          {onglet === 'graphique' && graphVue !== 'moyenne' && (
+            <>
+              <button type="button" onClick={() => {
+                const isFr = ongletGraphiqueMatiere === 'francais';
+                const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
+                const classesNiveau = classes.filter(c => normaliserNiveau(c.niveau) === niveauActif).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+                const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+                const maxScore = isFr ? 60 : 50;
+                const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : SESSIONS.slice();
+                const charts = elevesNiveauGraph.map(e => {
+                  const series = sessionsToShowIds.map(session => {
+                    const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
+                    if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+                    const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+                  }).filter(s => s.hasData);
+                  const classe = classesMap[String(e.classe_id)]?.nom || '';
+                  return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series: series.map(s => ({ ...s, label: s.session })), nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe, niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''), showTrend: true };
+                }).filter(c => c.series.length > 0);
+                if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
+                printCharts(charts, isFr, maxScore);
+              }} style={styles.btnAjouter}>Tout</button>
+              <button type="button" onClick={() => {
+                const isFr = ongletGraphiqueMatiere === 'francais';
+                const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
+                const classesNiveau = classes.filter(c => normaliserNiveau(c.niveau) === niveauActif).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+                const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+                const maxScore = isFr ? 60 : 50;
+                const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : [];
+                if (graphVue === 'individuelle' && graphEleveId) {
+                  const sessionsIndiv = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData);
+                  if (sessionsIndiv.length === 0) return;
+                  const e = eleves.find(ev => String(ev.id) === graphEleveId);
+                  const classe = classesMap[String(e?.classe_id)]?.nom || '';
+                  const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
+                  printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv.map(s => ({ ...s, label: s.session })), nom: toDisplayNom(e?.nom || ''), prenom: e?.prenom || '', classe, niveau, showTrend: true }], isFr, maxScore);
+                } else if (graphVue === 'classe' && graphClasseId && graphSession) {
+                  const elevesClasseFiltres = eleves.filter(e => String(e.classe_id) === String(graphClasseId)).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+                  const classe = classes.find(c => String(c.id) === graphClasseId);
+                  const charts = elevesClasseFiltres.map(e => { const series = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, String(e.id)); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData).map(s => ({ ...s, label: s.session })); return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`, series, nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: true }; }).filter(c => c.series.length > 0);
+                  if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
+                  printCharts(charts, isFr, maxScore);
+                }
+              }} style={styles.btnSauver}>Imprimer sélection</button>
+            </>
           )}
         </div>
       </div>
