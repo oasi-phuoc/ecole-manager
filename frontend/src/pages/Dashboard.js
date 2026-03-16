@@ -79,7 +79,7 @@ export default function Dashboard() {
     { label: 'Comptabilité',     path: '/comptabilite',            color: '#84cc16', bg: '#ecfccb', adminOnly: false, accentKey: 'comptabilite' },
     { label: 'Documents',        path: '/documents-administratifs',color: '#7c3aed', bg: '#ede9fe', adminOnly: false, accentKey: 'documents' },
     { label: 'Statistiques',     path: '/statistiques',            color: '#f97316', bg: '#ffedd5', adminOnly: false, accentKey: 'statistiques' },
-    { label: 'Paramètres',       path: '/parametres',              color: '#64748b', bg: '#f1f5f9', adminOnly: true },
+    { label: 'Paramètres',       path: '/parametres',              color: '#64748b', bg: '#f1f5f9', adminOnly: false },
   ].filter(m => {
     if (isAdmin) return true;
     if (m.adminOnly) return false;
