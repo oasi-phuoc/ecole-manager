@@ -817,6 +817,32 @@ export default function Notes() {
       return [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
     });
     if (!tousRemplis) { alert('Tous les critères de comportement doivent avoir une couleur avant de valider.'); return; }
+
+    const avertissements = [];
+    for (const b of bulletins) {
+      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+      const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
+      const presents = Number(st?.presents) || 0;
+      const retards = Number(st?.retards) || 0;
+      const absents = Number(st?.absents) || 0;
+      const excuses = Number(st?.excuses) || 0;
+      const conges = Number(st?.conges) || 0;
+      const totalPeriodes = presents + absents + retards + excuses + conges;
+      const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
+      const couleurTaux = tauxBN == null ? null : tauxBN < 70 ? 'rouge' : tauxBN < 80 ? 'orange' : null;
+      const couleurRetards = retards > 6 ? 'rouge' : retards > 3 ? 'orange' : null;
+      const nom = `${b.eleve.nom} ${b.eleve.prenom}`;
+      if (couleurTaux && cr.c1 !== couleurTaux)
+        avertissements.push(`${nom} : "Venir à l'école" doit être ${couleurTaux} (taux présence ${tauxBN}%)`);
+      if (couleurRetards && cr.c2 !== couleurRetards)
+        avertissements.push(`${nom} : "Être à l'heure" doit être ${couleurRetards} (${retards} retards)`);
+      if ((cr.remarques || '').includes('Suspension de scolarité') && cr.c3 !== 'rouge')
+        avertissements.push(`${nom} : "Respecter les règles" doit être rouge (suspension de scolarité)`);
+    }
+    if (avertissements.length > 0) {
+      alert('⚠ Incohérences détectées :\n\n' + avertissements.join('\n') + '\n\nCorrigez ces critères avant de valider.');
+      return;
+    }
     setCriteresValides(true);
   };
 
