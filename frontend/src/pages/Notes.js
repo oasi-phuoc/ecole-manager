@@ -100,6 +100,8 @@ export default function Notes() {
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const showToast = (message, type = 'success') => { setToast({ message, type }); setTimeout(() => setToast({ message: '', type: 'success' }), 2200); };
   const [criteresLocaux, setCriteresLocaux] = useState([]);
   const [criteresModifies, setCriteresModifies] = useState(false);
   const [criteresValides, setCriteresValides] = useState(false);
@@ -859,7 +861,7 @@ export default function Notes() {
     }
     setBulletinCriteres([...criteresLocaux]);
     setCriteresModifies(false);
-    setSauvegarde(true); setTimeout(() => setSauvegarde(false), 2000);
+    showToast('Comportements sauvegardés.');
   };
 
   if (vue === 'bulletin') {
@@ -926,17 +928,24 @@ export default function Notes() {
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {sauvegarde && <span style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>✓ Sauvegardé</span>}
+              {toast.message && (
+                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : toast.type === 'info' ? { background: '#e0e7ff', color: '#3730a3' } : { background: '#d1fae5', color: '#065f46' }) }}>
+                  {toast.message}
+                </span>
+              )}
               <button
                 onClick={validerCriteres}
-                style={{ padding: '8px 14px', borderRadius: 8, border: `2px solid ${criteresValides ? '#22c55e' : '#94a3b8'}`, background: criteresValides ? '#dcfce7' : '#f8fafc', color: criteresValides ? '#15803d' : '#64748b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                {criteresValides ? '✓ Critères validés' : 'Valider les critères'}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
+                <div style={{ width: 36, height: 20, borderRadius: 10, background: criteresValides ? '#10b981' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
+                  <div style={{ position: 'absolute', top: 2, left: criteresValides ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
+                </div>
+                {criteresValides ? '✅ Critères validés' : 'Valider les critères'}
               </button>
               <button
                 onClick={sauvegarderTousCriteres}
                 disabled={!criteresModifies || !criteresValides}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: criteresModifies && criteresValides ? '#6366f1' : '#e2e8f0', color: criteresModifies && criteresValides ? 'white' : '#94a3b8', fontWeight: 700, fontSize: 13, cursor: criteresModifies && criteresValides ? 'pointer' : 'default' }}>
-                Sauvegarder
+                style={{ padding: '8px 18px', borderRadius: 9, border: 'none', cursor: criteresModifies && criteresValides ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 13, background: criteresModifies && criteresValides ? '#6366f1' : '#e2e8f0', color: criteresModifies && criteresValides ? 'white' : '#94a3b8', transition: 'all 0.2s' }}>
+                💾 Sauvegarder
               </button>
             </div>
           )}
