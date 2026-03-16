@@ -1,4 +1,4 @@
-import { peutModifierPresences } from '../utils/permissions';
+import { peutModifierPresences, isAdmin } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -517,14 +517,16 @@ export default function Presences() {
           <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
           <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
           <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-          <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
-            {importLoading ? 'Import...' : 'Importer OASI'}
-            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
-              onChange={e => { if(e.target.files[0]) { importerPresencesOASI(e.target.files[0]); e.target.value=''; } }} />
-          </label>
-          <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
-            {exportLoading ? 'Export...' : 'Exporter LORA'}
-          </button>
+          {isAdmin() && <>
+            <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
+              {importLoading ? 'Import...' : 'Importer LORA'}
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
+                onChange={e => { if(e.target.files[0]) { importerPresencesOASI(e.target.files[0]); e.target.value=''; } }} />
+            </label>
+            <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
+              {exportLoading ? 'Export...' : 'Exporter LORA'}
+            </button>
+          </>}
         </div>
       </div>
 
