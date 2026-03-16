@@ -48,6 +48,7 @@ const importEleves = async (req, res) => {
       await pool.query(`
         INSERT INTO eleves (
           nom, prenom, date_naissance, statut, nom_parent,
+          categorie,
           oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
           oasi_nom, oasi_nais,
           oasi_nationalite,
@@ -57,6 +58,7 @@ const importEleves = async (req, res) => {
           oasi_prg_id, oasi_prg_occupation_id, oasi_ra_id, oasi_temps_reparti_id
         ) VALUES (
           $1,$2,$3,'actif',$4,
+          'OASI',
           $5,$6,$7,$8,$9,
           $10,$11,
           $12,

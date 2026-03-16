@@ -397,6 +397,7 @@ export default function Notes() {
   if (vue === 'saisie' && evaluationOuverte) {
     return (
       <div style={s.page}>
+        <style>{`input.note-input::-webkit-inner-spin-button, input.note-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input.note-input { -moz-appearance: textfield; }`}</style>
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => { setVue('evaluations'); chargerEvaluationsId(classeSelectionnee, matiereSelectionnee); }}>← Retour</button>
           <div style={{ flex: 1 }}>
@@ -440,9 +441,9 @@ export default function Notes() {
                     <td style={s.td}>{eleve.prenom}</td>
                     {avecPoints ? (
                       <td style={{ ...s.td, textAlign: 'center' }}>
-                        <input style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
+                        <input className="note-input" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
                           value={eleve.points} disabled={eleve.absent || eleve.dispense}
-                          onChange={ev => { const c = [...elevesNotes]; c[i].points = ev.target.value; setElevesNotes(c); }} />
+                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; const max = parseFloat(evaluationOuverte.points_max); if (v !== '' && !isNaN(max) && parseFloat(v) > max) v = String(max); if (v !== '' && parseFloat(v) < 0) v = '0'; c[i].points = v; setElevesNotes(c); }} />
                       </td>
                     ) : null}
                     <td style={{ ...s.td, textAlign: 'center' }}>
@@ -453,10 +454,10 @@ export default function Notes() {
                       ) : eleve.absent || eleve.dispense ? (
                         <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
                       ) : (
-                        <input style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
+                        <input className="note-input" style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
                           type="number" min="1" max="6" step="0.1"
                           value={eleve.note} placeholder="—"
-                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; c[i].note = v; setElevesNotes(c); }} />
+                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; if (v !== '' && parseFloat(v) < 1) v = '1'; c[i].note = v; setElevesNotes(c); }} />
                       )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
@@ -509,17 +510,17 @@ export default function Notes() {
 
         {/* Sous-onglets Vue générale */}
         <div className="no-print" style={s.subTabsBar}>
-          {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
-            <button key={val} onClick={() => setVueGeneraleMode(val)}
-              style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
-              {label}
-            </button>
-          ))}
-          <div style={{ width: 16 }} />
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
             <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
               style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
+            </button>
+          ))}
+          <div style={{ width: 16 }} />
+          {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
+            <button key={val} onClick={() => setVueGeneraleMode(val)}
+              style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
+              {label}
             </button>
           ))}
         </div>
@@ -608,12 +609,12 @@ export default function Notes() {
           <div style={{ overflowX: 'auto' }}>
           <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
             <h3 style={{ marginBottom: 12, fontSize: 15, padding: '12px 16px 0' }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
-            <table style={{ ...s.tbl, fontSize: 12 }}>
+            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: 'auto' }}>
               <colgroup>
-                <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
-                <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
-                {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 'auto' }} />)}
-                <col style={{ width: 90, minWidth: 90, maxWidth: 90 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 150 }} />
+                {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 70 }} />)}
+                <col style={{ width: 90 }} />
               </colgroup>
               <thead>
                 <tr style={s.theadRow}>
@@ -786,7 +787,7 @@ export default function Notes() {
     ["Respecter", "le matériel"],
     ["Organiser", "le classeur"],
   ];
-  const cycleCouleur = (v) => (v === '' ? 'vert' : v === 'vert' ? 'orange' : v === 'orange' ? 'rouge' : '');
+  const cycleCouleur = (v) => (v === '' || v === 'rouge' ? 'vert' : v === 'vert' ? 'orange' : 'rouge');
 
   if (vue === 'bulletin') {
     const titulaireNom = classeObj ? [classeObj.prof_prenom, classeObj.prof_nom].filter(Boolean).join(' ') || '—' : '—';
@@ -1093,36 +1094,29 @@ export default function Notes() {
           </>
         )}
 
-        {bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
+        {bulletinOnglet === 'notes' && bulletins.length > 0 && (
           <div ref={printRef}>
             {(() => {
-              const seen = new Set();
-              const allEleves = [];
-              for (const b of [...bulletinsSem1, ...bulletinsSem2]) {
-                if (!seen.has(b.eleve.id)) { seen.add(b.eleve.id); allEleves.push(b.eleve); }
-              }
+              const allEleves = bulletins.map(b => b.eleve);
               const elevesToShow = bulletinMode === 'tous' ? allEleves : allEleves.filter(el => el.id === parseInt(eleveSelectionne));
               const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', border: `2px solid ${v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444'}` }} /> : <span style={{ color: '#aaa' }}>—</span>;
               const moyBranches = (names, pm) => { const w = names.filter(n => pm[n]?.moyenne != null); return w.length ? w.reduce((a, n) => a + parseFloat(pm[n].moyenne || 0), 0) / w.length : null; };
+              const niveauCl = String(classeObj?.niveau || '').toUpperCase();
+              const branchesClasse = branches.filter(b => String(b.niveau || '').toUpperCase() === niveauCl && b.suivi_notes !== false);
+              const principalesNoms = branchesClasse.filter(b => b.type_branche === 'principale').map(b => b.nom);
+              const secondairesNoms = branchesClasse.filter(b => b.type_branche !== 'principale').map(b => b.nom);
               return elevesToShow.map((eleve, bi) => {
-                const bdS1 = bulletinsSem1.find(b => b.eleve.id === eleve.id);
-                const bdS2 = bulletinsSem2.find(b => b.eleve.id === eleve.id);
-                const cr1 = criteresSem1.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
-                const cr2 = criteresSem2.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
+                const bd = bulletins.find(b => b.eleve.id === eleve.id);
+                const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
                 const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(eleve.id));
-                const pm1 = bdS1?.parMatiere || {};
-                const pm2 = bdS2?.parMatiere || {};
-                const allNames = [...new Set([...Object.keys(pm1), ...Object.keys(pm2)])].sort();
-                const principales = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) >= 2);
-                const secondaires = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) < 2);
-                const moyP1 = moyBranches(principales, pm1); const moyP2 = moyBranches(principales, pm2);
-                const moyS1 = moyBranches(secondaires, pm1); const moyS2 = moyBranches(secondaires, pm2);
-                const allN = [...principales, ...secondaires];
-                const moyG1 = moyBranches(allN, pm1); const moyG2 = moyBranches(allN, pm2);
-                const moyAnn = moyG1 != null && moyG2 != null ? (moyG1 + moyG2) / 2 : null;
-                const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
-                const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
-                const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
+                const pm = bd?.parMatiere || {};
+                const principales = principalesNoms;
+                const secondaires = secondairesNoms;
+                const moyP = moyBranches(principales, pm);
+                const moyS = moyBranches(secondaires, pm);
+                const moyG = moyBranches([...principales, ...secondaires], pm);
+                const semLabel = bulletinSemestre === '1' ? '1er semestre' : '2e semestre';
+                const observations = cr.remarques && String(cr.remarques).trim() ? cr.remarques : '—';
                 const thStyle = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
                 const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
                 return (
@@ -1139,57 +1133,50 @@ export default function Notes() {
                       </div>
                       <div style={{ textAlign: 'right', fontSize: 13 }}>
                         <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>BULLETIN DE NOTES</div>
+                        <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{semLabel}</div>
                         <div>Classe : <b>{classeNom}</b></div>
                         <div>Date : Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                         <div style={{ marginTop: 4 }}><b>NOM Prénom :</b> {eleve.prenom} {eleve.nom}</div>
                       </div>
                     </div>
-                    {/* 3 colonnes */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                      {/* Branches principales */}
+                    {/* 2 colonnes : notes (principales + secondaires empilées) | comportement */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                      {/* Colonne gauche : principales puis secondaires dans un seul tableau */}
                       <div>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}>
                             <th style={s.th}>Branches principales</th>
-                            <th style={thStyle}>S1</th><th style={thStyle}>S2</th>
+                            <th style={thStyle}>Note</th>
                           </tr></thead>
                           <tbody>
-                            {principales.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {principales.length === 0 && <tr><td colSpan={2} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
                             {principales.map(nom => (
                               <tr key={nom} style={s.tr}>
                                 <td style={s.td}>{nom}</td>
-                                <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
-                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{pm[nom]?.moyenne != null ? fmtNote(pm[nom].moyenne) : '—'}</td>
                               </tr>
                             ))}
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
                               <td style={s.td}>Moyenne</td>
-                              <td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td>
-                              <td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td>
+                              <td style={tdC}>{moyP != null ? fmtNote(moyP) : '—'}</td>
                             </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Branches secondaires */}
-                      <div>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
-                          <thead><tr style={s.theadRow}>
-                            <th style={s.th}>Branches secondaires</th>
-                            <th style={thStyle}>S1</th><th style={thStyle}>S2</th>
-                          </tr></thead>
-                          <tbody>
-                            {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {/* Ligne d'espacement */}
+                            <tr><td colSpan={2} style={{ height: 12, background: 'white', border: 'none' }}></td></tr>
+                            {/* En-tête branches secondaires */}
+                            <tr style={s.theadRow}>
+                              <th style={s.th}>Branches secondaires</th>
+                              <th style={thStyle}>Note</th>
+                            </tr>
+                            {secondaires.length === 0 && <tr><td colSpan={2} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
                             {secondaires.map(nom => (
                               <tr key={nom} style={s.tr}>
                                 <td style={s.td}>{nom}</td>
-                                <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
-                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{pm[nom]?.moyenne != null ? fmtNote(pm[nom].moyenne) : '—'}</td>
                               </tr>
                             ))}
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
                               <td style={s.td}>Moyenne</td>
-                              <td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td>
-                              <td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td>
+                              <td style={tdC}>{moyS != null ? fmtNote(moyS) : '—'}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1199,8 +1186,7 @@ export default function Notes() {
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}>
                             <th style={s.th}>Comportement</th>
-                            <th style={{ ...thStyle, width: 32 }}>S1</th>
-                            <th style={{ ...thStyle, width: 32 }}>S2</th>
+                            <th style={{ ...thStyle, width: 32 }}></th>
                           </tr></thead>
                           <tbody>
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => {
@@ -1208,8 +1194,7 @@ export default function Notes() {
                               return (
                                 <tr key={idx} style={s.tr}>
                                   <td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td>
-                                  <td style={tdC}>{dot(cr1[key])}</td>
-                                  <td style={tdC}>{dot(cr2[key])}</td>
+                                  <td style={tdC}>{dot(cr[key])}</td>
                                 </tr>
                               );
                             })}
@@ -1217,19 +1202,11 @@ export default function Notes() {
                         </table>
                       </div>
                     </div>
-                    {/* Moyennes globales */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
+                    {/* Moyenne globale */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
                       <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
-                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne 1er semestre</div>
-                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</div>
-                      </div>
-                      <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
-                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne 2e semestre</div>
-                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</div>
-                      </div>
-                      <div style={{ ...s.card, padding: 10, textAlign: 'center' }}>
-                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne annuelle</div>
-                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</div>
+                        <div style={{ fontSize: 11, color: '#475569' }}>Moyenne {semLabel}</div>
+                        <div style={{ fontSize: 18, fontWeight: 800 }}>{moyG != null ? fmtNote(moyG) : '—'}</div>
                       </div>
                     </div>
                     {/* Absences + Observations */}
