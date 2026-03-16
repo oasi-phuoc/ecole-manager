@@ -1,4 +1,4 @@
-import { peutModifierPresences, isAdmin } from '../utils/permissions';
+import { peutModifierPresences, isAdmin, getUser } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -352,8 +352,27 @@ export default function Presences() {
   const chargerClasses = async () => {
     try {
       const res = await axios.get(API + '/presences/classes', { headers });
-      setClasses(res.data);
+      const loadedClasses = res.data;
+      setClasses(loadedClasses);
       setClasseSelectionnee('');
+
+      // Auto-sélection pour les profs : classe en cours selon l'heure actuelle
+      if (!isAdmin() && loadedClasses.length > 0) {
+        const user = getUser();
+        if (user?.id) {
+          try {
+            const edtRes = await axios.get(API + '/emploi-du-temps?prof_id=' + user.id, { headers });
+            const jourNom = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][new Date().getDay()];
+            const now = new Date();
+            const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            const cours = edtRes.data.find(e => e.jour === jourNom && e.heure_debut <= nowStr && nowStr <= e.heure_fin);
+            if (cours) {
+              const classeOk = loadedClasses.find(c => String(c.id) === String(cours.classe_id));
+              if (classeOk) setClasseSelectionnee(String(cours.classe_id));
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
     } catch (err) { console.error(err); }
   };
 

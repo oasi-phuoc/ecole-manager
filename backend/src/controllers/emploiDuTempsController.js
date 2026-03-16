@@ -24,7 +24,7 @@ const creerMatiere = async (req, res) => {
 
 const getEmploiDuTemps = async (req, res) => {
   try {
-    const { classe_id } = req.query;
+    const { classe_id, prof_id } = req.query;
     let query = `
       SELECT e.id, e.jour, e.heure_debut, e.heure_fin, e.salle,
         c.nom as classe, c.id as classe_id,
@@ -36,10 +36,10 @@ const getEmploiDuTemps = async (req, res) => {
       LEFT JOIN utilisateurs u ON e.prof_id = u.id
     `;
     const params = [];
-    if (classe_id) {
-      query += ' WHERE e.classe_id = $1';
-      params.push(classe_id);
-    }
+    const conditions = [];
+    if (classe_id) { conditions.push(`e.classe_id = $${params.length + 1}`); params.push(classe_id); }
+    if (prof_id)   { conditions.push(`e.prof_id = $${params.length + 1}`);   params.push(prof_id); }
+    if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY e.heure_debut';
     const result = await pool.query(query, params);
     res.json(result.rows);
