@@ -100,6 +100,9 @@ export default function Notes() {
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [criteresLocaux, setCriteresLocaux] = useState([]);
+  const [criteresModifies, setCriteresModifies] = useState(false);
+  const [criteresValides, setCriteresValides] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
   const printRef = useRef();
   const navigate = useNavigate();
@@ -189,6 +192,9 @@ export default function Notes() {
       setBulletins(bulletinRes.data);
       setBulletinStatsPresences(statsRes.data || []);
       setBulletinCriteres(criteresRes.data || []);
+      setCriteresLocaux(criteresRes.data || []);
+      setCriteresModifies(false);
+      setCriteresValides(false);
       setBulletinsSem1(bS1Res.data || []);
       setBulletinsSem2(bS2Res.data || []);
       setCriteresSem1(cr1Res.data || []);
@@ -375,6 +381,10 @@ export default function Notes() {
           <button key={k}
             style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
             onClick={() => {
+              if (criteresModifies && bulletinOnglet === 'criteres' && k !== 'comportements') {
+                if (!window.confirm('Vous avez des modifications non sauvegardées dans les comportements. Quitter sans sauvegarder ?')) return;
+                setCriteresModifies(false);
+              }
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
               if (k === 'bulletin') setBulletinOnglet('notes');
@@ -441,9 +451,10 @@ export default function Notes() {
                     <td style={s.td}>{eleve.prenom}</td>
                     {avecPoints ? (
                       <td style={{ ...s.td, textAlign: 'center' }}>
-                        <input className="note-input" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
+                        <input className="note-input" data-col="points" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
                           value={eleve.points} disabled={eleve.absent || eleve.dispense}
-                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; const max = parseFloat(evaluationOuverte.points_max); if (v !== '' && !isNaN(max) && parseFloat(v) > max) v = String(max); if (v !== '' && parseFloat(v) < 0) v = '0'; c[i].points = v; setElevesNotes(c); }} />
+                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; const max = parseFloat(evaluationOuverte.points_max); if (v !== '' && !isNaN(max) && parseFloat(v) > max) v = String(max); if (v !== '' && parseFloat(v) < 0) v = '0'; c[i].points = v; setElevesNotes(c); }}
+                          onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="points"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
                       </td>
                     ) : null}
                     <td style={{ ...s.td, textAlign: 'center' }}>
@@ -454,10 +465,11 @@ export default function Notes() {
                       ) : eleve.absent || eleve.dispense ? (
                         <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
                       ) : (
-                        <input className="note-input" style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
+                        <input className="note-input" data-col="note" style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
                           type="number" min="1" max="6" step="0.1"
                           value={eleve.note} placeholder="—"
-                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; if (v !== '' && parseFloat(v) < 1) v = '1'; c[i].note = v; setElevesNotes(c); }} />
+                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; if (v !== '' && parseFloat(v) < 1) v = '1'; c[i].note = v; setElevesNotes(c); }}
+                          onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="note"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
                       )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
@@ -789,6 +801,41 @@ export default function Notes() {
   ];
   const cycleCouleur = (v) => (v === '' || v === 'rouge' ? 'vert' : v === 'vert' ? 'orange' : 'rouge');
 
+  const mettreAJourCritereLocal = (eleveId, patch) => {
+    setCriteresLocaux(prev => {
+      const exists = prev.find(c => Number(c.eleve_id) === Number(eleveId));
+      if (exists) return prev.map(c => Number(c.eleve_id) === Number(eleveId) ? { ...c, ...patch } : c);
+      return [...prev, { eleve_id: eleveId, ...patch }];
+    });
+    setCriteresModifies(true);
+    setCriteresValides(false);
+  };
+
+  const validerCriteres = () => {
+    const tousRemplis = bulletins.every(b => {
+      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+      return [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
+    });
+    if (!tousRemplis) { alert('Tous les critères de comportement doivent avoir une couleur avant de valider.'); return; }
+    setCriteresValides(true);
+  };
+
+  const sauvegarderTousCriteres = async () => {
+    for (const b of bulletins) {
+      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+      const payload = {
+        classe_id: classeSelectionnee, semestre: bulletinSemestre,
+        c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
+        c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
+        remarques: cr.remarques||null, valide: cr.valide||false,
+      };
+      await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
+    }
+    setBulletinCriteres([...criteresLocaux]);
+    setCriteresModifies(false);
+    setSauvegarde(true); setTimeout(() => setSauvegarde(false), 2000);
+  };
+
   if (vue === 'bulletin') {
     const titulaireNom = classeObj ? [classeObj.prof_prenom, classeObj.prof_nom].filter(Boolean).join(' ') || '—' : '—';
     const articleSelonSexe = (sexe) => (String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du');
@@ -834,12 +881,10 @@ export default function Notes() {
       setBulletinCriteres(res.data || []);
     };
 
-    const toutVert = async () => {
+    const toutVert = () => {
       for (const b of bulletins) {
-        await sauvegarderCriteres(b.eleve.id, { c1: 'vert', c2: 'vert', c3: 'vert', c4: 'vert', c5: 'vert', c6: 'vert', c7: 'vert', c8: 'vert', c9: 'vert', c10: 'vert' });
+        mettreAJourCritereLocal(b.eleve.id, { c1: 'vert', c2: 'vert', c3: 'vert', c4: 'vert', c5: 'vert', c6: 'vert', c7: 'vert', c8: 'vert', c9: 'vert', c10: 'vert' });
       }
-      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee + '&semestre=' + bulletinSemestre, { headers });
-      setBulletinCriteres(res.data || []);
     };
 
     const toggleValide = async (eleveId) => {
@@ -853,6 +898,22 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
+          {bulletinOnglet === 'criteres' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {sauvegarde && <span style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>✓ Sauvegardé</span>}
+              <button
+                onClick={validerCriteres}
+                style={{ padding: '8px 14px', borderRadius: 8, border: `2px solid ${criteresValides ? '#22c55e' : '#94a3b8'}`, background: criteresValides ? '#dcfce7' : '#f8fafc', color: criteresValides ? '#15803d' : '#64748b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                {criteresValides ? '✓ Critères validés' : 'Valider les critères'}
+              </button>
+              <button
+                onClick={sauvegarderTousCriteres}
+                disabled={!criteresModifies || !criteresValides}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: criteresModifies && criteresValides ? '#6366f1' : '#e2e8f0', color: criteresModifies && criteresValides ? 'white' : '#94a3b8', fontWeight: 700, fontSize: 13, cursor: criteresModifies && criteresValides ? 'pointer' : 'default' }}>
+                Sauvegarder
+              </button>
+            </div>
+          )}
           {bulletinOnglet === 'notes' && (
             <button style={s.btnImprimer} onClick={handleImprimer}>
               Imprimer
@@ -908,27 +969,26 @@ export default function Notes() {
             </div>
 
             <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
-              <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed' }}>
+              <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
                 <thead>
                   <tr style={s.theadRow}>
-                    <th style={{ ...s.th, width: 120, minWidth: 100 }}>Élève</th>
+                    <th style={{ ...s.th, whiteSpace: 'nowrap', width: 1 }}>Élève</th>
                     {BULLETIN_CRITERES_LABELS.map((label, i) => (
-                      <th key={i} style={{ ...s.th, width: 50, minWidth: 50, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 110 }} title={label.join(' ')}>
+                      <th key={i} style={{ ...s.th, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 110 }} title={label.join(' ')}>
                         <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'pre-line', fontSize: 11, fontWeight: 700, lineHeight: 1.6, margin: '0 auto' }}>{label[0] + '\n' + label[1]}</div>
                       </th>
                     ))}
-                    <th style={{ ...s.th, width: 70, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />présence</th>
-                    <th style={{ ...s.th, width: 52, textAlign: 'center' }}>Retards</th>
-                    <th style={{ ...s.th, width: 90, textAlign: 'center' }}>Remarques</th>
-                    <th style={{ ...s.th, width: 36, minWidth: 36, maxWidth: 36, textAlign: 'center' }}>État</th>
+                    <th style={{ ...s.th, width: 58, minWidth: 58, maxWidth: 58, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />prés.</th>
+                    <th style={{ ...s.th, width: 44, minWidth: 44, maxWidth: 44, textAlign: 'center' }}>Ret.</th>
+                    <th style={{ ...s.th, width: 72, minWidth: 72, maxWidth: 72, textAlign: 'center' }}>Rem.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bulletins.length === 0 ? (
-                    <tr><td colSpan={15} style={s.vide}>Aucun élève</td></tr>
+                    <tr><td colSpan={14} style={s.vide}>Aucun élève</td></tr>
                   ) : bulletins.map((b, idx) => {
                     const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
-                    const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+                    const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
                     const presents = Number(st?.presents) || 0;
                     const retards = Number(st?.retards) || 0;
                     const absents = Number(st?.absents) || 0;
@@ -936,18 +996,17 @@ export default function Notes() {
                     const conges = Number(st?.conges) || 0;
                     const totalPeriodes = presents + absents + retards + excuses + conges;
                     const tauxBN = totalPeriodes > 0 ? Math.round(((presents + retards) / totalPeriodes) * 1000) / 10 : null;
-                    const allFilled = [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
                     const tauxBg = tauxBN == null ? {} : tauxBN < 70 ? {color:'#b91c1c'} : tauxBN < 80 ? {color:'#c2410c'} : {};
                     const retardsBg = retards > 6 ? {color:'#b91c1c'} : retards > 3 ? {color:'#c2410c'} : {};
                     return (
                       <tr key={b.eleve.id} style={{ ...s.tr, background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
-                        <td style={s.td}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
+                        <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}><b>{b.eleve.nom}</b> {b.eleve.prenom}</td>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
                           const key = 'c' + n;
                           const val = cr[key] || '';
                           return (
                             <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1].join(' ')}
-                              onClick={async () => { const next = cycleCouleur(val); await sauvegarderCriteres(b.eleve.id, { [key]: next }); }}>
+                              onClick={() => { mettreAJourCritereLocal(b.eleve.id, { [key]: cycleCouleur(val) }); }}>
                               {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
                             </td>
                           );
@@ -986,9 +1045,6 @@ export default function Notes() {
                             style={{ padding: '3px 8px', fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: cr.remarques ? '#ede9fe' : 'white', color: cr.remarques ? '#4c1d95' : '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             {cr.remarques ? 'Modifier' : '+ Ajouter'}
                           </button>
-                        </td>
-                        <td style={{ ...s.td, textAlign: 'center', padding: 4, width: 36, minWidth: 36, maxWidth: 36 }}>
-                          <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: allFilled ? '#22c55e' : '#ef4444' }} />
                         </td>
                       </tr>
                     );
@@ -1084,7 +1140,7 @@ export default function Notes() {
                           style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer tout</button>
                       )}
                       <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
-                      <button onClick={async () => { await sauvegarderCriteres(remarqueModal.eleveId, { remarques: previewText }); setRemarqueModal(null); }}
+                      <button onClick={() => { mettreAJourCritereLocal(remarqueModal.eleveId, { remarques: previewText }); setRemarqueModal(null); }}
                         style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
                     </div>
                   </div>
