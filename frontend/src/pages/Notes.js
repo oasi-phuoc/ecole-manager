@@ -1197,7 +1197,6 @@ export default function Notes() {
               const principalesNoms = branchesClasse.filter(b => b.type_branche === 'principale').map(b => b.nom);
               const secondairesNoms = branchesClasse.filter(b => b.type_branche !== 'principale').map(b => b.nom);
               const isSem2 = bulletinSemestre === '2';
-              const semLabel = isSem2 ? '2e semestre' : '1er semestre';
               const thHdr = { background: '#6366f1', color: 'white', fontWeight: 700, padding: '6px 8px', fontSize: 12 };
               const thNote = { ...thHdr, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
               const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
@@ -1236,7 +1235,7 @@ export default function Notes() {
                       </div>
                       <div style={{ textAlign: 'right', fontSize: 13 }}>
                         <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>BULLETIN DE NOTES</div>
-                        <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{semLabel}</div>
+
                         <div>Classe : <b>{classeNom}</b></div>
                         <div>Date : Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                         <div style={{ marginTop: 4 }}><b>NOM Prénom :</b> {eleve.prenom} {eleve.nom}</div>
@@ -1286,6 +1285,8 @@ export default function Notes() {
                               <td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td>
                               <td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td>
                             </tr>
+                            {/* Espacement avant moyenne générale */}
+                            <tr><td colSpan={3} style={{ height: 10, background: 'white', border: 'none' }}></td></tr>
                             {/* Moyenne générale */}
                             <tr style={{ ...s.tr, background: '#c7d2fe', fontWeight: 700 }}>
                               <td style={s.td}>Moyenne générale</td>
@@ -1293,7 +1294,7 @@ export default function Notes() {
                               <td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td>
                             </tr>
                             {/* Moyenne annuelle */}
-                            <tr style={{ ...s.tr, background: '#818cf8', fontWeight: 800 }}>
+                            <tr style={{ ...s.tr, background: '#6366f1', fontWeight: 800 }}>
                               <td style={{ ...s.td, color: 'white' }}>Moyenne annuelle</td>
                               <td style={{ ...tdC, color: 'white' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td>
                             </tr>
@@ -1312,7 +1313,7 @@ export default function Notes() {
                               const key = 'c' + (idx + 1);
                               return (
                                 <tr key={idx} style={s.tr}>
-                                  <td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td>
+                                  <td style={s.td}>{label.join(' ')}</td>
                                   <td style={tdC}>{dot(cr[key])}</td>
                                 </tr>
                               );
