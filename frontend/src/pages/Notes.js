@@ -695,7 +695,7 @@ export default function Notes() {
                       if (!node) return;
                       const popup = window.open('', '_blank', 'width=1000,height=800');
                       if (!popup) return;
-                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}</style></head><body>${node.outerHTML}</body></html>`);
+                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`);
                       popup.document.close(); popup.focus(); popup.print();
                     }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
@@ -721,7 +721,7 @@ export default function Notes() {
                       <div style={{ fontSize: 11, color: '#475569', fontFamily: font }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                     </div>
                     {/* Titre + Élève */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 100 }}>
+                    <div className="bulletin-titre-eleve" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 30 }}>
                       <div style={{ fontWeight: 900, fontSize: 18, fontFamily: font }}>BULLETIN DE NOTES</div>
                       <div style={{ textAlign: 'right', fontFamily: font }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.nom} {eleveInfo.prenom}</div>
@@ -763,7 +763,7 @@ export default function Notes() {
                     </div>
                     {/* Absences + Observations sous les deux tableaux */}
                     <div style={{ display: 'flex', gap: 10, marginTop: 10, fontFamily: font }}>
-                      <div style={{ ...s.card, padding: 6, fontSize: 12, flex: 1 }}><div>Abs. excusées : <b>{st?.excuses ?? 0}</b></div><div>Non excusées : <b>{st?.absents ?? 0}</b></div></div>
+                      <div style={{ padding: 6, fontSize: 12, flex: 1 }}><div>Abs. excusées : <b>{st?.excuses ?? 0}</b></div><div>Non excusées : <b>{st?.absents ?? 0}</b></div></div>
                       <div style={{ ...s.card, padding: 6, flex: 2 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>{obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}{obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}{!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}</div>
                     </div>
                     {/* Signatures + Pied de page — poussés en bas à l'impression */}
