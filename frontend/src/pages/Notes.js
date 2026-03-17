@@ -689,8 +689,8 @@ export default function Notes() {
                 <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Bulletin de notes</h3>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                     <button onClick={() => { setBulletinPopupEleve(null); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>
+                    <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
                 </div>
                 {!critValide ? (
