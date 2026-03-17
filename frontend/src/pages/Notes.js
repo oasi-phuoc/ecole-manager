@@ -194,10 +194,11 @@ export default function Notes() {
       ]);
       setBulletins(bulletinRes.data);
       setBulletinStatsPresences(statsRes.data || []);
-      setBulletinCriteres(criteresRes.data || []);
-      setCriteresLocaux(criteresRes.data || []);
+      const criteresData = criteresRes.data || [];
+      setBulletinCriteres(criteresData);
+      setCriteresLocaux(criteresData);
       setCriteresModifies(false);
-      setCriteresValides(false);
+      setCriteresValides(criteresData.length > 0 && criteresData.every(cr => cr.valide === true));
       setBulletinsSem1(bS1Res.data || []);
       setBulletinsSem2(bS2Res.data || []);
       setCriteresSem1(cr1Res.data || []);
@@ -291,8 +292,7 @@ export default function Notes() {
         commentaire: e.commentaire
       }));
       await axios.post(API + '/notes/' + evaluationOuverte.id + '/notes', { notes }, { headers });
-      setSauvegarde(true);
-      setTimeout(() => setSauvegarde(false), 3000);
+      showToast('Notes enregistrées.');
       await chargerBulletinId(classeSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
@@ -434,12 +434,14 @@ export default function Notes() {
             <div style={s.moyenneLabel}>Moyenne classe</div>
             <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</div>
           </div>
+          {toast.message && (
+            <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : toast.type === 'info' ? { background: '#e0e7ff', color: '#3730a3' } : { background: '#d1fae5', color: '#065f46' }) }}>{toast.message}</span>
+          )}
           {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
             <button style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
               disabled={!ok} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</button>
           ); })()}
         </div>
-        {sauvegarde && <div style={s.successMsg}>Notes enregistrées !</div>}
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
           <table style={s.tbl}>
@@ -965,7 +967,7 @@ export default function Notes() {
         classe_id: classeSelectionnee, semestre: bulletinSemestre,
         c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
         c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
-        remarques: cr.remarques||null, valide: cr.valide||false,
+        remarques: cr.remarques||null, valide: criteresValides ? true : (cr.valide||false),
       };
       await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
     }

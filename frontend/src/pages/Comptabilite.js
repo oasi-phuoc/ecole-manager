@@ -5,10 +5,16 @@ import { useNavigate } from 'react-router-dom';
 const API = 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
 const STATUTS = [
-  { val: 'en_attente', label: '⏳ En attente', color: '#fbbc04', bg: '#fff8e1' },
-  { val: 'paye',       label: '✅ Payé',        color: '#34a853', bg: '#e8f5e9' },
-  { val: 'en_retard',  label: '❌ En retard',   color: '#ea4335', bg: '#ffebee' },
-  { val: 'annule',     label: '🚫 Annulé',      color: '#888',    bg: '#f5f5f5' },
+  { val: 'en_attente', label: 'En attente', color: '#fbbc04', bg: '#fff8e1' },
+  { val: 'paye',       label: 'Payé',       color: '#34a853', bg: '#e8f5e9' },
+  { val: 'en_retard',  label: 'En retard',  color: '#ea4335', bg: '#ffebee' },
+  { val: 'annule',     label: 'Annulé',     color: '#888',    bg: '#f5f5f5' },
+];
+const ECOLAGE_DEFAUT = [
+  'Manifestations',
+  'Photocopies / feuilles',
+  'Matériel d\'enseignement',
+  'ACM / Sports Déplacements',
 ];
 const MATERIEL_FACTURATION = [
   { key: 'classeur_7',    label: 'Classeur 7 cm',              prix: 2.80,  qteDefaut: 1 },
@@ -55,6 +61,9 @@ export default function Comptabilite() {
   // Edit paiement (simple)
   const [showEditPopup, setShowEditPopup] = useState(false);
   const [editForm, setEditForm] = useState(null);
+
+  // Factures niveau sub-tab
+  const [facturesNiveau, setFacturesNiveau] = useState('Tous');
 
   // Liste de prix sub-tab
   const [prixOnglet, setPrixOnglet] = useState('scolaire');
@@ -182,6 +191,7 @@ export default function Comptabilite() {
 
   // Liste de prix helpers
   const materielsScolaires = materiels.filter(m => (m.section || 'scolaire') === 'scolaire');
+  const materielsEcolage = materiels.filter(m => m.section === 'ecolage');
   const materielsFournitures = materiels.filter(m => m.section === 'fournitures');
   const materielsFacturation = materielsFournitures.length > 0
     ? materielsFournitures.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qteDefaut: 1 }))
@@ -199,8 +209,8 @@ export default function Comptabilite() {
   const totalClasse = elevesClasseFacturation.reduce((acc, e) => acc + totalEleve(e.id), 0);
 
   useEffect(() => {
-    if (prixOnglet === 'facturation' && !classeFacturationId && classes.length > 0) setClasseFacturationId(String(classes[0].id));
-  }, [prixOnglet, classeFacturationId, classes]);
+    if (onglet === 'factures' && !classeFacturationId && classes.length > 0) setClasseFacturationId(String(classes[0].id));
+  }, [onglet, classeFacturationId, classes]);
   useEffect(() => {
     if (!classeFacturationId) return;
     setMaterielDistribue(prev => {
@@ -265,19 +275,19 @@ export default function Comptabilite() {
         <div style={styles.statsGrid}>
           <div style={{ ...styles.statCard, borderTop: '4px solid #34a853' }}>
             <div style={styles.statValeur}>{parseFloat(stats.total_encaisse).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>✅ Total encaissé</div>
+            <div style={styles.statLabel}>Total encaissé</div>
           </div>
           <div style={{ ...styles.statCard, borderTop: '4px solid #fbbc04' }}>
             <div style={styles.statValeur}>{parseFloat(stats.en_attente.total).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>⏳ En attente ({stats.en_attente.nb})</div>
+            <div style={styles.statLabel}>En attente ({stats.en_attente.nb})</div>
           </div>
           <div style={{ ...styles.statCard, borderTop: '4px solid #ea4335' }}>
             <div style={styles.statValeur}>{parseFloat(stats.en_retard.total).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>❌ En retard ({stats.en_retard.nb})</div>
+            <div style={styles.statLabel}>En retard ({stats.en_retard.nb})</div>
           </div>
           <div style={{ ...styles.statCard, borderTop: '4px solid #6366f1' }}>
             <div style={styles.statValeur}>{paiements.length}</div>
-            <div style={styles.statLabel}>📊 Total transactions</div>
+            <div style={styles.statLabel}>Total transactions</div>
           </div>
         </div>
       )}
@@ -285,9 +295,9 @@ export default function Comptabilite() {
       {/* Main tabs */}
       <div style={styles.tabsRow}>
         {[
-          { key: 'factures', label: '🧾 Factures' },
-          { key: 'paiements', label: '💳 Paiements' },
-          { key: 'prix', label: '📋 Liste de prix' },
+          { key: 'factures', label: 'Factures' },
+          { key: 'paiements', label: 'Paiements' },
+          { key: 'prix', label: 'Liste de prix' },
         ].map(t => (
           <button key={t.key} style={{ ...styles.tab, ...(onglet === t.key ? styles.tabActif : {}) }} onClick={() => setOnglet(t.key)}>
             {t.label}
@@ -297,41 +307,75 @@ export default function Comptabilite() {
 
       {/* ===== FACTURES ===== */}
       {onglet === 'factures' && (
-        <div style={styles.tabContent}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.theadRow}>
-                {['Élève', 'Classe', 'Type', 'Montant', 'Statut', 'Date', 'Commentaire', 'Actions'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
+        <>
+          <div style={{ display: 'flex', gap: 0 }}>
+            {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
+              <button key={niv}
+                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: facturesNiveau === niv ? '#4f46e5' : '#e0e7ff', color: facturesNiveau === niv ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: facturesNiveau === niv ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
+                onClick={() => { setFacturesNiveau(niv); setClasseFacturationId(''); }}>
+                {niv}
+              </button>
+            ))}
+          </div>
+          <div style={styles.tabContent}>
+            <div style={{ padding: '15px 16px', borderBottom: '1px solid #f0f0f0' }}>
+              <select style={{ ...styles.select, minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
+                <option value="">— Sélectionner une classe —</option>
+                {classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau)).map(c => (
+                  <option key={c.id} value={c.id}>{c.nom}</option>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paiements.length === 0 ? (
-                <tr><td colSpan="8" style={styles.vide}>Aucune facture — cliquez sur "+ Nouvelle facture"</td></tr>
-              ) : paiements.map(p => {
-                const statut = getStatut(p.statut);
-                return (
-                  <tr key={p.id} style={styles.tr}>
-                    <td style={styles.td}><b>{p.prenom} {p.nom}</b></td>
-                    <td style={styles.td}>{p.classe || '—'}</td>
-                    <td style={styles.td}><span style={styles.typeBadge}>{p.type}</span></td>
-                    <td style={{ ...styles.td, fontWeight: '700', color: '#1a73e8' }}>{parseFloat(p.montant).toFixed(2)} CHF</td>
-                    <td style={styles.td}>
-                      <span style={{ ...styles.statutBadge, background: statut.bg, color: statut.color }}>{statut.label}</span>
-                    </td>
-                    <td style={styles.td}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
-                    <td style={{ ...styles.td, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.commentaire || ''}>{p.commentaire || '—'}</td>
-                    <td style={styles.td}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              </select>
+            </div>
+            {!classeFacturationId ? (
+              <div style={styles.vide}>Sélectionnez une classe pour voir la facturation</div>
+            ) : (
+              <>
+                <div style={styles.facturationHeader}>
+                  <b>Classe : {(classes.find(c => String(c.id) === String(classeFacturationId)) || {}).nom || '—'}</b>
+                  <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '6px 10px', borderRadius: 10, fontWeight: '700', fontSize: 13 }}>Total classe : {totalClasse.toFixed(2)} CHF</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ ...styles.tableMateriel, minWidth: 1300 }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={styles.thMateriel}>Nom</th>
+                        <th style={styles.thMateriel}>Prénom</th>
+                        {materielsFacturation.map(m => (
+                          <th key={m.id} style={{ ...styles.thMateriel, textAlign: 'center', minWidth: 80, fontSize: 10, lineHeight: 1.2 }} title={m.nom}>{m.nom}</th>
+                        ))}
+                        <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Total</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Détail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {elevesClasseFacturation.length === 0 ? (
+                        <tr><td colSpan={materielsFacturation.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
+                      ) : elevesClasseFacturation.map((e, idx) => (
+                        <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                          <td style={styles.tdMateriel}>{e.nom || '—'}</td>
+                          <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
+                          {materielsFacturation.map(m => (
+                            <td key={m.id} style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                              <input type="number" min="0"
+                                style={{ width: 48, padding: '4px 6px', border: '1px solid #dbe3ee', borderRadius: 6, fontSize: 12, textAlign: 'center' }}
+                                value={materielDistribue[e.id]?.[m.id] ?? m.qteDefaut}
+                                onChange={ev => majQteMateriel(e.id, m.id, ev.target.value)}
+                              />
+                            </td>
+                          ))}
+                          <td style={{ ...styles.tdMateriel, textAlign: 'right', fontWeight: '700', color: '#1a73e8' }}>{totalEleve(e.id).toFixed(2)} CHF</td>
+                          <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                            <button style={styles.btnDetailFacture} onClick={() => ouvrirFactureImprime(e)}>Détail</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {/* ===== PAIEMENTS ===== */}
@@ -340,10 +384,10 @@ export default function Comptabilite() {
           <div style={styles.subTabsRow}>
             {[
               { key: 'tous', label: 'Tous' },
-              { key: 'paye', label: '✅ Payé' },
-              { key: 'en_attente', label: '⏳ En attente' },
-              { key: 'en_retard', label: '❌ En retard' },
-              { key: 'annule', label: '🚫 Annulé' },
+              { key: 'paye', label: 'Payé' },
+              { key: 'en_attente', label: 'En attente' },
+              { key: 'en_retard', label: 'En retard' },
+              { key: 'annule', label: 'Annulé' },
             ].map(t => (
               <button key={t.key}
                 style={{ ...styles.subTab, ...(paiementsOnglet === t.key ? styles.subTabActif : {}) }}
@@ -381,8 +425,8 @@ export default function Comptabilite() {
                     </td>
                     <td style={styles.td}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
                     <td style={styles.td}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>Éd.</button>
+                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>Sup.</button>
                     </td>
                   </tr>
                 );
@@ -394,53 +438,102 @@ export default function Comptabilite() {
 
       {/* ===== LISTE DE PRIX ===== */}
       {onglet === 'prix' && (
-        <div style={styles.tabContent}>
-          <div style={styles.subTabsRow}>
-            {[
-              { key: 'scolaire',    label: '📚 Matériel scolaire' },
-              { key: 'fournitures', label: '🧾 Fournitures' },
-              { key: 'facturation', label: '🧮 Facturation classe' },
-            ].map(t => (
-              <button key={t.key}
-                style={{ ...styles.subTab, ...(prixOnglet === t.key ? styles.subTabActif : {}) }}
-                onClick={() => setPrixOnglet(t.key)}>
-                {t.label}
-              </button>
-            ))}
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 0 }}>
+              {[
+                { key: 'scolaire',    label: 'Matériel scolaire' },
+                { key: 'fournitures', label: 'Fournitures' },
+              ].map(t => (
+                <button key={t.key}
+                  style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: prixOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: prixOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: prixOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
+                  onClick={() => setPrixOnglet(t.key)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
             {(prixOnglet === 'scolaire' || prixOnglet === 'fournitures') && (
-              <button style={{ ...styles.btnAjouter, marginLeft: 'auto', padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
+              <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
             )}
           </div>
+        <div style={styles.tabContent}>
 
           {/* Matériel scolaire */}
           {prixOnglet === 'scolaire' && (
-            <table style={styles.tableMateriel}>
-              <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
-                    <th key={h} style={styles.thMateriel}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {materielsScolaires.length === 0 ? (
-                  <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
-                ) : materielsScolaires.map((m, i) => (
-                  <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={styles.tdMateriel}>{m.nom}</td>
-                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
-                    <td style={styles.tdMateriel}>{m.ref || '—'}</td>
-                    <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
-                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
-                    <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
-                    <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
-                    </td>
+            <>
+              <table style={styles.tableMateriel}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
+                      <th key={h} style={styles.thMateriel}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {materielsScolaires.length === 0 ? (
+                    <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
+                  ) : materielsScolaires.map((m, i) => (
+                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={styles.tdMateriel}>{m.nom}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
+                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
+                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Section FINANCE ECOLAGE */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderTop: '2px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: '#1e293b', letterSpacing: 0.5 }}>FINANCE ECOLAGE &amp; MATERIEL GENERAL</span>
+                <button style={{ ...styles.btnAjouter, padding: '5px 12px', fontSize: 12 }} onClick={() => { setMaterielForm({ nom: '', section: 'ecolage', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }); setMaterielEdit(null); setShowMaterielForm(true); }}>+ Ajouter</button>
+              </div>
+              <table style={styles.tableMateriel}>
+                <thead>
+                  <tr style={{ background: '#f0f4ff' }}>
+                    {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
+                      <th key={h} style={styles.thMateriel}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {materielsEcolage.length === 0 ? (
+                    ECOLAGE_DEFAUT.map((nom, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={styles.tdMateriel}>{nom}</td>
+                        <td style={{ ...styles.tdMateriel, textAlign: 'right', color: '#94a3b8' }}>—</td>
+                        <td style={styles.tdMateriel}>—</td>
+                        <td style={styles.tdMateriel}>—</td>
+                        <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>—</td>
+                        <td style={styles.tdMateriel}>—</td>
+                        <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                          <button style={{ ...styles.btnAjouter, padding: '3px 8px', fontSize: 11 }} onClick={() => { setMaterielForm({ nom, section: 'ecolage', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }); setMaterielEdit(null); setShowMaterielForm(true); }}>Définir</button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : materielsEcolage.map((m, i) => (
+                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={styles.tdMateriel}>{m.nom}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
+                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
+                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
 
           {/* Fournitures */}
@@ -465,8 +558,8 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
                     </td>
                   </tr>
                 ))}
@@ -540,13 +633,14 @@ export default function Comptabilite() {
             </div>
           )}
         </div>
+        </>
       )}
 
       {/* ===== POPUP NOUVELLE FACTURE (3 tables) ===== */}
       {showFacturePopup && (
         <div style={styles.overlay}>
           <div style={{ ...styles.modal, width: 720, maxWidth: '96vw' }}>
-            <h3 style={styles.modalTitre}>🧾 Nouvelle facture</h3>
+            <h3 style={styles.modalTitre}>Nouvelle facture</h3>
             <form onSubmit={sauvegarderFacture}>
               {/* Header */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 18 }}>
