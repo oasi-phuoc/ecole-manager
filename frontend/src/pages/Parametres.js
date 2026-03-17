@@ -449,7 +449,7 @@ export default function Parametres() {
                               onClick={() => {
                                 const curr = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
                                 const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
-                                setProfil({...profil, niveau_prefere: newNiv.join(',')});
+                                setProfil({...profil, niveau_prefere: newNiv.length >= 3 ? '' : newNiv.join(',')});
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
                               {n}
@@ -478,7 +478,7 @@ export default function Parametres() {
                               onClick={() => {
                                 const curr = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
                                 const newL = selected ? curr.filter(x=>x!==l) : [...curr, l];
-                                setProfil({...profil, lieu_travail_prefere: newL.join(',')});
+                                setProfil({...profil, lieu_travail_prefere: newL.length >= 3 ? '' : newL.join(',')});
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
                               {l}
@@ -1052,7 +1052,7 @@ const styles = {
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' },
   formChamp: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
   label: { fontSize: '13px', fontWeight: '600', marginBottom: '5px', color: '#555' },
-  input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px' },
+  input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', background: 'white' },
   btnSauver: { padding: '12px 24px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' },
   vide: { color: '#888', textAlign: 'center', padding: '30px' },
   profCard: { display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', background: '#f8f9fa', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer', border: '2px solid transparent' },

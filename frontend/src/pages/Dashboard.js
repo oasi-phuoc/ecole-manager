@@ -6,7 +6,7 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false };
+const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
   const modules = [
     { label: 'Employés',         path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', adminOnly: true },
-    { label: 'Professeurs',      path: '/professeurs',             color: '#6366f1', bg: '#e0e7ff', adminOnly: true },
+    { label: 'Professeurs',      path: '/professeurs',             color: '#6366f1', bg: '#e0e7ff', adminOnly: false, accentKey: 'professeurs' },
     { label: 'Élèves',           path: '/eleves',                  color: '#f59e0b', bg: '#fef3c7', adminOnly: false, accentKey: 'eleves' },
     { label: 'Branches',         path: '/branches',                color: '#8b5cf6', bg: '#ede9fe', adminOnly: false, accentKey: 'branches' },
     { label: 'Classes',          path: '/classes',                 color: '#10b981', bg: '#d1fae5', adminOnly: false, accentKey: 'classes' },
