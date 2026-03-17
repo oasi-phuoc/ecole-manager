@@ -91,6 +91,7 @@ export default function Notes() {
   const [criteresSem1, setCriteresSem1] = useState([]);
   const [criteresSem2, setCriteresSem2] = useState([]);
   const [remarqueModal, setRemarqueModal] = useState(null);
+  const [bulletinPopupEleve, setBulletinPopupEleve] = useState(null);
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
@@ -375,10 +376,9 @@ export default function Notes() {
     <div className={className}>
       <div style={s.tabsBar}>
         {[
-          ['evaluations', 'Évaluations'],
-          ['generale','Vue générale'],
+          ['evaluations', classeNom ? `Évaluation — ${classeNom}` : 'Évaluations'],
           ['comportements','Comportements'],
-          ['bulletin','Bulletin de notes']
+          ['generale','Vue générale'],
         ].map(([k,l]) => (
           <button key={k}
             style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
@@ -389,13 +389,12 @@ export default function Notes() {
               }
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
-              if (k === 'bulletin') setBulletinOnglet('notes');
               if (classeSelectionnee) {
                 ouvrirVueDepuisSelectionClasse(k);
               } else {
                 if (k === 'evaluations') setVue('classes');
                 else if (k === 'generale') setVue('generale');
-                else if (k === 'comportements' || k === 'bulletin') setVue('bulletin');
+                else if (k === 'comportements') setVue('bulletin');
               }
             }}>
             {l}
@@ -404,6 +403,21 @@ export default function Notes() {
       </div>
     </div>
   );
+
+  // ===================== CONSTANTES BULLETIN =====================
+  const BULLETIN_CRITERES_LABELS = [
+    ["Venir", "à l'école"],
+    ["Être", "à l'heure"],
+    ["Respecter", "les règles"],
+    ["Participer", "en classe"],
+    ["Écouter", "les consignes"],
+    ["Parler", "français"],
+    ["Travailler", "sans déranger"],
+    ["Faire", "les devoirs"],
+    ["Respecter", "le matériel"],
+    ["Organiser", "le classeur"],
+  ];
+  const cycleCouleur = (v) => (v === '' || v === 'rouge' ? 'vert' : v === 'vert' ? 'orange' : 'rouge');
 
   // ===================== VUE SAISIE NOTES =====================
   if (vue === 'saisie' && evaluationOuverte) {
@@ -518,7 +532,6 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>Vue générale — {classeNom}</h2>
-          <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
         {renderActionsBar('no-print')}
 
@@ -586,6 +599,7 @@ export default function Notes() {
                   {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>second.</th>
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>générale</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Bulletin</th>
                 </tr>
               </thead>
               <tbody>
@@ -600,6 +614,12 @@ export default function Notes() {
                       {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: ms !== null ? (ms >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{ms !== null ? fmtNote(ms) : '—'}</td>
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, background: '#eef2ff', color: mg !== null ? (mg >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
+                      <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <button style={s.btnDetail} onClick={() => {
+                          if (bulletinsSem1.length === 0 && classeSelectionnee) chargerBulletinId(classeSelectionnee);
+                          setBulletinPopupEleve(eleve.id);
+                        }}>Détail</button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -610,11 +630,113 @@ export default function Notes() {
                   {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={s.td}></td>
                   <td style={s.td}></td>
+                  <td style={s.td}></td>
                 </tr>
               </tbody>
             </table>
           </div>
           </div>
+          );
+        })()}
+
+        {bulletinPopupEleve && (() => {
+          const critValide = bulletinCriteres.find(c => Number(c.eleve_id) === Number(bulletinPopupEleve))?.valide;
+          const bdS1 = bulletinsSem1.find(b => b.eleve.id === bulletinPopupEleve);
+          const bdS2 = bulletinsSem2.find(b => b.eleve.id === bulletinPopupEleve);
+          const eleveInfo = bdS1?.eleve || bdS2?.eleve;
+          const cr1 = criteresSem1.find(c => Number(c.eleve_id) === Number(bulletinPopupEleve)) || {};
+          const cr2 = criteresSem2.find(c => Number(c.eleve_id) === Number(bulletinPopupEleve)) || {};
+          const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletinPopupEleve));
+          const pm1 = bdS1?.parMatiere || {};
+          const pm2 = bdS2?.parMatiere || {};
+          const allNames = [...new Set([...Object.keys(pm1), ...Object.keys(pm2)])].sort();
+          const principales = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) >= 2);
+          const secondaires = allNames.filter(n => Number((pm1[n] || pm2[n] || {}).coefficient || 1) < 2);
+          const moyBr = (names, pm) => { const w = names.filter(n => pm[n]?.moyenne != null); return w.length ? w.reduce((a, n) => a + parseFloat(pm[n].moyenne || 0), 0) / w.length : null; };
+          const moyP1 = moyBr(principales, pm1); const moyP2 = moyBr(principales, pm2);
+          const moyS1 = moyBr(secondaires, pm1); const moyS2 = moyBr(secondaires, pm2);
+          const allN = [...principales, ...secondaires];
+          const moyG1 = moyBr(allN, pm1); const moyG2 = moyBr(allN, pm2);
+          const moyAnn = moyG1 != null && moyG2 != null ? (moyG1 + moyG2) / 2 : null;
+          const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
+          const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
+          const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
+          const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', border: `2px solid ${v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444'}` }} /> : <span style={{ color: '#aaa' }}>—</span>;
+          const thL = { ...s.th, textAlign: 'left' };
+          const thC = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
+          const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
+          return (
+            <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
+              <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{eleveInfo ? `${eleveInfo.prenom} ${eleveInfo.nom}` : 'Bulletin'}</h3>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setBulletinPopupEleve(null); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>
+                  </div>
+                </div>
+                {!critValide ? (
+                  <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '16px 20px', color: '#92400e', fontSize: 14, fontWeight: 600 }}>
+                    ⚠ Les critères de comportement de cet élève n'ont pas encore été validés. Le bulletin ne peut pas être affiché.
+                  </div>
+                ) : !eleveInfo ? (
+                  <div style={{ color: '#aaa', fontSize: 13 }}>Aucune donnée disponible. Veuillez d'abord charger les bulletins.</div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <img src="/logo-etat-du-valais.png" alt="" style={{ width: 65, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
+                        <div style={{ fontSize: 10, lineHeight: 1.4, color: '#334155' }}>
+                          <div>Département de la santé, des affaires sociales et de la culture</div>
+                          <div>Service de l'action sociale — Office de l'asile</div>
+                          <div>Centre de formation "Le Botza"</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#475569' }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 18, letterSpacing: 2, margin: '6px 0 4px' }}>BULLETIN DE NOTES</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
+                      <span><b>{classeNom}</b></span>
+                      <span><b>{eleveInfo.prenom} {eleveInfo.nom}</b></span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 10 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}><th style={thL}>Branches principales</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
+                          <tbody>
+                            {principales.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={s.td}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
+                          </tbody>
+                        </table>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}><th style={thL}>Branches secondaires</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
+                          <tbody>
+                            {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
+                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={s.td}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
+                          </tbody>
+                        </table>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <div style={{ flex: 1, ...s.card, padding: 6, textAlign: 'center' }}><div style={{ fontSize: 10 }}>Moy. 1er sem.</div><div style={{ fontSize: 15, fontWeight: 800 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</div></div>
+                          <div style={{ flex: 1, ...s.card, padding: 6, textAlign: 'center' }}><div style={{ fontSize: 10 }}>Moy. 2e sem.</div><div style={{ fontSize: 15, fontWeight: 800 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</div></div>
+                        </div>
+                        <div style={{ ...s.card, padding: 6, textAlign: 'center', marginTop: 2 }}><div style={{ fontSize: 10 }}>Moyenne annuelle</div><div style={{ fontSize: 17, fontWeight: 900, color: '#6366f1' }}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</div></div>
+                      </div>
+                      <div>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 32 }}>S1</th><th style={{ ...thC, width: 32 }}>S2</th></tr></thead>
+                          <tbody>
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
+                          </tbody>
+                        </table>
+                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontSize: 12 }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
+                        <div style={{ ...s.card, padding: 6, marginTop: 6 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           );
         })()}
 
@@ -789,20 +911,6 @@ export default function Notes() {
   }
 
   // ===================== VUE BULLETIN (tableau critères + PDF) =====================
-  const BULLETIN_CRITERES_LABELS = [
-    ["Venir", "à l'école"],
-    ["Être", "à l'heure"],
-    ["Respecter", "les règles"],
-    ["Participer", "en classe"],
-    ["Écouter", "les consignes"],
-    ["Parler", "français"],
-    ["Travailler", "sans déranger"],
-    ["Faire", "les devoirs"],
-    ["Respecter", "le matériel"],
-    ["Organiser", "le classeur"],
-  ];
-  const cycleCouleur = (v) => (v === '' || v === 'rouge' ? 'vert' : v === 'vert' ? 'orange' : 'rouge');
-
   const mettreAJourCritereLocal = (eleveId, patch) => {
     setCriteresLocaux(prev => {
       const exists = prev.find(c => Number(c.eleve_id) === Number(eleveId));
