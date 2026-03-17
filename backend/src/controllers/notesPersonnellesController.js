@@ -1,4 +1,4 @@
-const pool = require('../db');
+const pool = require('../config/database');
 
 const ensureTable = async () => {
   await pool.query(`
