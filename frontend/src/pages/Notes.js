@@ -771,13 +771,14 @@ export default function Notes() {
                       {/* Signatures */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: font }}>
                         {[
-                          `Signature ${articleSexe(classeObj?.prof_sexe)} titulaire`,
-                          `Signature ${articleSexe(respNiveauSexe)} responsable de niveau${respNiveauNom ? ` (${respNiveauNom})` : ''}`,
-                          `Signature ${articleSexe(respCoursSexe)} responsable des cours de langue${respCoursNom ? ` (${respCoursNom})` : ''}`,
-                        ].map((label, i) => (
+                          { label: 'Titulaire', nom: [classeObj?.prof_prenom, classeObj?.prof_nom].filter(Boolean).join(' ') },
+                          { label: 'Responsable de niveau', nom: respNiveauNom },
+                          { label: 'Responsable des cours', nom: respCoursNom },
+                        ].map(({ label, nom }, i) => (
                           <div key={i} style={{ flex: 1, textAlign: 'center' }}>
                             <div style={{ borderTop: '0.5px solid #000', marginBottom: 6 }}></div>
-                            <div style={{ fontSize: 11, color: '#334155' }}>{label}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>{label}</div>
+                            {nom && <div style={{ fontSize: 11, color: '#334155' }}>{nom}</div>}
                           </div>
                         ))}
                       </div>
