@@ -763,7 +763,7 @@ export default function Notes() {
                     {/* Absences + Observations sous les deux tableaux */}
                     <div style={{ display: 'flex', gap: 10, marginTop: 10, fontFamily: font }}>
                       <div style={{ ...s.card, padding: 6, fontSize: 12, flex: 1 }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
-                      <div style={{ ...s.card, padding: 6, flex: 2 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
+                      <div style={{ ...s.card, padding: 6, flex: 2 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>{obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}{obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}{!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}</div>
                     </div>
                     {/* Signatures */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 50, gap: 12, fontFamily: font }}>
