@@ -380,7 +380,6 @@ export default function Notes() {
       <div style={s.tabsBar}>
         {[
           ['evaluations', 'Évaluations'],
-          ['comportements','Comportements'],
           ['generale','Vue générale'],
         ].map(([k,l]) => (
           <button key={k}

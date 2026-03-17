@@ -11,6 +11,7 @@ import Branches from './pages/Branches';
 import EmploiDuTemps from './pages/EmploiDuTemps';
 import Presences from './pages/Presences';
 import Notes from './pages/Notes';
+import Bulletins from './pages/Bulletins';
 import Calendrier from './pages/Calendrier';
 import Parametres from './pages/Parametres';
 import Comptabilite from './pages/Comptabilite';
@@ -57,6 +58,7 @@ function App() {
         <Route path="/emploi-du-temps" element={<PrivateRoute><EmploiDuTemps /></PrivateRoute>} />
         <Route path="/presences" element={<PrivateRoute><Presences /></PrivateRoute>} />
         <Route path="/notes" element={<PrivateRoute><Notes /></PrivateRoute>} />
+        <Route path="/bulletins" element={<PrivateRoute><Bulletins /></PrivateRoute>} />
         <Route path="/tcf" element={<PrivateRoute><TCF /></PrivateRoute>} />
         <Route path="/calendrier" element={<PrivateRoute><Calendrier /></PrivateRoute>} />
         <Route path="/parametres" element={<PrivateRoute><Parametres /></PrivateRoute>} />

@@ -6,7 +6,7 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 
 const API = 'https://ecole-manager-backend.onrender.com/api';
 
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true };
+const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -98,6 +98,7 @@ export default function Dashboard() {
     { label: 'Emploi du Temps',  path: '/emploi-du-temps',         color: '#ef4444', bg: '#fee2e2', adminOnly: false, accentKey: 'emploi_du_temps' },
     { label: 'Présences',        path: '/presences',               color: '#06b6d4', bg: '#cffafe', adminOnly: false, accentKey: 'presences' },
     { label: 'Notes',            path: '/notes',                   color: '#ec4899', bg: '#fce7f3', adminOnly: false, accentKey: 'notes' },
+    { label: 'Bulletin de notes', path: '/bulletins',              color: '#6366f1', bg: '#e0e7ff', adminOnly: false, accentKey: 'bulletins' },
     { label: 'TCF',              path: '/tcf',                     color: '#0ea5e9', bg: '#e0f2fe', adminOnly: false, accentKey: 'tcf' },
     { label: 'Calendrier',       path: '/calendrier',              color: '#14b8a6', bg: '#ccfbf1', adminOnly: false, accentKey: 'calendrier' },
     { label: 'Comptabilité',     path: '/comptabilite',            color: '#84cc16', bg: '#ecfccb', adminOnly: false, accentKey: 'comptabilite' },
