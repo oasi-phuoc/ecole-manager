@@ -192,13 +192,16 @@ export default function Notes() {
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
       ]);
-      setBulletins(bulletinRes.data);
+      const bulletinData = bulletinRes.data || [];
+      setBulletins(bulletinData);
       setBulletinStatsPresences(statsRes.data || []);
       const criteresData = criteresRes.data || [];
       setBulletinCriteres(criteresData);
       setCriteresLocaux(criteresData);
       setCriteresModifies(false);
-      setCriteresValides(criteresData.length > 0 && criteresData.every(cr => cr.valide === true));
+      const activeEleveIds = new Set(bulletinData.map(b => Number(b.eleve.id)));
+      const criteresActifs = criteresData.filter(cr => activeEleveIds.has(Number(cr.eleve_id)));
+      setCriteresValides(activeEleveIds.size > 0 && criteresActifs.length === activeEleveIds.size && criteresActifs.every(cr => cr.valide === true));
       setBulletinsSem1(bS1Res.data || []);
       setBulletinsSem2(bS2Res.data || []);
       setCriteresSem1(cr1Res.data || []);
