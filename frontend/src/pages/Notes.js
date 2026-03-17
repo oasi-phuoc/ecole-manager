@@ -670,11 +670,12 @@ export default function Notes() {
           const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
           const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
           const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
-          const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', border: `2px solid ${v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444'}` }} /> : <span style={{ color: '#aaa' }}>—</span>;
-          const thL = { ...s.th, textAlign: 'left', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
-          const thC = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
-          const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
-          const tdL = { ...s.td, fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', background: v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444' }} /> : <span style={{ color: '#aaa' }}>—</span>;
+          const tblBorder = { border: '1px solid #c7d2fe' };
+          const thL = { ...s.th, border: 'none', textAlign: 'left', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const thC = { ...s.th, border: 'none', textAlign: 'center', width: 44, whiteSpace: 'nowrap', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const tdC = { ...s.td, border: 'none', textAlign: 'center', padding: '4px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const tdL = { ...s.td, border: 'none', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
           const articleSexe = (sexe) => String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du';
           const niveauCl = String(classeObj?.niveau || '').toUpperCase();
@@ -730,7 +731,7 @@ export default function Notes() {
                     {/* Tableaux */}
                     <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches principales</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
                             {principales.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
@@ -738,13 +739,13 @@ export default function Notes() {
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
                           </tbody>
                         </table>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches secondaires</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
                             {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
                             {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
-                            <tr><td colSpan={3} style={{ height: 6, padding: 0, border: 'none', background: 'white' }}></td></tr>
+                            <tr><td colSpan={3} style={{ height: 12, padding: 0, border: 'none', background: 'white' }}></td></tr>
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
                             <tr><td colSpan={3} style={{ height: 6, padding: 0, border: 'none', background: 'white' }}></td></tr>
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
@@ -752,7 +753,7 @@ export default function Notes() {
                         </table>
                       </div>
                       <div>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 32 }}>S1</th><th style={{ ...thC, width: 32 }}>S2</th></tr></thead>
                           <tbody>
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
