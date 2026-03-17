@@ -98,6 +98,7 @@ app.use('/api/planning', require('./src/routes/planning'));
 app.use('/api/documents-administratifs', require('./src/routes/documentsAdministratifs'));
 app.use('/api/inventaire-branches', require('./src/routes/inventaireBranches'));
 app.use('/api/tcf-state', require('./src/routes/tcfState'));
+app.use('/api/notes-personnelles', require('./src/routes/notesPersonnelles'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

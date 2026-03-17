@@ -14,8 +14,28 @@ export default function Dashboard() {
   const [accesProfs, setAccesProfs] = useState({});
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [observationDetail, setObservationDetail] = useState(null);
+  const [memo, setMemo] = useState('');
+  const [memoSaving, setMemoSaving] = useState(false);
+  const [memoSaved, setMemoSaved] = useState(false);
   const navigate = useNavigate();
   const headers = {};
+
+  const chargerMemo = async () => {
+    try {
+      const res = await axios.get(API + '/notes-personnelles', { headers });
+      setMemo(res.data.contenu || '');
+    } catch {}
+  };
+
+  const sauvegarderMemo = async (contenu) => {
+    setMemoSaving(true);
+    try {
+      await axios.put(API + '/notes-personnelles', { contenu }, { headers });
+      setMemoSaved(true);
+      setTimeout(() => setMemoSaved(false), 2000);
+    } catch {}
+    setMemoSaving(false);
+  };
 
   const chargerAccesProfs = async () => {
     try {
@@ -34,6 +54,7 @@ export default function Dashboard() {
       } catch {}
       chargerStats();
       chargerAccesProfs();
+      chargerMemo();
     };
     chargerUtilisateurEtStats();
   }, []);
@@ -220,6 +241,24 @@ export default function Dashboard() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+
+        <div style={styles.sectionTitle}>📝 Notes personnelles</div>
+        <div style={{ background: 'white', borderRadius: 12, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', marginBottom: 24 }}>
+          <textarea
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+            onBlur={() => sauvegarderMemo(memo)}
+            placeholder="Écrivez vos notes, rappels, mémos ici..."
+            style={{ width: '100%', minHeight: 120, border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#1e293b', lineHeight: 1.6 }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            {memoSaved && <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>✓ Sauvegardé</span>}
+            {memoSaving && <span style={{ fontSize: 12, color: '#94a3b8' }}>Sauvegarde...</span>}
+            <button onClick={() => sauvegarderMemo(memo)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              Sauvegarder
+            </button>
           </div>
         </div>
       </div>
