@@ -382,10 +382,14 @@ export default function Notes() {
         ].map(([k,l]) => (
           <button key={k}
             style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
-            onClick={() => {
-              if (criteresModifies && bulletinOnglet === 'criteres' && k !== 'comportements') {
-                if (!window.confirm('Vous avez des modifications non sauvegardées dans les comportements. Quitter sans sauvegarder ?')) return;
-                setCriteresModifies(false);
+            onClick={async () => {
+              if (bulletinOnglet === 'criteres' && k !== 'comportements') {
+                if (criteresModifies && criteresValides) {
+                  await sauvegarderTousCriteres();
+                } else if (criteresModifies) {
+                  if (!window.confirm('Vous avez des modifications non sauvegardées dans les comportements. Quitter sans sauvegarder ?')) return;
+                  setCriteresModifies(false);
+                }
               }
               setVueClasseAction(k);
               if (k === 'comportements') setBulletinOnglet('criteres');
