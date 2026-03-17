@@ -15,9 +15,13 @@ export default function Dashboard() {
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [observationDetail, setObservationDetail] = useState(null);
   const [memo, setMemo] = useState('');
-  const [memoSaving, setMemoSaving] = useState(false);
-  const [memoSaved, setMemoSaved] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: 'success' }), 2200);
+  };
   const headers = {};
 
   const chargerMemo = async () => {
@@ -27,14 +31,13 @@ export default function Dashboard() {
     } catch {}
   };
 
-  const sauvegarderMemo = async (contenu) => {
-    setMemoSaving(true);
+  const sauvegarderMemo = async () => {
     try {
-      await axios.put(API + '/notes-personnelles', { contenu }, { headers });
-      setMemoSaved(true);
-      setTimeout(() => setMemoSaved(false), 2000);
-    } catch {}
-    setMemoSaving(false);
+      await axios.put(API + '/notes-personnelles', { contenu: memo }, { headers });
+      showToast('Notes sauvegardées.');
+    } catch {
+      showToast('Erreur lors de la sauvegarde.', 'error');
+    }
   };
 
   const chargerAccesProfs = async () => {
@@ -249,14 +252,14 @@ export default function Dashboard() {
           <textarea
             value={memo}
             onChange={e => setMemo(e.target.value)}
-            onBlur={() => sauvegarderMemo(memo)}
             placeholder="Écrivez vos notes, rappels, mémos ici..."
             style={{ width: '100%', minHeight: 120, border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#1e293b', lineHeight: 1.6 }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            {memoSaved && <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>✓ Sauvegardé</span>}
-            {memoSaving && <span style={{ fontSize: 12, color: '#94a3b8' }}>Sauvegarde...</span>}
-            <button onClick={() => sauvegarderMemo(memo)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            {toast.message && (
+              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : { background: '#d1fae5', color: '#065f46' }) }}>{toast.message}</span>
+            )}
+            <button onClick={sauvegarderMemo} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Sauvegarder
             </button>
           </div>
