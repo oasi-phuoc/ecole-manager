@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const axios = require('axios');
+const https = require('https');
 
 const chatbot = async (req, res) => {
   try {
@@ -105,21 +105,37 @@ ${context}
 
 Réponds uniquement à partir de ces données. Si l'information n'est pas disponible, dis-le clairement.`;
 
-    const geminiRes = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
+    const geminiData = await new Promise((resolve, reject) => {
+      const body = JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: message }] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
-      },
-      { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
-    );
+      });
+      const options = {
+        hostname: 'generativelanguage.googleapis.com',
+        path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+      };
+      const req2 = https.request(options, (r) => {
+        let data = '';
+        r.on('data', chunk => { data += chunk; });
+        r.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+        });
+      });
+      req2.on('error', reject);
+      req2.setTimeout(30000, () => { req2.destroy(); reject(new Error('Timeout')); });
+      req2.write(body);
+      req2.end();
+    });
 
-    const answer = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Désolé, je n\'ai pas pu générer une réponse.';
+    if (geminiData.error) throw new Error(geminiData.error.message || 'Gemini error');
+    const answer = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Désolé, je n\'ai pas pu générer une réponse.';
     res.json({ answer });
   } catch (err) {
-    console.error('Chatbot error:', err.response?.data || err.message);
-    res.status(500).json({ message: 'Erreur chatbot: ' + (err.response?.data?.error?.message || err.message) });
+    console.error('Chatbot error:', err.message);
+    res.status(500).json({ message: 'Erreur chatbot: ' + err.message });
   }
 };
 
