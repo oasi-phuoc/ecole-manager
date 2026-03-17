@@ -675,8 +675,9 @@ export default function Notes() {
             <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
               <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{eleveInfo ? `${eleveInfo.prenom} ${eleveInfo.nom}` : 'Bulletin'}</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Bulletin de notes</h3>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                     <button onClick={() => { setBulletinPopupEleve(null); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>
                   </div>
                 </div>
@@ -690,7 +691,7 @@ export default function Notes() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <img src="/logo-etat-du-valais.png" alt="" style={{ width: 65, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
+                        <img src="/logo-etat-du-valais.png" alt="" style={{ width: 32, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
                         <div style={{ fontSize: 10, lineHeight: 1.4, color: '#334155' }}>
                           <div>Département de la santé, des affaires sociales et de la culture</div>
                           <div>Service de l'action sociale — Office de l'asile</div>
@@ -699,10 +700,12 @@ export default function Notes() {
                       </div>
                       <div style={{ fontSize: 11, color: '#475569' }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                     </div>
-                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 18, letterSpacing: 2, margin: '6px 0 4px' }}>BULLETIN DE NOTES</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-                      <span><b>{classeNom}</b></span>
-                      <span><b>{eleveInfo.prenom} {eleveInfo.nom}</b></span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 }}>
+                      <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: 2 }}>BULLETIN DE NOTES</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.nom} {eleveInfo.prenom}</div>
+                        <div style={{ fontSize: 12, color: '#475569' }}>{classeNom}</div>
+                      </div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -720,13 +723,10 @@ export default function Notes() {
                             {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
                             {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={s.td}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
                           </tbody>
                         </table>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <div style={{ flex: 1, ...s.card, padding: 6, textAlign: 'center' }}><div style={{ fontSize: 10 }}>Moy. 1er sem.</div><div style={{ fontSize: 15, fontWeight: 800 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</div></div>
-                          <div style={{ flex: 1, ...s.card, padding: 6, textAlign: 'center' }}><div style={{ fontSize: 10 }}>Moy. 2e sem.</div><div style={{ fontSize: 15, fontWeight: 800 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</div></div>
-                        </div>
-                        <div style={{ ...s.card, padding: 6, textAlign: 'center', marginTop: 2 }}><div style={{ fontSize: 10 }}>Moyenne annuelle</div><div style={{ fontSize: 17, fontWeight: 900, color: '#6366f1' }}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</div></div>
                       </div>
                       <div>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
