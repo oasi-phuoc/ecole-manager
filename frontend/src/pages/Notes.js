@@ -738,8 +738,10 @@ export default function Notes() {
                             {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
                             {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
                             <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={{ ...tdL, paddingTop: 5 }}>Moyenne semestrielle</td><td style={{ ...tdC, paddingTop: 5 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={{ ...tdC, paddingTop: 5 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={{ ...tdL, paddingTop: 5 }}>Moyenne annuelle</td><td style={{ ...tdC, paddingTop: 5, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
+                            <tr><td colSpan={3} style={{ height: 6, padding: 0, border: 'none', background: 'white' }}></td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
+                            <tr><td colSpan={3} style={{ height: 6, padding: 0, border: 'none', background: 'white' }}></td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
                           </tbody>
                         </table>
                       </div>
