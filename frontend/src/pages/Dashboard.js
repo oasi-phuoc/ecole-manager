@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [accesProfs, setAccesProfs] = useState({});
-  const [dashboardInfo, setDashboardInfo] = useState({ prochain_evenement: null, dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
+  const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [observationDetail, setObservationDetail] = useState(null);
   const navigate = useNavigate();
   const headers = {};
@@ -48,7 +48,7 @@ export default function Dashboard() {
       setStats({ classes: cl.data.length, eleves: el.data.length });
       if (st.data) {
         setDashboardInfo({
-          prochain_evenement: st.data.prochain_evenement || null,
+          prochains_evenements: (st.data.prochains_evenements || []).slice(0, 3),
           dernieres_notes: st.data.dernieres_notes || [],
           dernieres_observations: st.data.dernieres_observations || [],
           controle_presence_aujourdhui: st.data.controle_presence_aujourdhui || { creneau_en_cours: null, classes_en_cours: [] },
@@ -160,15 +160,16 @@ export default function Dashboard() {
         <div style={styles.sectionTitle}>Informations utiles</div>
         <div style={styles.infoRow}>
           <div style={styles.infoCard}>
-            <div style={styles.infoCardTitle}>📅 Prochain événement du calendrier</div>
-            {dashboardInfo.prochain_evenement ? (
-              <div>
-                <div style={styles.infoMain}>{dashboardInfo.prochain_evenement.titre}</div>
-                <div style={styles.infoSub}>
-                  {fmtDate(dashboardInfo.prochain_evenement.date_debut)} • {dashboardInfo.prochain_evenement.type || 'Événement'}
+            <div style={styles.infoCardTitle}>📅 Prochains événements</div>
+            {dashboardInfo.prochains_evenements.length === 0
+              ? <div style={styles.infoEmpty}>Aucun événement à venir</div>
+              : dashboardInfo.prochains_evenements.map((ev, i) => (
+                <div key={i} style={{ ...(i > 0 ? { marginTop: 8, paddingTop: 8, borderTop: '1px solid #f1f5f9' } : {}) }}>
+                  <div style={styles.infoMain}>{ev.titre}</div>
+                  <div style={styles.infoSub}>{fmtDate(ev.date_debut)} • {ev.type || 'Événement'}</div>
                 </div>
-              </div>
-            ) : <div style={styles.infoEmpty}>Aucun événement à venir</div>}
+              ))
+            }
           </div>
 
           <div style={styles.infoCard}>

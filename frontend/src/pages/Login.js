@@ -176,7 +176,7 @@ export default function Login() {
               value={email}
               disabled={mfaRequired}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@ecole.com"
+              placeholder="Saisir votre email"
             />
           </div>
           <div style={styles.champ}>
