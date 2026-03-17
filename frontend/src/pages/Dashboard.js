@@ -205,40 +205,21 @@ export default function Dashboard() {
 
           <div style={styles.infoCard}>
             <div style={styles.infoCardTitle}>✅ Contrôle de présence aujourd'hui</div>
-            {!dashboardInfo.controle_presence_aujourdhui?.creneau_en_cours ? (
-              <div style={styles.infoEmpty}>Aucune période en cours pour maintenant</div>
-            ) : (
-              <div>
-                <div style={styles.infoSub}>
-                  {dashboardInfo.controle_presence_aujourdhui.jour} • {dashboardInfo.controle_presence_aujourdhui.creneau_en_cours.heure_debut} - {dashboardInfo.controle_presence_aujourdhui.creneau_en_cours.heure_fin}
+            {(() => {
+              const classesDuJour = dashboardInfo.controle_presence_aujourdhui?.classes_du_jour || [];
+              if (classesDuJour.length === 0) return <div style={styles.infoEmpty}>Aucune classe aujourd'hui</div>;
+              return (
+                <div>
+                  <div style={styles.infoSub}>{dashboardInfo.controle_presence_aujourdhui.jour}</div>
+                  {classesDuJour.map(cl => (
+                    <div key={cl.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                      <b style={{ fontSize: 14 }}>{cl.nom}</b>
+                      <button style={styles.quickBtn} onClick={() => navigate('/presences', { state: { classe_id: cl.id } })}>Présences →</button>
+                    </div>
+                  ))}
                 </div>
-                {dashboardInfo.controle_presence_aujourdhui.classes_en_cours.length === 0 ? (
-                  <div style={styles.infoEmpty}>Aucune classe affectée sur ce créneau</div>
-                ) : dashboardInfo.controle_presence_aujourdhui.classes_en_cours.map((cl) => (
-                  <div key={cl.id} style={styles.presenceClassCard}>
-                    <div style={styles.presenceClassHead}>
-                      <b>{cl.nom}</b>
-                      <button
-                        style={styles.quickBtn}
-                        onClick={() => navigate('/presences', { state: { classe_id: cl.id } })}
-                      >
-                        Accès rapide
-                      </button>
-                    </div>
-                    <div style={styles.presenceElevesList}>
-                      {cl.eleves.map((e) => (
-                        <div key={e.id} style={styles.presenceEleveRow}>
-                          <span>{e.prenom} {e.nom}</span>
-                          <span style={{ ...styles.presenceBadge, ...(e.statut ? {} : { background: '#f1f5f9', color: '#94a3b8' }) }}>
-                            {e.statut || '—'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       </div>

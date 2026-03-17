@@ -99,10 +99,22 @@ const getStatistiques = async (req, res) => {
       LIMIT 1
     `, [jourAuj], []);
 
+    // Toutes les classes où le prof a cours aujourd'hui
+    const classesDuJourRes = await safeQuery(`
+      SELECT DISTINCT c.id, c.nom
+      FROM affectations a
+      JOIN classes c ON c.id = a.classe_id
+      JOIN creneaux cr ON cr.id = a.creneau_id
+      WHERE cr.jour = $1
+      ${isAdmin ? '' : 'AND a.prof_id = $2'}
+      ORDER BY c.nom
+    `, isAdmin ? [jourAuj] : [jourAuj, req.user.id], []);
+
     let controlePresenceAujourdhui = {
       jour: jourAuj,
       creneau_en_cours: null,
-      classes_en_cours: []
+      classes_en_cours: [],
+      classes_du_jour: classesDuJourRes.rows
     };
 
     if (creneauEnCoursRes.rows.length > 0) {
@@ -146,7 +158,8 @@ const getStatistiques = async (req, res) => {
       controlePresenceAujourdhui = {
         jour: jourAuj,
         creneau_en_cours: creneau,
-        classes_en_cours: classesEnCours
+        classes_en_cours: classesEnCours,
+        classes_du_jour: classesDuJourRes.rows
       };
     }
 
