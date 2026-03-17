@@ -752,9 +752,12 @@ export default function Notes() {
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
                           </tbody>
                         </table>
-                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontSize: 12, fontFamily: font }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
-                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontFamily: font }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
                       </div>
+                    </div>
+                    {/* Absences + Observations sous les deux tableaux */}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 10, fontFamily: font }}>
+                      <div style={{ ...s.card, padding: 6, fontSize: 12, flex: 1 }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
+                      <div style={{ ...s.card, padding: 6, flex: 2 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
                     </div>
                     {/* Signatures */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 50, gap: 12, fontFamily: font }}>
@@ -764,7 +767,7 @@ export default function Notes() {
                         `Signature ${articleSexe(respCoursSexe)} responsable des cours de langue${respCoursNom ? ` (${respCoursNom})` : ''}`,
                       ].map((label, i) => (
                         <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                          <div style={{ borderTop: '2px solid #000', marginBottom: 6, paddingTop: 0 }}></div>
+                          <div style={{ borderTop: '1px solid #000', marginBottom: 6 }}></div>
                           <div style={{ fontSize: 11, color: '#334155' }}>{label}</div>
                         </div>
                       ))}
