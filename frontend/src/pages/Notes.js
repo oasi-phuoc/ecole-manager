@@ -1437,23 +1437,6 @@ export default function Notes() {
                             </tr>
                           </tbody>
                         </table>
-                        {/* Moyennes globales sous les tableaux gauche */}
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <div style={{ flex: 1, ...s.card, padding: 8, textAlign: 'center' }}>
-                            <div style={{ fontSize: 10, color: '#475569' }}>Moy. 1er semestre</div>
-                            <div style={{ fontSize: 16, fontWeight: 800 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</div>
-                          </div>
-                          <div style={{ flex: 1, ...s.card, padding: 8, textAlign: 'center' }}>
-                            <div style={{ fontSize: 10, color: '#475569' }}>Moy. 2e semestre</div>
-                            <div style={{ fontSize: 16, fontWeight: 800 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</div>
-                          </div>
-                        </div>
-                        <div style={{ marginTop: 4 }}>
-                          <div style={{ ...s.card, padding: 8, textAlign: 'center' }}>
-                            <div style={{ fontSize: 10, color: '#475569' }}>Moyenne annuelle</div>
-                            <div style={{ fontSize: 18, fontWeight: 900, color: '#6366f1' }}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</div>
-                          </div>
-                        </div>
                       </div>
                       {/* Colonne droite : comportement */}
                       <div>
