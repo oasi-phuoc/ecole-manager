@@ -774,7 +774,7 @@ export default function Notes() {
                     </div>
                     {/* Pied de page */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 50, paddingTop: 8, fontSize: 11, color: '#64748b', fontFamily: font }}>
-                      <img src="/logo-pied-page.png" alt="" style={{ height: 28, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                      <img src="/logo-pied-page.png" alt="" style={{ height: 19, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                       <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
                     </div>
                   </div>
