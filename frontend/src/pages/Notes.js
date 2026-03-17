@@ -924,6 +924,14 @@ export default function Notes() {
   };
 
   const validerCriteres = () => {
+    // Toggle: si déjà validé, dé-valider
+    if (criteresValides) {
+      setCriteresLocaux(prev => prev.map(cr => ({ ...cr, valide: false })));
+      setCriteresModifies(true);
+      setCriteresValides(false);
+      return;
+    }
+
     const tousRemplis = bulletins.every(b => {
       const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
       return [1,2,3,4,5,6,7,8,9,10].every(n => cr['c'+n] && cr['c'+n] !== '');
@@ -961,19 +969,27 @@ export default function Notes() {
   };
 
   const sauvegarderTousCriteres = async () => {
+    if (!criteresValides) {
+      showToast('Veuillez valider les critères avant de sauvegarder.', 'info');
+      return;
+    }
+    if (!criteresModifies) {
+      showToast('Aucun changement à sauvegarder.', 'info');
+      return;
+    }
     for (const b of bulletins) {
       const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
       const payload = {
         classe_id: classeSelectionnee, semestre: bulletinSemestre,
         c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
         c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
-        remarques: cr.remarques||null, valide: criteresValides ? true : (cr.valide||false),
+        remarques: cr.remarques||null, valide: true,
       };
       await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
     }
     setBulletinCriteres([...criteresLocaux]);
     setCriteresModifies(false);
-    showToast('Comportements sauvegardés.');
+    showToast('Changements sauvegardés.', 'info');
   };
 
   if (vue === 'bulletin') {
@@ -1055,8 +1071,7 @@ export default function Notes() {
               </button>
               <button
                 onClick={sauvegarderTousCriteres}
-                disabled={!criteresModifies || !criteresValides}
-                style={{ padding: '8px 18px', borderRadius: 9, border: 'none', cursor: criteresModifies && criteresValides ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 13, background: criteresModifies && criteresValides ? '#6366f1' : '#e2e8f0', color: criteresModifies && criteresValides ? 'white' : '#94a3b8', transition: 'all 0.2s' }}>
+                style={{ padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#6366f1', color: 'white', transition: 'all 0.2s' }}>
                 💾 Sauvegarder
               </button>
             </div>
@@ -1072,7 +1087,7 @@ export default function Notes() {
         {/* Sous-onglets semestre (+ Tous/Par élève pour Bulletin de notes) */}
         <div className="no-print" style={s.subTabsBar}>
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-            <button key={sem.id} onClick={() => { setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
+            <button key={sem.id} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
               style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
@@ -1343,7 +1358,7 @@ export default function Notes() {
                     {/* En-tête : logo+org à gauche, date à droite */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <img src="/logo-etat-du-valais.png" alt="Logo État du Valais" style={{ width: 75, height: 'auto', objectFit: 'contain', display: 'block', backgroundColor: 'white', padding: 2 }} />
+                        <img src="/logo-etat-du-valais.png" alt="Logo État du Valais" style={{ width: 38, height: 'auto', objectFit: 'contain', display: 'block', backgroundColor: 'white', padding: 2 }} />
                         <div style={{ fontSize: 11, lineHeight: 1.4, color: '#334155' }}>
                           <div>Département de la santé, des affaires sociales et de la culture</div>
                           <div>Service de l'action sociale — Office de l'asile</div>
@@ -1406,6 +1421,15 @@ export default function Notes() {
                               <td style={s.td}>Moyenne</td>
                               <td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td>
                               <td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td>
+                            </tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                              <td style={s.td}>Moyenne semestrielle</td>
+                              <td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td>
+                              <td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td>
+                            </tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                              <td style={s.td}>Moyenne annuelle</td>
+                              <td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td>
                             </tr>
                           </tbody>
                         </table>
