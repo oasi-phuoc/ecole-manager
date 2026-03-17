@@ -720,7 +720,7 @@ export default function Notes() {
                       <div style={{ fontSize: 11, color: '#475569', fontFamily: font }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                     </div>
                     {/* Titre + Élève */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 100 }}>
                       <div style={{ fontWeight: 900, fontSize: 18, fontFamily: font }}>BULLETIN DE NOTES</div>
                       <div style={{ textAlign: 'right', fontFamily: font }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.nom} {eleveInfo.prenom}</div>
