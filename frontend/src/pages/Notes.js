@@ -690,7 +690,14 @@ export default function Notes() {
                   <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Bulletin de notes</h3>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => { setBulletinPopupEleve(null); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>
-                    <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
+                    <button onClick={() => {
+                      const node = document.getElementById('bulletin-popup-pdf');
+                      if (!node) return;
+                      const popup = window.open('', '_blank', 'width=1000,height=800');
+                      if (!popup) return;
+                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:24px;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}</style></head><body>${node.outerHTML}</body></html>`);
+                      popup.document.close(); popup.focus(); popup.print();
+                    }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
                 </div>
                 {!critValide ? (
@@ -700,7 +707,7 @@ export default function Notes() {
                 ) : !eleveInfo ? (
                   <div style={{ color: '#aaa', fontSize: 13 }}>Aucune donnée disponible. Veuillez d'abord charger les bulletins.</div>
                 ) : (
-                  <div>
+                  <div id="bulletin-popup-pdf">
                     {/* En-tête */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
