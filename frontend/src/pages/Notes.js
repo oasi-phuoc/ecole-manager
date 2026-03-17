@@ -671,13 +671,22 @@ export default function Notes() {
           const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
           const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
           const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', border: `2px solid ${v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444'}` }} /> : <span style={{ color: '#aaa' }}>—</span>;
-          const thL = { ...s.th, textAlign: 'left' };
-          const thC = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
-          const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
+          const thL = { ...s.th, textAlign: 'left', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const thC = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const tdL = { ...s.td, fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
+          const articleSexe = (sexe) => String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du';
+          const niveauCl = String(classeObj?.niveau || '').toUpperCase();
+          const cleNiv = niveauCl.includes('CSC') ? 'CSC' : niveauCl.includes('CFR') ? 'CFR' : niveauCl.includes('EPL') ? 'EPL' : '';
+          const respNiveauNom = cleNiv === 'CSC' ? (ecoleParams.responsable_niveau_csc || '') : cleNiv === 'CFR' ? (ecoleParams.responsable_niveau_cfr || '') : cleNiv === 'EPL' ? (ecoleParams.responsable_niveau_epl || '') : '';
+          const respNiveauSexe = cleNiv === 'CSC' ? ecoleParams.sexe_responsable_niveau_csc : cleNiv === 'CFR' ? ecoleParams.sexe_responsable_niveau_cfr : cleNiv === 'EPL' ? ecoleParams.sexe_responsable_niveau_epl : null;
+          const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
+          const respCoursSexe = ecoleParams.sexe_responsable_langues_jeunes;
           return (
             <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
-              <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto', fontFamily: font }} onClick={e => e.stopPropagation()}>
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Bulletin de notes</h3>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
@@ -692,42 +701,45 @@ export default function Notes() {
                   <div style={{ color: '#aaa', fontSize: 13 }}>Aucune donnée disponible. Veuillez d'abord charger les bulletins.</div>
                 ) : (
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                    {/* En-tête */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                         <img src="/logo-etat-du-valais.png" alt="" style={{ width: 32, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
-                        <div style={{ fontSize: 10, lineHeight: 1.4, color: '#334155' }}>
+                        <div style={{ fontSize: 10, lineHeight: 1.4, color: '#334155', fontFamily: font }}>
                           <div>Département de la santé, des affaires sociales et de la culture</div>
                           <div>Service de l'action sociale — Office de l'asile</div>
                           <div>Centre de formation "Le Botza"</div>
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: '#475569' }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                      <div style={{ fontSize: 11, color: '#475569', fontFamily: font }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 }}>
-                      <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: 2 }}>BULLETIN DE NOTES</div>
-                      <div style={{ textAlign: 'right' }}>
+                    {/* Titre + Élève */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 16 }}>
+                      <div style={{ fontWeight: 900, fontSize: 18, fontFamily: font }}>BULLETIN DE NOTES</div>
+                      <div style={{ textAlign: 'right', fontFamily: font }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.nom} {eleveInfo.prenom}</div>
                         <div style={{ fontSize: 12, color: '#475569' }}>{classeNom}</div>
                       </div>
                     </div>
+                    {/* Tableaux */}
                     <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches principales</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
-                            {principales.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
-                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={s.td}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
+                            {principales.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
+                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
                           </tbody>
                         </table>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches secondaires</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
-                            {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...s.td, color: '#aaa' }}>—</td></tr>}
-                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={s.td}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={s.td}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
+                            {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
+                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={{ ...tdL, paddingTop: 5 }}>Moyenne semestrielle</td><td style={{ ...tdC, paddingTop: 5 }}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={{ ...tdC, paddingTop: 5 }}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={{ ...tdL, paddingTop: 5 }}>Moyenne annuelle</td><td style={{ ...tdC, paddingTop: 5, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -735,12 +747,30 @@ export default function Notes() {
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 32 }}>S1</th><th style={{ ...thC, width: 32 }}>S2</th></tr></thead>
                           <tbody>
-                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
                           </tbody>
                         </table>
-                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontSize: 12 }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
-                        <div style={{ ...s.card, padding: 6, marginTop: 6 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
+                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontSize: 12, fontFamily: font }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
+                        <div style={{ ...s.card, padding: 6, marginTop: 6, fontFamily: font }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div><div style={{ fontSize: 11 }}>{observations}</div></div>
                       </div>
+                    </div>
+                    {/* Signatures */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 50, gap: 12, fontFamily: font }}>
+                      {[
+                        `Signature ${articleSexe(classeObj?.prof_sexe)} titulaire`,
+                        `Signature ${articleSexe(respNiveauSexe)} responsable de niveau${respNiveauNom ? ` (${respNiveauNom})` : ''}`,
+                        `Signature ${articleSexe(respCoursSexe)} responsable des cours de langue${respCoursNom ? ` (${respCoursNom})` : ''}`,
+                      ].map((label, i) => (
+                        <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ borderTop: '2px solid #000', marginBottom: 6, paddingTop: 0 }}></div>
+                          <div style={{ fontSize: 11, color: '#334155' }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Pied de page */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 50, paddingTop: 8, fontSize: 11, color: '#64748b', fontFamily: font }}>
+                      <img src="/logo-pied-page.png" alt="" style={{ height: 28, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                      <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
                     </div>
                   </div>
                 )}
