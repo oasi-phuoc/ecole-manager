@@ -694,7 +694,7 @@ export default function Notes() {
                       if (!node) return;
                       const popup = window.open('', '_blank', 'width=1000,height=800');
                       if (!popup) return;
-                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:24px;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}</style></head><body>${node.outerHTML}</body></html>`);
+                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}</style></head><body>${node.outerHTML}</body></html>`);
                       popup.document.close(); popup.focus(); popup.print();
                     }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
@@ -765,23 +765,26 @@ export default function Notes() {
                       <div style={{ ...s.card, padding: 6, fontSize: 12, flex: 1 }}><span>Abs. excusées : <b>{st?.excuses ?? 0}</b></span><span style={{ marginLeft: 10 }}>Non excusées : <b>{st?.absents ?? 0}</b></span></div>
                       <div style={{ ...s.card, padding: 6, flex: 2 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>{obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}{obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}{!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}</div>
                     </div>
-                    {/* Signatures */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 50, gap: 12, fontFamily: font }}>
-                      {[
-                        `Signature ${articleSexe(classeObj?.prof_sexe)} titulaire`,
-                        `Signature ${articleSexe(respNiveauSexe)} responsable de niveau${respNiveauNom ? ` (${respNiveauNom})` : ''}`,
-                        `Signature ${articleSexe(respCoursSexe)} responsable des cours de langue${respCoursNom ? ` (${respCoursNom})` : ''}`,
-                      ].map((label, i) => (
-                        <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                          <div style={{ borderTop: '1px solid #000', marginBottom: 6 }}></div>
-                          <div style={{ fontSize: 11, color: '#334155' }}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Pied de page */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 50, paddingTop: 8, fontSize: 11, color: '#64748b', fontFamily: font }}>
-                      <img src="/logo-pied-page.png" alt="" style={{ height: 19, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
-                      <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
+                    {/* Signatures + Pied de page — poussés en bas à l'impression */}
+                    <div className="bulletin-bas-page">
+                      {/* Signatures */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: font }}>
+                        {[
+                          `Signature ${articleSexe(classeObj?.prof_sexe)} titulaire`,
+                          `Signature ${articleSexe(respNiveauSexe)} responsable de niveau${respNiveauNom ? ` (${respNiveauNom})` : ''}`,
+                          `Signature ${articleSexe(respCoursSexe)} responsable des cours de langue${respCoursNom ? ` (${respCoursNom})` : ''}`,
+                        ].map((label, i) => (
+                          <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                            <div style={{ borderTop: '0.5px solid #000', marginBottom: 6 }}></div>
+                            <div style={{ fontSize: 11, color: '#334155' }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Pied de page */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 20, paddingTop: 8, fontSize: 11, color: '#64748b', fontFamily: font }}>
+                        <img src="/logo-pied-page.png" alt="" style={{ height: 19, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                        <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
+                      </div>
                     </div>
                   </div>
                 )}
