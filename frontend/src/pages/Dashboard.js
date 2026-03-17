@@ -17,6 +17,10 @@ export default function Dashboard() {
   const [memo, setMemo] = useState('');
   const [memoSaving, setMemoSaving] = useState(false);
   const [memoSaved, setMemoSaved] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([{ role: 'assistant', text: 'Bonjour ! Je suis votre assistant. Posez-moi des questions sur les élèves, les présences, les notes...' }]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
   const navigate = useNavigate();
   const headers = {};
 
@@ -35,6 +39,21 @@ export default function Dashboard() {
       setTimeout(() => setMemoSaved(false), 2000);
     } catch {}
     setMemoSaving(false);
+  };
+
+  const envoyerChatMessage = async () => {
+    const msg = chatInput.trim();
+    if (!msg || chatLoading) return;
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setChatInput('');
+    setChatLoading(true);
+    try {
+      const res = await axios.post(API + '/chatbot', { message: msg }, { headers });
+      setChatMessages(prev => [...prev, { role: 'assistant', text: res.data.answer }]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: 'Désolé, une erreur s\'est produite.' }]);
+    }
+    setChatLoading(false);
   };
 
   const chargerAccesProfs = async () => {
@@ -284,6 +303,53 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Chatbot flottant */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}>
+        {chatOpen && (
+          <div style={{ position: 'absolute', bottom: 64, right: 0, width: 360, height: 480, background: 'white', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ background: '#6366f1', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>🤖 Assistant IA</div>
+              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            </div>
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth: '80%', padding: '8px 12px', borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px', background: m.role === 'user' ? '#6366f1' : '#f1f5f9', color: m.role === 'user' ? 'white' : '#1e293b', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ padding: '8px 14px', borderRadius: '12px 12px 12px 2px', background: '#f1f5f9', color: '#94a3b8', fontSize: 13 }}>...</div>
+                </div>
+              )}
+            </div>
+            {/* Input */}
+            <div style={{ padding: '10px 12px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 8 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); envoyerChatMessage(); } }}
+                placeholder="Posez votre question..."
+                style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }}
+              />
+              <button onClick={envoyerChatMessage} disabled={chatLoading || !chatInput.trim()}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: chatInput.trim() && !chatLoading ? '#6366f1' : '#e2e8f0', color: chatInput.trim() && !chatLoading ? 'white' : '#94a3b8', cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default', fontWeight: 700, fontSize: 14 }}>
+                ➤
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Toggle button */}
+        <button onClick={() => setChatOpen(o => !o)}
+          style={{ width: 52, height: 52, borderRadius: '50%', background: '#6366f1', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+          {chatOpen ? '✕' : '🤖'}
+        </button>
+      </div>
     </div>
   );
 }
