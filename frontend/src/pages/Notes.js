@@ -752,11 +752,11 @@ export default function Notes() {
                           </tbody>
                         </table>
                       </div>
-                      <div>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 32 }}>S1</th><th style={{ ...thC, width: 32 }}>S2</th></tr></thead>
-                          <tbody>
-                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={s.tr}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
+                          <tbody style={{ height: '100%' }}>
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
                           </tbody>
                         </table>
                       </div>
