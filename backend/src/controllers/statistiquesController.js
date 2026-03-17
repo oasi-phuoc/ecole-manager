@@ -85,6 +85,7 @@ const getStatistiques = async (req, res) => {
       SELECT titre, date_debut, type, couleur
       FROM calendrier
       WHERE date_debut >= CURRENT_DATE
+        AND (categorie IS NULL OR categorie NOT IN ('particulier', 'retenue', 'evaluation'))
       ORDER BY date_debut
       LIMIT 5
     `, [], []);

@@ -185,7 +185,7 @@ export default function Notes() {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
       const [bulletinRes, statsRes, criteresRes, bS1Res, bS2Res, cr1Res, cr2Res] = await Promise.all([
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId, { headers }),
+        axios.get(API + '/presences/statistiques?classe_id=' + classeId + (() => { const today = new Date(); const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1; return semVal === '1' ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31` : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`; })(), { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
@@ -376,7 +376,7 @@ export default function Notes() {
     <div className={className}>
       <div style={s.tabsBar}>
         {[
-          ['evaluations', classeNom ? `Évaluation — ${classeNom}` : 'Évaluations'],
+          ['evaluations', 'Évaluations'],
           ['comportements','Comportements'],
           ['generale','Vue générale'],
         ].map(([k,l]) => (
@@ -544,7 +544,7 @@ export default function Notes() {
             </button>
           ))}
           <div style={{ width: 16 }} />
-          {[['tous','Tous'],['branche','Par branche'],['eleve','Par élève']].map(([val,label]) => (
+          {[['tous','Tous'],['eleve','Par élève'],['branche','Par branche']].map(([val,label]) => (
             <button key={val} onClick={() => setVueGeneraleMode(val)}
               style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
               {label}
@@ -953,6 +953,8 @@ export default function Notes() {
       alert('⚠ Incohérences détectées :\n\n' + avertissements.join('\n') + '\n\nCorrigez ces critères avant de valider.');
       return;
     }
+    setCriteresLocaux(prev => prev.map(cr => ({ ...cr, valide: true })));
+    setCriteresModifies(true);
     setCriteresValides(true);
   };
 
@@ -1047,7 +1049,7 @@ export default function Notes() {
                 <div style={{ width: 36, height: 20, borderRadius: 10, background: criteresValides ? '#10b981' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
                   <div style={{ position: 'absolute', top: 2, left: criteresValides ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
                 </div>
-                {criteresValides ? '✅ Critères validés' : 'Valider les critères'}
+                {criteresValides ? 'Critères validés' : 'Valider les critères'}
               </button>
               <button
                 onClick={sauvegarderTousCriteres}
