@@ -686,8 +686,7 @@ export default function Notes() {
           return (
             <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
               <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto', fontFamily: font }} onClick={e => e.stopPropagation()}>
-                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Bulletin de notes</h3>
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => { setBulletinPopupEleve(null); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>
                     <button onClick={() => {
