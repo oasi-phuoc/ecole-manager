@@ -36,10 +36,13 @@ export default function Calendrier() {
   const [formParticulier, setFormParticulier] = useState({ titre:'', date_debut:'', date_fin:'' });
   const [jourPopup, setJourPopup] = useState(null);
   const [evtsPopup, setEvtsPopup] = useState([]);
+  const [calendrierProf, setCalendrierProf] = useState([]);
+  const [profEventForm, setProfEventForm] = useState({ date: '', titre: '', type: 'Devoir', description: '' });
+  const [showProfForm, setShowProfForm] = useState(false);
   const navigate = useNavigate();
   const headers = {};
 
-  useEffect(() => { chargerTout(); }, []);
+  useEffect(() => { chargerTout(); chargerCalendrierProf(); }, []);
 
   const chargerTout = async () => {
     try {
@@ -50,6 +53,28 @@ export default function Calendrier() {
       setEvenements(ev.data);
       setProfs(pr.data);
     } catch(err) { console.error(err); }
+  };
+
+  const chargerCalendrierProf = async () => {
+    try {
+      const res = await axios.get(API + '/calendrier/prof', { headers });
+      setCalendrierProf(res.data || []);
+    } catch {}
+  };
+
+  const supprimerProfEvent = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    await axios.delete(API + '/calendrier/prof/' + id, { headers });
+    chargerCalendrierProf();
+  };
+
+  const ajouterProfEvent = async (e) => {
+    e.preventDefault();
+    if (!profEventForm.date || !profEventForm.titre) return;
+    await axios.post(API + '/calendrier/prof', profEventForm, { headers });
+    setProfEventForm({ date: '', titre: '', type: 'Devoir', description: '' });
+    setShowProfForm(false);
+    chargerCalendrierProf();
   };
 
   const vacances = evenements.filter(e => e.categorie === 'vacance');
@@ -504,6 +529,89 @@ export default function Calendrier() {
         </div>
 
       </div>
+
+      {/* Tableau personnel du professeur */}
+      <div style={{ marginTop: 32, background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>📋 Mon agenda personnel</h3>
+          <button onClick={() => setShowProfForm(!showProfForm)}
+            style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            + Ajouter
+          </button>
+        </div>
+        {showProfForm && (
+          <form onSubmit={ajouterProfEvent} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f8fafc', borderRadius: 8, padding: 12, marginBottom: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Date *</label>
+              <input type="date" required value={profEventForm.date} onChange={e => setProfEventForm({...profEventForm, date: e.target.value})}
+                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 160 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Titre *</label>
+              <input type="text" required placeholder="Ex: Remise des devoirs..." value={profEventForm.titre} onChange={e => setProfEventForm({...profEventForm, titre: e.target.value})}
+                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Type</label>
+              <select value={profEventForm.type} onChange={e => setProfEventForm({...profEventForm, type: e.target.value})}
+                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13, background: 'white' }}>
+                <option>Devoir</option>
+                <option>Examen</option>
+                <option>Administratif</option>
+                <option>Réunion</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 2, minWidth: 160 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Description</label>
+              <input type="text" placeholder="Optionnel..." value={profEventForm.description} onChange={e => setProfEventForm({...profEventForm, description: e.target.value})}
+                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => setShowProfForm(false)}
+                style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
+              <button type="submit"
+                style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Ajouter</button>
+            </div>
+          </form>
+        )}
+        {calendrierProf.length === 0 ? (
+          <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0', fontSize: 14 }}>Aucun élément — cliquez sur "+ Ajouter" pour commencer</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: '#6366f1' }}>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left', borderRadius: '8px 0 0 0' }}>Date</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Titre</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Type</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Description</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'center', borderRadius: '0 8px 0 0' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calendrierProf.map((ev, i) => (
+                <tr key={ev.id} style={{ background: i % 2 === 0 ? 'white' : '#fafbfc', borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                  <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.titre}</td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <span style={{ padding: '2px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: ev.type === 'Devoir' ? '#dbeafe' : ev.type === 'Examen' ? '#fce7f3' : ev.type === 'Réunion' ? '#d1fae5' : '#f1f5f9', color: ev.type === 'Devoir' ? '#1e40af' : ev.type === 'Examen' ? '#9d174d' : ev.type === 'Réunion' ? '#065f46' : '#475569' }}>
+                      {ev.type}
+                    </span>
+                  </td>
+                  <td style={{ padding: '8px 12px', color: '#64748b' }}>{ev.description || '—'}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <button onClick={() => supprimerProfEvent(ev.id)}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
     </div>
   );
 }

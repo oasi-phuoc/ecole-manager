@@ -45,4 +45,28 @@ const supprimerEvenement = async (req, res) => {
   }
 };
 
-module.exports = { getEvenements, creerEvenement, modifierEvenement, supprimerEvenement };
+const getCalendrierProf = async (req, res) => {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS calendrier_prof (id SERIAL PRIMARY KEY, prof_id INTEGER NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE, date DATE NOT NULL, titre VARCHAR(200) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', description TEXT DEFAULT '', created_at TIMESTAMP DEFAULT NOW())`);
+    const r = await pool.query('SELECT * FROM calendrier_prof WHERE prof_id=$1 ORDER BY date DESC', [req.user.id]);
+    res.json(r.rows);
+  } catch(err) { res.status(500).json({message:err.message}); }
+};
+
+const postCalendrierProf = async (req, res) => {
+  try {
+    const { date, titre, type, description } = req.body;
+    const r = await pool.query('INSERT INTO calendrier_prof (prof_id,date,titre,type,description) VALUES($1,$2,$3,$4,$5) RETURNING *',
+      [req.user.id, date, titre, type||'Autre', description||'']);
+    res.json(r.rows[0]);
+  } catch(err) { res.status(500).json({message:err.message}); }
+};
+
+const deleteCalendrierProf = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM calendrier_prof WHERE id=$1 AND prof_id=$2', [req.params.id, req.user.id]);
+    res.json({ok:true});
+  } catch(err) { res.status(500).json({message:err.message}); }
+};
+
+module.exports = { getEvenements, creerEvenement, modifierEvenement, supprimerEvenement, getCalendrierProf, postCalendrierProf, deleteCalendrierProf };
