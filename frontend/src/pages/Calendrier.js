@@ -173,11 +173,15 @@ export default function Calendrier() {
   const eventsJour = (jour) => {
     if (!jour) return [];
     const dateStr = anneeActuelle+'-'+String(moisActuel+1).padStart(2,'0')+'-'+String(jour).padStart(2,'0');
-    return evenements.filter(ev => {
+    const scolaires = evenements.filter(ev => {
       const deb = ev.date_debut?.substring(0,10);
       const fin = (ev.date_fin||ev.date_debut)?.substring(0,10);
       return dateStr >= deb && dateStr <= fin;
     });
+    const persos = calendrierProf.filter(ev => ev.date?.substring(0,10) === dateStr).map(ev => ({
+      ...ev, couleur: '#6366f1', date_debut: ev.date, categorie: 'personnel'
+    }));
+    return [...scolaires, ...persos];
   };
 
   const today = new Date();

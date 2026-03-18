@@ -74,11 +74,28 @@ const creerClasse = async (req, res) => {
 const modifierClasse = async (req, res) => {
   const { nom, niveau, annee_scolaire, prof_principal_id, actif } = req.body;
   try {
+    // Récupérer l'ancien nom avant modification
+    const ancien = await pool.query('SELECT nom FROM classes WHERE id=$1', [req.params.id]);
+    const ancienNom = ancien.rows[0]?.nom || '';
+
     const r = await pool.query(
       'UPDATE classes SET nom=$1, niveau=$2, annee_scolaire=$3, prof_principal_id=$4, actif=$5 WHERE id=$6 RETURNING *',
       [nom, niveau||null, annee_scolaire, prof_principal_id||null, actif!==undefined?actif:true, req.params.id]
     );
     if (!r.rows.length) return res.status(404).json({ message: 'Classe non trouvée' });
+
+    // Si le nom a changé, mettre à jour PROG_NOM des élèves de cette classe
+    if (ancienNom && nom && ancienNom !== nom) {
+      const oldKey = ancienNom.replace(/\s+/g, '');
+      const newKey = nom.replace(/\s+/g, '');
+      if (oldKey && newKey && oldKey !== newKey) {
+        await pool.query(
+          `UPDATE eleves SET oasi_prog_nom = REPLACE(oasi_prog_nom, $1, $2) WHERE classe_id=$3 AND oasi_prog_nom LIKE $4`,
+          [oldKey, newKey, req.params.id, '%'+oldKey+'%']
+        );
+      }
+    }
+
     res.json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };

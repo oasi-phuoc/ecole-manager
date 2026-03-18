@@ -1,4 +1,4 @@
-import { isAdmin } from '../utils/permissions';
+import { isAdmin, isProf } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -60,7 +60,7 @@ export default function EmploiDuTemps() {
     Matin: { ...(source?.Matin || PAUSES_PAR_PERIODE_DEFAUT.Matin) },
     'Après-midi': { ...(source?.['Après-midi'] || PAUSES_PAR_PERIODE_DEFAUT['Après-midi']) },
   });
-  const [onglet, setOnglet] = useState('pools');
+  const [onglet, setOnglet] = useState(isAdmin() ? 'pools' : 'plannings');
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [profs, setProfs] = useState([]);
@@ -246,17 +246,11 @@ export default function EmploiDuTemps() {
     try {
       if (!poolForm.niveau) { alert('Veuillez sélectionner un niveau.'); return; }
       if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
-      if (totalPeriodesRequisesFormTotal < totalPeriodesProfsForm) {
-        const ok = window.confirm(
-          "Les périodes professeurs dépassent le total requis (cours + titulariat). Voulez-vous vraiment poursuivre la sauvegarde ?"
-        );
-        if (!ok) return;
-      } else if (totalPeriodesRequisesFormTotal > totalPeriodesProfsForm) {
+      if (totalPeriodesRequisesFormTotal !== 0 && totalPeriodesProfsForm !== 0 && totalPeriodesRequisesFormTotal < totalPeriodesProfsForm) {
+        window.alert("Attention : les périodes professeurs dépassent le total requis (cours + titulariat).");
+      } else if (totalPeriodesRequisesFormTotal !== 0 && totalPeriodesProfsForm !== 0 && totalPeriodesRequisesFormTotal > totalPeriodesProfsForm) {
         const manque = totalPeriodesRequisesFormTotal - totalPeriodesProfsForm;
-        const ok = window.confirm(
-          `Il manque ${manque} période(s) professeur par rapport au total requis (cours + titulariat). Voulez-vous vraiment poursuivre la sauvegarde ?`
-        );
-        if (!ok) return;
+        window.alert(`Attention : il manque ${manque} période(s) professeur par rapport au total requis.`);
       }
       if (poolEdit) {
         await axios.put(API + '/planning/pools/' + poolEdit.id, poolForm, { headers });
@@ -1600,12 +1594,20 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
           </div>
         )}
+        {onglet === 'disponibilites' && (
+          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {toast.message && (
+              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,...(toast.type==='error'?{background:'#fee2e2',color:'#991b1b'}:{background:'#ede9fe',color:'#4f46e5'})}}>{toast.message}</span>
+            )}
+            <button type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos}>💾 Sauvegarder</button>
+          </div>
+        )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {toast.message && (
               <span style={{
                 fontSize:13, fontWeight:600, padding:'6px 14px', borderRadius:8,
-                ...(toast.type==='error' ? {background:'#fee2e2',color:'#991b1b'} : toast.type==='info' ? {background:'#e0e7ff',color:'#3730a3'} : {background:'#d1fae5',color:'#065f46'})
+                ...(toast.type==='error' ? {background:'#fee2e2',color:'#991b1b'} : {background:'#ede9fe',color:'#4f46e5'})
               }}>{toast.message}</span>
             )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
@@ -1620,11 +1622,11 @@ export default function EmploiDuTemps() {
 
       <div style={styles.onglets}>
         {[
-          {id:'pools', label:'Pools'},
-          {id:'disponibilites', label:'Disponibilités'},
-          {id:'affectations', label:'Affectations'},
-          {id:'plannings', label:'Plannings'},
-        ].map(o => (
+          {id:'pools', label:'Pools', adminOnly: true},
+          {id:'disponibilites', label:'Disponibilités', adminOnly: true},
+          {id:'affectations', label:'Affectations', adminOnly: true},
+          {id:'plannings', label:'Plannings', adminOnly: false},
+        ].filter(o => !o.adminOnly || isAdmin()).map(o => (
           <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
             onClick={() => {
               if (onglet === 'affectations' && o.id !== 'affectations' && !confirmerQuitterSansSauvegarder()) return;
@@ -1757,7 +1759,6 @@ export default function EmploiDuTemps() {
                     {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
                   </span>
                 </h3>
-                {isAdmin() && <button style={styles.btnBleu} onClick={sauverDispos}>💾 Sauvegarder</button>}
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
                 <div style={{minWidth:860, width:'100%'}}>
@@ -3305,8 +3306,8 @@ const styles = {
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
   noticeBand:{padding:'10px 16px',borderRadius:8,marginBottom:12,fontSize:13,fontWeight:600},
-  noticeBandSuccess:{background:'#d1fae5',color:'#065f46'},
-  noticeBandInfo:{background:'#d1fae5',color:'#065f46'},
+  noticeBandSuccess:{background:'#ede9fe',color:'#4f46e5'},
+  noticeBandInfo:{background:'#ede9fe',color:'#4f46e5'},
   noticeBandError:{background:'#fee2e2',color:'#991b1b'},
   onglets:{display:'flex',gap:0,marginBottom:15,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'2px solid #6366f1',paddingBottom:0},
   onglet:{padding:'9px 14px',background:'#ede9fe',border:'none',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none',width:120,minWidth:120,textAlign:'center'},
@@ -3389,5 +3390,5 @@ const styles = {
   poolLabel:{fontSize:11,fontWeight:700,color:'#aaa',marginBottom:4,letterSpacing:1},
   badge:{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:600,margin:'2px 3px 2px 0'},
   aucun:{color:'#ccc',fontSize:12},
-  cellSel:{width:'100%',padding:'5px 6px',border:'1px solid #e0e0e0',borderRadius:6,fontSize:12},
+  cellSel:{width:'100%',padding:'5px 6px',border:'1px solid #e0e0e0',borderRadius:6,fontSize:12,textAlign:'center',textAlignLast:'center'},
 };

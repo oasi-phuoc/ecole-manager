@@ -26,6 +26,9 @@ export default function Classes() {
   const [obsEditId, setObsEditId] = useState(null);
   const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
   const [obsForm, setObsForm] = useState({ titre:'', contenu:'', mesure_prise:'', intervention_responsable:false, demande_entretien:false });
+  const [filtreElevesActif, setFiltreElevesActif] = useState('actif');
+  const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
+  const [loraImportLoading, setLoraImportLoading] = useState(false);
   const navigate = useNavigate();
   const headers = {};
   const currentUser = getSessionUser() || null;
@@ -55,6 +58,30 @@ export default function Classes() {
       console.error('Erreur suivi notes classes:', sn.reason);
       setSuiviNotesClasse({});
     }
+  };
+
+  const mettreAJourLORA = async (file) => {
+    if (!file) return;
+    setLoraUpdateLoading(true);
+    try {
+      const fd = new FormData(); fd.append('fichier', file);
+      const r = await axios.post(API+'/import/update-lora', fd, { headers: {'Content-Type':'multipart/form-data'} });
+      alert(r.data.message);
+      chargerTout();
+    } catch(err) { alert('Erreur mise à jour LORA: '+(err.response?.data?.message||err.message)); }
+    setLoraUpdateLoading(false);
+  };
+
+  const importerLORA = async (file) => {
+    if (!file) return;
+    setLoraImportLoading(true);
+    try {
+      const fd = new FormData(); fd.append('fichier', file);
+      const r = await axios.post(API+'/import/eleves', fd, { headers: {'Content-Type':'multipart/form-data'} });
+      alert(r.data.message);
+      chargerTout();
+    } catch(err) { alert('Erreur import LORA: '+(err.response?.data?.message||err.message)); }
+    setLoraImportLoading(false);
   };
 
   const handleSubmit = async (e) => {
@@ -1127,6 +1154,12 @@ export default function Classes() {
       </div>
 
       {classeVueTab === 'eleves' ? (
+        <>
+          <div style={{display:'flex',gap:0,marginBottom:12}}>
+            {[{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'},{id:'tous',label:'Tous'}].map(f => (
+              <button key={f.id} style={{...s.subTabBtn,width:90,minWidth:90,...(filtreElevesActif===f.id?s.subTabBtnActif:{})}} onClick={() => setFiltreElevesActif(f.id)}>{f.label}</button>
+            ))}
+          </div>
         <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
@@ -1135,9 +1168,9 @@ export default function Classes() {
               </tr>
             </thead>
             <tbody>
-              {elevesClasse.length===0 ? (
-                <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
-              ) : elevesClasse.map(el => (
+              {elevesClasse.filter(el => filtreElevesActif === 'tous' || (filtreElevesActif === 'actif' ? (el.statut !== 'inactif') : el.statut === 'inactif')).length===0 ? (
+                <tr><td colSpan="7" style={s.empty}>Aucun élève {filtreElevesActif === 'actif' ? 'actif' : filtreElevesActif === 'inactif' ? 'inactif' : ''} dans cette classe</td></tr>
+              ) : elevesClasse.filter(el => filtreElevesActif === 'tous' || (filtreElevesActif === 'actif' ? (el.statut !== 'inactif') : el.statut === 'inactif')).map(el => (
                 <tr key={el.id} style={s.tr}>
                   <td style={s.td}>
                     <div style={{position:'relative',width:38,height:38}}>
@@ -1181,6 +1214,7 @@ export default function Classes() {
             </tbody>
           </table>
         </div>
+        </>
       ) : classeVueTab === 'inventaire' ? (
         <div style={s.inventoryLayout}>
           <div style={s.tableWrap}>
@@ -1327,7 +1361,19 @@ export default function Classes() {
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>Gestion des classes</h2>
-        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>}
+        {isAdmin() && (
+          <div style={{display:'flex',gap:8,marginLeft:'auto',alignItems:'center'}}>
+            <label style={{...s.btnAdd,background:'#64748b',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+              {loraUpdateLoading ? 'Mise à jour...' : '🔄 Mise à jour LORA'}
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
+            </label>
+            <label style={{...s.btnAdd,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+              {loraImportLoading ? 'Import...' : '📥 Importer LORA'}
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) importerLORA(e.target.files[0]); e.target.value=''; }} />
+            </label>
+            <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>
+          </div>
+        )}
       </div>
       <div style={s.tabsBar}>
         <div style={s.tabsRow}>
@@ -1390,8 +1436,8 @@ export default function Classes() {
           <thead>
             <tr style={s.thead}>
               <th style={{...s.th, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}></th>
-              <th style={{...s.th, width:130, minWidth:130, maxWidth:130}}>Classe</th>
-              <th style={{...s.th, width:220, minWidth:220, whiteSpace:'nowrap'}}>Titulaire</th>
+              <th style={{...s.th, width:1, minWidth:80, whiteSpace:'nowrap'}}>Classe</th>
+              <th style={{...s.th, width:1, minWidth:100, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
@@ -1405,10 +1451,10 @@ export default function Classes() {
               return (
               <tr key={c.id} style={s.tr}>
                 <td style={{...s.td, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
-                <td style={{...s.td, width:130, minWidth:130, maxWidth:130}}>
+                <td style={{...s.td, width:1, whiteSpace:'nowrap'}}>
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                 </td>
-                <td style={{...s.td, width:220, minWidth:220, whiteSpace:'nowrap'}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
+                <td style={{...s.td, width:1, whiteSpace:'nowrap'}}>{c.prof_prenom ? <span>{c.prof_prenom} <b>{c.prof_nom}</b></span> : <span style={{color:'#94a3b8'}}>—</span>}</td>
                 <td style={s.td}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {badgesNotes.length === 0 ? (

@@ -235,7 +235,7 @@ export default function Bulletins() {
               if (!node) return;
               const popup = window.open('', '_blank', 'width=1000,height=800');
               if (!popup) return;
-              popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`);
+              popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}span[style*="border-radius: 50%"],span[style*="border-radius:50%"]{display:inline-block!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`);
               popup.document.close(); popup.focus(); popup.print();
             }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
           </div>
@@ -297,9 +297,14 @@ export default function Bulletins() {
                   </table>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 10, fontFamily: font }}>
-                <div style={{ padding: 6, fontSize: 12, flex: 1 }}><div>Abs. excusées : <b>{st?.excuses ?? 0}</b></div><div>Non excusées : <b>{st?.absents ?? 0}</b></div></div>
-                <div style={{ ...s.card, padding: 6, flex: 2, minHeight: 80 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>{obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}{obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}{!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}</div>
+              <div style={{ marginTop: 15, fontFamily: font, fontSize: 12, padding: '6px 0' }}>
+                Abs. excusées : <b>{st?.excuses ?? 0}</b> &nbsp;|&nbsp; Non excusées : <b>{st?.absents ?? 0}</b> &nbsp;|&nbsp; Retards : <b>{st?.retards ?? 0}</b>
+              </div>
+              <div style={{ ...s.card, marginTop: 15, padding: 8, fontFamily: font }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Observations</div>
+                {obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}
+                {obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}
+                {!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}
               </div>
               <div className="bulletin-bas-page">
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: font }}>
@@ -333,7 +338,7 @@ export default function Bulletins() {
       <div style={s.page}>
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-          <h2 style={s.titre}>Bulletin de notes</h2>
+          <h2 style={s.titre}>Bulletins de notes</h2>
         </div>
         <div style={s.tabsBar}>
           {niveaux.map(n => (
@@ -348,8 +353,8 @@ export default function Bulletins() {
             <thead>
               <tr style={s.theadRow}>
                 <th style={{ ...s.th, width: 1 }}></th>
-                <th style={s.th}>Classe</th>
-                <th style={s.th}>Niveau</th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Niveau</th>
                 <th style={s.th}>Titulaire</th>
               </tr>
             </thead>
@@ -359,10 +364,10 @@ export default function Bulletins() {
               ) : classesFiltrees.map((cl, i) => (
                 <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={{ ...s.td, width: 1 }}>
-                    <button style={s.btnDetail} onClick={() => ouvrirClasse(cl)}>Ouvrir</button>
+                    <button style={s.btnDetail} onClick={() => ouvrirClasse(cl)}>👁 Détail</button>
                   </td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>{cl.nom}</td>
-                  <td style={s.td}>{cl.niveau || '—'}</td>
+                  <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{cl.nom}</td>
+                  <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}>{cl.niveau || '—'}</td>
                   <td style={s.td}>{cl.prof_prenom || cl.prof_nom ? [cl.prof_prenom, cl.prof_nom].filter(Boolean).join(' ') : '—'}</td>
                 </tr>
               ))}
@@ -387,7 +392,7 @@ export default function Bulletins() {
     <div style={s.page}>
       <div style={s.header}>
         <button style={s.btnRetour} onClick={() => { setClasseSelectionnee(''); setClasseObj(null); }}>← Retour</button>
-        <h2 style={s.titre}>{onglet === 'comportements' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
+        <h2 style={s.titre}>{onglet === 'comportements' ? 'Comportements' : 'Bulletins de notes'} — {classeNom}</h2>
         {onglet === 'comportements' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {toast.message && (
@@ -412,7 +417,7 @@ export default function Bulletins() {
 
       {/* Main tabs */}
       <div style={s.tabsBar}>
-        {[['comportements', 'Comportements'], ['bulletin', 'Bulletin de notes']].map(([k, l]) => (
+        {[['comportements', 'Comportements'], ['bulletin', 'Bulletins de notes']].map(([k, l]) => (
           <button key={k} onClick={async () => {
             if (onglet === 'comportements' && k !== 'comportements' && criteresModifies && criteresValides) await sauvegarderTousCriteres();
             setOnglet(k);
@@ -430,7 +435,7 @@ export default function Bulletins() {
                 setBulletinSemestre(sem.id);
                 chargerBulletinId(classeSelectionnee, sem.id);
               }}
-              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
+              style={{ ...s.subTabBtn, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
           ))}
@@ -591,35 +596,59 @@ export default function Bulletins() {
       {/* === BULLETIN TAB === */}
       {onglet === 'bulletin' && (
         <div style={{ marginTop: 15 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={s.subTabsBar}>
+              {[{ id: '1', label: 'Semestre 1' }, { id: '2', label: 'Semestre 2' }].map(sem => (
+                <button key={sem.id} style={{ ...s.subTabBtn, borderRadius: 8, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}
+                  onClick={() => { setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}>
+                  {sem.label}
+                </button>
+              ))}
+            </div>
+            <button style={{ ...s.btnDetail, background: '#6366f1', color: 'white', padding: '7px 14px' }}
+              onClick={() => {
+                const elevesAImprimer = allEleves.filter(e => {
+                  const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(e.id));
+                  return cr?.valide;
+                });
+                if (elevesAImprimer.length === 0) { alert('Aucun bulletin validé à imprimer.'); return; }
+                elevesAImprimer.forEach(e => setBulletinPopupEleve(e.id));
+              }}>
+              🖨️ Tout imprimer
+            </button>
+          </div>
           {chargement ? (
             <div style={{ ...s.vide, color: '#6366f1' }}>Chargement…</div>
           ) : allEleves.length === 0 ? (
             <div style={s.vide}>Aucun bulletin disponible pour cette classe.</div>
           ) : (
             <div style={{ ...s.tblWrap }}>
-              <table style={s.tbl}>
+              <table style={{ ...s.tbl, tableLayout: 'auto' }}>
                 <thead>
                   <tr style={s.theadRow}>
-                    <th style={s.th}>Nom</th>
-                    <th style={s.th}>Prénom</th>
+                    <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Nom</th>
+                    <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Prénom</th>
                     <th style={{ ...s.th, textAlign: 'center' }}>Critères validés</th>
-                    <th style={{ ...s.th, textAlign: 'center' }}>Bulletin</th>
+                    <th style={{ ...s.th, textAlign: 'right' }}>Bulletin</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allEleves.map((eleve, i) => {
                     const crS1 = criteresSem1.find(c => Number(c.eleve_id) === Number(eleve.id));
                     const crS2 = criteresSem2.find(c => Number(c.eleve_id) === Number(eleve.id));
-                    const valide = crS1?.valide && crS2?.valide;
+                    const valideS1 = crS1?.valide === true;
+                    const valideS2 = crS2?.valide === true;
+                    const valide = bulletinSemestre === '1' ? valideS1 : valideS2;
                     return (
                       <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                        <td style={{ ...s.td, fontWeight: 700 }}>{nomSansSuffixe(eleve.nom)}</td>
-                        <td style={s.td}>{eleve.prenom}</td>
+                        <td style={{ ...s.td, fontWeight: 700, width: 1, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                        <td style={{ ...s.td, width: 1, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                         <td style={{ ...s.td, textAlign: 'center' }}>
-                          <span style={{ fontWeight: 700, color: valide ? '#16a34a' : '#f59e0b' }}>{valide ? '✓ S1 + S2' : '⚠ Incomplet'}</span>
+                          <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: valide ? '#22c55e' : '#e2e8f0', verticalAlign: 'middle', marginRight: 6 }} />
+                          <span style={{ fontSize: 12, color: valide ? '#16a34a' : '#94a3b8' }}>{valide ? 'Validé' : 'Non validé'}</span>
                         </td>
-                        <td style={{ ...s.td, textAlign: 'center' }}>
-                          <button style={s.btnDetail} onClick={() => setBulletinPopupEleve(eleve.id)}>Voir bulletin</button>
+                        <td style={{ ...s.td, textAlign: 'right' }}>
+                          <button style={s.btnDetail} onClick={() => setBulletinPopupEleve(eleve.id)}>👁 Détail</button>
                         </td>
                       </tr>
                     );
@@ -642,7 +671,7 @@ const s = {
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, width: 160, minWidth: 160, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   subTabsBar: { display: 'flex', gap: 0, marginTop: 0 },
-  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: '#e0e7ff', color: '#3730a3', fontWeight: 700, width: 150, minWidth: 150, textAlign: 'center', border: 'none', cursor: 'pointer', outline: 'none', position: 'relative', zIndex: 1, lineHeight: 1 },
+  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: '#e0e7ff', color: '#3730a3', fontWeight: 700, width: 160, minWidth: 160, textAlign: 'center', border: 'none', cursor: 'pointer', outline: 'none', position: 'relative', zIndex: 1, lineHeight: 1 },
   subTabBtnActif: { background: '#4f46e5', color: 'white', zIndex: 2, boxShadow: '0 4px 6px rgba(79,70,229,0.18)' },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },

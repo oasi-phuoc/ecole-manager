@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [accesProfs, setAccesProfs] = useState({});
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
+  const [agendaPerso, setAgendaPerso] = useState([]);
   const [observationDetail, setObservationDetail] = useState(null);
   const [memo, setMemo] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -64,15 +65,17 @@ export default function Dashboard() {
 
   const chargerStats = async () => {
     try {
-      const [cl, el, st] = await Promise.all([
+      const [cl, el, st, ap] = await Promise.all([
         axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
         axios.get(API + '/statistiques', { headers }).catch(() => ({ data: null })),
+        axios.get(API + '/calendrier/prof', { headers }).catch(() => ({ data: [] })),
       ]);
       setStats({ classes: cl.data.length, eleves: el.data.length });
+      setAgendaPerso(ap.data || []);
       if (st.data) {
         setDashboardInfo({
-          prochains_evenements: (st.data.prochains_evenements || []).slice(0, 3),
+          prochains_evenements: st.data.prochains_evenements || [],
           dernieres_notes: st.data.dernieres_notes || [],
           dernieres_observations: st.data.dernieres_observations || [],
           controle_presence_aujourdhui: st.data.controle_presence_aujourdhui || { creneau_en_cours: null, classes_en_cours: [] },
@@ -186,15 +189,23 @@ export default function Dashboard() {
         <div style={styles.infoRow}>
           <div style={styles.infoCard}>
             <div style={styles.infoCardTitle}>📅 Prochains événements</div>
-            {dashboardInfo.prochains_evenements.length === 0
-              ? <div style={styles.infoEmpty}>Aucun événement à venir</div>
-              : dashboardInfo.prochains_evenements.map((ev, i) => (
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const persos = agendaPerso
+                .filter(ev => ev.date && ev.date.substring(0, 10) >= today)
+                .map(ev => ({ titre: ev.titre, date_debut: ev.date, type: ev.type || 'Agenda', _perso: true }));
+              const scolaires = (dashboardInfo.prochains_evenements || []).map(ev => ({ ...ev, _perso: false }));
+              const merged = [...scolaires, ...persos]
+                .sort((a, b) => (a.date_debut || '').localeCompare(b.date_debut || ''))
+                .slice(0, 3);
+              if (merged.length === 0) return <div style={styles.infoEmpty}>Aucun événement à venir</div>;
+              return merged.map((ev, i) => (
                 <div key={i} style={{ ...(i > 0 ? { marginTop: 8, paddingTop: 8, borderTop: '1px solid #f1f5f9' } : {}) }}>
-                  <div style={styles.infoMain}>{ev.titre}</div>
+                  <div style={styles.infoMain}>{ev.titre}{ev._perso && <span style={{ marginLeft: 6, fontSize: 10, background: '#ede9fe', color: '#6366f1', borderRadius: 99, padding: '1px 6px', fontWeight: 700 }}>Perso</span>}</div>
                   <div style={styles.infoSub}>{fmtDate(ev.date_debut)} • {ev.type || 'Événement'}</div>
                 </div>
-              ))
-            }
+              ));
+            })()}
           </div>
 
           <div style={styles.infoCard}>

@@ -85,4 +85,51 @@ const importEleves = async (req, res) => {
   } catch(err) { res.status(500).json({ message: 'Erreur import: ' + err.message }); }
 };
 
-module.exports = { importEleves };
+const updateLoraEleves = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'Fichier manquant' });
+  try {
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+    const dataRows = rows.slice(1).filter(r => r[3]);
+
+    const seen = new Set();
+    const unique = [];
+    for (const row of dataRows) {
+      const ref = parseInt(row[3]);
+      if (ref && !seen.has(ref)) { seen.add(ref); unique.push(row); }
+    }
+
+    const parseInt2 = (val) => {
+      if (!val) return null;
+      const n = parseInt(val);
+      return isNaN(n) ? null : n;
+    };
+
+    let updated = 0, notFound = 0;
+
+    for (const row of unique) {
+      const ref = parseInt(row[3]);
+      const exists = await pool.query('SELECT id FROM eleves WHERE oasi_ref=$1', [ref]);
+      if (exists.rows.length === 0) { notFound++; continue; }
+
+      await pool.query(`
+        UPDATE eleves SET
+          oasi_prog_nom=$1, oasi_prog_encadrant=$2, oasi_n=$3, oasi_pos=$4,
+          oasi_prog_presences=$5, oasi_prog_admin=$6, oasi_as=$7,
+          oasi_prg_id=$8, oasi_prg_occupation_id=$9, oasi_ra_id=$10, oasi_temps_reparti_id=$11
+        WHERE oasi_ref=$12
+      `, [
+        row[0]||null, row[1]||null, parseInt2(row[2]), parseInt2(row[4]),
+        row[15]||null, row[16]||null, row[17]||null,
+        parseInt2(row[18]), parseInt2(row[19]), parseInt2(row[20]), parseInt2(row[21]),
+        ref
+      ]);
+      updated++;
+    }
+
+    res.json({ message: `Mise à jour terminée : ${updated} mis à jour, ${notFound} introuvable(s)`, updated, notFound });
+  } catch(err) { res.status(500).json({ message: 'Erreur mise à jour LORA: ' + err.message }); }
+};
+
+module.exports = { importEleves, updateLoraEleves };
