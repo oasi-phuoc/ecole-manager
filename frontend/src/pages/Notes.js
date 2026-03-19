@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 
 const calculerNote = (points, pointsMax) => {

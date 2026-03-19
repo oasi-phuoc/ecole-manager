@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const fmtNote = (n) => {
   if (n === null || n === undefined) return '—';

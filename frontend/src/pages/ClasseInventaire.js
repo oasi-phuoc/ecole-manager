@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function ClasseInventaire() {
   const navigate = useNavigate();

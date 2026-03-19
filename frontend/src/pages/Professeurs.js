@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '../styles/theme';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;

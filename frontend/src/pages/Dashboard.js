@@ -4,7 +4,7 @@ import axios from 'axios';
 import { T, colors } from '../styles/theme';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true };
 

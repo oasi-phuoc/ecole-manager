@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { setSessionUser } from '../utils/session';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
