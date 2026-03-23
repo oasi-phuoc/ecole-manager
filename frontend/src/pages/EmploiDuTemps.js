@@ -1,5 +1,5 @@
-import { isAdmin, isProf } from '../utils/permissions';
-import React, { useState, useEffect } from 'react';
+import { isAdmin } from '../utils/permissions';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,15 +11,7 @@ const SALLES_FIXES_PAR_LIEU = {
   botza: ['Salle 1', 'Salle 2', 'Salle 3', 'Salle 4'],
   synecom: ['Salle 11', 'Salle 12', 'Salle 13', 'Salle 21', 'Salle 22', 'Salle 23', 'Salle 24', 'Salle 25', 'Salle 26'],
 };
-const COULEURS = [
-  '#F8B4B4', // rouge pastel
-  '#B7E4C7', // vert pastel
-  '#FFD6A5', // orange pastel
-  '#AEEBFF', // cyan pastel
-  '#FBCFE8', // rose pastel
-  '#BFDBFE', // bleu pastel
-  '#DDD6FE', // violet pastel
-];
+
 const COULEURS_CLASSES_DISPONIBLES = [
   '#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12',
   '#f59e0b', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#a855f7', '#d946ef', '#ec4899',
@@ -113,6 +105,9 @@ export default function EmploiDuTemps() {
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [sallesDB, setSallesDB] = useState([]);
+  const [parametresHoraires, setParametresHoraires] = useState({});
+  const dragPoolIdx = useRef(null);
+  const [dragOverPool, setDragOverPool] = useState(null);
   const navigate = useNavigate();
   const headers = {};
 
@@ -134,6 +129,49 @@ export default function EmploiDuTemps() {
       setLieuxTravailDB(lieux.data || []);
       setSallesDB(salles.data || []);
     } catch(err) { console.error(err); }
+    try {
+      const par = await axios.get(API + '/parametres/ecole', { headers });
+      const h = par.data?.horaires || {};
+      setParametresHoraires(typeof h === 'string' ? JSON.parse(h) : h);
+    } catch(err) { console.error('parametres horaires:', err); }
+  };
+
+  const reorderPools = async (from, to) => {
+    if (from === to) return;
+    const list = [...pools];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    setPools(list);
+    await Promise.all(list.map((p, i) => axios.put(API + '/planning/pools/' + p.id, { nom: p.nom, site: p.site, couleur: p.couleur, niveau: p.niveau, prof_ids: (p.profs||[]).map(x=>x.id), classe_ids: (p.classes||[]).map(x=>x.id), branche_ids: (p.branches||[]).map(x=>x.id), horaires: p.horaires, ordre: i + 1 }, { headers })));
+  };
+
+  const horaireParamToPool = (horaireParam) => {
+    if (!horaireParam || (!horaireParam.matin && !horaireParam.apresmidi)) {
+      return { poolHoraires: [...HORAIRES_DEFAUT], pauses: clonePausesParPeriode() };
+    }
+    const poolHoraires = [];
+    const pauses = clonePausesParPeriode();
+    let nm = 1, na = 1;
+    (horaireParam.matin || []).forEach(p => {
+      if (p.label === 'Pause') { pauses.Matin = { debut: p.debut, fin: p.fin }; }
+      else { poolHoraires.push({ periode: 'Matin', num: nm++, debut: p.debut, fin: p.fin }); }
+    });
+    (horaireParam.apresmidi || []).forEach(p => {
+      if (p.label === 'Pause') { pauses['Après-midi'] = { debut: p.debut, fin: p.fin }; }
+      else { poolHoraires.push({ periode: 'Après-midi', num: na++, debut: p.debut, fin: p.fin }); }
+    });
+    if (poolHoraires.length !== 8) return { poolHoraires: [...HORAIRES_DEFAUT], pauses: clonePausesParPeriode() };
+    return { poolHoraires, pauses };
+  };
+
+  const getHoraireForLieu = (lieuNom, lieux, paramH) => {
+    const h = paramH || parametresHoraires;
+    const l = lieux || lieuxTravailDB;
+    if (lieuNom) {
+      const lieu = l.find(x => x.nom === lieuNom);
+      if (lieu && h[String(lieu.id)]) return horaireParamToPool(h[String(lieu.id)]);
+    }
+    return horaireParamToPool(h['defaut']);
   };
 
   const chargerTout = async () => {
@@ -223,6 +261,7 @@ export default function EmploiDuTemps() {
   };
 
   const sauverDispos = async () => {
+    if (!profSelectionne) { showToast('Sélectionner d\'abord un professeur.', 'error'); return; }
     const prof = profs.find(p => p.id == profSelectionne);
     const periodesRequises = getPeriodesRequisesPourTaux(prof);
     const periodesSelectionnees = Object.values(dispos).filter(v => v !== false).length;
@@ -1603,7 +1642,12 @@ export default function EmploiDuTemps() {
         <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={styles.titre}>Emploi du temps</h2>
         {isAdmin() && onglet === 'pools' && (
-          <button style={{...styles.btnVert, marginLeft:'auto'}} onClick={() => { setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]}); setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode)); }}>+ Ajouter</button>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {toast.message && (
+              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,...(toast.type==='error'?{background:'#fee2e2',color:'#991b1b'}:{background:'#d1fae5',color:'#065f46'})}}>{toast.message}</span>
+            )}
+            <button style={styles.btnVert} onClick={() => { const {poolHoraires, pauses} = getHoraireForLieu(''); setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:poolHoraires}); setPausesParPeriodeForm(pauses); }}>+ Ajouter</button>
+          </div>
         )}
         {onglet === 'plannings' && (
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
@@ -1613,9 +1657,6 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'disponibilites' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
-            {toast.message && (
-              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,...(toast.type==='error'?{background:'#fee2e2',color:'#991b1b'}:{background:'#ede9fe',color:'#4f46e5'})}}>{toast.message}</span>
-            )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos}>💾 Sauvegarder</button>
           </div>
         )}
@@ -1652,7 +1693,11 @@ export default function EmploiDuTemps() {
               }
               setOnglet(o.id);
               if (o.id === 'disponibilites') {
-                axios.get(API + '/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
+                axios.get(API + '/profs', { headers }).then(r => {
+                  const liste = r.data.filter(x => x.actif !== false);
+                  setProfs(liste);
+                  if (!profSelectionne && liste.length > 0) chargerDispos(liste[0].id);
+                }).catch(() => {});
               }
               if (o.id === 'plannings') {
                 setSousOngletPlanning('classes');
@@ -1665,11 +1710,6 @@ export default function EmploiDuTemps() {
           </button>
         ))}
       </div>
-      {toast.message && onglet !== 'affectations' ? (
-        <div style={{ ...styles.noticeBand, ...(toast.type === 'error' ? styles.noticeBandError : toast.type === 'info' ? styles.noticeBandInfo : styles.noticeBandSuccess) }}>
-          {toast.message}
-        </div>
-      ) : null}
 
       {onglet === 'plannings' && (
         <>
@@ -1794,7 +1834,7 @@ export default function EmploiDuTemps() {
                   <table style={{...styles.tbl, tableLayout:'fixed', width:'100%'}}>
                     <thead>
                       <tr>
-                        <th style={{...styles.thA, width:160, minWidth:160, maxWidth:160}}>Période</th>
+                        <th style={{...styles.thA, width:120, minWidth:120, maxWidth:120}}>Période</th>
                         {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
                       </tr>
                     </thead>
@@ -1803,9 +1843,9 @@ export default function EmploiDuTemps() {
                         const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
                         return crsLundi.map((crBase, idx) => (
                           <tr key={crBase.id}>
-                            <td style={{...styles.tdPer, width:160, minWidth:160, maxWidth:160}}>
-                              <span style={styles.periodeTag}>{periode}</span>
-                              <span style={styles.periodeNum}>Période {idx+1}</span>
+                            <td style={{...styles.tdPer, width:120, minWidth:120, maxWidth:120}}>
+                              <span style={styles.periodeTag}>{periode === 'Matin' ? 'Matin' : 'Après-midi'}</span>
+                              <span style={styles.periodeNum}>P{idx+1}</span>
                             </td>
                             {JOURS.map(jour => {
                               const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
@@ -1861,7 +1901,7 @@ export default function EmploiDuTemps() {
                     </div>
                     <div style={styles.fc}>
                       <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
-                      <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
+                      <select style={styles.inp} value={poolForm.site} onChange={e => { const site=e.target.value; const {poolHoraires,pauses}=getHoraireForLieu(site); setPoolForm({...poolForm,site,horaires:poolHoraires}); setPausesParPeriodeForm(pauses); }}>
                         <option value="">Choisir</option>
                         {lieuxTravailDB.map(l => <option key={l.id} value={l.nom}>{l.nom}</option>)}
                       </select>
@@ -1963,14 +2003,6 @@ export default function EmploiDuTemps() {
 
                   <div style={{display:'flex',flexDirection:'column',gap:15,width:250}}>
                     <div style={styles.fc}>
-                      <label style={styles.lbl}>Couleur</label>
-                      <div style={{display:'flex',flexWrap:'nowrap',gap:6,marginTop:6}}>
-                        {COULEURS.map(c => <div key={c} onClick={() => setPoolForm({...poolForm,couleur:c})}
-                          style={{width:26,height:26,borderRadius:'50%',background:c,cursor:'pointer',border:poolForm.couleur===c?'3px solid #333':'3px solid transparent'}} />)}
-                      </div>
-                    </div>
-
-                    <div style={styles.fc}>
                       <label style={styles.lbl}>Horaires</label>
                       <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:8}}>
                         {['Matin','Après-midi'].map(per => (
@@ -1983,36 +2015,16 @@ export default function EmploiDuTemps() {
                               <React.Fragment key={`${per}-${h.num || idx}`}>
                                 <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
                                   <span style={{fontSize:12,width:60,color:'#888'}}>P{idx+1}</span>
-                                  <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.debut}
-                                    onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,debut:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                                  <span style={{width:70,padding:'4px 6px',fontSize:12,textAlign:'center',background:'#f1f5f9',borderRadius:6,border:'1px solid #e2e8f0',color:'#475569',display:'inline-block'}}>{h.debut}</span>
                                   <span style={{fontSize:11,color:'#aaa'}}>→</span>
-                                  <input style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}} value={h.fin}
-                                    onChange={e => { const nh=[...poolForm.horaires]; const gi=poolForm.horaires.indexOf(h); nh[gi]={...h,fin:e.target.value}; setPoolForm({...poolForm,horaires:nh}); }} />
+                                  <span style={{width:70,padding:'4px 6px',fontSize:12,textAlign:'center',background:'#f1f5f9',borderRadius:6,border:'1px solid #e2e8f0',color:'#475569',display:'inline-block'}}>{h.fin}</span>
                                 </div>
                                 {idx === 1 && (
                                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
                                     <span style={{fontSize:12,width:60,color:'#888'}}>Pause</span>
-                                    <input
-                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}}
-                                      value={pausesParPeriodeForm[per].debut}
-                                      onChange={e => {
-                                        setPausesParPeriodeForm(prev => ({
-                                          ...prev,
-                                          [per]: { ...prev[per], debut: e.target.value }
-                                        }));
-                                      }}
-                                    />
+                                    <span style={{width:70,padding:'4px 6px',fontSize:12,textAlign:'center',background:'#f1f5f9',borderRadius:6,border:'1px solid #e2e8f0',color:'#475569',display:'inline-block'}}>{pausesParPeriodeForm[per].debut}</span>
                                     <span style={{fontSize:11,color:'#aaa'}}>→</span>
-                                    <input
-                                      style={{...styles.inp,width:70,padding:'4px 6px',fontSize:12}}
-                                      value={pausesParPeriodeForm[per].fin}
-                                      onChange={e => {
-                                        setPausesParPeriodeForm(prev => ({
-                                          ...prev,
-                                          [per]: { ...prev[per], fin: e.target.value }
-                                        }));
-                                      }}
-                                    />
+                                    <span style={{width:70,padding:'4px 6px',fontSize:12,textAlign:'center',background:'#f1f5f9',borderRadius:6,border:'1px solid #e2e8f0',color:'#475569',display:'inline-block'}}>{pausesParPeriodeForm[per].fin}</span>
                                   </div>
                                 )}
                               </React.Fragment>
@@ -2037,8 +2049,15 @@ export default function EmploiDuTemps() {
             </div>
           )}
           <div style={styles.poolsGrid}>
-            {pools.map(pool => (
-              <div key={pool.id} style={{...styles.poolCard,borderTop:'4px solid '+pool.couleur}}>
+            {pools.map((pool, idx) => (
+              <div key={pool.id}
+                draggable
+                onDragStart={() => { dragPoolIdx.current = idx; }}
+                onDragOver={e => { e.preventDefault(); setDragOverPool(idx); }}
+                onDragLeave={() => setDragOverPool(null)}
+                onDrop={() => { reorderPools(dragPoolIdx.current, idx); setDragOverPool(null); }}
+                onDragEnd={() => { dragPoolIdx.current = null; setDragOverPool(null); }}
+                style={{...styles.poolCard, cursor:'grab', border: dragOverPool === idx ? '2px dashed #6366f1' : '2px solid transparent', transition:'border 0.15s'}}>
                 <div style={styles.rowBetween}>
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     <div style={{fontWeight:700,fontSize:16,color:'#0f172a'}}>{pool.nom}</div>
@@ -2049,13 +2068,14 @@ export default function EmploiDuTemps() {
                   </div>
                   {isAdmin() && <div>
                     <button style={styles.btnIcon} onClick={() => {
+                      const {poolHoraires, pauses} = getHoraireForLieu(pool.site||'');
                       setPoolEdit(pool); setShowPoolForm(true);
                       setPoolForm({nom:pool.nom,site:pool.site||'',couleur:pool.couleur,
                         niveau:pool.niveau||'',
                         prof_ids:pool.profs.map(p=>p.id),classe_ids:pool.classes.map(c=>c.id),
                         branche_ids:pool.branches.map(b=>b.id),
-                        horaires:pool.horaires&&pool.horaires.length===8?pool.horaires:[...HORAIRES_DEFAUT]});
-                      setPausesParPeriodeForm(clonePausesParPeriode(pausesParPeriode));
+                        horaires:poolHoraires});
+                      setPausesParPeriodeForm(pauses);
                     }}>✏️</button>
                     <button style={styles.btnIcon} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
                   </div>}
@@ -2496,7 +2516,7 @@ export default function EmploiDuTemps() {
                                             ? affectationsDraft.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
                                             : null;
                                           if (conflit) {
-                                            const profConflit = profsPool.find(p => p.id == conflit.prof_id);
+                                            const profConflit = profsPool.find(p => p.id === conflit.prof_id);
                                             const nomProfConflit = profConflit ? `${profConflit.prenom} ${profConflit.nom}` : 'un autre professeur';
                                             const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
                                             const confirmer = window.confirm(
@@ -3406,7 +3426,7 @@ const styles = {
   inp:{padding:10,border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20},
   checkBadge:{padding:'5px 10px',borderRadius:16,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center'},
-  poolsGrid:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16,marginTop:16},
+  poolsGrid:{display:'flex',flexDirection:'column',gap:16,marginTop:16},
   poolCard:{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'},
   poolLabel:{fontSize:11,fontWeight:700,color:'#aaa',marginBottom:4,letterSpacing:1},
   badge:{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:600,margin:'2px 3px 2px 0'},

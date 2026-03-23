@@ -120,7 +120,29 @@ const initDB = async () => {
 
     // Tables planning
     await pool.query(`CREATE TABLE IF NOT EXISTS creneaux (id SERIAL PRIMARY KEY, jour VARCHAR(20), heure_debut TIME, heure_fin TIME, periode VARCHAR(50), ordre INTEGER);`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS pools (id SERIAL PRIMARY KEY, nom VARCHAR(200) NOT NULL, site VARCHAR(200), couleur VARCHAR(20) DEFAULT '#6366f1', horaires TEXT, niveau VARCHAR(100));`);
+    // Seed creneaux by default if empty
+    const nbCreneaux = await pool.query('SELECT COUNT(*) FROM creneaux');
+    if (parseInt(nbCreneaux.rows[0].count) === 0) {
+      const jours = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+      const periodes = [
+        {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
+        {periode:'Matin',num:2,debut:'09:05',fin:'09:45'},
+        {periode:'Matin',num:3,debut:'10:05',fin:'10:55'},
+        {periode:'Matin',num:4,debut:'10:55',fin:'11:40'},
+        {periode:'Après-midi',num:1,debut:'13:30',fin:'14:15'},
+        {periode:'Après-midi',num:2,debut:'14:15',fin:'15:00'},
+        {periode:'Après-midi',num:3,debut:'15:20',fin:'16:05'},
+        {periode:'Après-midi',num:4,debut:'16:05',fin:'16:50'},
+      ];
+      for (const jour of jours) {
+        for (const p of periodes) {
+          await pool.query('INSERT INTO creneaux (jour, heure_debut, heure_fin, periode, ordre) VALUES ($1,$2,$3,$4,$5)', [jour, p.debut, p.fin, p.periode, p.num]);
+        }
+      }
+    }
+    await pool.query(`CREATE TABLE IF NOT EXISTS pools (id SERIAL PRIMARY KEY, nom VARCHAR(200) NOT NULL, site VARCHAR(200), couleur VARCHAR(20) DEFAULT '#6366f1', niveau VARCHAR(100));`);
+    await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS horaires TEXT`);
+    await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS ordre INTEGER DEFAULT 0`);
     await pool.query(`CREATE TABLE IF NOT EXISTS disponibilites (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, disponible BOOLEAN DEFAULT true);`);
     await pool.query(`CREATE TABLE IF NOT EXISTS pool_profs (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE);`);
     await pool.query(`CREATE TABLE IF NOT EXISTS pool_classes (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE);`);

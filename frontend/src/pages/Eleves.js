@@ -27,6 +27,7 @@ export default function Eleves() {
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
   const [photoZoom, setPhotoZoom] = useState(null);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -90,6 +91,18 @@ export default function Eleves() {
     chargerTout();
     axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
   }, []);
+
+  const mettreAJourLORA = async (file) => {
+    if (!file) return;
+    setLoraUpdateLoading(true);
+    try {
+      const fd = new FormData(); fd.append('fichier', file);
+      const r = await axios.post(API + '/import/update-lora', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      alert(r.data.message);
+      chargerTout();
+    } catch(err) { alert('Erreur mise à jour LORA: ' + (err.response?.data?.message || err.message)); }
+    setLoraUpdateLoading(false);
+  };
 
   const chargerTout = async () => {
     try {
@@ -455,6 +468,10 @@ export default function Eleves() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
+          {isAdmin() && <label style={{padding:'8px 16px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
+            {loraUpdateLoading ? 'Mise à jour...' : '🔄 Mise à jour LORA'}
+            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
+          </label>}
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Importer LORA</button>}
         </div>
       </div>

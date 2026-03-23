@@ -52,7 +52,7 @@ const saveDisponibilites = async (req, res) => {
 };
 
 const getPools = async (req, res) => {
-  const pools = await pool.query('SELECT id, nom, site, couleur, horaires, niveau FROM pools ORDER BY nom');
+  const pools = await pool.query('SELECT id, nom, site, couleur, horaires, niveau, ordre FROM pools ORDER BY COALESCE(ordre, 0), nom');
   const result = [];
   for (const p of pools.rows) {
     const profs = await pool.query('SELECT u.id, u.nom, u.prenom, u.taux_activite, u.periodes_semaine, u.niveau_prefere, u.lieu_travail_prefere, u.branches_specialites FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1', [p.id]);
@@ -77,7 +77,7 @@ const createPool = async (req, res) => {
 
 const updatePool = async (req, res) => {
   const { id } = req.params;
-  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau } = req.body;
+  const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau, ordre } = req.body;
   try {
     const anciensProfsRes = await pool.query('SELECT prof_id FROM pool_profs WHERE pool_id=$1', [id]);
     const anciennesClassesRes = await pool.query('SELECT classe_id FROM pool_classes WHERE pool_id=$1', [id]);
@@ -93,7 +93,7 @@ const updatePool = async (req, res) => {
       );
     }
 
-    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5 WHERE id=$6', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveau||null, id]);
+    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5, ordre=$6 WHERE id=$7', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveau||null, ordre !== undefined ? ordre : 0, id]);
     await pool.query('DELETE FROM pool_profs WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_classes WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_branches WHERE pool_id=$1', [id]);

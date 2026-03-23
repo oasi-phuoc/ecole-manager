@@ -140,15 +140,15 @@ export default function Classes() {
     setBranchesInventaire([]);
     setBrancheInventaireActive(null);
     try {
-      const [elevesRes, branchesRes] = await Promise.all([
-        axios.get(API+'/classes/'+c.id+'/eleves', {headers}),
-        axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers}),
-      ]);
+      const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
+    } catch(err) { console.error('Erreur chargement élèves:', err); }
+    try {
+      const branchesRes = await axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers});
       const brs = branchesRes.data?.branches || [];
       setBranchesInventaire(brs);
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
-    } catch(err) { console.error(err); }
+    } catch(err) { console.error('Erreur chargement branches inventaire:', err); }
   };
 
   const ouvrirEleveDetail = async (eleve) => {
@@ -345,7 +345,7 @@ export default function Classes() {
     const elementsSpeciaux = ELEMENTS_SPECIAUX_PLAN;
 
     return (
-      <div>
+      <div style={{marginTop:30}}>
         <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
           <div style={{flex:1,overflowX:'auto'}}>
             <table style={{borderCollapse:'collapse',width:'100%',minWidth:620}}>
@@ -1159,7 +1159,7 @@ export default function Classes() {
 
       {classeVueTab === 'eleves' ? (
         <>
-          <div style={{display:'flex',gap:0,marginBottom:12}}>
+          <div style={{display:'flex',gap:0,marginBottom:12,marginTop:0}}>
             {[{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'},{id:'tous',label:'Tous'}].map(f => (
               <button key={f.id} style={{...s.subTabBtn,width:90,minWidth:90,...(filtreElevesActif===f.id?s.subTabBtnActif:{})}} onClick={() => setFiltreElevesActif(f.id)}>{f.label}</button>
             ))}
@@ -1367,14 +1367,6 @@ export default function Classes() {
         <h2 style={s.title}>Gestion des classes</h2>
         {isAdmin() && (
           <div style={{display:'flex',gap:8,marginLeft:'auto',alignItems:'center'}}>
-            <label style={{...s.btnAdd,background:'#64748b',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
-              {loraUpdateLoading ? 'Mise à jour...' : '🔄 Mise à jour LORA'}
-              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
-            </label>
-            <label style={{...s.btnAdd,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
-              {loraImportLoading ? 'Import...' : '📥 Importer LORA'}
-              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) importerLORA(e.target.files[0]); e.target.value=''; }} />
-            </label>
             <button style={s.btnAdd} onClick={() => { setShowForm(true); setClasseEdit(null); setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''}); }}>+ Ajouter</button>
           </div>
         )}
@@ -1549,12 +1541,12 @@ const s = {
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
-  inventoryLayout:{display:'grid',gridTemplateColumns:'320px 1fr',gap:14,alignItems:'start'},
+  inventoryLayout:{display:'grid',gridTemplateColumns:'320px 1fr',gap:14,alignItems:'start',marginTop:15},
   invTitle:{fontSize:14,fontWeight:800,color:'#0f172a',padding:'14px 14px 0'},
   invMsg:{margin:'12px 12px 0',padding:'8px 10px',borderRadius:8,background:'#fee2e2',color:'#991b1b',fontSize:12,fontWeight:700},
   invForm:{display:'grid',gridTemplateColumns:'140px 1.4fr auto 1fr auto',gap:8,padding:14,alignItems:'center'},
   invToggle:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',fontWeight:600,whiteSpace:'nowrap'},
-  trombiGrid:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14},
+  trombiGrid:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,marginTop:30},
   trombiCard:{display:'flex',flexDirection:'column',alignItems:'center',padding:16,background:'white',borderRadius:12,border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'},
   trombiImg:{width:86,height:86,borderRadius:'50%',objectFit:'cover',border:'3px solid #e0e7ff',marginBottom:10},
   trombiFallback:{width:86,height:86,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,fontWeight:800,color:'#6366f1',marginBottom:10},

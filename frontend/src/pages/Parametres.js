@@ -200,12 +200,9 @@ export default function Parametres() {
           sexe_responsable_niveau_cfr: res.data.sexe_responsable_niveau_cfr || 'M',
           sexe_responsable_niveau_epl: res.data.sexe_responsable_niveau_epl || 'M',
         }));
-        if (res.data.horaires && Object.keys(res.data.horaires).length > 0) {
-          setHorairesEcole(res.data.horaires);
-        }
-        if (res.data.horaires) {
-          const firstKey = Object.keys(res.data.horaires)[0];
-          if (firstKey) setLieuHoraireOnglet(firstKey);
+        if (res.data.horaires != null) {
+          const h = typeof res.data.horaires === 'string' ? JSON.parse(res.data.horaires) : res.data.horaires;
+          setHorairesEcole(h);
         }
       }
     } catch (err) { console.error(err); }
@@ -377,7 +374,8 @@ export default function Parametres() {
   const handleSauverEcole = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(API + '/parametres/ecole', { ...ecole, horaires: horairesEcole }, { headers });
+      const horairesData = Object.keys(horairesEcole).length > 0 ? horairesEcole : (ecole.horaires || {});
+      await axios.put(API + '/parametres/ecole', { ...ecole, horaires: horairesData }, { headers });
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
