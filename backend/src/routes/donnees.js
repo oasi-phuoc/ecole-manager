@@ -37,21 +37,23 @@ router.delete('/niveaux/:id', auth, async (req, res) => {
 // ===== LIEUX DE TRAVAIL =====
 router.get('/lieux-travail', async (req, res) => {
   try {
-    const r = await pool.query('SELECT * FROM lieux_travail ORDER BY nom');
+    const r = await pool.query('SELECT * FROM lieux_travail ORDER BY COALESCE(ordre, 0), nom');
     res.json(r.rows);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 router.post('/lieux-travail', auth, async (req, res) => {
   try {
-    const r = await pool.query('INSERT INTO lieux_travail (nom) VALUES ($1) RETURNING *', [req.body.nom]);
+    const { nom, ordre = 0 } = req.body;
+    const r = await pool.query('INSERT INTO lieux_travail (nom, ordre) VALUES ($1,$2) RETURNING *', [nom, ordre]);
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 router.put('/lieux-travail/:id', auth, async (req, res) => {
   try {
-    const r = await pool.query('UPDATE lieux_travail SET nom=$1 WHERE id=$2 RETURNING *', [req.body.nom, req.params.id]);
+    const { nom, ordre } = req.body;
+    const r = await pool.query('UPDATE lieux_travail SET nom=$1, ordre=$2 WHERE id=$3 RETURNING *', [nom, ordre ?? 0, req.params.id]);
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });

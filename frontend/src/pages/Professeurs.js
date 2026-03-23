@@ -275,7 +275,7 @@ export default function Professeurs({
               <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'start'}}>
+              <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'stretch'}}>
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
@@ -290,7 +290,7 @@ export default function Professeurs({
                   </div>
 
                   <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
-                  <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10,marginBottom:16}}>
+                  <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10,marginBottom:showRoleToggle?0:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NOM *</label>
                       <input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value.toUpperCase()})} placeholder="DUPONT" />
@@ -367,7 +367,7 @@ export default function Professeurs({
                   </>)}
                 </div>
 
-                <div>
+                <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
                   {showRoleToggle && (<>
                     <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
                     <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
@@ -546,19 +546,24 @@ export default function Professeurs({
                   )}
 
                   <div style={{display:'flex',flexDirection:'column', marginTop: showRoleToggle ? 20 : 0}}>
-                    <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
-                    <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
-                      <option value="true">✅ Actif</option>
-                      <option value="false">❌ Inactif</option>
-                    </select>
+                    <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Statut</label>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div onClick={()=>setForm({...form,actif:(form.actif===false||form.actif==='false')})} style={{width:44,height:24,borderRadius:12,background:(form.actif===false||form.actif==='false')?'#ccc':'#34a853',cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0}}>
+                        <span style={{position:'absolute',top:2,left:(form.actif===false||form.actif==='false')?2:22,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                      </div>
+                      <span style={{fontSize:13,fontWeight:600,color:(form.actif===false||form.actif==='false')?'#94a3b8':'#34a853'}}>
+                        {(form.actif===false||form.actif==='false')?'Inactif':'Actif'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{flex:1}}/>
+                  <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
+                    <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
+                    <button type="submit" style={s.btnSave}>{profEdit?'Modifier':'Créer'}</button>
                   </div>
                 </div>
               </div>
 
-              <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>
-                <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>{profEdit?'Modifier':'Créer'}</button>
-              </div>
             </form>
           </div>
         </div>

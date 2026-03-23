@@ -177,6 +177,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_csc VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_cfr VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_epl VARCHAR(1)`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS horaires JSONB DEFAULT '{}'::jsonb`);
 
     // Table configuration email (admin)
     await pool.query(`
@@ -259,7 +260,8 @@ const initDB = async () => {
 
     // Tables données de référence (niveaux, lieux de travail, salles)
     await pool.query(`CREATE TABLE IF NOT EXISTS niveaux (id SERIAL PRIMARY KEY, nom VARCHAR(50) NOT NULL UNIQUE, ordre INTEGER DEFAULT 0)`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS lieux_travail (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS lieux_travail (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE, ordre INTEGER DEFAULT 0)`);
+    await pool.query(`ALTER TABLE lieux_travail ADD COLUMN IF NOT EXISTS ordre INTEGER DEFAULT 0`);
     await pool.query(`CREATE TABLE IF NOT EXISTS salles (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL, lieu_travail_id INTEGER REFERENCES lieux_travail(id) ON DELETE CASCADE)`);
     // Seed niveaux si vide
     const nbNiv = await pool.query('SELECT COUNT(*)::int as nb FROM niveaux');

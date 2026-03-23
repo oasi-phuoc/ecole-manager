@@ -2028,6 +2028,11 @@ export default function EmploiDuTemps() {
             </div>
           )}
 
+          {pools.length === 0 && (
+            <div style={styles.msgVide}>
+              Aucun pool créé. Cliquez sur <strong>+ Ajouter</strong> pour créer votre premier pool.
+            </div>
+          )}
           <div style={styles.poolsGrid}>
             {pools.map(pool => (
               <div key={pool.id} style={{...styles.poolCard,borderTop:'4px solid '+pool.couleur}}>
@@ -2624,7 +2629,7 @@ export default function EmploiDuTemps() {
                   <div style={{marginBottom:12}}>
                     <h3 style={styles.suiviGrandTitre}>Suivi des salles</h3>
                     {suiviSalles.length === 0 ? (
-                      <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune salle configurée pour ce lieu.</div>
+                      <div style={styles.msgVide}>Aucune salle configurée pour ce lieu.</div>
                     ) : (
                       <div style={styles.suiviBranchesGrid}>
                         {suiviSalles.map(salle => (
@@ -2707,7 +2712,7 @@ export default function EmploiDuTemps() {
                         <tbody>
                           {classesFiltreesSalles.length === 0 ? (
                             <tr>
-                              <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontWeight:600}}>
+                              <td colSpan={6} style={{...styles.td, textAlign:'center', color:'#64748b', fontSize:12, fontStyle:'italic', fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"}}>
                                 Aucune classe trouvée pour cette sélection.
                               </td>
                             </tr>

@@ -1,8 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+
+const normaliserBranchesSpecialites = (valeur) => {
+  if (!valeur) return [];
+  if (Array.isArray(valeur)) return Array.from(new Set(valeur.map(v => String(v).trim()).filter(Boolean)));
+  const brut = String(valeur).trim();
+  if (!brut) return [];
+  try { const parsed = JSON.parse(brut); if (Array.isArray(parsed)) return Array.from(new Set(parsed.map(v => String(v).trim()).filter(Boolean))); } catch {}
+  return brut.split(',').map(v => v.trim()).filter(Boolean);
+};
+
+const HORAIRE_DEFAUT = {
+  matin: [
+    { label: 'P1', debut: '08:20', fin: '09:05' },
+    { label: 'P2', debut: '09:05', fin: '09:45' },
+    { label: 'Pause', debut: '09:45', fin: '10:05' },
+    { label: 'P3', debut: '10:05', fin: '10:55' },
+    { label: 'P4', debut: '10:55', fin: '11:40' },
+  ],
+  apresmidi: [
+    { label: 'P1', debut: '13:30', fin: '14:15' },
+    { label: 'P2', debut: '14:15', fin: '15:00' },
+    { label: 'Pause', debut: '15:00', fin: '15:20' },
+    { label: 'P3', debut: '15:20', fin: '16:05' },
+    { label: 'P4', debut: '16:05', fin: '16:50' },
+  ]
+};
 
 const MODULES_ACCES_PROFS = [
   { key: 'employes_admin',  label: 'Employés', defaut: false, onglets: [{ key: 'employes_admin_base', label: 'Base — Nom, prénom, email, téléphone, naissance' }, { key: 'employes_admin_etendu', label: 'Étendu — Toutes les informations' }, { key: 'employes_admin_gestion', label: 'Ajout, suppression et statut actif/inactif' }] },
@@ -37,6 +63,12 @@ export default function Parametres() {
   const [accesRoleOnglet, setAccesRoleOnglet] = useState('professeurs');
   const [msgAccesProfs, setMsgAccesProfs] = useState('');
   const [moduleOuvert, setModuleOuvert] = useState(null);
+  const [sousOngletEcole, setSousOngletEcole] = useState('adresse');
+  const [horairesEcole, setHorairesEcole] = useState({});
+  const [lieuHoraireOnglet, setLieuHoraireOnglet] = useState('defaut');
+  const [sousOngletProfil, setSousOngletProfil] = useState('connexion');
+  const [mdpOuvert, setMdpOuvert] = useState(false);
+  const [branchesDisponiblesProfil, setBranchesDisponiblesProfil] = useState([]);
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
@@ -73,19 +105,40 @@ export default function Parametres() {
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [sallesDB, setSallesDB] = useState([]);
-  const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '', ordre: '' });
+  const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '' });
   const [donneesLieuForm, setDonneesLieuForm] = useState({ nom: '' });
   const [donneesSalleForm, setDonneesSalleForm] = useState({ nom: '', lieu_travail_id: '' });
   const [donneesNiveauEdit, setDonneesNiveauEdit] = useState(null);
   const [donneesLieuEdit, setDonneesLieuEdit] = useState(null);
   const [donneesSalleEdit, setDonneesSalleEdit] = useState(null);
+  const dragNiveauIdx = useRef(null);
+  const dragLieuIdx = useRef(null);
+  const [dragOverNiveau, setDragOverNiveau] = useState(null);
+  const [dragOverLieu, setDragOverLieu] = useState(null);
   const navigate = useNavigate();
   const headers = {};
   const isAdmin = profil.role === 'admin';
 
+  const reorderNiveaux = async (from, to) => {
+    if (from === to) return;
+    const list = [...niveauxDB];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    setNiveauxDB(list);
+    await Promise.all(list.map((n, i) => axios.put(API + '/donnees/niveaux/' + n.id, { nom: n.nom, ordre: i + 1 }, { headers })));
+  };
+  const reorderLieux = async (from, to) => {
+    if (from === to) return;
+    const list = [...lieuxTravailDB];
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    setLieuxTravailDB(list);
+    await Promise.all(list.map((l, i) => axios.put(API + '/donnees/lieux-travail/' + l.id, { nom: l.nom, ordre: i + 1 }, { headers })));
+  };
+
   useEffect(() => { chargerProfil(); }, []);
-  useEffect(() => { chargerMfaStatus(); }, []);
-  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); chargerDonnees(); } }, [isAdmin]);
+  useEffect(() => { chargerMfaStatus(); chargerDonnees(); }, []);
+  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
   }, [isAdmin, profil?.email, mailTestTo]);
@@ -110,6 +163,30 @@ export default function Parametres() {
     } catch(err) { console.error(err); }
   };
 
+  const chargerBranchesProfil = async (niveaux = []) => {
+    try {
+      const r = await axios.get(API + '/branches', { headers });
+      const filtrees = r.data
+        .filter(b => !niveaux.length || niveaux.includes(b.niveau))
+        .filter(b => { const code = String(b.designation_courte || '').trim().toUpperCase(); return code !== 'AI'; });
+      const parCode = new Map();
+      filtrees.forEach(b => {
+        const code = String(b.designation_courte || b.nom || '').trim().toUpperCase();
+        if (!code) return;
+        if (!parCode.has(code)) { parCode.set(code, { id: code, label: code, ids: [String(b.id)], noms: [String(b.nom || '').trim()].filter(Boolean) }); return; }
+        const ex = parCode.get(code); ex.ids.push(String(b.id));
+        const nom = String(b.nom || '').trim(); if (nom && !ex.noms.includes(nom)) ex.noms.push(nom);
+      });
+      setBranchesDisponiblesProfil(Array.from(parCode.values()).sort((a, b) => a.label.localeCompare(b.label, 'fr')));
+    } catch { setBranchesDisponiblesProfil([]); }
+  };
+
+  useEffect(() => {
+    if (sousOngletProfil !== 'desideratas') return;
+    const niveaux = (profil.niveau_prefere || '').split(',').filter(Boolean);
+    chargerBranchesProfil(niveaux);
+  }, [profil.niveau_prefere, sousOngletProfil]);
+
   const chargerEcole = async () => {
     try {
       const res = await axios.get(API + '/parametres/ecole', { headers });
@@ -122,6 +199,13 @@ export default function Parametres() {
           sexe_responsable_niveau_cfr: res.data.sexe_responsable_niveau_cfr || 'M',
           sexe_responsable_niveau_epl: res.data.sexe_responsable_niveau_epl || 'M',
         }));
+        if (res.data.horaires && Object.keys(res.data.horaires).length > 0) {
+          setHorairesEcole(res.data.horaires);
+        }
+        if (res.data.horaires) {
+          const firstKey = Object.keys(res.data.horaires)[0];
+          if (firstKey) setLieuHoraireOnglet(firstKey);
+        }
       }
     } catch (err) { console.error(err); }
   };
@@ -292,7 +376,7 @@ export default function Parametres() {
   const handleSauverEcole = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(API + '/parametres/ecole', ecole, { headers });
+      await axios.put(API + '/parametres/ecole', { ...ecole, horaires: horairesEcole }, { headers });
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
@@ -395,7 +479,6 @@ export default function Parametres() {
 
   const ONGLETS = [
     { key: 'profil', label: 'Mon profil', show: true },
-    { key: 'mdp', label: 'Mot de passe', show: true },
     { key: 'mfa', label: 'Double authentification', show: true },
     { key: 'ecole', label: 'École', show: isAdmin },
     { key: 'mail', label: 'Envoi des mails', show: isAdmin },
@@ -438,173 +521,245 @@ export default function Parametres() {
         <div style={styles.topBar}>
           <h1 style={styles.titre}>Paramètres</h1>
           <div style={styles.topBarRight}>
-            {onglet === 'profil' && (
+            {onglet === 'profil' && (<>
+              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#d1fae5',color:'#065f46'}}>✅ Profil mis à jour !</span>}
+              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#fee2e2',color:'#991b1b'}}>❌ Erreur</span>}
               <button type="submit" form="form-profil" style={styles.btnSauverHeader}>Sauvegarder</button>
-            )}
-            {onglet === 'ecole' && isAdmin && (
+            </>)}
+            {onglet === 'ecole' && isAdmin && (<>
+              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#d1fae5',color:'#065f46'}}>✅ Paramètres mis à jour !</span>}
+              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#fee2e2',color:'#991b1b'}}>❌ Erreur</span>}
               <button type="submit" form="form-ecole" style={styles.btnSauverHeader}>Sauvegarder</button>
-            )}
+            </>)}
           </div>
         </div>
         <div style={styles.content}>
 
           {onglet === 'profil' && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>Mon profil</h3>
-              <div style={styles.roleTag}>{profil.role}</div>
-              {msgProfil === 'success' && <div style={styles.msgSuccess}>✅ Profil mis à jour !</div>}
-              {msgProfil === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
-              <form id="form-profil" onSubmit={handleSauverProfil}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <h3 style={{ ...styles.cardTitre, margin: 0 }}>Mon profil</h3>
+                <div style={styles.roleTag}>{profil.role}</div>
+              </div>
 
-                {/* Informations de connexion */}
-                <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations de connexion</div>
-                <div style={{...styles.formGrid, marginBottom:20}}>
-                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
-                    <label style={styles.label}>Email *</label>
-                    <input style={styles.input} type="email" required value={profil.email} onChange={e => setProfil({ ...profil, email: e.target.value })} />
-                  </div>
-                </div>
+              {/* Sous-onglets profil */}
+              <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
+                {[['connexion','Informations de connexion'],['personnelles','Informations personnelles'],['professionnelles','Informations professionnelles'],['desideratas','Désidératas']].map(([key, label]) => (
+                  <button key={key} onClick={() => setSousOngletProfil(key)} style={{ padding: '9px 18px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: '1', outline: 'none', position: 'relative', zIndex: sousOngletProfil === key ? 2 : 1, ...(sousOngletProfil === key ? { background: '#6366f1', color: 'white', marginBottom: -2, boxShadow: '0 -1px 6px rgba(99,102,241,0.18)' } : { background: '#ede9fe', color: '#5b21b6' }) }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ paddingTop: 20 }}>
+                {msgProfil === 'success' && <div style={styles.msgSuccess}>✅ Profil mis à jour !</div>}
+                {msgProfil === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
 
-                {/* Informations personnelles */}
-                <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations personnelles</div>
-                <div style={{...styles.formGrid, marginBottom:20}}>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>NOM *</label>
-                    <input style={styles.input} type="text" required value={profil.nom} onChange={e => setProfil({ ...profil, nom: e.target.value.toUpperCase() })} placeholder="DUPONT" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Prénom *</label>
-                    <input style={styles.input} type="text" required value={profil.prenom} onChange={e => setProfil({ ...profil, prenom: e.target.value })} placeholder="Jean" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Date de naissance</label>
-                    <input style={styles.input} type="date" value={profil.date_naissance ? profil.date_naissance.slice(0,10) : ''} onChange={e => setProfil({ ...profil, date_naissance: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Sexe</label>
-                    <select style={styles.input} value={profil.sexe||''} onChange={e => setProfil({ ...profil, sexe: e.target.value })}>
-                      <option value="">--</option>
-                      <option value="M">Masculin</option>
-                      <option value="F">Féminin</option>
-                      <option value="Autre">Autre</option>
-                    </select>
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Téléphone</label>
-                    <input style={styles.input} type="text" value={profil.telephone||''} onChange={e => setProfil({ ...profil, telephone: e.target.value })} placeholder="079 123 45 67" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>N° AVS</label>
-                    <input style={styles.input} type="text" value={profil.avs||''} onChange={e => setProfil({ ...profil, avs: e.target.value })} placeholder="756.XXXX.XXXX.XX" />
-                  </div>
-                  <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
-                    <label style={styles.label}>Adresse</label>
-                    <input style={styles.input} type="text" value={profil.adresse||''} onChange={e => setProfil({ ...profil, adresse: e.target.value })} placeholder="Rue de la Paix 10" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>NPA</label>
-                    <input style={styles.input} type="text" value={profil.npa||''} onChange={e => setProfil({ ...profil, npa: e.target.value })} placeholder="1950" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Lieu</label>
-                    <input style={styles.input} type="text" value={profil.lieu||''} onChange={e => setProfil({ ...profil, lieu: e.target.value })} placeholder="Sion" />
-                  </div>
-                </div>
+                <form id="form-profil" onSubmit={handleSauverProfil}>
 
-                {/* Désidératas — uniquement pour les profs */}
-                {profil.role === 'prof' && (<>
-                  <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Désidératas</div>
-                  <div style={{marginBottom:20,display:'flex',flexDirection:'column',gap:12}}>
-                    <div style={styles.formChamp}>
-                      <label style={styles.label}>Niveaux préférés</label>
-                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
-                        {['CSC','CFR','EPL'].map(n => {
-                          const niveaux = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
-                          const selected = niveaux.includes(n);
-                          return (
-                            <button key={n} type="button"
-                              onClick={() => {
-                                const curr = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
-                                const newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
-                                setProfil({...profil, niveau_prefere: newNiv.length >= 3 ? '' : newNiv.join(',')});
-                              }}
-                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
-                              {n}
-                            </button>
-                          );
-                        })}
-                        <button type="button"
-                          onClick={() => setProfil({...profil, niveau_prefere:''})}
-                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.niveau_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.niveau_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
-                          Aucune préférence
-                        </button>
+                  {/* Connexion */}
+                  {sousOngletProfil === 'connexion' && (
+                    <div>
+                      <div style={{...styles.formGrid, marginBottom: 20}}>
+                        <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
+                          <label style={styles.label}>Email *</label>
+                          <input style={styles.input} type="email" required value={profil.email} onChange={e => setProfil({ ...profil, email: e.target.value })} />
+                        </div>
+                      </div>
+                      {/* Changer mot de passe - expandable */}
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+                        <div onClick={() => setMdpOuvert(!mdpOuvert)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: '#f8fafc', cursor: 'pointer' }}>
+                          <span style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>Changer le mot de passe</span>
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>{mdpOuvert ? '▲' : '▼'}</span>
+                        </div>
+                        {mdpOuvert && (
+                          <div style={{ padding: '16px', background: 'white', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {msgMdp === 'success' && <div style={styles.msgSuccess}>✅ Mot de passe modifié !</div>}
+                            {msgMdp === 'error' && <div style={styles.msgError}>❌ Ancien mot de passe incorrect</div>}
+                            {msgMdp === 'mismatch' && <div style={styles.msgError}>❌ Les mots de passe ne correspondent pas</div>}
+                            <div style={styles.formChamp}>
+                              <label style={styles.label}>Ancien mot de passe *</label>
+                              <input style={styles.input} type="password" value={mdp.ancien} onChange={e => setMdp({ ...mdp, ancien: e.target.value })} />
+                            </div>
+                            <div style={styles.formChamp}>
+                              <label style={styles.label}>Nouveau mot de passe *</label>
+                              <input style={styles.input} type="password" value={mdp.nouveau} onChange={e => setMdp({ ...mdp, nouveau: e.target.value })} />
+                            </div>
+                            <div style={styles.formChamp}>
+                              <label style={styles.label}>Confirmer *</label>
+                              <input style={styles.input} type="password" value={mdp.confirmation} onChange={e => setMdp({ ...mdp, confirmation: e.target.value })} />
+                            </div>
+                            <button type="button" onClick={handleSauverMdp} style={{ ...styles.btnSauver, background: '#ea4335', alignSelf: 'flex-start' }}>Changer</button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div style={styles.formChamp}>
-                      <label style={styles.label}>Remarques niveaux / branches</label>
-                      <input style={styles.input} type="text" value={profil.specialite||''} onChange={e => setProfil({...profil, specialite: e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
-                    </div>
-                    <div style={styles.formChamp}>
-                      <label style={styles.label}>Lieux de travail préférés</label>
-                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
-                        {['BOTZA','SYNECOM','CREUSET'].map(l => {
-                          const lieux = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
-                          const selected = lieux.includes(l);
-                          return (
-                            <button key={l} type="button"
-                              onClick={() => {
-                                const curr = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
-                                const newL = selected ? curr.filter(x=>x!==l) : [...curr, l];
-                                setProfil({...profil, lieu_travail_prefere: newL.length >= 3 ? '' : newL.join(',')});
-                              }}
-                              style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
-                              {l}
-                            </button>
-                          );
-                        })}
-                        <button type="button"
-                          onClick={() => setProfil({...profil, lieu_travail_prefere:''})}
-                          style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.lieu_travail_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.lieu_travail_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
-                          Aucune préférence
-                        </button>
+                  )}
+
+                  {/* Informations personnelles */}
+                  {sousOngletProfil === 'personnelles' && (
+                    <div style={{...styles.formGrid, marginBottom: 20}}>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>NOM *</label>
+                        <input style={styles.input} type="text" required value={profil.nom} onChange={e => setProfil({ ...profil, nom: e.target.value.toUpperCase() })} placeholder="DUPONT" />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Prénom *</label>
+                        <input style={styles.input} type="text" required value={profil.prenom} onChange={e => setProfil({ ...profil, prenom: e.target.value })} placeholder="Jean" />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Date de naissance</label>
+                        <input style={styles.input} type="date" value={profil.date_naissance ? profil.date_naissance.slice(0,10) : ''} onChange={e => setProfil({ ...profil, date_naissance: e.target.value })} />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Sexe</label>
+                        <select style={styles.input} value={profil.sexe||''} onChange={e => setProfil({ ...profil, sexe: e.target.value })}>
+                          <option value="">--</option>
+                          <option value="M">Masculin</option>
+                          <option value="F">Féminin</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Téléphone</label>
+                        <input style={styles.input} type="text" value={profil.telephone||''} onChange={e => setProfil({ ...profil, telephone: e.target.value })} placeholder="079 123 45 67" />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>N° AVS</label>
+                        <input style={styles.input} type="text" value={profil.avs||''} onChange={e => setProfil({ ...profil, avs: e.target.value })} placeholder="756.XXXX.XXXX.XX" />
+                      </div>
+                      <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
+                        <label style={styles.label}>Adresse</label>
+                        <input style={styles.input} type="text" value={profil.adresse||''} onChange={e => setProfil({ ...profil, adresse: e.target.value })} placeholder="Rue de la Paix 10" />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>NPA</label>
+                        <input style={styles.input} type="text" value={profil.npa||''} onChange={e => setProfil({ ...profil, npa: e.target.value })} placeholder="1950" />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Lieu</label>
+                        <input style={styles.input} type="text" value={profil.lieu||''} onChange={e => setProfil({ ...profil, lieu: e.target.value })} placeholder="Sion" />
                       </div>
                     </div>
-                    <div style={styles.formChamp}>
-                      <label style={styles.label}>Remarques lieu de travail</label>
-                      <input style={styles.input} type="text" value={profil.remarque_lieu_travail||''} onChange={e => setProfil({...profil, remarque_lieu_travail: e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
+                  )}
+
+                  {/* Informations professionnelles */}
+                  {sousOngletProfil === 'professionnelles' && (
+                    <div style={{...styles.formGrid, marginBottom: 20}}>
+                      {[
+                        {label:"Taux d'activité (%)", value: profil.taux_activite ?? '—'},
+                        {label:"Périodes / semaine", value: profil.periodes_semaine ?? '—'},
+                        {label:"Type de contrat", value: profil.type_contrat || '—'},
+                      ].map(({label,value}) => (
+                        <div key={label} style={styles.formChamp}>
+                          <label style={styles.label}>{label}</label>
+                          <div style={{...styles.input, background:'#f1f5f9', color:'#64748b', cursor:'not-allowed', display:'flex', alignItems:'center', height:38}}>{value}</div>
+                        </div>
+                      ))}
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Type de permis</label>
+                        <input style={styles.input} type="text" value={profil.type_permis || ''} onChange={e => setProfil({...profil, type_permis: e.target.value})} placeholder="B, C, L..." />
+                      </div>
                     </div>
-                    <div style={styles.formChamp}>
-                      <label style={styles.label}>Priorité</label>
-                      <div style={{display:'flex',gap:8,marginTop:4}}>
-                        {[['niveau','Niveau'],['lieu','Lieu de travail']].map(([val,label]) => (
-                          <button key={val} type="button"
-                            onClick={() => setProfil({...profil, priorite_pref: val})}
-                            style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(profil.priorite_pref===val?'#6366f1':'#e2e8f0'),background:profil.priorite_pref===val?'#e0e7ff':'white',fontWeight:700,cursor:'pointer',fontSize:13,color:profil.priorite_pref===val?'#3730a3':'#64748b'}}>
-                            {label}
+                  )}
+
+                  {/* Désidératas */}
+                  {sousOngletProfil === 'desideratas' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Niveaux préférés</label>
+                        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                          {niveauxDB.map(n => {
+                            const niveaux = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
+                            const selected = niveaux.includes(n.nom);
+                            return (
+                              <button key={n.id} type="button"
+                                onClick={() => {
+                                  const curr = profil.niveau_prefere ? profil.niveau_prefere.split(',').filter(Boolean) : [];
+                                  const newNiv = selected ? curr.filter(x=>x!==n.nom) : [...curr, n.nom];
+                                  setProfil({...profil, niveau_prefere: newNiv.length >= niveauxDB.length ? '' : newNiv.join(',')});
+                                }}
+                                style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                                {n.nom}
+                              </button>
+                            );
+                          })}
+                          <button type="button" onClick={() => setProfil({...profil, niveau_prefere:''})}
+                            style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.niveau_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.niveau_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                            Aucune préférence
                           </button>
-                        ))}
+                        </div>
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Spécialité(s) — {profil.niveau_prefere || 'Tous niveaux'}</label>
+                        {branchesDisponiblesProfil.length === 0 ? (
+                          <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginTop: 4 }}>
+                            {branchesDisponiblesProfil.map(b => {
+                              const bsArr = normaliserBranchesSpecialites(profil.branches_specialites);
+                              const selected = (b.ids || []).some(id => bsArr.includes(String(id)));
+                              return (
+                                <button key={b.id} type="button" title={(b.noms || []).join(' / ')}
+                                  onClick={() => {
+                                    const curr = normaliserBranchesSpecialites(profil.branches_specialites);
+                                    const newSel = selected
+                                      ? curr.filter(x => !(b.ids || []).includes(String(x)))
+                                      : Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
+                                    setProfil({ ...profil, branches_specialites: newSel });
+                                  }}
+                                  style={{ height: 34, borderRadius: 9, border: '2px solid ' + (selected ? '#6366f1' : '#e2e8f0'), background: selected ? '#e0e7ff' : 'white', color: selected ? '#3730a3' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
+                                  {b.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Lieux de travail préférés</label>
+                        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                          {lieuxTravailDB.map(l => {
+                            const lieux = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                            const selected = lieux.includes(l.nom);
+                            return (
+                              <button key={l.id} type="button"
+                                onClick={() => {
+                                  const curr = profil.lieu_travail_prefere ? profil.lieu_travail_prefere.split(',').filter(Boolean) : [];
+                                  const newL = selected ? curr.filter(x=>x!==l.nom) : [...curr, l.nom];
+                                  setProfil({...profil, lieu_travail_prefere: newL.length >= lieuxTravailDB.length ? '' : newL.join(',')});
+                                }}
+                                style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                                {l.nom}
+                              </button>
+                            );
+                          })}
+                          <button type="button" onClick={() => setProfil({...profil, lieu_travail_prefere:''})}
+                            style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+((!profil.lieu_travail_prefere)?'#94a3b8':'#e2e8f0'),background:(!profil.lieu_travail_prefere)?'#f1f5f9':'white',color:'#64748b',cursor:'pointer',fontWeight:700,fontSize:13}}>
+                            Aucune préférence
+                          </button>
+                        </div>
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Remarques lieu de travail</label>
+                        <input style={styles.input} type="text" value={profil.remarque_lieu_travail||''} onChange={e => setProfil({...profil, remarque_lieu_travail: e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
+                      </div>
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>Priorité</label>
+                        <div style={{display:'flex',gap:8,marginTop:4}}>
+                          {[['niveau','Niveau'],['lieu','Lieu de travail']].map(([val,lbl]) => (
+                            <button key={val} type="button"
+                              onClick={() => setProfil({...profil, priorite_pref: val})}
+                              style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(profil.priorite_pref===val?'#6366f1':'#e2e8f0'),background:profil.priorite_pref===val?'#e0e7ff':'white',fontWeight:700,cursor:'pointer',fontSize:13,color:profil.priorite_pref===val?'#3730a3':'#64748b'}}>
+                              {lbl}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Informations professionnelles (lecture seule) */}
-                  <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations professionnelles</div>
-                  <div style={{...styles.formGrid, marginBottom:20}}>
-                    {[
-                      {label:"Taux d'activité (%)", value: profil.taux_activite ?? '—'},
-                      {label:"Périodes / semaine", value: profil.periodes_semaine ?? '—'},
-                      {label:"Type de contrat", value: profil.type_contrat || '—'},
-                      {label:"Type de permis", value: profil.type_permis || '—'},
-                    ].map(({label,value}) => (
-                      <div key={label} style={styles.formChamp}>
-                        <label style={styles.label}>{label}</label>
-                        <div style={{...styles.input, background:'#f1f5f9', color:'#64748b', cursor:'not-allowed', display:'flex', alignItems:'center', height:38}}>{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </>)}
-
-              </form>
+                </form>
+              </div>
             </div>
           )}
 
@@ -751,13 +906,24 @@ export default function Parametres() {
 
           {onglet === 'ecole' && isAdmin && (
             <div style={styles.card}>
-              <h3 style={{ ...styles.cardTitre, marginBottom: 20 }}>Paramètres de l'école</h3>
+              <h3 style={{ ...styles.cardTitre, marginBottom: 16 }}>Paramètres de l'école</h3>
+
+              {/* Sous-onglets */}
+              <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
+                {[['adresse','Adresse'],['responsables','Responsables'],['structure','Structure'],['horaires','Horaires']].map(([key, label]) => (
+                  <button key={key} onClick={() => setSousOngletEcole(key)} style={{ padding: '9px 18px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: '1', outline: 'none', position: 'relative', zIndex: sousOngletEcole === key ? 2 : 1, ...(sousOngletEcole === key ? { background: '#6366f1', color: 'white', marginBottom: -2, boxShadow: '0 -1px 6px rgba(99,102,241,0.18)' } : { background: '#ede9fe', color: '#5b21b6' }) }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ paddingTop: sousOngletEcole === 'horaires' ? 0 : 20 }}>
+
               {msgEcole === 'success' && <div style={styles.msgSuccess}>✅ Paramètres mis à jour !</div>}
               {msgEcole === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
               <form id="form-ecole" onSubmit={handleSauverEcole}>
 
                 {/* Section Adresse */}
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#1e40af', background: '#dbeafe', padding: '5px 12px', borderRadius: 6, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Adresse</div>
+                {sousOngletEcole === 'adresse' && <div>
                 <div style={styles.formGrid}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={styles.label}>Nom de l'école</label>
@@ -780,9 +946,10 @@ export default function Parametres() {
                     <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
                   </div>
                 </div>
+                </div>}
 
                 {/* Section Responsables */}
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '5px 12px', borderRadius: 6, marginBottom: 12, marginTop: 20, textTransform: 'uppercase', letterSpacing: 1 }}>Responsables</div>
+                {sousOngletEcole === 'responsables' && <div>
                 <div style={styles.formGrid}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -833,12 +1000,12 @@ export default function Parametres() {
                     <input style={styles.input} type="text" value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })} />
                   </div>
                 </div>
+                </div>}
 
               </form>
 
               {/* Section Structure */}
-              <div style={{ marginTop: 28 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', padding: '5px 12px', borderRadius: 6, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 }}>Structure</div>
+              {sousOngletEcole === 'structure' && <div>
                 <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
                   {/* Niveaux */}
@@ -848,25 +1015,31 @@ export default function Parametres() {
                       e.preventDefault();
                       try {
                         if (donneesNiveauEdit) {
-                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, donneesNiveauForm, { headers });
+                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, { nom: donneesNiveauForm.nom, ordre: donneesNiveauEdit.ordre }, { headers });
                         } else {
-                          await axios.post(API + '/donnees/niveaux', donneesNiveauForm, { headers });
+                          await axios.post(API + '/donnees/niveaux', { nom: donneesNiveauForm.nom, ordre: niveauxDB.length + 1 }, { headers });
                         }
-                        setDonneesNiveauForm({ nom: '', ordre: '' });
+                        setDonneesNiveauForm({ nom: '' });
                         setDonneesNiveauEdit(null);
                         chargerDonnees();
                       } catch(err) { alert(err.response?.data?.message || err.message); }
                     }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                       <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: CSC)" value={donneesNiveauForm.nom} onChange={e => setDonneesNiveauForm(f => ({ ...f, nom: e.target.value }))} required />
-                      <input style={{ ...styles.input, width: 55, margin: 0, padding: '7px 8px' }} placeholder="#" type="number" value={donneesNiveauForm.ordre} onChange={e => setDonneesNiveauForm(f => ({ ...f, ordre: e.target.value }))} />
                       <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesNiveauEdit ? '✓' : '+'}</button>
-                      {donneesNiveauEdit && <button type="button" onClick={() => { setDonneesNiveauEdit(null); setDonneesNiveauForm({ nom: '', ordre: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                      {donneesNiveauEdit && <button type="button" onClick={() => { setDonneesNiveauEdit(null); setDonneesNiveauForm({ nom: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
                     </form>
-                    {niveauxDB.map(n => (
-                      <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 5 }}>
+                    {niveauxDB.map((n, idx) => (
+                      <div key={n.id}
+                        draggable
+                        onDragStart={() => { dragNiveauIdx.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); setDragOverNiveau(idx); }}
+                        onDragLeave={() => setDragOverNiveau(null)}
+                        onDrop={() => { reorderNiveaux(dragNiveauIdx.current, idx); setDragOverNiveau(null); dragNiveauIdx.current = null; }}
+                        onDragEnd={() => { setDragOverNiveau(null); dragNiveauIdx.current = null; }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: dragOverNiveau === idx ? '#e0e7ff' : '#f8fafc', borderRadius: 7, border: '1px solid ' + (dragOverNiveau === idx ? '#6366f1' : '#e2e8f0'), marginBottom: 5, cursor: 'grab' }}>
+                        <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{n.nom}</span>
-                        {n.ordre ? <span style={{ fontSize: 11, color: '#94a3b8' }}>#{n.ordre}</span> : null}
-                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom, ordre: n.ordre || '' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
+                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
                         <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
                       </div>
                     ))}
@@ -893,8 +1066,16 @@ export default function Parametres() {
                       <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesLieuEdit ? '✓' : '+'}</button>
                       {donneesLieuEdit && <button type="button" onClick={() => { setDonneesLieuEdit(null); setDonneesLieuForm({ nom: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
                     </form>
-                    {lieuxTravailDB.map(l => (
-                      <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 5 }}>
+                    {lieuxTravailDB.map((l, idx) => (
+                      <div key={l.id}
+                        draggable
+                        onDragStart={() => { dragLieuIdx.current = idx; }}
+                        onDragOver={e => { e.preventDefault(); setDragOverLieu(idx); }}
+                        onDragLeave={() => setDragOverLieu(null)}
+                        onDrop={() => { reorderLieux(dragLieuIdx.current, idx); setDragOverLieu(null); dragLieuIdx.current = null; }}
+                        onDragEnd={() => { setDragOverLieu(null); dragLieuIdx.current = null; }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: dragOverLieu === idx ? '#e0e7ff' : '#f8fafc', borderRadius: 7, border: '1px solid ' + (dragOverLieu === idx ? '#6366f1' : '#e2e8f0'), marginBottom: 5, cursor: 'grab' }}>
+                        <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{l.nom}</span>
                         <button onClick={() => { setDonneesLieuEdit(l); setDonneesLieuForm({ nom: l.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
                         <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
@@ -947,8 +1128,58 @@ export default function Parametres() {
                   </div>
 
                 </div>
-              </div>
+              </div>}
 
+              {/* Section Horaires */}
+              {sousOngletEcole === 'horaires' && (() => {
+                const lieux = lieuxTravailDB;
+                const actifKey = lieuHoraireOnglet || 'defaut';
+                const horaireActif = horairesEcole[actifKey] || JSON.parse(JSON.stringify(HORAIRE_DEFAUT));
+                const initLieu = (key) => {
+                  if (!horairesEcole[key]) setHorairesEcole(prev => ({ ...prev, [key]: JSON.parse(JSON.stringify(HORAIRE_DEFAUT)) }));
+                  setLieuHoraireOnglet(key);
+                };
+                const updatePeriode = (bloc, idx, champ, val) => {
+                  const updated = JSON.parse(JSON.stringify(horaireActif));
+                  updated[bloc][idx][champ] = val;
+                  setHorairesEcole(prev => ({ ...prev, [actifKey]: updated }));
+                };
+                const allTabs = [{key:'defaut', nom:'Par défaut'}, ...lieux.map(l => ({key:String(l.id), nom:l.nom}))];
+                return (
+                  <div>
+                    {/* Sous-onglets style affectations EDT */}
+                    <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', marginBottom: 0, marginTop: 0 }}>
+                      {allTabs.map(item => {
+                        const actif = (actifKey === item.key);
+                        return (
+                          <button key={item.key} type="button" onClick={() => initLieu(item.key)} style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: actif ? '#4f46e5' : '#e0e7ff', color: actif ? 'white' : '#3730a3', lineHeight: 1, position: 'relative', zIndex: actif ? 2 : 1, outline: 'none', minWidth: 100, textAlign: 'center', ...(actif ? { marginTop: -1, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' } : {}) }}>
+                            {item.nom}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ paddingTop: 20, display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+                      {[['matin', 'Matin'], ['apresmidi', 'Après-midi']].map(([bloc, titre]) => (
+                        <div key={bloc} style={{ minWidth: 260 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b', marginBottom: 12 }}>{titre}</div>
+                          {(horaireActif[bloc] || []).map((p, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                              <span style={{ width: 44, fontSize: 13, color: p.label === 'Pause' ? '#94a3b8' : '#334155', fontWeight: p.label === 'Pause' ? 400 : 600 }}>{p.label}</span>
+                              <input type="time" value={p.debut} onChange={e => updatePeriode(bloc, idx, 'debut', e.target.value)}
+                                style={{ ...styles.input, width: 90, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
+                              <span style={{ color: '#94a3b8', fontSize: 13 }}>→</span>
+                              <input type="time" value={p.fin} onChange={e => updatePeriode(bloc, idx, 'fin', e.target.value)}
+                                style={{ ...styles.input, width: 90, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              </div>{/* fin paddingTop */}
             </div>
           )}
 
@@ -1224,7 +1455,7 @@ const styles = {
   content: {},
   card: { background: 'white', borderRadius: 14, padding: '30px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   cardTitre: { fontSize: '20px', fontWeight: '700', marginBottom: '20px' },
-  roleTag: { display: 'inline-block', background: '#e3f2fd', color: '#1a73e8', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', marginBottom: '20px' },
+  roleTag: { display: 'inline-block', background: '#e3f2fd', color: '#1a73e8', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600' },
   msgSuccess: { background: '#e8f5e9', color: '#2e7d32', padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
   msgError: { background: '#ffebee', color: '#c62828', padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
   msgInfo: { padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },

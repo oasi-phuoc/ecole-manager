@@ -48,13 +48,14 @@ const modifierParametresEcole = async (req, res) => {
     nom_ecole, adresse, telephone, email, annee_scolaire,
     responsable_langues_jeunes, responsable_niveau,
     responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl,
-    sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl
+    sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl,
+    horaires
   } = req.body;
   try {
     const existe = await pool.query('SELECT id FROM parametres_ecole LIMIT 1');
     if (existe.rows.length > 0) {
       await pool.query(
-        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, responsable_langues_jeunes=$6, responsable_niveau=$7, responsable_niveau_csc=$8, responsable_niveau_cfr=$9, responsable_niveau_epl=$10, sexe_responsable_langues_jeunes=$11, sexe_responsable_niveau_csc=$12, sexe_responsable_niveau_cfr=$13, sexe_responsable_niveau_epl=$14 WHERE id=$15',
+        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, responsable_langues_jeunes=$6, responsable_niveau=$7, responsable_niveau_csc=$8, responsable_niveau_cfr=$9, responsable_niveau_epl=$10, sexe_responsable_langues_jeunes=$11, sexe_responsable_niveau_csc=$12, sexe_responsable_niveau_cfr=$13, sexe_responsable_niveau_epl=$14, horaires=$15 WHERE id=$16',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire,
           responsable_langues_jeunes || null,
@@ -66,12 +67,13 @@ const modifierParametresEcole = async (req, res) => {
           sexe_responsable_niveau_csc || null,
           sexe_responsable_niveau_cfr || null,
           sexe_responsable_niveau_epl || null,
+          horaires ? JSON.stringify(horaires) : '{}',
           existe.rows[0].id
         ]
       );
     } else {
       await pool.query(
-        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
+        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl, horaires) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire,
           responsable_langues_jeunes || null,
@@ -82,7 +84,8 @@ const modifierParametresEcole = async (req, res) => {
           sexe_responsable_langues_jeunes || null,
           sexe_responsable_niveau_csc || null,
           sexe_responsable_niveau_cfr || null,
-          sexe_responsable_niveau_epl || null
+          sexe_responsable_niveau_epl || null,
+          horaires ? JSON.stringify(horaires) : '{}'
         ]
       );
     }
