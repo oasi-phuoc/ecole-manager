@@ -117,6 +117,7 @@ export default function TCF() {
   const [resultatDirty, setResultatDirty] = useState(false);
   const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', classes: '', roles: '', resultat: '' });
   const [saveToast, setSaveToast] = useState('');
+  const [niveauxDB, setNiveauxDB] = useState([]);
 
   const [resultatNiveau, setResultatNiveau] = useState('');
   const [resultatMatiere, setResultatMatiere] = useState('francais');
@@ -188,7 +189,7 @@ export default function TCF() {
     const charger = async () => {
       setChargement(true);
       try {
-        const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres] = await Promise.all([
+        const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres, rNiveaux] = await Promise.all([
           axios.get(API + '/profs', { headers }),
           axios.get(API + '/planning/pools', { headers }),
           axios.get(API + '/planning/creneaux', { headers }),
@@ -196,6 +197,7 @@ export default function TCF() {
           axios.get(API + '/classes', { headers }),
           axios.get(API + '/eleves', { headers }),
           axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
+          axios.get(API + '/donnees/niveaux').catch(() => ({ data: [] })),
         ]);
         setProfs((rp.data || []).filter(p => p.actif !== false));
         setPools(rPools.data || []);
@@ -203,6 +205,7 @@ export default function TCF() {
         setClasses((rClasses.data || []).filter(c => c.actif !== false));
         setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
         setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
+        setNiveauxDB(rNiveaux.data || []);
 
         const dMap = {};
         (rGeneral.data?.dispos || []).forEach(d => {
@@ -279,8 +282,21 @@ export default function TCF() {
     });
   }, [classes]);
 
+  const niveauxTabs = useMemo(() => {
+    if (niveauxDB.length > 0) {
+      const ORDRE = ['CSC', 'CFR', 'EPL'];
+      return niveauxDB.map(n => normaliserNiveau(n.nom)).sort((a, b) => {
+        const ia = ORDRE.indexOf(a), ib = ORDRE.indexOf(b);
+        if (ia !== -1 && ib !== -1) return ia - ib;
+        if (ia !== -1) return -1; if (ib !== -1) return 1;
+        return a.localeCompare(b, 'fr');
+      });
+    }
+    return niveaux;
+  }, [niveauxDB, niveaux]);
+
   useEffect(() => {
-    if (!resultatNiveau && niveaux.length) setResultatNiveau(niveaux[0]);
+    if (!resultatNiveau && niveauxTabs.length) setResultatNiveau(niveauxTabs[0]);
   }, [niveaux, resultatNiveau]);
 
   useEffect(() => {
@@ -988,7 +1004,7 @@ export default function TCF() {
       <div>
         {/* Sous-onglets niveaux */}
         <div style={{ display: 'flex', gap: 0 }}>
-          {niveaux.map(n => (
+          {niveauxTabs.map(n => (
             <button key={n}
               onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
               style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}>
@@ -2030,7 +2046,7 @@ export default function TCF() {
         {/* Sous-onglets niveaux */}
         {niveaux.length > 0 && (
           <div style={styles.subTabsRow}>
-            {niveaux.map(n => (
+            {niveauxTabs.map(n => (
               <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
                 style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
             ))}
@@ -2215,7 +2231,7 @@ export default function TCF() {
         {/* Sous-onglets niveaux */}
         {niveaux.length > 0 && (
           <div style={{ display: 'flex', gap: 0 }}>
-            {niveaux.map(n => (
+            {niveauxTabs.map(n => (
               <button key={n} type="button" onClick={() => setStatNiveau(n)}
                 style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
             ))}
@@ -2416,7 +2432,7 @@ export default function TCF() {
     <div style={styles.page}>
       <div style={styles.header}>
         <button onClick={() => navigate('/dashboard')} style={styles.btnBack}>← Retour</button>
-        <h2 style={styles.title}>Test de connaissance</h2>
+        <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {onglet === 'pool' && (
             <button onClick={ajouterSite} style={styles.btnAjouter}>+ Ajouter</button>
@@ -2478,6 +2494,7 @@ export default function TCF() {
             { id: 'pool', label: 'Pool' },
             { id: 'classes', label: 'Classes' },
             { id: 'roles', label: 'Rôles' },
+            { id: 'plannings', label: 'Plannings' },
             { id: 'resultat', label: 'Résultats' },
             { id: 'statistique', label: 'Statistiques' },
             { id: 'graphique', label: 'Graphiques' },
@@ -2535,6 +2552,12 @@ export default function TCF() {
 
         {onglet === 'roles' && renderRoles()}
 
+        {onglet === 'plannings' && (
+          <div style={{ padding: '24px 0', color: '#64748b', textAlign: 'center', fontSize: 14 }}>
+            En cours de développement
+          </div>
+        )}
+
         {onglet === 'resultat' && renderResultat()}
 
         {onglet === 'statistique' && renderStatistiques()}
@@ -2557,7 +2580,7 @@ const styles = {
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabsRow: { display: 'flex', gap: 0, flexWrap: 'wrap', alignItems: 'flex-end' },
-  tabContent: { paddingTop: 14 },
+  tabContent: { paddingTop: 0 },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 14, width: 150, minWidth: 150, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -2, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   btnAjouter: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
@@ -2658,8 +2681,8 @@ const styles = {
   noticeBand: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
 
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
-  subTabBtn: { padding: '8px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', boxShadow: 'none' },
-  subTabBtnActif: { background: '#6366f1', color: 'white', border: 'none', boxShadow: '0 -1px 6px rgba(99,102,241,0.22)' },
+  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: '#e0e7ff', color: '#3730a3', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', textAlign: 'center' },
+  subTabBtnActif: { background: '#4f46e5', color: 'white', marginTop: -1, zIndex: 2, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' },
   poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   btnAddSitePoolTabs: { marginLeft: 'auto', padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: '1' },
   rolesTopRight: { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },

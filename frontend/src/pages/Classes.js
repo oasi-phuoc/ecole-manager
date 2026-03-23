@@ -16,6 +16,7 @@ export default function Classes() {
   const [recherche, setRecherche] = useState('');
   const [filtreActif, setFiltreActif] = useState('actif');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
   const [elevesClasse, setElevesClasse] = useState([]);
@@ -33,7 +34,10 @@ export default function Classes() {
   const headers = {};
   const currentUser = getSessionUser() || null;
 
-  useEffect(() => { chargerTout(); }, []);
+  useEffect(() => {
+    chargerTout();
+    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+  }, []);
 
   const chargerTout = async () => {
     const [cl, pr, br, sn] = await Promise.allSettled([
@@ -1143,7 +1147,7 @@ export default function Classes() {
         )}
       </div>
 
-      <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:15}}>
+      <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:0}}>
         {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
           <button key={k}
             style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:155,minWidth:155,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
@@ -1377,7 +1381,7 @@ export default function Classes() {
       </div>
       <div style={s.tabsBar}>
         <div style={s.tabsRow}>
-          {[{id:'tous',label:'Toutes'},{id:'CSC',label:'CSC'},{id:'CFR',label:'CFR'},{id:'EPL',label:'EPL'},{id:'CPR',label:'CPR'}].map(f => (
+          {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
             <button key={f.id} style={{...s.tabBtn,...(filtreNiveau===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
           ))}
         </div>
@@ -1407,10 +1411,7 @@ export default function Classes() {
                   <label style={s.lbl}>Niveau *</label>
                   <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
                     <option value="">-- Choisir --</option>
-                    <option value="CSC">CSC</option>
-                    <option value="CFR">CFR</option>
-                    <option value="EPL">EPL</option>
-                    <option value="CPR">CPR</option>
+                    {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
                   </select>
                 </div>
                 
@@ -1450,7 +1451,7 @@ export default function Classes() {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
-                <td style={{...s.td, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
+                <td style={{...s.td, width:1, whiteSpace:'nowrap', textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
                 <td style={{...s.td, width:1, whiteSpace:'nowrap'}}>
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                 </td>

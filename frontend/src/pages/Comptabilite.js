@@ -264,7 +264,7 @@ export default function Comptabilite() {
     <div style={styles.page}>
       <div style={styles.header}>
         <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={styles.titre}>💰 Comptabilité</h2>
+        <h2 style={styles.titre}>Comptabilité</h2>
         {onglet === 'factures' && (
           <button style={styles.btnAjouter} onClick={ouvrirNouvelleFacture}>+ Nouvelle facture</button>
         )}
@@ -380,8 +380,9 @@ export default function Comptabilite() {
 
       {/* ===== PAIEMENTS ===== */}
       {onglet === 'paiements' && (
-        <div style={styles.tabContent}>
-          <div style={styles.subTabsRow}>
+        <>
+          {/* Sous-onglets statut paiements */}
+          <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
             {[
               { key: 'tous', label: 'Tous' },
               { key: 'paye', label: 'Payé' },
@@ -390,12 +391,14 @@ export default function Comptabilite() {
               { key: 'annule', label: 'Annulé' },
             ].map(t => (
               <button key={t.key}
-                style={{ ...styles.subTab, ...(paiementsOnglet === t.key ? styles.subTabActif : {}) }}
+                style={{ padding: '9px 14px', background: paiementsOnglet === t.key ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: paiementsOnglet === t.key ? 'white' : '#5b21b6', marginRight: 4, outline: 'none', lineHeight: '1', marginBottom: paiementsOnglet === t.key ? -1 : 0, zIndex: paiementsOnglet === t.key ? 2 : 1 }}
                 onClick={() => setPaiementsOnglet(t.key)}>
                 {t.label} ({paiements.filter(p => t.key === 'tous' || p.statut === t.key).length})
               </button>
             ))}
-            <div style={{ flex: 1 }} />
+          </div>
+        <div style={{ ...styles.tabContent, borderTopLeftRadius: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 14px', borderBottom: '1px solid #f0f0f0' }}>
             <select style={styles.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
               <option value="">Toutes les classes</option>
               {classes.map(c => <option key={c.id} value={c.nom}>{c.nom}</option>)}
@@ -425,8 +428,8 @@ export default function Comptabilite() {
                     </td>
                     <td style={styles.td}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
                     <td style={styles.td}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>Éd.</button>
-                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>Sup.</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
+                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
                     </td>
                   </tr>
                 );
@@ -434,6 +437,7 @@ export default function Comptabilite() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* ===== LISTE DE PRIX ===== */}
@@ -456,7 +460,7 @@ export default function Comptabilite() {
               <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
             )}
           </div>
-        <div style={styles.tabContent}>
+        <div style={{ ...styles.tabContent, marginTop: 15 }}>
 
           {/* Matériel scolaire */}
           {prixOnglet === 'scolaire' && (
@@ -481,8 +485,8 @@ export default function Comptabilite() {
                       <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                       <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
                       <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
-                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -490,11 +494,12 @@ export default function Comptabilite() {
               </table>
 
               {/* Section FINANCE ECOLAGE */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderTop: '2px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ fontWeight: 800, fontSize: 13, color: '#1e293b', letterSpacing: 0.5 }}>FINANCE ECOLAGE &amp; MATERIEL GENERAL</span>
+              <div style={{ height: 20 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#e0e7ff', borderRadius: '8px 8px 0 0', border: '2px solid #6366f1', borderBottom: 'none' }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: '#3730a3', letterSpacing: 0.5 }}>FINANCE ÉCOLAGE &amp; MATÉRIEL GÉNÉRAL</span>
                 <button style={{ ...styles.btnAjouter, padding: '5px 12px', fontSize: 12 }} onClick={() => { setMaterielForm({ nom: '', section: 'ecolage', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }); setMaterielEdit(null); setShowMaterielForm(true); }}>+ Ajouter</button>
               </div>
-              <table style={styles.tableMateriel}>
+              <table style={{ ...styles.tableMateriel, border: '2px solid #6366f1', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                 <thead>
                   <tr style={{ background: '#f0f4ff' }}>
                     {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
@@ -526,8 +531,8 @@ export default function Comptabilite() {
                       <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                       <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
                       <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
-                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -558,8 +563,8 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>Éd.</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>Sup.</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
                     </td>
                   </tr>
                 ))}
@@ -985,9 +990,9 @@ const styles = {
   statCard: { background: 'white', padding: '16px 20px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center' },
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },
-  tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #c4b5fd', marginBottom: 0 },
-  tab: { padding: '11px 22px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', marginRight: 4, outline: 'none' },
-  tabActif: { background: '#6366f1', color: 'white', marginBottom: -2 },
+  tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
+  tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', marginRight: 4, outline: 'none', lineHeight: '1' },
+  tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tabContent: { background: 'white', borderRadius: '0 12px 12px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden' },
   subTabsRow: { display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid #f0f0f0', flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' },
   subTab: { padding: '7px 13px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#475569', outline: 'none' },

@@ -5,15 +5,15 @@ export default function EmployesAdministratifs() {
   return (
     <Professeurs
       apiBase="/employes-administratifs"
-      titre="Gestion des employés administratifs"
-      nomEntite="employé administratif"
+      titre="Gestion des employés"
+      nomEntite="employé"
       hidePreferences={true}
       hidePeriodesSemaine={true}
       hidePreferencesLieu={true}
       hideRemarque={true}
-      singleColumnForm={true}
       excludeSessionUser={true}
       searchPlaceholder="Rechercher un employé..."
+      showRoleToggle={true}
     />
   );
 }

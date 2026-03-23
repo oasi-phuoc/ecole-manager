@@ -8,8 +8,6 @@ const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onre
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-const NIVEAUX = ['CSC','CFR','EPL'];
-const LIEUX_PREF = ['BOTZA','SYNECOM','CREUSET'];
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -41,14 +39,17 @@ export default function Professeurs({
   singleColumnForm = false,
   excludeSessionUser = false,
   searchPlaceholder = 'Rechercher un professeur...',
+  showRoleToggle = false,
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau' });
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:'employe' });
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [emailEnvoi, setEmailEnvoi] = useState({});
   const [showDocs, setShowDocs] = useState(false);
   const [docsProf, setDocsProf] = useState(null);
@@ -154,7 +155,11 @@ export default function Professeurs({
   };
   const headers = {};
 
-  useEffect(() => { chargerProfs(); }, []);
+  useEffect(() => {
+    chargerProfs();
+    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    axios.get(API + '/donnees/lieux-travail').then(r => setLieuxTravailDB(r.data || [])).catch(() => {});
+  }, []);
   useEffect(() => {
     if (!showForm) return;
     if (hidePreferences) return;
@@ -228,8 +233,8 @@ export default function Professeurs({
   const branchesSpecialitesSelectionnees = normaliserBranchesSpecialites(form.branches_specialites);
   const libelleNiveauxBranches = niveauxPreferesSelectionnes.length > 0
     ? form.niveau_prefere
-    : 'Tous niveaux (CSC, CFR, EPL)';
-  const colsForm = singleColumnForm ? '1fr' : '1fr 1fr';
+    : 'Tous niveaux';
+  const colsForm = (singleColumnForm && !showRoleToggle) ? '1fr' : '1fr 1fr';
 
   useEffect(() => {
     if (hidePreferences) return;
@@ -329,47 +334,89 @@ export default function Professeurs({
                     </div>
                   </div>
 
-                  <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <div style={{display:'grid',gridTemplateColumns:hidePeriodesSemaine ? '1fr' : '1fr 1fr',gap:10}}>
-                      <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
-                        <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
+                  {!showRoleToggle && (<>
+                    <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
+                    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                      <div style={{display:'grid',gridTemplateColumns:hidePeriodesSemaine ? '1fr' : '1fr 1fr',gap:10}}>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
+                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
+                        </div>
+                        {!hidePeriodesSemaine && <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine <span style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>(100% = 32)</span></label>
+                          <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
+                        </div>}
                       </div>
-                      {!hidePeriodesSemaine && <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine <span style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>(100% = 32)</span></label>
-                        <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
-                      </div>}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
+                          <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
+                            <option value="">-- Choisir --</option>
+                            {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
+                          <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
+                            <option value="">-- Choisir --</option>
+                            {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10}}>
-                      <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
-                        <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
-                          <option value="">-- Choisir --</option>
-                          {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      <div style={{display:'flex',flexDirection:'column'}}>
-                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
-                        <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
-                          <option value="">-- Choisir --</option>
-                          {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                  </>)}
                 </div>
 
                 <div>
+                  {showRoleToggle && (<>
+                    <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
+                    <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
+                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
+                          <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
+                            <option value="">-- Choisir --</option>
+                            {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column'}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
+                          <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
+                            <option value="">-- Choisir --</option>
+                            {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:14,textTransform:'uppercase'}}>🔑 Rôle</div>
+                    <div style={{display:'flex',gap:0,borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',marginBottom:8}}>
+                      {[{key:'employe',label:'Employé'},{key:'responsable',label:'Responsable'},{key:'admin',label:'Administrateur'}].map(r=>(
+                        <button key={r.key} type="button" onClick={()=>setForm({...form,role_acces:r.key})}
+                          style={{flex:1,padding:'10px 0',border:'none',borderRight:'1px solid #e2e8f0',background:form.role_acces===r.key?'#6366f1':'white',color:form.role_acces===r.key?'white':'#475569',fontWeight:form.role_acces===r.key?700:500,fontSize:13,cursor:'pointer',transition:'all 0.15s'}}>
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{fontSize:12,color:'#94a3b8',margin:0}}>
+                      {form.role_acces==='employe' && 'Accès standard selon la configuration des accès employés.'}
+                      {form.role_acces==='responsable' && 'Accès étendu selon la configuration des accès responsables.'}
+                      {form.role_acces==='admin' && 'Accès complet à tous les modules.'}
+                    </p>
+                  </>)}
                   {(!hidePreferences || !hidePreferencesLieu || !hideRemarque) && (
-                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🧭 Désidératas</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase',marginTop:showRoleToggle?20:0}}>🧭 Désidératas</div>
                   )}
 
                   {!hidePreferences && (
                     <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Niveaux préférés</label>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {NIVEAUX.map(n => {
+                        {niveauxDB.map(niv => {
+                          const n = niv.nom;
                           const niveaux = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
                           const selected = niveaux.includes(n);
                           return (
@@ -377,7 +424,7 @@ export default function Professeurs({
                               onClick={() => {
                                 const curr = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
                                 let newNiv = selected ? curr.filter(x=>x!==n) : [...curr, n];
-                                if (newNiv.length === NIVEAUX.length) newNiv = [];
+                                if (newNiv.length === niveauxDB.length) newNiv = [];
                                 setForm(prev => ({...prev, niveau_prefere: newNiv.join(',')}));
                               }}
                               style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
@@ -452,7 +499,8 @@ export default function Professeurs({
                   {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                     <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieux de travail préférés</label>
                     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                      {LIEUX_PREF.map(l => {
+                      {lieuxTravailDB.map(lieu => {
+                        const l = lieu.nom;
                         const lieux = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
                         const selected = lieux.includes(l);
                         return (
@@ -460,7 +508,7 @@ export default function Professeurs({
                             onClick={() => {
                               const curr = form.lieu_travail_prefere ? form.lieu_travail_prefere.split(',').filter(Boolean) : [];
                               let newLieux = selected ? curr.filter(x=>x!==l) : [...curr, l];
-                              if (newLieux.length === LIEUX_PREF.length) newLieux = [];
+                              if (newLieux.length === lieuxTravailDB.length) newLieux = [];
                               setForm({...form, lieu_travail_prefere: newLieux.join(',')});
                             }}
                             style={{padding:'8px 16px',borderRadius:8,border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),background:selected?'#e0e7ff':'white',color:selected?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,transition:'all 0.15s'}}>
@@ -497,7 +545,7 @@ export default function Professeurs({
                     </div>
                   )}
 
-                  <div style={{display:'flex',flexDirection:'column'}}>
+                  <div style={{display:'flex',flexDirection:'column', marginTop: showRoleToggle ? 20 : 0}}>
                     <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Statut</label>
                     <select style={s.inp} value={form.actif===false||form.actif==='false'?'false':'true'} onChange={e=>setForm({...form,actif:e.target.value==='true'})}>
                       <option value="true">✅ Actif</option>

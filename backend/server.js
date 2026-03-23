@@ -14,7 +14,9 @@ const envOrigins = (process.env.CORS_ORIGIN || '')
   .filter(Boolean);
 const defaultOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
   'https://ecole-manager-frontend.onrender.com',
   'https://ecole-manager.onrender.com',
 ];
@@ -27,6 +29,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) return cb(null, true);
     try {
       const host = new URL(origin).hostname;
+      if (host === 'localhost' || host === '127.0.0.1') return cb(null, true);
       if (host.endsWith('.onrender.com')) return cb(null, true);
     } catch {}
     return cb(new Error('Not allowed by CORS'));
@@ -100,6 +103,7 @@ app.use('/api/inventaire-branches', require('./src/routes/inventaireBranches'));
 app.use('/api/tcf-state', require('./src/routes/tcfState'));
 app.use('/api/notes-personnelles', require('./src/routes/notesPersonnelles'));
 app.use('/api/chatbot', require('./src/routes/chatbot'));
+app.use('/api/donnees', require('./src/routes/donnees'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

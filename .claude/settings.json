@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find 'e:/OneDrive - Ecoles - Schulen Valais-Wallis/ecole-manager/frontend/src/pages' -name Eleves* -o -name Élèves* -o -name Students*)",
+      "Bash(psql --version)",
+      "Bash(mkdir -p \"e:\\\\OneDrive - Ecoles - Schulen Valais-Wallis\\\\ecole-manager\\\\frontend\\\\src\\\\config\")",
+      "Bash(echo \"const API = process.env.REACT_APP_API_URL || ''https://ecole-manager-backend.onrender.com/api'';:*)",
+      "Bash(\"e:\\\\OneDrive - Ecoles - Schulen Valais-Wallis\\\\ecole-manager\\\\frontend\\\\src\\\\config\\\\api.js\")",
+      "Bash(psql -U postgres -c \"SELECT version\\(\\);\")",
+      "Bash(net start:*)",
+      "Bash(sc query:*)",
+      "Bash(node -e \":*)",
+      "Bash(find 'e:\\\\OneDrive - Ecoles - Schulen Valais-Wallis\\\\ecole-manager' -name *.sql)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 12352 /F)",
+      "Bash(cmd /c \"taskkill /PID 12352 /F\")",
+      "Bash(cmd /c \"taskkill /PID 12352 /F 2>&1\")",
+      "Bash(echo \"exit: $?\")"
+    ],
+    "additionalDirectories": [
+      "e:\\OneDrive - Ecoles - Schulen Valais-Wallis\\ecole-manager\\backend",
+      "e:\\OneDrive - Ecoles - Schulen Valais-Wallis\\ecole-manager\\frontend"
+    ]
+  }
+}

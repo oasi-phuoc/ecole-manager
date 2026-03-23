@@ -10,6 +10,8 @@ const getDocumentsAdministratifs = async (req, res) => {
         d.taille,
         d.created_at,
         d.auteur_id,
+        d.categorie,
+        d.sous_categorie,
         u.nom AS auteur_nom,
         u.prenom AS auteur_prenom
       FROM documents_administratifs d
@@ -23,16 +25,16 @@ const getDocumentsAdministratifs = async (req, res) => {
 };
 
 const creerDocumentAdministratif = async (req, res) => {
-  const { designation, nom_fichier, contenu, taille } = req.body;
+  const { designation, nom_fichier, contenu, taille, categorie, sous_categorie } = req.body;
   if (!designation || !nom_fichier || !contenu) {
     return res.status(400).json({ message: 'Champs requis manquants' });
   }
   try {
     const result = await pool.query(
-      `INSERT INTO documents_administratifs (designation, nom_fichier, contenu, taille, auteur_id)
-       VALUES ($1,$2,$3,$4,$5)
-       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id`,
-      [designation, nom_fichier, contenu, taille || null, req.user.id]
+      `INSERT INTO documents_administratifs (designation, nom_fichier, contenu, taille, auteur_id, categorie, sous_categorie)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id, categorie, sous_categorie`,
+      [designation, nom_fichier, contenu, taille || null, req.user.id, categorie || 'Administratifs', sous_categorie || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -41,23 +43,25 @@ const creerDocumentAdministratif = async (req, res) => {
 };
 
 const modifierDocumentAdministratif = async (req, res) => {
-  const { designation, nom_fichier, contenu, taille } = req.body;
+  const { designation, nom_fichier, contenu, taille, categorie, sous_categorie } = req.body;
   if (!designation) return res.status(400).json({ message: 'La désignation est requise' });
   try {
-    const current = await pool.query('SELECT id, nom_fichier, contenu, taille FROM documents_administratifs WHERE id=$1', [req.params.id]);
+    const current = await pool.query('SELECT id, nom_fichier, contenu, taille, categorie, sous_categorie FROM documents_administratifs WHERE id=$1', [req.params.id]);
     if (current.rows.length === 0) return res.status(404).json({ message: 'Document introuvable' });
 
     const old = current.rows[0];
     const result = await pool.query(
       `UPDATE documents_administratifs
-       SET designation=$1, nom_fichier=$2, contenu=$3, taille=$4
-       WHERE id=$5
-       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id`,
+       SET designation=$1, nom_fichier=$2, contenu=$3, taille=$4, categorie=$5, sous_categorie=$6
+       WHERE id=$7
+       RETURNING id, designation, nom_fichier, taille, created_at, auteur_id, categorie, sous_categorie`,
       [
         designation,
         nom_fichier || old.nom_fichier,
         contenu || old.contenu,
         typeof taille === 'number' ? taille : old.taille,
+        categorie || old.categorie || 'Administratifs',
+        sous_categorie !== undefined ? sous_categorie : old.sous_categorie,
         req.params.id
       ]
     );

@@ -65,6 +65,8 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS auteur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL`);
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
     await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS categorie VARCHAR(100) DEFAULT 'Administratifs'`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS sous_categorie VARCHAR(100)`);
 
     // Table état module TCF (pool, affectation, résultats)
     await pool.query(`
@@ -252,6 +254,32 @@ const initDB = async () => {
       ];
       for (const s of seed) {
         await pool.query('INSERT INTO materiels (nom, section, prix) VALUES ($1,$2,$3)', s);
+      }
+    }
+
+    // Tables données de référence (niveaux, lieux de travail, salles)
+    await pool.query(`CREATE TABLE IF NOT EXISTS niveaux (id SERIAL PRIMARY KEY, nom VARCHAR(50) NOT NULL UNIQUE, ordre INTEGER DEFAULT 0)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS lieux_travail (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS salles (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL, lieu_travail_id INTEGER REFERENCES lieux_travail(id) ON DELETE CASCADE)`);
+    // Seed niveaux si vide
+    const nbNiv = await pool.query('SELECT COUNT(*)::int as nb FROM niveaux');
+    if ((nbNiv.rows[0]?.nb || 0) === 0) {
+      for (const [nom, ordre] of [['CSC',1],['CFR',2],['EPL',3],['CPR',4]]) {
+        await pool.query('INSERT INTO niveaux (nom, ordre) VALUES ($1,$2) ON CONFLICT (nom) DO NOTHING', [nom, ordre]);
+      }
+    }
+    // Seed lieux_travail si vide
+    const nbLieux = await pool.query('SELECT COUNT(*)::int as nb FROM lieux_travail');
+    if ((nbLieux.rows[0]?.nb || 0) === 0) {
+      for (const nom of ['BOTZA','SYNECOM','CREUSET']) {
+        const r = await pool.query('INSERT INTO lieux_travail (nom) VALUES ($1) ON CONFLICT (nom) DO NOTHING RETURNING id', [nom]);
+        const id = r.rows[0]?.id;
+        if (id) {
+          const sallesParLieu = { BOTZA: ['Salle 1','Salle 2','Salle 3','Salle 4'], SYNECOM: ['Salle 11','Salle 12','Salle 13','Salle 21','Salle 22','Salle 23','Salle 24','Salle 25','Salle 26'], CREUSET: ['Salle 1','Salle 2','Salle 3'] };
+          for (const salle of (sallesParLieu[nom] || [])) {
+            await pool.query('INSERT INTO salles (nom, lieu_travail_id) VALUES ($1,$2)', [salle, id]);
+          }
+        }
       }
     }
 

@@ -11,11 +11,18 @@ export default function DocumentsAdministratifs() {
   const currentUser = getSessionUser() || {};
   const isAdmin = currentUser?.role === 'admin';
 
+  const CATEGORIES = ['Administratifs', 'Pédagogiques', 'Séances', 'Formulaires', 'Divers'];
+
   const [documents, setDocuments] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [designation, setDesignation] = useState('');
+  const [categorie, setCategorie] = useState('Administratifs');
+  const [sousCategorie, setSousCategorie] = useState('');
+  const [categorieOnglet, setCategorieOnglet] = useState('Administratifs');
+  const [niveauOnglet, setNiveauOnglet] = useState('tous');
   const [selectedFile, setSelectedFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -24,6 +31,7 @@ export default function DocumentsAdministratifs() {
 
   useEffect(() => {
     chargerDocuments();
+    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
   }, []);
 
   const chargerDocuments = async () => {
@@ -40,10 +48,16 @@ export default function DocumentsAdministratifs() {
   };
 
   const documentsTries = useMemo(() => {
-    return [...documents].sort((a, b) =>
-      (a.designation || '').localeCompare(b.designation || '', 'fr', { sensitivity: 'base' })
-    );
-  }, [documents]);
+    return [...documents]
+      .filter(d => (d.categorie || 'Administratifs') === categorieOnglet)
+      .filter(d => {
+        if (categorieOnglet !== 'Pédagogiques' || niveauOnglet === 'tous') return true;
+        return (d.sous_categorie || '') === niveauOnglet;
+      })
+      .sort((a, b) =>
+        (a.designation || '').localeCompare(b.designation || '', 'fr', { sensitivity: 'base' })
+      );
+  }, [documents, categorieOnglet, niveauOnglet]);
 
   const lireFichier = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -54,6 +68,8 @@ export default function DocumentsAdministratifs() {
 
   const resetForm = () => {
     setDesignation('');
+    setCategorie(categorieOnglet);
+    setSousCategorie(categorieOnglet === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
     setSelectedFile(null);
     setEditing(null);
     setDragOver(false);
@@ -61,6 +77,8 @@ export default function DocumentsAdministratifs() {
 
   const ouvrirAjout = () => {
     resetForm();
+    setCategorie(categorieOnglet);
+    setSousCategorie(categorieOnglet === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
     setShowForm(true);
     setMsg('');
   };
@@ -68,6 +86,8 @@ export default function DocumentsAdministratifs() {
   const ouvrirEdition = (doc) => {
     setEditing(doc);
     setDesignation(doc.designation || '');
+    setCategorie(doc.categorie || 'Administratifs');
+    setSousCategorie(doc.sous_categorie || '');
     setSelectedFile(null);
     setShowForm(true);
     setMsg('');
@@ -99,7 +119,7 @@ export default function DocumentsAdministratifs() {
         return;
       }
       if (editing) {
-        let payload = { designation: designation.trim() };
+        let payload = { designation: designation.trim(), categorie, sous_categorie: sousCategorie || null };
         if (selectedFile) {
           payload = {
             ...payload,
@@ -112,6 +132,8 @@ export default function DocumentsAdministratifs() {
       } else {
         await axios.post(API + '/documents-administratifs', {
           designation: designation.trim(),
+          categorie,
+          sous_categorie: sousCategorie || null,
           nom_fichier: selectedFile.name,
           contenu: await lireFichier(selectedFile),
           taille: selectedFile.size,
@@ -163,7 +185,32 @@ export default function DocumentsAdministratifs() {
         </button>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents</h2>
       </div>
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20 }}>
+
+      {/* Onglets catégories */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
+        {CATEGORIES.map(cat => (
+          <button key={cat}
+            style={{ padding: '9px 14px', background: categorieOnglet === cat ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: categorieOnglet === cat ? 'white' : '#5b21b6', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: categorieOnglet === cat ? -1 : 0, zIndex: categorieOnglet === cat ? 2 : 1 }}
+            onClick={() => { setCategorieOnglet(cat); setShowForm(false); resetForm(); setMsg(''); }}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Sous-onglets niveaux pour Pédagogiques */}
+      {categorieOnglet === 'Pédagogiques' && niveauxDB.length > 0 && (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #c4b5fd', marginBottom: 0, background: '#f5f3ff', paddingTop: 8, paddingLeft: 8, paddingRight: 8 }}>
+          {[{ id: 'tous', label: 'Tous' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
+            <button key={n.id}
+              style={{ padding: '7px 14px', background: niveauOnglet === n.id ? '#7c3aed' : '#ede9fe', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: niveauOnglet === n.id ? 'white' : '#6d28d9', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: niveauOnglet === n.id ? -1 : 0 }}
+              onClick={() => { setNiveauOnglet(n.id); setShowForm(false); }}>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '0 12px 12px 12px', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 14, color: '#475569' }}>Documents classés par ordre alphabétique</div>
           {isAdmin && (
@@ -195,16 +242,42 @@ export default function DocumentsAdministratifs() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
-              <input
-                value={designation}
-                onChange={e => setDesignation(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155' }}
-                placeholder="Ex: Attestation de suivi TCF"
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
+                <input
+                  value={designation}
+                  onChange={e => setDesignation(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155', boxSizing: 'border-box' }}
+                  placeholder="Ex: Attestation de suivi TCF"
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Catégorie</div>
+                <select
+                  value={categorie}
+                  onChange={e => { setCategorie(e.target.value); if (e.target.value !== 'Pédagogiques') setSousCategorie(''); }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155' }}
+                >
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
             </div>
+
+            {categorie === 'Pédagogiques' && niveauxDB.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau</div>
+                <select
+                  value={sousCategorie}
+                  onChange={e => setSousCategorie(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155' }}
+                >
+                  <option value="">— Tous niveaux —</option>
+                  {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
+                </select>
+              </div>
+            )}
 
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

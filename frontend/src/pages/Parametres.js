@@ -5,17 +5,19 @@ import { useNavigate } from 'react-router-dom';
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const MODULES_ACCES_PROFS = [
-  { key: 'eleves',            label: 'Élèves',         defaut: true },
-  { key: 'classes',           label: 'Classes',         defaut: false },
-  { key: 'branches',          label: 'Branches',        defaut: false },
-  { key: 'emploi_du_temps',   label: 'Emploi du Temps', defaut: false },
-  { key: 'presences',         label: 'Présences',       defaut: true },
-  { key: 'notes',             label: 'Notes',           defaut: true },
-  { key: 'tcf',               label: 'TCF',             defaut: false },
-  { key: 'calendrier',        label: 'Calendrier',      defaut: true },
-  { key: 'comptabilite',      label: 'Comptabilité',    defaut: false },
-  { key: 'documents',         label: 'Documents',       defaut: false },
-  { key: 'statistiques',      label: 'Statistiques',    defaut: false },
+  { key: 'employes_admin',  label: 'Employés', defaut: false, onglets: [{ key: 'employes_admin_base', label: 'Base — Nom, prénom, email, téléphone, naissance' }, { key: 'employes_admin_etendu', label: 'Étendu — Toutes les informations' }, { key: 'employes_admin_gestion', label: 'Ajout, suppression et statut actif/inactif' }] },
+  { key: 'professeurs',     label: 'Professeurs',      defaut: true,  onglets: [{ key: 'professeurs_base', label: 'Base — Nom, prénom, email, téléphone, naissance' }, { key: 'professeurs_etendu', label: 'Étendu — Toutes les informations' }, { key: 'professeurs_gestion', label: 'Ajout, suppression et statut actif/inactif' }] },
+  { key: 'eleves',          label: 'Élèves',          defaut: true,  onglets: [{ key: 'eleves_base', label: 'Base — Photo, nom, prénom, nationalité, classe, naissance, observations, sanctions, documents' }, { key: 'eleves_etendu', label: 'Étendu — Toutes les informations' }, { key: 'eleves_import', label: 'Ajout, suppression et statut actif/inactif' }] },
+  { key: 'branches',        label: 'Branches',         defaut: false, onglets: [] },
+  { key: 'classes',         label: 'Classes',          defaut: false, onglets: [{ key: 'classes_base', label: 'Base — Tableau (détail, classe, titulaire, note)' }, { key: 'classes_gestion', label: 'Ajout, suppression et statut actif/inactif' }] },
+  { key: 'emploi_du_temps', label: 'Emploi du temps',  defaut: false, onglets: [{ key: 'emploi_du_temps_planification', label: 'Planification — Pools, disponibilités, affectations' }, { key: 'emploi_du_temps_plannings', label: 'Vue des plannings' }] },
+  { key: 'presences',       label: 'Présences',        defaut: true,  onglets: [{ key: 'presences_base', label: 'Base — Tout sauf importation LORA' }, { key: 'presences_import', label: 'Importer LORA' }] },
+  { key: 'notes',           label: 'Notes',            defaut: true,  onglets: [{ key: 'notes_notes', label: 'Notes' }, { key: 'notes_evaluations', label: 'Évaluations' }] },
+  { key: 'tcf',             label: 'TCF',              defaut: false, onglets: [{ key: 'tcf_liste', label: 'Liste' }] },
+  { key: 'calendrier',      label: 'Calendrier',       defaut: true,  onglets: [{ key: 'calendrier_scolaire', label: 'Calendrier scolaire' }, { key: 'calendrier_agenda', label: 'Agenda personnel' }] },
+  { key: 'comptabilite',    label: 'Comptabilité',     defaut: false, onglets: [{ key: 'comptabilite_paiements', label: 'Paiements' }, { key: 'comptabilite_listes', label: 'Listes' }, { key: 'comptabilite_prix', label: 'Liste de prix' }] },
+  { key: 'documents',       label: 'Documents',        defaut: false, onglets: [{ key: 'documents_administratifs', label: 'Administratifs' }, { key: 'documents_pedagogiques', label: 'Pédagogiques' }, { key: 'documents_seances', label: 'Séances' }, { key: 'documents_formulaires', label: 'Formulaires' }, { key: 'documents_divers', label: 'Divers' }] },
+  { key: 'statistiques',    label: 'Statistiques',     defaut: false, onglets: [{ key: 'statistiques_dashboard', label: 'Tableau de bord' }] },
 ];
 
 export default function Parametres() {
@@ -31,8 +33,10 @@ export default function Parametres() {
   const [profs, setProfs] = useState([]);
   const [profSelectionne, setProfSelectionne] = useState(null);
   const [permissions, setPermissions] = useState({});
-  const [accesProfs, setAccesProfs] = useState({});
+  const [accesParRole, setAccesParRole] = useState({ professeurs: {}, employes: {}, responsables: {}, admins: {} });
+  const [accesRoleOnglet, setAccesRoleOnglet] = useState('professeurs');
   const [msgAccesProfs, setMsgAccesProfs] = useState('');
+  const [moduleOuvert, setModuleOuvert] = useState(null);
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
@@ -65,13 +69,23 @@ export default function Parametres() {
   const [resetMsg, setResetMsg] = useState('');
   const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetRentreeMsg, setResetRentreeMsg] = useState('');
+  // Données (niveaux, lieux, salles)
+  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
+  const [sallesDB, setSallesDB] = useState([]);
+  const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '', ordre: '' });
+  const [donneesLieuForm, setDonneesLieuForm] = useState({ nom: '' });
+  const [donneesSalleForm, setDonneesSalleForm] = useState({ nom: '', lieu_travail_id: '' });
+  const [donneesNiveauEdit, setDonneesNiveauEdit] = useState(null);
+  const [donneesLieuEdit, setDonneesLieuEdit] = useState(null);
+  const [donneesSalleEdit, setDonneesSalleEdit] = useState(null);
   const navigate = useNavigate();
   const headers = {};
   const isAdmin = profil.role === 'admin';
 
   useEffect(() => { chargerProfil(); }, []);
   useEffect(() => { chargerMfaStatus(); }, []);
-  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); chargerDonnees(); } }, [isAdmin]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
   }, [isAdmin, profil?.email, mailTestTo]);
@@ -81,6 +95,19 @@ export default function Parametres() {
       const res = await axios.get(API + '/parametres/profil', { headers });
       setProfil(res.data);
     } catch (err) { console.error(err); }
+  };
+
+  const chargerDonnees = async () => {
+    try {
+      const [niv, lieux, salles] = await Promise.all([
+        axios.get(API + '/donnees/niveaux', { headers }),
+        axios.get(API + '/donnees/lieux-travail', { headers }),
+        axios.get(API + '/donnees/salles', { headers }),
+      ]);
+      setNiveauxDB(niv.data || []);
+      setLieuxTravailDB(lieux.data || []);
+      setSallesDB(salles.data || []);
+    } catch(err) { console.error(err); }
   };
 
   const chargerEcole = async () => {
@@ -106,14 +133,46 @@ export default function Parametres() {
     } catch (err) { console.error(err); }
   };
 
+  const initRole = (roleData, defaultVal) => {
+    const init = {};
+    MODULES_ACCES_PROFS.forEach(m => {
+      const mVal = roleData[m.key] !== undefined ? roleData[m.key] : defaultVal;
+      init[m.key] = mVal;
+      m.onglets.forEach(o => { init[o.key] = roleData[o.key] !== undefined ? roleData[o.key] : mVal; });
+    });
+    return init;
+  };
+
   const chargerAccesProfs = async () => {
     try {
       const res = await axios.get(API + '/parametres/acces-profs', { headers });
       const data = res.data || {};
-      const init = {};
-      MODULES_ACCES_PROFS.forEach(m => { init[m.key] = data[m.key] !== undefined ? data[m.key] : m.defaut; });
-      setAccesProfs(init);
+      const hasNested = data.professeurs !== undefined;
+      const profRaw = hasNested ? (data.professeurs || {}) : data;
+      setAccesParRole({
+        professeurs: initRole(profRaw, true),
+        employes:    initRole(hasNested ? (data.employes    || {}) : {}, false),
+        responsables: initRole(hasNested ? (data.responsables || {}) : {}, false),
+        admins:      initRole(hasNested ? (data.admins      || {}) : {}, true),
+      });
     } catch {}
+  };
+
+  const toggleModule = (m) => {
+    const curr = accesParRole[accesRoleOnglet] || {};
+    const newVal = !curr[m.key];
+    const update = { ...curr, [m.key]: newVal };
+    m.onglets.forEach(o => { update[o.key] = newVal; });
+    setAccesParRole(prev => ({ ...prev, [accesRoleOnglet]: update }));
+  };
+
+  const toggleOnglet = (m, oKey) => {
+    const curr = accesParRole[accesRoleOnglet] || {};
+    const newVal = !curr[oKey];
+    const update = { ...curr, [oKey]: newVal };
+    const anyOn = m.onglets.some(o => o.key === oKey ? newVal : update[o.key]);
+    update[m.key] = anyOn;
+    setAccesParRole(prev => ({ ...prev, [accesRoleOnglet]: update }));
   };
 
   const chargerMail = async () => {
@@ -335,52 +394,70 @@ export default function Parametres() {
   };
 
   const ONGLETS = [
-    { key: 'profil', label: '👤 Mon profil', show: true },
-    { key: 'mdp', label: '🔒 Mot de passe', show: true },
-    { key: 'mfa', label: '📱 Double authentification', show: true },
-    { key: 'ecole', label: '🏫 École', show: isAdmin },
-    { key: 'mail', label: '✉️ Envoi des mails', show: isAdmin },
-    { key: 'acces', label: '🔑 Gestion des accès', show: isAdmin },
-    { key: 'danger', label: '⚠️ Réinitialisation', show: isAdmin },
+    { key: 'profil', label: 'Mon profil', show: true },
+    { key: 'mdp', label: 'Mot de passe', show: true },
+    { key: 'mfa', label: 'Double authentification', show: true },
+    { key: 'ecole', label: 'École', show: isAdmin },
+    { key: 'mail', label: 'Envoi des mails', show: isAdmin },
+    { key: 'acces', label: 'Gestion des accès', show: isAdmin },
+    { key: 'danger', label: 'Réinitialisation', show: isAdmin },
   ].filter(o => o.show);
 
   const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', mfa: '#0f766e', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
-        <h2 style={styles.titre}>⚙️ Paramètres</h2>
-      </div>
-
-      <div style={styles.layout}>
-        <div style={styles.sidebar}>
+      <div style={styles.sidebar}>
+        <div style={styles.logo}>
+          <img src="/logo-oasis.webp" alt="Oasis" style={styles.logoImg} />
+        </div>
+        <nav style={styles.nav}>
           {ONGLETS.map(o => (
-            <div
+            <button
               key={o.key}
-              style={{
-                ...styles.navItem,
-                ...(onglet === o.key ? { ...styles.navItemActif, boxShadow: `0 -1px 6px ${COULEURS[o.key]}33` } : {})
-              }}
+              style={{ ...styles.navItem, ...(onglet === o.key ? styles.navItemActif : {}) }}
               onClick={() => setOnglet(o.key)}
             >
               {o.label}
-            </div>
+            </button>
           ))}
+        </nav>
+        <div style={styles.sidebarFooter}>
+          <div style={styles.userInfo}>
+            <div style={styles.avatar}>{profil.prenom?.[0]}{profil.nom?.[0]}</div>
+            <div>
+              <div style={styles.userName}>{profil.prenom} {profil.nom}</div>
+              <div style={styles.userRole}>{isAdmin ? 'Administrateur' : 'Professeur'}</div>
+            </div>
+          </div>
+          <button style={styles.btnLogout} onClick={() => navigate('/dashboard')}>← Dashboard</button>
         </div>
+      </div>
 
+      <div style={styles.main}>
+        <div style={styles.topBar}>
+          <h1 style={styles.titre}>Paramètres</h1>
+          <div style={styles.topBarRight}>
+            {onglet === 'profil' && (
+              <button type="submit" form="form-profil" style={styles.btnSauverHeader}>Sauvegarder</button>
+            )}
+            {onglet === 'ecole' && isAdmin && (
+              <button type="submit" form="form-ecole" style={styles.btnSauverHeader}>Sauvegarder</button>
+            )}
+          </div>
+        </div>
         <div style={styles.content}>
 
           {onglet === 'profil' && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>👤 Mon profil</h3>
+              <h3 style={styles.cardTitre}>Mon profil</h3>
               <div style={styles.roleTag}>{profil.role}</div>
               {msgProfil === 'success' && <div style={styles.msgSuccess}>✅ Profil mis à jour !</div>}
               {msgProfil === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
-              <form onSubmit={handleSauverProfil}>
+              <form id="form-profil" onSubmit={handleSauverProfil}>
 
                 {/* Informations de connexion */}
-                <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
+                <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations de connexion</div>
                 <div style={{...styles.formGrid, marginBottom:20}}>
                   <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
                     <label style={styles.label}>Email *</label>
@@ -389,7 +466,7 @@ export default function Parametres() {
                 </div>
 
                 {/* Informations personnelles */}
-                <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>👤 Informations personnelles</div>
+                <div style={{fontSize:11,fontWeight:700,color:'#1e40af',background:'#dbeafe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations personnelles</div>
                 <div style={{...styles.formGrid, marginBottom:20}}>
                   <div style={styles.formChamp}>
                     <label style={styles.label}>NOM *</label>
@@ -436,7 +513,7 @@ export default function Parametres() {
 
                 {/* Désidératas — uniquement pour les profs */}
                 {profil.role === 'prof' && (<>
-                  <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🧭 Désidératas</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Désidératas</div>
                   <div style={{marginBottom:20,display:'flex',flexDirection:'column',gap:12}}>
                     <div style={styles.formChamp}>
                       <label style={styles.label}>Niveaux préférés</label>
@@ -511,7 +588,7 @@ export default function Parametres() {
                   </div>
 
                   {/* Informations professionnelles (lecture seule) */}
-                  <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>💼 Informations professionnelles</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#065f46',background:'#d1fae5',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>Informations professionnelles</div>
                   <div style={{...styles.formGrid, marginBottom:20}}>
                     {[
                       {label:"Taux d'activité (%)", value: profil.taux_activite ?? '—'},
@@ -527,14 +604,13 @@ export default function Parametres() {
                   </div>
                 </>)}
 
-                <button type="submit" style={styles.btnSauver}>💾 Sauvegarder</button>
               </form>
             </div>
           )}
 
           {onglet === 'mdp' && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>🔒 Changer le mot de passe</h3>
+              <h3 style={styles.cardTitre}>Changer le mot de passe</h3>
               {msgMdp === 'success' && <div style={styles.msgSuccess}>✅ Mot de passe modifié !</div>}
               {msgMdp === 'error' && <div style={styles.msgError}>❌ Ancien mot de passe incorrect</div>}
               {msgMdp === 'mismatch' && <div style={styles.msgError}>❌ Les mots de passe ne correspondent pas</div>}
@@ -551,14 +627,14 @@ export default function Parametres() {
                   <label style={styles.label}>Confirmer *</label>
                   <input style={styles.input} type="password" required value={mdp.confirmation} onChange={e => setMdp({ ...mdp, confirmation: e.target.value })} />
                 </div>
-                <button type="submit" style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>🔒 Changer</button>
+                <button type="submit" style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>Changer</button>
               </form>
             </div>
           )}
 
           {onglet === 'mfa' && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>📱 Double authentification (Google Authenticator)</h3>
+              <h3 style={styles.cardTitre}>Double authentification (Google Authenticator)</h3>
               <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
                 Activez un second facteur de connexion (code à 6 chiffres) pour sécuriser l'accès à votre compte.
               </p>
@@ -675,15 +751,39 @@ export default function Parametres() {
 
           {onglet === 'ecole' && isAdmin && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>🏫 Paramètres de l'école</h3>
+              <h3 style={{ ...styles.cardTitre, marginBottom: 20 }}>Paramètres de l'école</h3>
               {msgEcole === 'success' && <div style={styles.msgSuccess}>✅ Paramètres mis à jour !</div>}
               {msgEcole === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
-              <form onSubmit={handleSauverEcole}>
+              <form id="form-ecole" onSubmit={handleSauverEcole}>
+
+                {/* Section Adresse */}
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#1e40af', background: '#dbeafe', padding: '5px 12px', borderRadius: 6, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Adresse</div>
                 <div style={styles.formGrid}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={styles.label}>Nom de l'école</label>
                     <input style={styles.input} type="text" value={ecole.nom_ecole || ''} onChange={e => setEcole({ ...ecole, nom_ecole: e.target.value })} />
                   </div>
+                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                    <label style={styles.label}>Adresse</label>
+                    <input style={styles.input} type="text" value={ecole.adresse || ''} onChange={e => setEcole({ ...ecole, adresse: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Téléphone</label>
+                    <input style={styles.input} type="text" value={ecole.telephone || ''} onChange={e => setEcole({ ...ecole, telephone: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Email</label>
+                    <input style={styles.input} type="email" value={ecole.email || ''} onChange={e => setEcole({ ...ecole, email: e.target.value })} />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Année scolaire</label>
+                    <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
+                  </div>
+                </div>
+
+                {/* Section Responsables */}
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '5px 12px', borderRadius: 6, marginBottom: 12, marginTop: 20, textTransform: 'uppercase', letterSpacing: 1 }}>Responsables</div>
+                <div style={styles.formGrid}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span>Responsable des cours de langues jeunes</span>
@@ -732,31 +832,129 @@ export default function Parametres() {
                     </label>
                     <input style={styles.input} type="text" value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })} />
                   </div>
-                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
-                    <label style={styles.label}>Adresse</label>
-                    <input style={styles.input} type="text" value={ecole.adresse || ''} onChange={e => setEcole({ ...ecole, adresse: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Téléphone</label>
-                    <input style={styles.input} type="text" value={ecole.telephone || ''} onChange={e => setEcole({ ...ecole, telephone: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Email</label>
-                    <input style={styles.input} type="email" value={ecole.email || ''} onChange={e => setEcole({ ...ecole, email: e.target.value })} />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Année scolaire</label>
-                    <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
-                  </div>
                 </div>
-                <button type="submit" style={{ ...styles.btnSauver, background: '#34a853', marginTop: '10px' }}>💾 Sauvegarder</button>
+
               </form>
+
+              {/* Section Structure */}
+              <div style={{ marginTop: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', padding: '5px 12px', borderRadius: 6, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 }}>Structure</div>
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+
+                  {/* Niveaux */}
+                  <div style={{ flex: '1 1 220px' }}>
+                    <div style={styles.label}>Niveaux de classes</div>
+                    <form onSubmit={async e => {
+                      e.preventDefault();
+                      try {
+                        if (donneesNiveauEdit) {
+                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, donneesNiveauForm, { headers });
+                        } else {
+                          await axios.post(API + '/donnees/niveaux', donneesNiveauForm, { headers });
+                        }
+                        setDonneesNiveauForm({ nom: '', ordre: '' });
+                        setDonneesNiveauEdit(null);
+                        chargerDonnees();
+                      } catch(err) { alert(err.response?.data?.message || err.message); }
+                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: CSC)" value={donneesNiveauForm.nom} onChange={e => setDonneesNiveauForm(f => ({ ...f, nom: e.target.value }))} required />
+                      <input style={{ ...styles.input, width: 55, margin: 0, padding: '7px 8px' }} placeholder="#" type="number" value={donneesNiveauForm.ordre} onChange={e => setDonneesNiveauForm(f => ({ ...f, ordre: e.target.value }))} />
+                      <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesNiveauEdit ? '✓' : '+'}</button>
+                      {donneesNiveauEdit && <button type="button" onClick={() => { setDonneesNiveauEdit(null); setDonneesNiveauForm({ nom: '', ordre: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                    </form>
+                    {niveauxDB.map(n => (
+                      <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 5 }}>
+                        <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{n.nom}</span>
+                        {n.ordre ? <span style={{ fontSize: 11, color: '#94a3b8' }}>#{n.ordre}</span> : null}
+                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom, ordre: n.ordre || '' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                      </div>
+                    ))}
+                    {niveauxDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun niveau</div>}
+                  </div>
+
+                  {/* Lieux de travail */}
+                  <div style={{ flex: '1 1 220px' }}>
+                    <div style={styles.label}>Lieux de travail</div>
+                    <form onSubmit={async e => {
+                      e.preventDefault();
+                      try {
+                        if (donneesLieuEdit) {
+                          await axios.put(API + '/donnees/lieux-travail/' + donneesLieuEdit.id, donneesLieuForm, { headers });
+                        } else {
+                          await axios.post(API + '/donnees/lieux-travail', donneesLieuForm, { headers });
+                        }
+                        setDonneesLieuForm({ nom: '' });
+                        setDonneesLieuEdit(null);
+                        chargerDonnees();
+                      } catch(err) { alert(err.response?.data?.message || err.message); }
+                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: BOTZA)" value={donneesLieuForm.nom} onChange={e => setDonneesLieuForm(f => ({ ...f, nom: e.target.value }))} required />
+                      <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesLieuEdit ? '✓' : '+'}</button>
+                      {donneesLieuEdit && <button type="button" onClick={() => { setDonneesLieuEdit(null); setDonneesLieuForm({ nom: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                    </form>
+                    {lieuxTravailDB.map(l => (
+                      <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 5 }}>
+                        <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{l.nom}</span>
+                        <button onClick={() => { setDonneesLieuEdit(l); setDonneesLieuForm({ nom: l.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                      </div>
+                    ))}
+                    {lieuxTravailDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun lieu</div>}
+                  </div>
+
+                  {/* Salles */}
+                  <div style={{ flex: '2 1 320px' }}>
+                    <div style={styles.label}>Salles</div>
+                    <form onSubmit={async e => {
+                      e.preventDefault();
+                      try {
+                        if (donneesSalleEdit) {
+                          await axios.put(API + '/donnees/salles/' + donneesSalleEdit.id, donneesSalleForm, { headers });
+                        } else {
+                          await axios.post(API + '/donnees/salles', donneesSalleForm, { headers });
+                        }
+                        setDonneesSalleForm({ nom: '', lieu_travail_id: '' });
+                        setDonneesSalleEdit(null);
+                        chargerDonnees();
+                      } catch(err) { alert(err.response?.data?.message || err.message); }
+                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom salle" value={donneesSalleForm.nom} onChange={e => setDonneesSalleForm(f => ({ ...f, nom: e.target.value }))} required />
+                      <select style={{ ...styles.input, minWidth: 130, margin: 0, padding: '7px 8px' }} value={donneesSalleForm.lieu_travail_id} onChange={e => setDonneesSalleForm(f => ({ ...f, lieu_travail_id: e.target.value }))} required>
+                        <option value="">Lieu</option>
+                        {lieuxTravailDB.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+                      </select>
+                      <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesSalleEdit ? '✓' : '+'}</button>
+                      {donneesSalleEdit && <button type="button" onClick={() => { setDonneesSalleEdit(null); setDonneesSalleForm({ nom: '', lieu_travail_id: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                    </form>
+                    {lieuxTravailDB.map(l => {
+                      const sallesLieu = sallesDB.filter(s => String(s.lieu_travail_id) === String(l.id));
+                      if (!sallesLieu.length) return null;
+                      return (
+                        <div key={l.id} style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{l.nom}</div>
+                          {sallesLieu.map(s => (
+                            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 4 }}>
+                              <span style={{ flex: 1, fontSize: 13, color: '#334155' }}>{s.nom}</span>
+                              <button onClick={() => { setDonneesSalleEdit(s); setDonneesSalleForm({ nom: s.nom, lieu_travail_id: String(s.lieu_travail_id) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
+                              <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/salles/' + s.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {sallesDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune salle</div>}
+                  </div>
+
+                </div>
+              </div>
+
             </div>
           )}
 
           {onglet === 'mail' && isAdmin && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>✉️ Envoi des mails (admin)</h3>
+              <h3 style={styles.cardTitre}>Envoi des mails (admin)</h3>
               <p style={{ color: '#64748b', fontSize: 14, marginBottom: 16, lineHeight: 1.6 }}>
                 Pour un compte Outlook avec double authentification, utilisez un <b>mot de passe d'application</b>
                 (et non votre mot de passe normal).
@@ -832,18 +1030,18 @@ export default function Parametres() {
                   </div>
                 </div>
 
-                <button type="submit" style={{ ...styles.btnSauver, background: '#7c3aed', marginTop: '10px' }}>💾 Sauvegarder la configuration</button>
+                <button type="submit" style={{ ...styles.btnSauver, background: '#7c3aed', marginTop: '10px' }}>Sauvegarder la configuration</button>
               </form>
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: 16, color: '#111827' }}>🧪 Tester l'envoi</h4>
+                <h4 style={{ margin: '0 0 12px', fontSize: 16, color: '#111827' }}>Tester l'envoi</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'end' }}>
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Email destinataire test</label>
                     <input style={styles.input} type="email" value={mailTestTo} onChange={e => setMailTestTo(e.target.value)} placeholder="votre.email@exemple.ch" />
                   </div>
                   <button type="button" style={{ ...styles.btnSauver, background: '#0ea5e9', opacity: testMailLoading ? 0.7 : 1 }} onClick={handleTesterMail} disabled={testMailLoading}>
-                    {testMailLoading ? '⏳ Envoi...' : '📨 Envoyer un test'}
+                    {testMailLoading ? 'Envoi...' : 'Envoyer un test'}
                   </button>
                 </div>
                 {msgMailTest && (
@@ -857,58 +1055,83 @@ export default function Parametres() {
 
           {onglet === 'acces' && isAdmin && (
             <div style={styles.card}>
-              <h3 style={styles.cardTitre}>🔑 Gestion des accès</h3>
+              <h3 style={styles.cardTitre}>Gestion des accès</h3>
 
-              <div style={{marginBottom:24}}>
-                <div style={{fontSize:13,fontWeight:700,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>Employés administratifs</div>
-                <p style={{color:'#64748b',fontSize:13,margin:'0 0 8px'}}>Les employés administratifs ont accès à tous les modules sans restriction.</p>
-                <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                  {MODULES_ACCES_PROFS.map(m => (
-                    <span key={m.key} style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ {m.label}</span>
-                  ))}
-                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Employés</span>
-                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Professeurs</span>
-                  <span style={{padding:'4px 12px',background:'#d1fae5',color:'#065f46',borderRadius:99,fontSize:12,fontWeight:700}}>✅ Paramètres</span>
-                </div>
+              {/* Onglets de rôle */}
+              <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid #6366f1' }}>
+                {[
+                  { key: 'employes_admin', label: 'Employés admin.' },
+                  { key: 'professeurs',    label: 'Professeurs' },
+                  { key: 'responsables',   label: 'Responsables' },
+                  { key: 'admins',         label: 'Administrateurs' },
+                ].map(r => (
+                  <button key={r.key} onClick={() => { setAccesRoleOnglet(r.key); setModuleOuvert(null); }}
+                    style={{ padding: '9px 18px', border: 'none', borderRadius: '10px 10px 0 0', background: accesRoleOnglet === r.key ? '#6366f1' : '#ede9fe', color: accesRoleOnglet === r.key ? 'white' : '#5b21b6', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginBottom: accesRoleOnglet === r.key ? -2 : 0, zIndex: accesRoleOnglet === r.key ? 2 : 1, position: 'relative' }}>
+                    {r.label}
+                  </button>
+                ))}
               </div>
 
-              <div style={{borderTop:'1px solid #e2e8f0',paddingTop:20}}>
-                <div style={{fontSize:13,fontWeight:700,color:'#475569',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>Professeurs — accès aux modules</div>
-                <p style={{color:'#64748b',fontSize:13,margin:'0 0 16px'}}>Ces paramètres s'appliquent à tous les professeurs.</p>
-                {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>✅ Accès mis à jour !</div>}
-                {msgAccesProfs === 'error' && <div style={styles.msgError}>❌ Erreur</div>}
-                <div style={styles.permsGrid}>
-                  {MODULES_ACCES_PROFS.map(m => (
-                    <div key={m.key} style={styles.permRow}>
-                      <div style={styles.permLabel}>{m.label}</div>
-                      <label style={styles.toggle}>
-                        <input type="checkbox" checked={accesProfs[m.key] === true}
-                          onChange={e => setAccesProfs({ ...accesProfs, [m.key]: e.target.checked })} />
-                        <span style={{ ...styles.toggleSlider, background: accesProfs[m.key] ? '#34a853' : '#ccc' }}>
-                          <span style={{ ...styles.toggleThumb, left: accesProfs[m.key] ? '22px' : '2px' }} />
+              {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>✅ Accès mis à jour !</div>}
+              {msgAccesProfs === 'error' && <div style={styles.msgError}>❌ Erreur</div>}
+              <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 14px' }}>
+                {accesRoleOnglet === 'professeurs'    && 'Ces paramètres s\'appliquent à tous les professeurs.'}
+                {accesRoleOnglet === 'employes_admin' && 'Ces paramètres s\'appliquent aux employés administratifs.'}
+                {accesRoleOnglet === 'responsables'   && 'Ces paramètres s\'appliquent aux responsables.'}
+                {accesRoleOnglet === 'admins'         && 'Les administrateurs ont accès à tous les modules.'}
+              </p>
+              {MODULES_ACCES_PROFS.map(m => {
+                const ca = accesParRole[accesRoleOnglet] || {};
+                const hasOnglets = m.onglets.length > 0;
+                const allOn = hasOnglets ? m.onglets.every(o => ca[o.key]) : !!ca[m.key];
+                const someOn = hasOnglets ? m.onglets.some(o => ca[o.key]) : !!ca[m.key];
+                const bgMain = allOn ? '#34a853' : someOn ? '#f59e0b' : '#ccc';
+                return (
+                  <div key={m.key} style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '11px 14px', background: '#f8fafc', cursor: hasOnglets ? 'pointer' : 'default', gap: 10 }}
+                      onClick={() => hasOnglets && setModuleOuvert(moduleOuvert === m.key ? null : m.key)}>
+                      <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{m.label}</span>
+                      <div style={styles.toggle} onClick={e => { e.stopPropagation(); toggleModule(m); }}>
+                        <span style={{ ...styles.toggleSlider, background: bgMain }}>
+                          <span style={{ ...styles.toggleThumb, left: someOn ? '22px' : '2px' }} />
                         </span>
-                      </label>
+                      </div>
+                      <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 6, visibility: hasOnglets ? 'visible' : 'hidden' }}>{moduleOuvert === m.key ? '▲' : '▼'}</span>
                     </div>
-                  ))}
-                </div>
-                <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={async () => {
-                  try {
-                    await axios.put(API + '/parametres/acces-profs', { acces_profs: accesProfs }, { headers });
-                    setMsgAccesProfs('success');
-                    setTimeout(() => setMsgAccesProfs(''), 3000);
-                  } catch { setMsgAccesProfs('error'); }
-                }}>
-                  💾 Sauvegarder les accès
-                </button>
-              </div>
+                    {hasOnglets && moduleOuvert === m.key && (
+                      <div style={{ background: 'white', padding: '4px 14px 10px' }}>
+                        {m.onglets.map((o, i) => (
+                          <div key={o.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < m.onglets.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                            <span style={{ fontSize: 13, color: '#334155' }}>{o.label}</span>
+                            <div style={styles.toggle} onClick={e => { e.stopPropagation(); toggleOnglet(m, o.key); }}>
+                              <span style={{ ...styles.toggleSlider, background: ca[o.key] ? '#34a853' : '#ccc' }}>
+                                <span style={{ ...styles.toggleThumb, left: ca[o.key] ? '22px' : '2px' }} />
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={async () => {
+                try {
+                  await axios.put(API + '/parametres/acces-profs', { acces_profs: accesParRole }, { headers });
+                  setMsgAccesProfs('success');
+                  setTimeout(() => setMsgAccesProfs(''), 3000);
+                } catch { setMsgAccesProfs('error'); }
+              }}>
+                Sauvegarder les accès
+              </button>
             </div>
           )}
           {onglet === 'danger' && isAdmin && (
             <div style={{...styles.card,border:'2px solid #fecaca'}}>
-              <h3 style={{...styles.cardTitre,color:'#dc2626'}}>⚠️ Réinitialisation</h3>
+              <h3 style={{...styles.cardTitre,color:'#dc2626'}}>Réinitialisation</h3>
 
               <div style={{marginTop:4,paddingTop:0}}>
-                <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>🔁 Réinitialisation pour la rentrée scolaire</h4>
+                <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>Réinitialisation pour la rentrée scolaire</h4>
                 <p style={{color:'#7c2d12',fontSize:14,marginBottom:16,lineHeight:1.6}}>
                   Cette option supprime uniquement les données de l'année à réinitialiser :
                 </p>
@@ -932,7 +1155,7 @@ export default function Parametres() {
                 {resetRentreeEtape === 0 && (
                   <button onClick={() => setResetRentreeEtape(1)}
                     style={{padding:'12px 24px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
-                    🧹 Lancer la réinitialisation pour la rentrée scolaire
+                    Lancer la réinitialisation pour la rentrée scolaire
                   </button>
                 )}
 
@@ -969,61 +1192,6 @@ export default function Parametres() {
                 )}
               </div>
 
-              <div style={{marginTop:30,paddingTop:24,borderTop:'2px dashed #fecaca'}}>
-                <h4 style={{margin:'0 0 10px',color:'#dc2626',fontSize:18}}>⚠️ Zone de danger</h4>
-                <p style={{color:'#64748b',fontSize:14,marginBottom:24,lineHeight:1.6}}>
-                  Cette action supprime <b>définitivement et irréversiblement</b> toutes les données :
-                  élèves, classes, professeurs, notes, branches, emploi du temps, présences, comptabilité, calendrier, etc.<br/>
-                  <b>Les comptes administrateurs sont conservés.</b>
-                </p>
-
-                {resetMsg && (
-                  <div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,fontWeight:600,fontSize:14,
-                    background:resetMsg.startsWith('✅')?'#d1fae5':'#fee2e2',
-                    color:resetMsg.startsWith('✅')?'#065f46':'#991b1b'}}>
-                    {resetMsg}
-                  </div>
-                )}
-
-                {resetEtape === 0 && (
-                  <button onClick={() => setResetEtape(1)}
-                    style={{padding:'12px 24px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
-                    🗑️ Réinitialiser toutes les données
-                  </button>
-                )}
-
-                {resetEtape === 1 && (
-                  <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:20}}>
-                    <p style={{fontWeight:700,color:'#dc2626',marginBottom:16}}>⚠️ Première confirmation — Êtes-vous sûr ?</p>
-                    <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Cette action est irréversible. Toutes les données seront perdues.</p>
-                    <div style={{display:'flex',gap:10}}>
-                      <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                      <button onClick={() => setResetEtape(2)} style={{padding:'10px 20px',background:'#dc2626',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700}}>Oui, continuer</button>
-                    </div>
-                  </div>
-                )}
-
-                {resetEtape === 2 && (
-                  <div style={{background:'#fef2f2',border:'2px solid #dc2626',borderRadius:10,padding:20}}>
-                    <p style={{fontWeight:800,color:'#dc2626',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Cette action est irréversible !</p>
-                    <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>Toutes les données seront <b>définitivement supprimées</b>. Confirmez une dernière fois.</p>
-                    <div style={{display:'flex',gap:10}}>
-                      <button onClick={() => setResetEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                      <button onClick={handleReset} style={{padding:'10px 20px',background:'#991b1b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800}}>⚠️ SUPPRIMER TOUTES LES DONNÉES</button>
-                    </div>
-                  </div>
-                )}
-
-                {resetEtape === 3 && (
-                  <div style={{padding:20,textAlign:'center',color:'#dc2626',fontWeight:700}}>⏳ Suppression en cours...</div>
-                )}
-
-                {resetEtape === 4 && (
-                  <button onClick={() => { setResetEtape(0); setResetMsg(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,marginTop:10}}>
-                    Réinitialiser
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
@@ -1033,17 +1201,28 @@ export default function Parametres() {
   );
 }
 
+
 const styles = {
-  page: { padding: '20px', background: '#f0f2f5', minHeight: '100vh' },
-  header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
-  btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' },
-  titre: { fontSize: '24px', fontWeight: '700' },
-  layout: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: '20px' },
-  sidebar: { background: 'white', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: 'fit-content' },
-  navItem: { padding: '10px 14px', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: '14px', fontWeight: '700', border: 'none', background: '#ede9fe', color: '#5b21b6', marginBottom: '6px', lineHeight: 1.2, position: 'relative', zIndex: 1, outline: 'none' },
-  navItemActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: '5px', transform: 'translateX(2px)', zIndex: 2 },
+  page: { display: 'flex', minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  sidebar: { width: 240, background: 'white', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, borderRight: '1px solid #ddd6fe', boxShadow: '2px 0 12px rgba(99,102,241,0.07)' },
+  logo: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #ede9fe' },
+  logoImg: { width: 90, height: 'auto', display: 'block' },
+  nav: { flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 },
+  navItem: { display: 'flex', alignItems: 'center', padding: '9px 12px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#4c1d95', fontFamily: 'inherit' },
+  navItemActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
+  sidebarFooter: { padding: '16px', borderTop: '1px solid #ede9fe' },
+  userInfo: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
+  avatar: { width: 36, height: 36, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
+  userName: { fontSize: 13, fontWeight: 600, color: '#1e1b4b' },
+  userRole: { fontSize: 11, color: '#7c3aed', marginTop: 1 },
+  btnLogout: { width: '100%', padding: '8px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600, fontFamily: 'inherit' },
+  main: { marginLeft: 240, flex: 1, padding: '32px 36px', minHeight: '100vh' },
+  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, minHeight: 44 },
+  titre: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
+  topBarRight: { display: 'flex', alignItems: 'center', gap: 12 },
+  btnSauverHeader: { padding: '9px 22px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14, fontFamily: 'inherit' },
   content: {},
-  card: { background: 'white', borderRadius: '12px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
+  card: { background: 'white', borderRadius: 14, padding: '30px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   cardTitre: { fontSize: '20px', fontWeight: '700', marginBottom: '20px' },
   roleTag: { display: 'inline-block', background: '#e3f2fd', color: '#1a73e8', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: '600', marginBottom: '20px' },
   msgSuccess: { background: '#e8f5e9', color: '#2e7d32', padding: '10px 16px', borderRadius: '8px', marginBottom: '15px', fontWeight: '600' },
@@ -1052,8 +1231,8 @@ const styles = {
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' },
   formChamp: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
   label: { fontSize: '13px', fontWeight: '600', marginBottom: '5px', color: '#555' },
-  input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', background: 'white' },
-  btnSauver: { padding: '12px 24px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' },
+  input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', background: 'white', fontFamily: 'inherit' },
+  btnSauver: { padding: '12px 24px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '15px', fontFamily: 'inherit' },
   vide: { color: '#888', textAlign: 'center', padding: '30px' },
   profCard: { display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', background: '#f8f9fa', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer', border: '2px solid transparent' },
   profAvatar: { width: '44px', height: '44px', borderRadius: '50%', background: '#ff9800', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '15px' },
@@ -1062,7 +1241,7 @@ const styles = {
   profPermsCount: { fontSize: '12px', color: '#ff9800', fontWeight: '600', background: '#fff3e0', padding: '4px 10px', borderRadius: '12px' },
   chevron: { fontSize: '20px', color: '#ccc' },
   profHeader: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '15px', borderBottom: '2px solid #f0f0f0' },
-  btnBack: { padding: '8px 14px', background: '#f5f5f5', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  btnBack: { padding: '8px 14px', background: '#f5f5f5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' },
   permsGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
   permRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: '#f8f9fa', borderRadius: '10px' },
   permLabel: { fontSize: '14px', fontWeight: '600' },

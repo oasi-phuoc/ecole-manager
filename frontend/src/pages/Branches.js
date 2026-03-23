@@ -4,7 +4,6 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
-const NIVEAUX = ['CSC','CFR','EPL','CPR'];
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
@@ -14,10 +13,14 @@ export default function Branches() {
   const [erreur, setErreur] = useState('');
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const navigate = useNavigate();
   const headers = {};
 
-  useEffect(() => { chargerBranches(); }, []);
+  useEffect(() => {
+    chargerBranches();
+    axios.get(API + '/donnees/niveaux', { headers }).then(r => setNiveauxDB(r.data || [])).catch(() => {});
+  }, []);
 
   const chargerBranches = async () => {
     try { const res = await axios.get(API+'/branches',{headers}); setBranches(res.data); }
@@ -56,7 +59,7 @@ export default function Branches() {
     }
   };
 
-  const niveaux = ['tous', 'CSC', 'CFR', 'EPL', 'CPR'];
+  const niveaux = ['tous', ...niveauxDB.map(n => n.nom)];
 
   const branchesFiltrees = branches.filter(b => {
     const matchR = b.nom.toLowerCase().includes(recherche.toLowerCase());
@@ -103,10 +106,10 @@ export default function Branches() {
                   <input style={s.inp} type="text" required value={form.designation_courte} onChange={e => setForm({...form,designation_courte:e.target.value})} placeholder="Ex: MATH, FRA" />
                 </div>
                 <div style={s.field}>
-                  <label style={s.lbl}>Niveau * <span style={{color:'#9ca3af',fontWeight:400}}>(ex: CSC, CFR, EPL, CPR)</span></label>
+                  <label style={s.lbl}>Niveau *</label>
                   <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
                     <option value="">-- Choisir --</option>
-                    {NIVEAUX.map(n => <option key={n} value={n}>{n}</option>)}
+                    {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
                   </select>
                 </div>
                 <div style={s.field}>

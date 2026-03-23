@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'https://ecole-manager-backend.onrender.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 let sessionUser = null;
 

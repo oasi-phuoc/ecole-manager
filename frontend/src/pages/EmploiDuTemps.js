@@ -109,6 +109,10 @@ export default function EmploiDuTemps() {
   const [pausesParPeriodeForm, setPausesParPeriodeForm] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
   const [poolAffId, setPoolAffId] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
+  // Données (niveaux, lieux, salles) pour les sélecteurs
+  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
+  const [sallesDB, setSallesDB] = useState([]);
   const navigate = useNavigate();
   const headers = {};
 
@@ -117,7 +121,20 @@ export default function EmploiDuTemps() {
     setTimeout(() => setToast({ message: '', type: 'success' }), 2200);
   };
 
-  useEffect(() => { chargerTout(); }, []);
+  useEffect(() => { chargerTout(); chargerDonnees(); }, []);
+
+  const chargerDonnees = async () => {
+    try {
+      const [niv, lieux, salles] = await Promise.all([
+        axios.get(API + '/donnees/niveaux', { headers }),
+        axios.get(API + '/donnees/lieux-travail', { headers }),
+        axios.get(API + '/donnees/salles', { headers }),
+      ]);
+      setNiveauxDB(niv.data || []);
+      setLieuxTravailDB(lieux.data || []);
+      setSallesDB(salles.data || []);
+    } catch(err) { console.error(err); }
+  };
 
   const chargerTout = async () => {
     try {
@@ -488,11 +505,8 @@ export default function EmploiDuTemps() {
       compteAutres
     };
   });
-  const lieuxTravailMap = new Map([
-    ['creuset', 'Creuset'],
-    ['botza', 'Botza'],
-    ['synecom', 'Synecom'],
-  ]);
+  const lieuxTravailMap = new Map();
+  lieuxTravailDB.forEach(l => lieuxTravailMap.set(normaliserLieuTravail(l.nom), l.nom));
   pools
     .map(p => (p.site || '').trim())
     .filter(Boolean)
@@ -538,7 +552,10 @@ export default function EmploiDuTemps() {
   const sallesDisponiblesLieuDyn = Array.from(
     new Set(classesPourSalles.flatMap(cl => cl.sallesClasse))
   ).sort((a, b) => a.localeCompare(b, 'fr'));
-  const sallesFixesLieu = SALLES_FIXES_PAR_LIEU[normaliserLieuTravail(sallesLieuTravailId)] || [];
+  const sallesDBPourLieu = sallesDB
+    .filter(s => normaliserLieuTravail(s.lieu_nom || '') === normaliserLieuTravail(sallesLieuTravailId))
+    .map(s => s.nom);
+  const sallesFixesLieu = sallesDBPourLieu.length ? sallesDBPourLieu : (SALLES_FIXES_PAR_LIEU[normaliserLieuTravail(sallesLieuTravailId)] || []);
   const sallesDisponiblesLieu = sallesFixesLieu.length ? sallesFixesLieu : sallesDisponiblesLieuDyn;
   const classesFiltreesSalles = salleSelectionnee ? classesPourSalles : [];
   const classesSallesParCellule = (jour, periode) =>
@@ -1827,9 +1844,7 @@ export default function EmploiDuTemps() {
                       <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
                       <select style={styles.inp} value={poolForm.niveau} onChange={e => setPoolForm({...poolForm,niveau:e.target.value})}>
                         <option value="">Choisir</option>
-                        <option value="CSC">CSC</option>
-                        <option value="CFR">CFR</option>
-                        <option value="EPL">EPL</option>
+                        {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
                       </select>
                       <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
                         Périodes de cours : {totalPeriodesCoursForm}
@@ -1845,9 +1860,7 @@ export default function EmploiDuTemps() {
                       <label style={styles.lbl}>Lieu de travail <span style={{color:'#ef4444'}}>*</span></label>
                       <select style={styles.inp} value={poolForm.site} onChange={e => setPoolForm({...poolForm,site:e.target.value})}>
                         <option value="">Choisir</option>
-                        <option value="Synecom">Synecom</option>
-                        <option value="Botza">Botza</option>
-                        <option value="Creuset">Creuset</option>
+                        {lieuxTravailDB.map(l => <option key={l.id} value={l.nom}>{l.nom}</option>)}
                       </select>
                       <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesProfs}}>
                         Périodes professeurs : {totalPeriodesProfsForm}
