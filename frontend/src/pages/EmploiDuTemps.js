@@ -1651,6 +1651,9 @@ export default function EmploiDuTemps() {
                 abandonnerChangementsAffectationsCourants();
               }
               setOnglet(o.id);
+              if (o.id === 'disponibilites') {
+                axios.get(API + '/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
+              }
               if (o.id === 'plannings') {
                 setSousOngletPlanning('classes');
               }

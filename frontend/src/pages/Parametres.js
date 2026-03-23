@@ -139,6 +139,7 @@ export default function Parametres() {
   useEffect(() => { chargerProfil(); }, []);
   useEffect(() => { chargerMfaStatus(); chargerDonnees(); }, []);
   useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
+  useEffect(() => { if (onglet === 'ecole' && isAdmin) chargerEcole(); }, [onglet]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
   }, [isAdmin, profil?.email, mailTestTo]);
@@ -918,8 +919,6 @@ export default function Parametres() {
               </div>
               <div style={{ paddingTop: sousOngletEcole === 'horaires' ? 0 : 20 }}>
 
-              {msgEcole === 'success' && <div style={styles.msgSuccess}>✅ Paramètres mis à jour !</div>}
-              {msgEcole === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
               <form id="form-ecole" onSubmit={handleSauverEcole}>
 
                 {/* Section Adresse */}
