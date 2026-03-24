@@ -381,6 +381,7 @@ export default function Notes() {
         {[
           ['evaluations', 'Évaluations'],
           ['generale','Vue générale'],
+          ['comportements', 'Comportements'],
         ].map(([k,l]) => (
           <button key={k}
             style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
@@ -1763,11 +1764,12 @@ export default function Notes() {
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
                 <th style={{ ...s.th, whiteSpace: 'nowrap' }}>Notes</th>
                 <th style={{ ...s.th, width: '100%' }}>Responsables</th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
               {classesFiltrees.length === 0 ? (
-                <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
+                <tr><td colSpan={5} style={s.vide}>Aucune classe disponible.</td></tr>
               ) : classesFiltrees.map((cl, i) => {
                 // Badges notes (même logique que Classes.js)
                 const niveauClasse = String(cl?.niveau || '').toUpperCase();
@@ -1823,6 +1825,11 @@ export default function Notes() {
                           )}
                         </div>
                       )}
+                    </td>
+                    <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
+                      <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => ouvrirVueDepuisSelectionClasse('comportements', cl.id)}>
+                        📋 Bulletin
+                      </button>
                     </td>
                   </tr>
                 );

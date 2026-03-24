@@ -205,6 +205,7 @@ export default function Classes() {
     remarques: '',
   });
   const [dragInventaireId, setDragInventaireId] = useState(null);
+  const [dragOverInventaireId, setDragOverInventaireId] = useState(null);
   const ELEMENTS_SPECIAUX_PLAN = [
     { id: 'SPECIAL_ENTREE', label: "Porte d'entrée", icon: '🚪', bg: '#fff7ed', text: '#9a3412' },
     { id: 'SPECIAL_TABLEAU', label: 'Tableau', icon: '🧾', bg: '#ecfeff', text: '#0e7490' },
@@ -1159,8 +1160,8 @@ export default function Classes() {
 
       {classeVueTab === 'eleves' ? (
         <>
-          <div style={{display:'flex',gap:0,marginBottom:12,marginTop:0}}>
-            {[{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'},{id:'tous',label:'Tous'}].map(f => (
+          <div style={{display:'flex',gap:0,marginBottom:15,marginTop:0}}>
+            {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
               <button key={f.id} style={{...s.subTabBtn,width:90,minWidth:90,...(filtreElevesActif===f.id?s.subTabBtnActif:{})}} onClick={() => setFiltreElevesActif(f.id)}>{f.label}</button>
             ))}
           </div>
@@ -1220,77 +1221,78 @@ export default function Classes() {
         </div>
         </>
       ) : classeVueTab === 'inventaire' ? (
-        <div style={s.inventoryLayout}>
-          <div style={s.tableWrap}>
-            <table style={s.table}>
-              <thead>
-                <tr style={s.thead}>
-                  <th style={s.th}>Branches</th>
-                </tr>
-              </thead>
-              <tbody>
-                {branchesInventaire.length===0 ? (
-                  <tr><td style={s.empty}>Aucune branche</td></tr>
-                ) : branchesInventaire.map(b => (
-                  <tr
-                    key={b.id}
-                    style={String(brancheInventaireActive?.id)===String(b.id) ? s.trActive : s.tr}
-                    onClick={() => setBrancheInventaireActive(b)}
-                  >
-                    <td style={{...s.td,cursor:'pointer'}}>
-                      <div style={{fontWeight:700}}>{b.nom}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={s.tableWrap}>
-            {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
-            {brancheInventaireActive ? (
+        <div style={{paddingTop:0}}>
+          {branchesInventaire.length === 0 ? (
+            <div style={s.empty}>Aucune branche pour ce niveau</div>
+          ) : (
+            <div style={{display:'flex',gap:0,flexWrap:'wrap',marginBottom:8}}>
+              {branchesInventaire.map(b => (
+                <button key={b.id}
+                  onClick={() => setBrancheInventaireActive(b)}
+                  style={{...s.subTabBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.subTabBtnActif:{}),width:'auto',minWidth:80}}>
+                  {b.code || b.nom}
+                </button>
+              ))}
+            </div>
+          )}
+          {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
+          {brancheInventaireActive ? (
               <>
-                <div style={s.invTitle}>Inventaire: {brancheInventaireActive.nom}</div>
                 <form onSubmit={ajouterLigneInventaire} style={s.invForm}>
-                  <input type="date" style={s.inp} value={inventaireForm.date_document} onChange={e => setInventaireForm({...inventaireForm,date_document:e.target.value})} />
-                  <input type="text" style={s.inp} placeholder="Nom du document *" value={inventaireForm.nom_document} onChange={e => setInventaireForm({...inventaireForm,nom_document:e.target.value})} />
-                  <label style={s.invToggle}>
+                  <input type="date" style={{...s.inp,width:142,flexShrink:0}} value={inventaireForm.date_document} onChange={e => setInventaireForm({...inventaireForm,date_document:e.target.value})} />
+                  <input type="text" style={{...s.inp,flex:2}} placeholder="Nom du document *" value={inventaireForm.nom_document} onChange={e => setInventaireForm({...inventaireForm,nom_document:e.target.value})} />
+                  <label style={{...s.invToggle,flexShrink:0}}>
                     <input type="checkbox" checked={inventaireForm.sans_numero} onChange={e => setInventaireForm({...inventaireForm,sans_numero:e.target.checked})} />
                     Pas de numéro
                   </label>
-                  <input type="text" style={s.inp} placeholder="Remarques" value={inventaireForm.remarques} onChange={e => setInventaireForm({...inventaireForm,remarques:e.target.value})} />
-                  <button type="submit" style={s.btnAdd}>Valider</button>
+                  <input type="text" style={{...s.inp,flex:1}} placeholder="Remarques" value={inventaireForm.remarques} onChange={e => setInventaireForm({...inventaireForm,remarques:e.target.value})} />
+                  <button type="submit" style={{...s.btnAdd,flexShrink:0}}>Valider</button>
                 </form>
 
-                <table style={s.table}>
+                <table style={{...s.table, tableLayout:'fixed', width:'100%'}}>
+                  <colgroup>
+                    <col style={{width:32}} />
+                    <col style={{width:110}} />
+                    <col />
+                    <col style={{width:70}} />
+                    <col />
+                    <col style={{width:60}} />
+                    <col style={{width:90}} />
+                  </colgroup>
                   <thead>
                     <tr style={s.thead}>
-                      {['Date','Nom du document','Numéro','Remarques','VISA','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)}
+                      <th style={s.th}></th>
+                      {['Date','Nom du document','Numéro','Remarques','VISA','Actions'].map(h => <th key={h} style={{...s.th, textAlign: h==='Actions' ? 'right' : 'left'}}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {inventaireLoading ? (
-                      <tr><td colSpan="6" style={s.empty}>Chargement...</td></tr>
+                      <tr><td colSpan="7" style={s.empty}>Chargement...</td></tr>
                     ) : inventaireRows.length===0 ? (
-                      <tr><td colSpan="6" style={s.empty}>Aucune ligne d’inventaire</td></tr>
+                      <tr><td colSpan="7" style={s.empty}>Aucune ligne d'inventaire</td></tr>
                     ) : (() => {
                       let compteurNumero = 0;
                       return inventaireRows.map(l => {
                         const sansNumero = !!l.sans_numero;
                         const numeroAffiche = sansNumero ? '—' : String(++compteurNumero);
                         const isEditing = inventaireEditId === l.id;
+                        const isDragOver = dragOverInventaireId === l.id;
                         return (
                           <tr
                             key={l.id}
-                            style={s.tr}
+                            style={{...s.tr, background: isDragOver ? '#e0e7ff' : undefined, outline: isDragOver ? '2px solid #6366f1' : undefined}}
                             draggable
                             onDragStart={() => setDragInventaireId(l.id)}
-                            onDragOver={(e) => e.preventDefault()}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverInventaireId(l.id); }}
+                            onDragLeave={() => setDragOverInventaireId(null)}
                             onDrop={() => {
                               reordonnerInventaire(dragInventaireId, l.id);
                               setDragInventaireId(null);
+                              setDragOverInventaireId(null);
                             }}
+                            onDragEnd={() => { setDragInventaireId(null); setDragOverInventaireId(null); }}
                           >
+                            <td style={{...s.td, cursor:'grab', textAlign:'center', color:'#cbd5e1', fontSize:16, padding:'0 4px'}}>⠿</td>
                             {isEditing ? (
                               <>
                                 <td style={s.td}><input type="date" style={s.inp} value={inventaireEditForm.date_document?.substring(0,10) || ''} onChange={e => setInventaireEditForm({...inventaireEditForm,date_document:e.target.value})} /></td>
@@ -1298,28 +1300,28 @@ export default function Classes() {
                                 <td style={s.td}>
                                   <label style={s.invToggle}>
                                     <input type="checkbox" checked={!!inventaireEditForm.sans_numero} onChange={e => setInventaireEditForm({...inventaireEditForm,sans_numero:e.target.checked})} />
-                                    Pas de numéro
+                                    Sans n°
                                   </label>
                                 </td>
                                 <td style={s.td}><input type="text" style={s.inp} value={inventaireEditForm.remarques || ''} onChange={e => setInventaireEditForm({...inventaireEditForm,remarques:e.target.value})} /></td>
                                 <td style={s.td}>
                                   <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
                                 </td>
-                                <td style={s.td}>
+                                <td style={{...s.td, textAlign:'right'}}>
                                   <button style={s.btnEdit} onClick={() => sauvegarderEditionInventaire(l.id)}>✅</button>
                                   <button style={s.btnDel} onClick={() => setInventaireEditId(null)}>✕</button>
                                 </td>
                               </>
                             ) : (
                               <>
-                                <td style={s.td}>{l.date_document ? new Date(l.date_document).toLocaleDateString('fr-CH') : '—'}</td>
+                                <td style={{...s.td,textAlign:'left'}}>{l.date_document ? new Date(l.date_document).toLocaleDateString('fr-CH') : '—'}</td>
                                 <td style={{...s.td,fontWeight:700}}>{l.nom_document || '—'}</td>
                                 <td style={s.td}>{numeroAffiche}</td>
                                 <td style={s.td}>{l.remarques || '—'}</td>
                                 <td style={s.td}>
                                   <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
                                 </td>
-                                <td style={s.td}>
+                                <td style={{...s.td, textAlign:'right'}}>
                                   <button
                                     style={s.btnEdit}
                                     onClick={() => {
@@ -1334,7 +1336,6 @@ export default function Classes() {
                                   >
                                     ✏️
                                   </button>
-                                  <button style={s.btnEdit} title="Déplacer" onMouseDown={() => setDragInventaireId(l.id)}>↕️</button>
                                   <button style={s.btnDel} onClick={() => supprimerLigneInventaire(l.id)}>🗑️</button>
                                 </td>
                               </>
@@ -1349,7 +1350,6 @@ export default function Classes() {
             ) : (
               <div style={s.empty}>Sélectionnez une branche</div>
             )}
-          </div>
         </div>
       ) : classeVueTab === 'plan' ? (
         renderPlanClasseOnglet()
@@ -1544,7 +1544,7 @@ const s = {
   inventoryLayout:{display:'grid',gridTemplateColumns:'320px 1fr',gap:14,alignItems:'start',marginTop:15},
   invTitle:{fontSize:14,fontWeight:800,color:'#0f172a',padding:'14px 14px 0'},
   invMsg:{margin:'12px 12px 0',padding:'8px 10px',borderRadius:8,background:'#fee2e2',color:'#991b1b',fontSize:12,fontWeight:700},
-  invForm:{display:'grid',gridTemplateColumns:'140px 1.4fr auto 1fr auto',gap:8,padding:14,alignItems:'center'},
+  invForm:{display:'flex',gap:8,padding:'8px 0',marginBottom:8,alignItems:'center',width:'100%',boxSizing:'border-box'},
   invToggle:{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#475569',fontWeight:600,whiteSpace:'nowrap'},
   trombiGrid:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,marginTop:30},
   trombiCard:{display:'flex',flexDirection:'column',alignItems:'center',padding:16,background:'white',borderRadius:12,border:'1px solid #e2e8f0',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'},
