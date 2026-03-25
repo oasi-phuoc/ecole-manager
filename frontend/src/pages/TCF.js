@@ -2054,8 +2054,12 @@ export default function TCF() {
       alert('Veuillez sélectionner une classe avant d\'imprimer.');
       return;
     }
+    const cl = classes.find(c => String(c.id) === String(classeConvocation));
+    const siteNom = (siteNames[sitePlan] || sitePlan).replace(/\s+/g, '_');
+    const classeNom = (cl?.nom || 'classe').replace(/\s+/g, '_');
+    const filename = `${siteNom}_${classeNom}`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -2067,8 +2071,10 @@ export default function TCF() {
     const pages = classesSite.map((cl, i) =>
       `<div style="${i < classesSite.length - 1 ? 'page-break-after:always' : ''}">${buildConvocationPage(cl.id, sitePlan)}</div>`
     );
+    const siteNom = (siteNames[sitePlan] || sitePlan).replace(/\s+/g, '_');
+    const filename = `${siteNom}_toutes_classes`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
