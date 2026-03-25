@@ -2119,17 +2119,10 @@ export default function TCF() {
       return `<div class="page">
         <div class="screen-card">
           ${headerHtml}
-          <div class="title-wrap">
-            <div class="spacer-top"></div>
-            <div class="page-title">${titleMain}</div>
-            <div class="spacer-mid"></div>
-            <div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>
-            <div class="ligne-classe-date">
-              <div class="page-classe"><b>Classe :</b> ${classe || '—'}</div>
-              <div class="page-date">${dateVetroz}</div>
-            </div>
-            <div class="spacer-bottom"></div>
-          </div>
+          <div class="page-title">${titleMain}</div>
+          <div class="page-date">${dateVetroz}</div>
+          ${nom || prenom ? `<div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>` : ''}
+          ${classe ? `<div class="page-classe"><b>Classe :</b> ${classe}</div>` : ''}
           <div class="chart-wrap">${svg}</div>
           <div class="footer-line">
             <img class="footer-logo" src="${logoPiedUrl}" alt="Logo pied de page" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoPiedFallbackUrl}';}else{this.style.display='none';}" />
@@ -2148,27 +2141,24 @@ export default function TCF() {
         .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; align-items: center; justify-content: flex-start; }
         .page:last-child { page-break-after: auto; }
         .screen-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 12px 24px; width: 800px; max-width: 100%; margin-top: 8px; }
-        .page-header { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: flex-start; justify-content: flex-start; gap: 14px; }
+        .page-header { padding-bottom: 14px; margin-bottom: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
         .header-left { display: flex; align-items: flex-start; gap: 10px; }
-        .header-logo-wrap { background: #ffffff; border-radius: 6px; padding: 4px; }
-        .header-logo { height: 54px; width: auto; object-fit: contain; display: block; }
-        .header-admin { font-size: 8pt; color: #334155; line-height: 1.25; font-weight: 600; }
-        .header-right { text-align: left; margin-left: 10px; }
-        .header-scai { font-size: 20pt; font-weight: 800; color: #1e293b; line-height: 1; }
-        .header-year { font-size: 11pt; font-weight: 700; color: #374151; margin-top: 2px; }
+        .header-logo-wrap { background: #ffffff; border-radius: 6px; padding: 2px; }
+        .header-logo { width: 38px; height: auto; object-fit: contain; display: block; }
+        .header-admin { font-size: 8pt; color: #334155; line-height: 1.5; }
+        .header-right { text-align: right; }
+        .header-scai { font-size: 17pt; font-weight: 800; color: #1e293b; line-height: 1; }
+        .header-year { font-size: 10pt; font-weight: 700; color: #374151; margin-top: 2px; }
         .header-sub { font-size: 8pt; font-weight: 700; color: #475569; margin-top: 2px; }
-        .title-wrap { text-align: left; margin-top: 10px; margin-bottom: 10px; }
-        .spacer-top { height: 36px; }
-        .spacer-mid { height: 24px; }
-        .spacer-bottom { height: 12px; }
-        .page-title { font-size: 26px; font-weight: 800; color: #111827; margin-bottom: 10px; text-align: left; }
-        .page-identite, .page-classe, .page-date { font-size: 16pt; color: #1f2937; }
-        .ligne-classe-date { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 2px; }
+        .page-title { font-size: 17pt; font-weight: 700; color: #0f172a; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 60px; margin-bottom: 40px; }
+        .page-date { font-size: 10pt; color: #1e293b; text-align: right; margin-bottom: 40px; }
+        .page-identite { font-size: 10pt; color: #1f2937; margin-bottom: 4px; }
+        .page-classe { font-size: 10pt; color: #1f2937; margin-bottom: 16px; }
         .chart-wrap { overflow-x: auto; display: flex; justify-content: center; }
         .chart-wrap svg { max-width: 100%; height: auto; display: block; }
         .footer-line { border-top: 1px solid #cbd5e1; margin-top: 10px; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
-        .footer-text { font-size: 6pt; color: #64748b; line-height: 1.35; }
+        .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
         @page { size: A4 portrait; margin: 10mm; }
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -2357,17 +2347,15 @@ export default function TCF() {
       const identiteLabel = opts.identiteLabel || 'NOM Prénom';
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '12px 24px', width: opts.cardWidth || 800, maxWidth: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 10 }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ background: '#fff', borderRadius: 6, padding: 4 }}>
-                  <img src={logoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain', display: 'block' }} />
-                </div>
-                <div style={{ fontSize: '6pt', color: '#475569', lineHeight: 1.25 }}>
-                  <div style={{ fontWeight: 700 }}>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
-                  <div style={{ fontWeight: 400 }}>Service de l'action sociale</div>
-                  <div style={{ fontWeight: 400 }}>Office de l'asile</div>
-                  <div style={{ fontWeight: 400 }}>Centre de formation "Le Botza"</div>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '24px 28px', width: opts.cardWidth || 800, maxWidth: '100%' }}>
+            {/* En-tête */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <img src={logoSrc} alt="Logo" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
+                  <div>Département de la santé, des affaires sociales et de la culture</div>
+                  <div>Service de l'action sociale — Office de l'asile</div>
+                  <div>Centre de formation "Le Botza"</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -2376,22 +2364,18 @@ export default function TCF() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
               </div>
             </div>
-            <div style={{ textAlign: 'left', marginTop: 10, marginBottom: 10 }}>
-              <div style={{ height: 36 }} />
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 10 }}>{titreGraph}</div>
-              <div style={{ height: 24 }} />
-              <div style={{ fontSize: 16, color: '#1f2937', marginTop: 2, textAlign: 'left' }}>
-                <b>{identiteLabel} :</b> {nomMaj} {prenomAff}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-                <div style={{ fontSize: 16, color: '#1f2937' }}><b>Classe :</b> {classeAff || '—'}</div>
-                <div style={{ fontSize: 12, color: '#374151' }}>{dateVetroz}</div>
-              </div>
-              <div style={{ height: 12 }} />
-            </div>
+            {/* Titre */}
+            <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 40, marginTop: 60, color: '#0f172a' }}>{titreGraph}</div>
+            {/* Date */}
+            <div style={{ textAlign: 'right', fontSize: 16, color: '#1e293b', marginBottom: 40 }}>{dateVetroz}</div>
+            {/* Identité */}
+            {(nomMaj || prenomAff) && <div style={{ fontSize: 16, color: '#1f2937', marginBottom: 4 }}><b>{identiteLabel} :</b> {nomMaj} {prenomAff}</div>}
+            {classeAff && <div style={{ fontSize: 16, color: '#1f2937', marginBottom: 16 }}><b>Classe :</b> {classeAff}</div>}
+            {/* Graphique */}
             <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
+            {/* Pied de page */}
             <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <img
                 src={logoPiedSrc}
@@ -2406,7 +2390,7 @@ export default function TCF() {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <div style={{ fontSize: '6pt', color: '#64748b', lineHeight: 1.35 }}>
+              <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.35 }}>
                 <div>Zone Industrielle 4, 1963 Vétroz</div>
                 <div>Tél. 027 606 18 60</div>
               </div>
