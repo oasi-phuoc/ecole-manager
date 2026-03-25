@@ -2030,7 +2030,7 @@ export default function TCF() {
         <div>
           <p>Madame, Monsieur,</p>
           <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.</p>
-          <p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>
+          ${classeId ? `<p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>` : ''}
           <div style="margin-top:25px">${tableHtml}</div>
           <div style="margin-bottom:25px"></div>
           <p style="font-weight:700;font-size:12pt !important;">Informations importantes</p>
@@ -2821,7 +2821,7 @@ export default function TCF() {
           )}
           {onglet === 'plannings' && (
             <>
-              <button type="button" onClick={printAllConvocations} style={{ ...styles.btnAjouter, background: '#0ea5e9', color: 'white', border: '1px solid #0ea5e9' }}>🖨️ Tout imprimer</button>
+              <button type="button" onClick={printAllConvocations} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Tout imprimer</button>
               <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Imprimer</button>
             </>
           )}
@@ -3004,8 +3004,9 @@ export default function TCF() {
                       Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
                     </p>
                     {(() => {
+                      if (!classeConvocation) return null;
                       const cl = classes.find(c => String(c.id) === String(classeConvocation));
-                      const aff = classeConvocation ? getClasseJourHoraire(sitePlan, classeConvocation) : null;
+                      const aff = getClasseJourHoraire(sitePlan, classeConvocation);
                       return (
                         <p style={p}>
                           Classe : <strong>{cl?.nom || '—'}</strong>&emsp;
