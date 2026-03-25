@@ -2597,39 +2597,42 @@ export default function TCF() {
 
     return (
       <div>
-        {/* Sous-onglets niveaux */}
-        {niveaux.length > 0 && (
-          <div style={{ display: 'flex', gap: 0 }}>
-            {niveauxTabs.map(n => (
-              <button key={n} type="button" onClick={() => setStatNiveau(n)}
-                style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+        {/* Tous les sous-onglets sur une ligne */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+          {/* Niveaux */}
+          {niveaux.length > 0 && (
+            <div style={{ display: 'flex', gap: 0 }}>
+              {niveauxTabs.map(n => (
+                <button key={n} type="button" onClick={() => setStatNiveau(n)}
+                  style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+              ))}
+            </div>
+          )}
+
+          {/* Matière */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            {[['francais','Français'],['math','Math']].map(([val,label]) => (
+              <button key={val} onClick={() => setStatMatiere(val)}
+                style={{ ...styles.subTabBtn, ...(statMatiere === val ? styles.subTabBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-        )}
 
-        {/* Sous-onglets matière */}
-        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
-          {[['francais','Français'],['math','Math']].map(([val,label]) => (
-            <button key={val} onClick={() => setStatMatiere(val)}
-              style={{ ...styles.subTabBtn, ...(statMatiere === val ? styles.subTabBtnActif : {}) }}>{label}</button>
-          ))}
-        </div>
+          {/* Fort/Faible */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            {[['fort','Fort'],['faible','Faible']].map(([val,label]) => (
+              <button key={val}
+                onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
+                style={{ ...styles.subTabBtn, ...(statSens === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+            ))}
+          </div>
 
-        {/* Sous-onglets Fort/Faible */}
-        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
-          {[['fort','Fort'],['faible','Faible']].map(([val,label]) => (
-            <button key={val}
-              onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
-              style={{ ...styles.subTabBtn, ...(statSens === val ? styles.subTabBtnActif : {}) }}>{label}</button>
-          ))}
-        </div>
-
-        {/* Sous-onglets ordre */}
-        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
-          {[['croissant','Croissant'],['decroissant','Décroissant']].map(([val,label]) => (
-            <button key={val} onClick={() => setStatOrdre(val)}
-              style={{ ...styles.subTabBtn, ...(statOrdre === val ? styles.subTabBtnActif : {}) }}>{label}</button>
-          ))}
+          {/* Croissant/Décroissant */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            {[['croissant','Croissant'],['decroissant','Décroissant']].map(([val,label]) => (
+              <button key={val} onClick={() => setStatOrdre(val)}
+                style={{ ...styles.subTabBtn, ...(statOrdre === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+            ))}
+          </div>
         </div>
 
         {/* Dropdown session + seuil — 15px sous les sous-onglets */}
