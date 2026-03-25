@@ -3002,7 +3002,7 @@ export default function TCF() {
                 {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
               </div>
               {/* Date sous le titre */}
-              <div className="conv-date" style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginBottom: 40 }}>
+              <div className="conv-date" style={{ textAlign: 'right', fontSize: 16, color: '#1e293b', marginBottom: 40 }}>
                 Vétroz, le {new Date().toLocaleDateString('fr-CH')}
               </div>
               {/* Contenu */}
