@@ -1596,8 +1596,8 @@ export default function TCF() {
 
         {/* Demi-journée + groupes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner une demi-journée -</option>
+          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={{ ...styles.select, background: '#6366f1', color: 'white', fontWeight: 700, border: 'none', borderRadius: 8, padding: '8px 12px' }}>
+            <option value="">Choisir une demi-journée</option>
             {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
           {useGroups && (
@@ -2961,8 +2961,8 @@ export default function TCF() {
             </div>
             {planningsType === 'classes' && (
               <div className="tcf-no-print" style={{ margin: '12px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
-                  <option value="">— Sélectionner une classe —</option>
+                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, background: '#6366f1', color: 'white', fontWeight: 700, border: 'none', borderRadius: 8, padding: '8px 12px', minWidth: 220 }}>
+                  <option value="">Choisir une classe</option>
                   {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
                     <option key={cl.id} value={cl.id}>{cl.nom}</option>
                   ))}
