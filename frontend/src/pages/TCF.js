@@ -1253,41 +1253,44 @@ export default function TCF() {
 
     return (
       <div>
-        {/* Sous-onglets niveaux */}
-        <div style={{ display: 'flex', gap: 0 }}>
-          {niveauxTabs.map(n => (
-            <button key={n}
-              onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
-              style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}>
-              {n}
-            </button>
-          ))}
-        </div>
+        {/* Tous les sous-onglets sur une ligne */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+          {/* Niveaux */}
+          <div style={{ display: 'flex', gap: 0 }}>
+            {niveauxTabs.map(n => (
+              <button key={n}
+                onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
+                style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}>
+                {n}
+              </button>
+            ))}
+          </div>
 
-        {/* Sous-onglets matière */}
-        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
-          {[['francais','Français'],['math','Math']].map(([val,label]) => (
-            <button key={val}
-              onClick={() => setResultatMatiere(val)}
-              style={{ ...styles.subTabBtn, ...(resultatMatiere === val ? styles.subTabBtnActif : {}) }}>
-              {label}
-            </button>
-          ))}
-        </div>
+          {/* Matière */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            {[['francais','Français'],['math','Math']].map(([val,label]) => (
+              <button key={val}
+                onClick={() => setResultatMatiere(val)}
+                style={{ ...styles.subTabBtn, ...(resultatMatiere === val ? styles.subTabBtnActif : {}) }}>
+                {label}
+              </button>
+            ))}
+          </div>
 
-        {/* Sous-onglets vue */}
-        <div style={{ display: 'flex', gap: 0, marginTop: 8 }}>
-          {[['individuelle','Individuelle'],['classe','Classe']].map(([val,label]) => (
-            <button key={val}
-              onClick={() => {
-                setResultatVue(val);
-                if (val === 'individuelle') setResultatClasseId('');
-                else { setResultatEleveId(''); setResultatEleveSearch(''); }
-              }}
-              style={{ ...styles.subTabBtn, ...(resultatVue === val ? styles.subTabBtnActif : {}) }}>
-              {label}
-            </button>
-          ))}
+          {/* Vue */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
+              <button key={val}
+                onClick={() => {
+                  setResultatVue(val);
+                  if (val === 'individuelle') setResultatClasseId('');
+                  else { setResultatEleveId(''); setResultatEleveSearch(''); }
+                }}
+                style={{ ...styles.subTabBtn, ...(resultatVue === val ? styles.subTabBtnActif : {}) }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Dropdowns 15px sous les sous-onglets */}
