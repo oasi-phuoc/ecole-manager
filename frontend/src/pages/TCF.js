@@ -1596,7 +1596,7 @@ export default function TCF() {
 
         {/* Demi-journée + groupes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={{ ...styles.select, background: '#6366f1', color: 'white', fontWeight: 700, border: 'none', borderRadius: 8, padding: '8px 12px' }}>
+          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
             <option value="">Choisir une demi-journée</option>
             {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
@@ -2961,7 +2961,7 @@ export default function TCF() {
             </div>
             {planningsType === 'classes' && (
               <div className="tcf-no-print" style={{ margin: '12px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, background: '#6366f1', color: 'white', fontWeight: 700, border: 'none', borderRadius: 8, padding: '8px 12px', minWidth: 220 }}>
+                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
                   <option value="">Choisir une classe</option>
                   {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
                     <option key={cl.id} value={cl.id}>{cl.nom}</option>
@@ -3185,7 +3185,7 @@ const styles = {
   dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
-  select: { padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b', background: 'white', lineHeight: '1' },
+  select: { padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
