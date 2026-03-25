@@ -1996,7 +1996,7 @@ export default function TCF() {
     th, td { border: 1px solid #e2e8f0; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
     thead tr { background: #6366f1 !important; color: white !important; }
     thead th { background: #6366f1 !important; color: white !important; }
-    p { font-size: 10pt !important; text-align: justify !important; }
+    p { font-size: 10pt !important; text-align: justify !important; margin-bottom: 8pt !important; }
     .conv-entete, .conv-entete * { font-size: 6pt !important; }
     .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
     .conv-footer * { font-size: 6pt !important; }
