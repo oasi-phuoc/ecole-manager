@@ -2023,7 +2023,7 @@ export default function TCF() {
         <div class="conv-entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
           <div style="display:flex;align-items:flex-start;gap:10px;">
             <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
-            <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale — Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
+            <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
           </div>
           <div style="text-align:right;">
             <div class="conv-scai" style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">SCAI</div>
@@ -2354,7 +2354,8 @@ export default function TCF() {
                 <img src={logoSrc} alt="Logo" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
                 <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
                   <div>Département de la santé, des affaires sociales et de la culture</div>
-                  <div>Service de l'action sociale — Office de l'asile</div>
+                  <div>Service de l'action sociale</div>
+                  <div>Office de l'asile</div>
                   <div>Centre de formation "Le Botza"</div>
                 </div>
               </div>
@@ -2971,7 +2972,7 @@ export default function TCF() {
                   <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
                   <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
                     <div>Département de la santé, des affaires sociales et de la culture</div>
-                    <div>Service de l'action sociale — Office de l'asile</div>
+                    <div>Service de l'action sociale</div>
                     <div>Centre de formation "Le Botza"</div>
                   </div>
                 </div>
