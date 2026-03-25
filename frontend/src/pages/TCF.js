@@ -2427,10 +2427,13 @@ export default function TCF() {
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {onglet === 'pool' && (
-            <button onClick={ajouterSite} style={styles.btnAjouter}>+ Ajouter</button>
+            <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
           )}
           {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
-            <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
+            <>
+              {saveToast && <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✅ {saveToast}</span>}
+              <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
+            </>
           )}
           {onglet === 'graphique' && graphVue !== 'moyenne' && (
             <>
@@ -2502,8 +2505,6 @@ export default function TCF() {
         </div>
       </div>
       <div style={styles.tabContent}>
-        {saveToast && <div style={styles.noticeBand}>✅ {saveToast}</div>}
-
         {onglet === 'pool' && (
           <div>
             <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
