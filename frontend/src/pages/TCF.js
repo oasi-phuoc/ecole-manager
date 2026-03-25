@@ -110,7 +110,8 @@ export default function TCF() {
   const [siteOrder, setSiteOrder] = useState(['site1', 'site2']);
   const [siteCounter, setSiteCounter] = useState(2);
   const [siteActif, setSiteActif] = useState('site1');
-  const [planningsSousOnglet, setPlanningsSousOnglet] = useState(null);
+  const [planningsSite, setPlanningsSite] = useState(null);
+  const [planningsType, setPlanningsType] = useState('classes');
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [poolDirty, setPoolDirty] = useState(false);
@@ -983,6 +984,143 @@ export default function TCF() {
       {renderTablePoolSite(siteKey)}
     </div>
   );
+
+  const renderTableAffectationSiteReadOnly = (siteKey) => {
+    const classesSite = classesEligiblesSite[siteKey] || [];
+    const dateDebut = affectationDateDebutBySite?.[siteKey] || '';
+    const formatDate = (d) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}.${m}.${y}`; };
+    return (
+      <>
+        <div style={{ ...styles.affectationMetaWrap, pointerEvents: 'none', opacity: 0.85 }}>
+          <span style={styles.inlineLabel}>Date de début : <strong>{formatDate(dateDebut)}</strong></span>
+          <span style={styles.inlineLabel}>Matin : <strong>{getHoraireSite(siteKey, 'matinDebut')} – {getHoraireSite(siteKey, 'matinFin')}</strong></span>
+          <span style={styles.inlineLabel}>Après-midi : <strong>{getHoraireSite(siteKey, 'apresMidiDebut')} – {getHoraireSite(siteKey, 'apresMidiFin')}</strong></span>
+        </div>
+        <div style={styles.tableWrap}>
+          <table style={styles.tablePool}>
+            <colgroup>
+              <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
+              {JOURS.map(j => <col key={j} style={{ width: 'auto' }} />)}
+            </colgroup>
+            <thead>
+              <tr style={styles.thead}>
+                <th style={styles.thCenter}></th>
+                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {MOMENTS.map((moment, idxMoment) => (
+                <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
+                  <tr>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>{moment.label}</td>
+                    {JOURS.map(j => {
+                      const actif = isJourActifSite(siteKey, j);
+                      if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
+                      const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+                      return (
+                        <td key={`${j}-${moment.id}`} style={styles.tdLeft}>
+                          <div style={styles.pastillesWrap}>
+                            {classesCell.length === 0
+                              ? <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
+                              : classesCell.map(cid => {
+                                const cl = classes.find(c => String(c.id) === String(cid));
+                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default' }}>{cl?.nom || cid}</span>;
+                              })}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  {idxMoment === 0 && (
+                    <tr><td style={styles.tdSpacer}></td>{JOURS.map(j => <td key={`sp-${j}`} style={styles.tdSpacer}></td>)}</tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  };
+
+  const renderRolesReadOnly = (siteKey) => {
+    const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
+    const selectedProfIds = siteKey ? (selectedBySite[siteKey] || []) : [];
+    const reserveSet = new Set(
+      demi ? selectedProfIds.filter(id => statutCellule(siteKey, String(id), demi.jour, demi.moment) === 'rouge' && rActifCellule(siteKey, String(id), demi.jour, demi.moment)) : []
+    );
+    const profsPool = selectedProfIds
+      .map(id => profMap[String(id)]).filter(Boolean)
+      .filter(p => !demi || statutCellule(siteKey, String(p.id), demi.jour, demi.moment) !== 'rouge' || rActifCellule(siteKey, String(p.id), demi.jour, demi.moment))
+      .sort((a, b) => {
+        const aR = reserveSet.has(String(a.id)), bR = reserveSet.has(String(b.id));
+        if (aR !== bR) return aR ? 1 : -1;
+        return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr');
+      });
+    const key = `${siteKey}::${rolesDemiJourneeSelect}`;
+    const rolesMap = rolesAffectesByPoolDemi[key] || {};
+    const org = organisationByPoolDemi[key] || {};
+    const classesAffecteesDemi = demi ? (affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
+    const classesAffecteesObjs = classesAffecteesDemi.map(cid => classes.find(c => String(c.id) === String(cid))).filter(Boolean);
+    const useGroups = classesAffecteesObjs.length > 2;
+    const savedGroups = {
+      g1: (org.groups?.g1 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid))),
+      g2: (org.groups?.g2 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid))),
+    };
+    const classesColonnes = useGroups
+      ? [
+        { id: 'group:g1', nom: savedGroups.g1.map(cid => classes.find(c => String(c.id) === String(cid))?.nom).filter(Boolean).join(' + ') || 'Groupe 1', classIds: savedGroups.g1 },
+        { id: 'group:g2', nom: savedGroups.g2.map(cid => classes.find(c => String(c.id) === String(cid))?.nom).filter(Boolean).join(' + ') || 'Groupe 2', classIds: savedGroups.g2 },
+      ]
+      : classesAffecteesObjs.map(cl => ({ id: String(cl.id), nom: cl.nom, classIds: [String(cl.id)] }));
+    return (
+      <div>
+        <div style={{ marginTop: 15, marginBottom: 15 }}>
+          <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
+            <option value="">- Sélectionner une demi-journée -</option>
+            {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+          </select>
+        </div>
+        {!rolesDemiJourneeSelect ? (
+          <div style={styles.empty}>Sélectionnez une demi-journée.</div>
+        ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
+          <div style={styles.empty}>La demi-journée sélectionnée est inactive pour ce site.</div>
+        ) : (
+          <div style={styles.rolesGrid}>
+            <div style={styles.tableWrap}>
+              <table style={styles.tableRolesLeft}>
+                <thead>
+                  <tr style={styles.thead}>
+                    <th style={styles.thLeftFixed}>Professeurs</th>
+                    <th style={{ ...styles.thLeftFixed, width: 155, minWidth: 155, maxWidth: 155 }}>Rôle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profsPool.map(p => {
+                    const selectedRole = rolesMap[String(p.id)] || '—';
+                    const isReserve = reserveSet.has(String(p.id));
+                    return (
+                      <tr key={`roro-${p.id}`}>
+                        <td style={{ ...styles.tdLeft, ...(isReserve ? styles.tdReserve : {}) }}>
+                          <div style={styles.reserveCellWrap}>
+                            <span>{p.prenom} {toDisplayNom(p.nom)}</span>
+                            {isReserve && <span style={styles.reserveBadge}>Réserve</span>}
+                          </div>
+                        </td>
+                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155, fontWeight: selectedRole !== '—' ? 600 : 400, color: selectedRole !== '—' ? '#1e293b' : '#94a3b8' }}>
+                          {selectedRole}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderResultat = () => {
     if (!niveaux.length) return <div style={styles.msgVide}>Aucun niveau de classe trouvé.</div>;
@@ -2444,6 +2582,9 @@ export default function TCF() {
               <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
             </>
           )}
+          {onglet === 'plannings' && (
+            <button type="button" onClick={() => window.print()} style={styles.btnAjouter}>🖨️ Imprimer</button>
+          )}
           {onglet === 'graphique' && graphVue !== 'moyenne' && (
             <>
               <button type="button" onClick={() => {
@@ -2554,45 +2695,36 @@ export default function TCF() {
 
         {onglet === 'roles' && renderRoles()}
 
-        {onglet === 'plannings' && (() => {
-          const sousOnglets = [
-            ...siteOrder.map((sk, idx) => ({ id: sk, label: siteNames[sk] || `Site ${idx + 1}`, type: 'site' })),
-            { id: 'classes', label: 'Classes', type: 'special' },
-            { id: 'roles', label: 'Rôles', type: 'special' },
-          ];
-          const actif = planningsSousOnglet || sousOnglets[0]?.id || '';
-          return (
-            <div>
-              <div style={{ display: 'flex', gap: 0, marginBottom: 0, alignItems: 'flex-end' }}>
-                {sousOnglets.map((so, idx) => (
-                  <button key={so.id} type="button"
-                    onClick={() => { setPlanningsSousOnglet(so.id); if (so.type === 'site') setSiteActif(so.id); }}
-                    style={{ ...styles.subTabBtn, ...(actif === so.id ? styles.subTabBtnActif : {}), ...(so.type === 'special' && idx > 0 && sousOnglets[idx - 1]?.type === 'site' ? { marginLeft: 15 } : {}) }}>
-                    {so.label}
+        {onglet === 'plannings' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0 }}>
+              <div style={{ display: 'flex', gap: 0 }}>
+                {siteOrder.map((sk, idx) => (
+                  <button key={`plan-site-${sk}`} type="button"
+                    onClick={() => setPlanningsSite(sk)}
+                    style={{ ...styles.subTabBtn, ...(planningsSite === sk ? styles.subTabBtnActif : {}) }}>
+                    {siteNames[sk] || `Site ${idx + 1}`}
                   </button>
                 ))}
               </div>
-              <div>
-                {sousOnglets.find(so => so.id === actif)?.type === 'site' && renderSelectionSite(actif, '', true)}
-                {actif === 'classes' && (
-                  <div>
-                    <div style={{ display: 'flex', gap: 0, marginBottom: 14, marginTop: 0 }}>
-                      {siteOrder.map((sk, idx) => (
-                        <button key={`plan-cls-${sk}`} type="button"
-                          onClick={() => setSiteActif(sk)}
-                          style={{ ...styles.subTabBtn, ...(siteActif === sk ? styles.subTabBtnActif : {}) }}>
-                          {siteNames[sk] || `Site ${idx + 1}`}
-                        </button>
-                      ))}
-                    </div>
-                    {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
-                  </div>
-                )}
-                {actif === 'roles' && renderRoles()}
+              <div style={{ display: 'flex', gap: 0, marginLeft: 20 }}>
+                {[{ id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
+                  <button key={`plan-type-${t.id}`} type="button"
+                    onClick={() => setPlanningsType(t.id)}
+                    style={{ ...styles.subTabBtn, ...(planningsType === t.id ? styles.subTabBtnActif : {}) }}>
+                    {t.label}
+                  </button>
+                ))}
               </div>
             </div>
-          );
-        })()}
+            <div>
+              {!planningsSite ? (
+                <div style={styles.empty}>Sélectionnez un site.</div>
+              ) : planningsType === 'classes' ? renderTableAffectationSiteReadOnly(planningsSite)
+                : renderRolesReadOnly(planningsSite)}
+            </div>
+          </div>
+        )}
 
         {onglet === 'resultat' && renderResultat()}
 
