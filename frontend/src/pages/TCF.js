@@ -2415,6 +2415,7 @@ export default function TCF() {
   };
 
   const handleSaveCurrentTab = async () => {
+    if (!tabHasUnsaved(onglet)) { afficherSaveMsg(onglet, 'Aucun changement à sauvegarder.'); return; }
     if (onglet === 'pool') await handleSavePool();
     else if (onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
     else if (onglet === 'resultat') await handleSaveResultat();
