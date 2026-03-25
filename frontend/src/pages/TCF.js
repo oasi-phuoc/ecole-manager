@@ -1990,7 +1990,8 @@ export default function TCF() {
         p { font-size: 10pt !important; text-align: justify !important; }
         .conv-entete, .conv-entete * { font-size: 6pt !important; }
         .conv-footer, .conv-footer * { font-size: 6pt !important; }
-        .conv-titre { font-size: 17pt !important; }
+        .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
+        .conv-date { font-size: 10pt !important; }
       </style>
     </head><body>${html}</body></html>`);
     win.document.close();
@@ -2886,7 +2887,7 @@ export default function TCF() {
                     <div>Centre de formation "Le Botza"</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div className="conv-date" style={{ fontSize: 12, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   Vétroz, le {new Date().toLocaleDateString('fr-CH')}
                 </div>
               </div>
