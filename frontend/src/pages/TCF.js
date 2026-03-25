@@ -2031,9 +2031,10 @@ export default function TCF() {
             <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
           </div>
         </div>
-        <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:60px;margin-top:60px;color:#0f172a;">
+        <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;margin-top:60px;color:#0f172a;">
           Convocation<br>Test de connaissance du français
         </div>
+        <div class="conv-date" style="text-align:right;margin-bottom:40px;">Vétroz, le ${dateVetroz}</div>
         <div>
           <p>Madame, Monsieur,</p>
           <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.</p>
@@ -2997,8 +2998,12 @@ export default function TCF() {
                 </div>
               </div>
               {/* Titre */}
-              <div className="conv-titre" style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 60, marginTop: 60, color: '#0f172a' }}>
+              <div className="conv-titre" style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 20, marginTop: 60, color: '#0f172a' }}>
                 {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
+              </div>
+              {/* Date sous le titre */}
+              <div className="conv-date" style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginBottom: 40 }}>
+                Vétroz, le {new Date().toLocaleDateString('fr-CH')}
               </div>
               {/* Contenu */}
               {!sitePlan ? (
