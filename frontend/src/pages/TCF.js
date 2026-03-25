@@ -2875,7 +2875,7 @@ export default function TCF() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
-                  <div style={{ fontSize: 8, lineHeight: 1.5, color: '#334155' }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
                     <div>Département de la santé, des affaires sociales et de la culture</div>
                     <div>Service de l'action sociale — Office de l'asile</div>
                     <div>Centre de formation "Le Botza"</div>
@@ -2894,7 +2894,7 @@ export default function TCF() {
                 <div style={styles.empty}>Aucun site disponible.</div>
               ) : planningsType === 'classes' ? (() => {
                 const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
-                const p = { fontSize: 12, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 14 };
+                const p = { fontSize: 16, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 14 };
                 const hr = { display: 'none' };
                 return (
                   <div style={{ fontFamily: font }}>
@@ -2923,7 +2923,7 @@ export default function TCF() {
               })()
               : renderRolesReadOnly(sitePlan)}
               {/* Pied de page */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 8, color: '#64748b' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 12, color: '#64748b' }}>
                 <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                 <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
               </div>
