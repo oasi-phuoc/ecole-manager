@@ -1297,7 +1297,7 @@ export default function TCF() {
         {/* Dropdowns 15px sous les sous-onglets */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner la session -</option>
+            <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           {resultatVue === 'individuelle' && (
@@ -1313,11 +1313,11 @@ export default function TCF() {
                     if (found) setResultatEleveId(String(found.id));
                   }
                 }}
-                placeholder="N° élève (Entrée)"
+                placeholder="N° élève"
                 style={{ ...styles.select, width: 150 }}
               />
               <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
-                <option value="">- Sélectionner l'élève -</option>
+                <option value="">Choisir un élève</option>
                 {elevesNiveau.map((e, idx) => (
                   <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
                 ))}
@@ -2435,7 +2435,7 @@ export default function TCF() {
         {/* Listes déroulantes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.selectOnglet}>
-            <option value="">- Sélectionner la session -</option>
+            <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           {graphVue === 'classe' && (
@@ -2457,11 +2457,11 @@ export default function TCF() {
                     if (found) setGraphEleveId(String(found.id));
                   }
                 }}
-                placeholder="N° élève (Entrée)"
+                placeholder="N° élève"
                 style={{ ...styles.selectOnglet, width: 150 }}
               />
               <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.selectOnglet}>
-                <option value="">- Sélectionner l'élève -</option>
+                <option value="">Choisir un élève</option>
                 {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
               </select>
             </>
@@ -2635,7 +2635,7 @@ export default function TCF() {
         {/* Dropdown session + seuil — 15px sous les sous-onglets */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner la session -</option>
+            <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Points :</span>
