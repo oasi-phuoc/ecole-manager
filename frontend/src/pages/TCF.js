@@ -1252,6 +1252,7 @@ export default function TCF() {
     const profsPool = selectedProfIds
       .map(id => profMap[String(id)])
       .filter(Boolean)
+      .filter(p => !demi || statutCellule(siteKey, String(p.id), demi.jour, demi.moment) !== 'rouge')
       .sort((a, b) => {
         const aReserve = reserveSet.has(String(a.id));
         const bReserve = reserveSet.has(String(b.id));
