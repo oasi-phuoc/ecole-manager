@@ -114,6 +114,7 @@ export default function TCF() {
   const [siteActif, setSiteActif] = useState('site1');
   const [planningsSite, setPlanningsSite] = useState(null);
   const [planningsType, setPlanningsType] = useState('classes');
+  const [classeConvocation, setClasseConvocation] = useState('');
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [poolDirty, setPoolDirty] = useState(false);
@@ -1968,34 +1969,106 @@ export default function TCF() {
   };
 
   const convocationRef = useRef(null);
+  const tableConvocationRef = useRef(null);
+
+  const getClasseJourHoraire = (siteKey, classeId) => {
+    for (const j of JOURS) {
+      for (const m of MOMENTS) {
+        const classesCell = getAffectationClassesSite(siteKey, j, m.id);
+        if (classesCell.map(String).includes(String(classeId))) {
+          const debut = getHoraireSite(siteKey, m.id === 'matin' ? 'matinDebut' : 'apresMidiDebut');
+          const fin = getHoraireSite(siteKey, m.id === 'matin' ? 'matinFin' : 'apresMidiFin');
+          return { jour: j, horaire: `${debut} – ${fin}` };
+        }
+      }
+    }
+    return null;
+  };
+
+  const convocPrintCSS = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+    @page { size: A4 portrait; margin: 15mm 20mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    div { overflow: visible !important; }
+    table { border-collapse: collapse; width: 100% !important; table-layout: fixed; min-width: 0 !important; }
+    col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
+    th, td { border: 1px solid #e2e8f0; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+    thead tr { background: #6366f1 !important; color: white !important; }
+    thead th { background: #6366f1 !important; color: white !important; }
+    p { font-size: 10pt !important; text-align: justify !important; }
+    .conv-entete, .conv-entete * { font-size: 6pt !important; }
+    .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
+    .conv-footer * { font-size: 6pt !important; }
+    .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
+    .conv-date { font-size: 10pt !important; }
+    .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
+  `;
+
+  const buildConvocationPage = (classeId, siteKey) => {
+    const cl = classes.find(c => String(c.id) === String(classeId));
+    const aff = getClasseJourHoraire(siteKey, classeId);
+    const nom = cl?.nom || '—';
+    const lieu = siteNames[siteKey] || siteKey;
+    const jour = aff?.jour || '—';
+    const horaire = aff?.horaire || '—';
+    const dateVetroz = new Date().toLocaleDateString('fr-CH');
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const tableHtml = tableConvocationRef.current?.innerHTML || '';
+    return `
+      <div>
+        <div class="conv-entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
+            <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale — Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
+          </div>
+          <div class="conv-date" style="text-align:right;white-space:nowrap;">Vétroz, le ${dateVetroz}</div>
+        </div>
+        <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:60px;margin-top:60px;color:#0f172a;">
+          Convocation<br>Test de connaissance du français
+        </div>
+        <div>
+          <p>Madame, Monsieur,</p>
+          <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.</p>
+          <p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>
+          <div style="margin-top:25px">${tableHtml}</div>
+          <div style="margin-bottom:25px"></div>
+          <p style="font-weight:700;font-size:12pt !important;">Informations importantes</p>
+          <p>Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus. Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.</p>
+          <p><strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.</p>
+          <p>Si vous avez une <strong>absence planifiée</strong> à cette date, nous vous demandons de contacter sans délai les responsables afin d'être regroupé(e) avec une autre classe et d'effectuer le test à un autre créneau prévu.</p>
+          <p>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
+          <p style="margin-top:24px;">Cordialement,</p>
+          <p class="conv-direction">La direction</p>
+        </div>
+        <div class="conv-footer" style="display:flex;align-items:center;gap:12px;margin-top:28px;padding-top:10px;">
+          <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
+          <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
+        </div>
+      </div>`;
+  };
 
   const printConvocation = () => {
-    const content = convocationRef.current;
-    if (!content) return;
-    const html = content.innerHTML
-      .replace('Convocation — Test de connaissance du français', 'Convocation<br>Test de connaissance du français');
+    const sitePlan = planningsSite || siteOrder[0] || '';
+    if (!classeConvocation) {
+      alert('Veuillez sélectionner une classe avant d\'imprimer.');
+      return;
+    }
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
-        @page { size: A4 portrait; margin: 15mm 20mm; }
-        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-        div { overflow: visible !important; }
-        table { border-collapse: collapse; width: 100% !important; table-layout: fixed; }
-        col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
-        th, td { border: 1px solid #e2e8f0; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
-        thead tr { background: #6366f1 !important; color: white !important; }
-        thead th { background: #6366f1 !important; color: white !important; }
-        p { font-size: 10pt !important; text-align: justify !important; }
-        .conv-entete, .conv-entete * { font-size: 6pt !important; }
-        .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
-        .conv-footer * { font-size: 6pt !important; }
-        .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
-        .conv-date { font-size: 10pt !important; }
-        .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
-      </style>
-    </head><body>${html}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
+  const printAllConvocations = () => {
+    const sitePlan = planningsSite || siteOrder[0] || '';
+    const classesSite = classesEligiblesSite[sitePlan] || [];
+    if (!classesSite.length) return;
+    const pages = classesSite.map((cl, i) =>
+      `<div style="${i < classesSite.length - 1 ? 'page-break-after:always' : ''}">${buildConvocationPage(cl.id, sitePlan)}</div>`
+    );
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -2741,7 +2814,10 @@ export default function TCF() {
             </>
           )}
           {onglet === 'plannings' && (
-            <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Imprimer</button>
+            <>
+              <button type="button" onClick={printAllConvocations} style={{ ...styles.btnAjouter, background: '#0ea5e9', color: 'white', border: '1px solid #0ea5e9' }}>🖨️ Tout imprimer</button>
+              <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Imprimer</button>
+            </>
           )}
           {onglet === 'graphique' && graphVue !== 'moyenne' && (
             <>
@@ -2877,6 +2953,16 @@ export default function TCF() {
                 ))}
               </div>
             </div>
+            {planningsType === 'classes' && (
+              <div className="tcf-no-print" style={{ margin: '12px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
+                  <option value="">— Sélectionner une classe —</option>
+                  {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
+                    <option key={cl.id} value={cl.id}>{cl.nom}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
               {/* En-tête */}
@@ -2911,8 +2997,19 @@ export default function TCF() {
                       Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>.
                       Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
                     </p>
-                    <p style={p}>Lieu : <strong>{siteNames[sitePlan] || sitePlan}</strong></p>
-                    <div style={{ marginTop: 25 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
+                    {(() => {
+                      const cl = classes.find(c => String(c.id) === String(classeConvocation));
+                      const aff = classeConvocation ? getClasseJourHoraire(sitePlan, classeConvocation) : null;
+                      return (
+                        <p style={p}>
+                          Classe : <strong>{cl?.nom || '—'}</strong>&emsp;
+                          Lieu : <strong>{siteNames[sitePlan] || sitePlan}</strong>&emsp;
+                          Jour : <strong>{aff?.jour || '—'}</strong>&emsp;
+                          Horaire : <strong>{aff?.horaire || '—'}</strong>
+                        </p>
+                      );
+                    })()}
+                    <div ref={tableConvocationRef} style={{ marginTop: 25 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
                     <div style={{ marginBottom: 25 }} />
                     <p style={{ ...p, fontWeight: 700, fontSize: 14 }}>Informations importantes</p>
                     <p style={p}>
