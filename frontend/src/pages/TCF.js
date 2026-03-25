@@ -2432,7 +2432,7 @@ export default function TCF() {
           <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
             <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'individuelle' ? styles.subTabBtnActif : {}) }}>Élève</button>
             <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'classe' ? styles.subTabBtnActif : {}) }}>Classe</button>
-            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne</button>
+            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne globale</button>
           </div>
         </div>
         {/* Listes déroulantes */}
