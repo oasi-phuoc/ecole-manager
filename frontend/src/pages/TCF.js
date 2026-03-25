@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -143,6 +143,7 @@ export default function TCF() {
   const [rolesDemiJourneeSelect, setRolesDemiJourneeSelect] = useState('');
   const [rolesAffectesByPoolDemi, setRolesAffectesByPoolDemi] = useState({});
   const [organisationByPoolDemi, setOrganisationByPoolDemi] = useState({});
+  const savedAffectationRef = useRef({});
   const [ongletGraphiqueMatiere, setOngletGraphiqueMatiere] = useState('francais');
   const [graphPoolId, setGraphPoolId] = useState('');
   const [graphSession, setGraphSession] = useState('');
@@ -172,13 +173,14 @@ export default function TCF() {
     if (poolState?.poolCellOverrides) setPoolCellOverrides(poolState.poolCellOverrides);
   };
 
-  const appliquerAffectationState = (aff = {}) => {
+  const appliquerAffectationState = (aff = {}, saveSnapshot = false) => {
     setAffectationDateDebutBySite(aff?.dateDebutBySite || {});
     setAffectationHorairesBySite(aff?.horairesBySite || {});
     setAffectationClassesBySite(aff?.classesBySite || {});
     setAffectationJoursActifsBySite(aff?.joursActifsBySite || {});
     setRolesAffectesByPoolDemi(aff?.rolesByPoolDemi || {});
     setOrganisationByPoolDemi(aff?.organisationByPoolDemi || {});
+    if (saveSnapshot) savedAffectationRef.current = aff;
   };
 
   const sauvegarderEtatTCFServeur = async (cle, donnees) => {
@@ -232,7 +234,7 @@ export default function TCF() {
         }
         if (affSrv?.data?.updated_at) {
           const donnees = affSrv.data?.donnees || {};
-          appliquerAffectationState(donnees);
+          appliquerAffectationState(donnees, true);
         }
         if (rsSrv?.data?.updated_at) {
           const donnees = rsSrv.data?.donnees || {};
@@ -2376,13 +2378,13 @@ export default function TCF() {
       alert('Erreur sauvegarde serveur (Classes/Rôles): ' + (err.response?.data?.message || err.message));
       return;
     }
+    savedAffectationRef.current = payload;
     setAffectationDirty(false);
     afficherSaveMsg(onglet === 'roles' ? 'roles' : 'classes');
   };
 
   const resetAffectationToSaved = () => {
-    const aff = lireObjetLocal('tcf_affectation_state');
-    appliquerAffectationState(aff);
+    appliquerAffectationState(savedAffectationRef.current);
     setAffectationDirty(false);
   };
 
