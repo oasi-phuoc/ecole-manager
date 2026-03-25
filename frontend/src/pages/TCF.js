@@ -775,7 +775,7 @@ export default function TCF() {
       <>
         <div style={styles.affectationMetaWrap}>
           <label style={styles.inlineLabel}>
-            Date de début des tests :
+            Date de début :
             <input
               type="date"
               value={affectationDateDebutBySite?.[siteKey] || ''}
@@ -2499,7 +2499,7 @@ export default function TCF() {
         const noms = sitesSansDate
           .map((siteKey, idx) => siteNames?.[siteKey] || `Site ${idx + 1}`)
           .join(', ');
-        alert(`Date de début des tests obligatoire.\n\nVeuillez renseigner la date pour : ${noms}.`);
+        alert(`Date de début obligatoire.\n\nVeuillez renseigner la date pour : ${noms}.`);
         return;
       }
     }
