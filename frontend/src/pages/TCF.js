@@ -1995,7 +1995,7 @@ export default function TCF() {
     div { overflow: visible !important; }
     table { border-collapse: collapse; width: 100% !important; table-layout: fixed; min-width: 0 !important; }
     col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
-    th, td { border: none; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+    th, td { border: none; padding: 4px 6px; font-size: 10pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
     thead tr { background: #6366f1 !important; color: white !important; }
     thead th { background: #6366f1 !important; color: white !important; }
     p { font-size: 10pt !important; text-align: justify !important; margin-bottom: 8pt !important; }
