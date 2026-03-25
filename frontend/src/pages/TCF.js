@@ -2960,7 +2960,7 @@ export default function TCF() {
               </div>
             </div>
             {planningsType === 'classes' && (
-              <div className="tcf-no-print" style={{ margin: '12px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="tcf-no-print" style={{ margin: '15px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
                   <option value="">Choisir une classe</option>
                   {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
