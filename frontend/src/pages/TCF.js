@@ -1989,7 +1989,8 @@ export default function TCF() {
         thead th { background: #6366f1 !important; color: white !important; }
         p { font-size: 10pt !important; text-align: justify !important; }
         .conv-entete, .conv-entete * { font-size: 6pt !important; }
-        .conv-footer, .conv-footer * { font-size: 6pt !important; }
+        .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
+        .conv-footer * { font-size: 6pt !important; }
         .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
         .conv-date { font-size: 10pt !important; }
         .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
