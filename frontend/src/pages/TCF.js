@@ -1250,7 +1250,7 @@ export default function TCF() {
       .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
     const elevesResultat = resultatVue === 'classe'
       ? (resultatClasseId ? elevesNiveau.filter(e => String(e.classe_id) === String(resultatClasseId)) : [])
-      : (resultatEleveId ? elevesNiveau.filter(e => String(e.id) === String(resultatEleveId)) : []);
+      : (resultatEleveId ? elevesNiveau.filter(e => String(e.id) === String(resultatEleveId)) : elevesNiveau);
 
     return (
       <div>
@@ -1334,8 +1334,6 @@ export default function TCF() {
 
         {!resultatSession ? (
           <div style={styles.msgVide}>Sélectionnez une session pour afficher les résultats.</div>
-        ) : resultatVue === 'individuelle' && !resultatEleveId ? (
-          <div style={styles.msgVide}>Sélectionnez un élève pour afficher ses résultats.</div>
         ) : resultatVue === 'classe' && !resultatClasseId ? (
           <div style={styles.msgVide}>Sélectionnez une classe pour afficher les résultats.</div>
         ) : (
