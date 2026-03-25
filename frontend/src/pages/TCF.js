@@ -1365,8 +1365,8 @@ export default function TCF() {
                         <th style={styles.thCenter}>P2</th>
                         <th style={styles.thCenter}>P3</th>
                         <th style={styles.thCenter}>P4</th>
-                        <th style={styles.thCenter}>CSC-CFR</th>
-                        <th style={styles.thCenter}>CAF-CAP</th>
+                        <th style={styles.thCenter}>Base</th>
+                        <th style={styles.thCenter}>Avancé</th>
                         <th style={styles.thCenter}>Total</th>
                       </>
                     )}
@@ -1869,8 +1869,8 @@ export default function TCF() {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const showTrend = options.showTrend !== false;
     const niveau = normaliserNiveau(options.niveau || '');
-    const label1 = options.label1 || (isFr ? 'Oral' : 'CSC-CFR');
-    const label2 = options.label2 || (isFr ? 'Écrit' : 'CAF-CAP');
+    const label1 = options.label1 || (isFr ? 'Oral' : 'Base');
+    const label2 = options.label2 || (isFr ? 'Écrit' : 'Avancé');
 
     const barW = 52;
     const groupW = 180;
