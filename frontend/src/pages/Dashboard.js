@@ -6,7 +6,7 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true };
+const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -107,6 +107,8 @@ export default function Dashboard() {
     { label: 'Comptabilité',     path: '/comptabilite',            color: '#84cc16', bg: '#ecfccb', adminOnly: false, accentKey: 'comptabilite' },
     { label: 'Documents',        path: '/documents-administratifs',color: '#7c3aed', bg: '#ede9fe', adminOnly: false, accentKey: 'documents' },
     { label: 'Statistiques',     path: '/statistiques',            color: '#f97316', bg: '#ffedd5', adminOnly: false, accentKey: 'statistiques' },
+    { label: 'Enclassement',     path: '/enclassement',            color: '#0891b2', bg: '#e0f7fa', adminOnly: false, accentKey: 'enclassement' },
+    { label: 'Sorties scolaires',path: '/sorties-scolaires',       color: '#16a34a', bg: '#dcfce7', adminOnly: false, accentKey: 'sorties_scolaires' },
     { label: 'Paramètres',       path: '/parametres',              color: '#64748b', bg: '#f1f5f9', adminOnly: false },
   ].filter(m => {
     if (isAdmin) return true;

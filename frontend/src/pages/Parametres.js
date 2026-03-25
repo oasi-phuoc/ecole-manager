@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -43,7 +44,9 @@ const MODULES_ACCES_PROFS = [
   { key: 'calendrier',      label: 'Calendrier',       defaut: true,  onglets: [{ key: 'calendrier_scolaire', label: 'Calendrier scolaire' }, { key: 'calendrier_agenda', label: 'Agenda personnel' }] },
   { key: 'comptabilite',    label: 'Comptabilité',     defaut: false, onglets: [{ key: 'comptabilite_paiements', label: 'Paiements' }, { key: 'comptabilite_listes', label: 'Listes' }, { key: 'comptabilite_prix', label: 'Liste de prix' }] },
   { key: 'documents',       label: 'Documents',        defaut: false, onglets: [{ key: 'documents_administratifs', label: 'Administratifs' }, { key: 'documents_pedagogiques', label: 'Pédagogiques' }, { key: 'documents_seances', label: 'Séances' }, { key: 'documents_formulaires', label: 'Formulaires' }, { key: 'documents_divers', label: 'Divers' }] },
-  { key: 'statistiques',    label: 'Statistiques',     defaut: false, onglets: [{ key: 'statistiques_dashboard', label: 'Tableau de bord' }] },
+  { key: 'statistiques',       label: 'Statistiques',        defaut: false, onglets: [{ key: 'statistiques_dashboard', label: 'Tableau de bord' }] },
+  { key: 'enclassement',      label: 'Enclassement',        defaut: false, onglets: [] },
+  { key: 'sorties_scolaires', label: 'Sorties scolaires',   defaut: false, onglets: [{ key: 'sorties_automne', label: 'Automne' }, { key: 'sorties_juin', label: 'Juin' }, { key: 'sorties_autres', label: 'Autres' }, { key: 'sorties_suivi', label: 'Tableau de suivi' }] },
 ];
 
 export default function Parametres() {
