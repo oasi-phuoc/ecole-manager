@@ -1008,9 +1008,9 @@ export default function TCF() {
             </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1, border: 'none' }}></th>
+                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1, border: 'none', fontSize: 16 }}></th>
                 {JOURS.map((j, idx) => (
-                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2, border: 'none' }}>
+                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2, border: 'none', fontSize: 16 }}>
                     <div>{j}</div>
                     {getDateJour(idx) && <div style={{ fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
                   </th>
@@ -1021,9 +1021,9 @@ export default function TCF() {
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, border: 'none' }}>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, border: 'none', fontSize: 16 }}>
                       <div>{moment.label}</div>
-                      <div style={{ fontWeight: 400, color: '#475569', marginTop: 1 }}>
+                      <div style={{ fontWeight: 400, color: '#475569', marginTop: 1, fontSize: 16 }}>
                         {moment.id === 'matin'
                           ? `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`
                           : `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`}
@@ -1034,13 +1034,13 @@ export default function TCF() {
                       if (!actif) return <td key={`${j}-${moment.id}`} style={{ ...styles.dayInactiveCell, border: 'none' }}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px', border: 'none' }}>
+                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px', border: 'none', fontSize: 16 }}>
                           <div style={{ ...styles.pastillesWrap, justifyContent: 'center', gap: 3 }}>
                             {classesCell.length === 0
-                              ? <span style={{ fontSize: 9, color: '#cbd5e1' }}>—</span>
+                              ? <span style={{ fontSize: 16, color: '#cbd5e1' }}>—</span>
                               : classesCell.map(cid => {
                                 const cl = classes.find(c => String(c.id) === String(cid));
-                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default', padding: '2px 6px', fontSize: 9 }}>{cl?.nom || cid}</span>;
+                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default', padding: '2px 6px', fontSize: 16 }}>{cl?.nom || cid}</span>;
                               })}
                           </div>
                         </td>
