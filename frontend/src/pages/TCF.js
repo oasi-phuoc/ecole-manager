@@ -998,19 +998,19 @@ export default function TCF() {
     };
     return (
       <>
-        <div style={styles.tableWrap}>
-          <table style={styles.tablePool}>
+        <div style={{ ...styles.tableWrap, overflowX: 'hidden', display: 'inline-block', width: '100%' }}>
+          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'auto', borderCollapse: 'collapse' }}>
             <colgroup>
-              <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
-              {JOURS.map(j => <col key={j} style={{ width: 'auto' }} />)}
+              <col style={{ width: '1px' }} />
+              {JOURS.map(j => <col key={j} />)}
             </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={styles.thCenter}></th>
+                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1 }}></th>
                 {JOURS.map((j, idx) => (
-                  <th key={j} style={styles.thCenter}>
+                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2 }}>
                     <div>{j}</div>
-                    {getDateJour(idx) && <div style={{ fontSize: 10, fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
+                    {getDateJour(idx) && <div style={{ fontSize: 9, fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
                   </th>
                 ))}
               </tr>
@@ -1019,9 +1019,9 @@ export default function TCF() {
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, width: 1, whiteSpace: 'nowrap' }}>
                       <div>{moment.label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 400, color: '#475569', marginTop: 2 }}>
+                      <div style={{ fontSize: 9, fontWeight: 400, color: '#475569', marginTop: 1 }}>
                         {moment.id === 'matin'
                           ? `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`
                           : `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`}
@@ -1032,13 +1032,13 @@ export default function TCF() {
                       if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={styles.tdCenter}>
-                          <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px' }}>
+                          <div style={{ ...styles.pastillesWrap, justifyContent: 'center', gap: 3 }}>
                             {classesCell.length === 0
-                              ? <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
+                              ? <span style={{ fontSize: 9, color: '#cbd5e1' }}>—</span>
                               : classesCell.map(cid => {
                                 const cl = classes.find(c => String(c.id) === String(cid));
-                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default' }}>{cl?.nom || cid}</span>;
+                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default', padding: '2px 6px', fontSize: 9 }}>{cl?.nom || cid}</span>;
                               })}
                           </div>
                         </td>
@@ -1967,6 +1967,31 @@ export default function TCF() {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">${parts.join('')}</svg>`;
   };
 
+  const convocationRef = useRef(null);
+
+  const printConvocation = () => {
+    const content = convocationRef.current;
+    if (!content) return;
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+        @page { size: A4 portrait; margin: 15mm 20mm; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        div { overflow: visible !important; }
+        table { border-collapse: collapse; width: 100% !important; table-layout: fixed; }
+        col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
+        th, td { border: 1px solid #e2e8f0; padding: 4px 2px; font-size: 9px; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+        thead tr { background: #6366f1 !important; color: white !important; }
+        thead th { background: #6366f1 !important; color: white !important; }
+      </style>
+    </head><body>${content.innerHTML}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
   const printCharts = (charts, isFr, maxScore) => {
     const titleMain = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
@@ -2708,7 +2733,7 @@ export default function TCF() {
             </>
           )}
           {onglet === 'plannings' && (
-            <button type="button" onClick={() => window.print()} style={styles.btnAjouter}>🖨️ Imprimer</button>
+            <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Imprimer</button>
           )}
           {onglet === 'graphique' && graphVue !== 'moyenne' && (
             <>
@@ -2844,10 +2869,10 @@ export default function TCF() {
                 ))}
               </div>
             </div>
-            <div style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
               {/* En-tête */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
                   <div style={{ fontSize: 8, lineHeight: 1.5, color: '#334155' }}>
@@ -2856,12 +2881,12 @@ export default function TCF() {
                     <div>Centre de formation "Le Botza"</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 8, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 12, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   Vétroz, le {new Date().toLocaleDateString('fr-CH')}
                 </div>
               </div>
               {/* Titre */}
-              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 100, color: '#0f172a' }}>
+              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 60, marginTop: 60, color: '#0f172a' }}>
                 {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
               </div>
               {/* Contenu */}
@@ -2883,7 +2908,7 @@ export default function TCF() {
                     <p style={{ ...p, fontWeight: 700, fontSize: 14 }}>Informations importantes</p>
                     <p style={p}>
                       Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus.
-                      Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.{' '}
+                      Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.<br />
                       <strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.
                     </p>
                     <p style={p}>
@@ -2892,13 +2917,13 @@ export default function TCF() {
                     <hr style={hr} />
                     <p style={p}>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
                     <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
-                    <p style={{ ...p, fontWeight: 700, marginTop: 50, textAlign: 'right' }}>La direction</p>
+                    <p style={{ ...p, fontWeight: 700, marginTop: 50, paddingLeft: '9cm' }}>La direction</p>
                   </div>
                 );
               })()
               : renderRolesReadOnly(sitePlan)}
               {/* Pied de page */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 28, paddingTop: 10, fontSize: 8, color: '#64748b' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 8, color: '#64748b' }}>
                 <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                 <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
               </div>
