@@ -1500,7 +1500,7 @@ const s = {
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:110,minWidth:110,textAlign:'center',border:'none',cursor:'pointer',outline:'none',lineHeight:1},
   subTabBtnActif:{background:'#4f46e5',color:'white',boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
-  tabSearch:{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'#f1f5f9',outline:'none',fontSize:14,width:280,color:'#475569',fontFamily:'inherit'},
+  tabSearch:{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'},
   chip:{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:600},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},

@@ -494,7 +494,7 @@ export default function Eleves() {
       </div>
       <div style={{marginTop:15,marginBottom:12}}>
         <input
-          style={{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'#f1f5f9',outline:'none',fontSize:14,width:280,color:'#475569',fontFamily:'inherit'}}
+          style={{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'}}
           placeholder="Rechercher un élève, une classe..."
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
