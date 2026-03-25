@@ -110,6 +110,7 @@ export default function TCF() {
   const [siteOrder, setSiteOrder] = useState(['site1', 'site2']);
   const [siteCounter, setSiteCounter] = useState(2);
   const [siteActif, setSiteActif] = useState('site1');
+  const [planningsSousOnglet, setPlanningsSousOnglet] = useState(null);
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
   const [poolDirty, setPoolDirty] = useState(false);
@@ -2553,11 +2554,45 @@ export default function TCF() {
 
         {onglet === 'roles' && renderRoles()}
 
-        {onglet === 'plannings' && (
-          <div style={{ padding: '24px 0', color: '#64748b', textAlign: 'center', fontSize: 14 }}>
-            En cours de développement
-          </div>
-        )}
+        {onglet === 'plannings' && (() => {
+          const sousOnglets = [
+            ...siteOrder.map((sk, idx) => ({ id: sk, label: siteNames[sk] || `Site ${idx + 1}`, type: 'site' })),
+            { id: 'classes', label: 'Classes', type: 'special' },
+            { id: 'roles', label: 'Rôles', type: 'special' },
+          ];
+          const actif = planningsSousOnglet || sousOnglets[0]?.id || '';
+          return (
+            <div>
+              <div style={{ display: 'flex', gap: 0, marginBottom: 0 }}>
+                {sousOnglets.map(so => (
+                  <button key={so.id} type="button"
+                    onClick={() => { setPlanningsSousOnglet(so.id); if (so.type === 'site') setSiteActif(so.id); }}
+                    style={{ ...styles.subTabBtn, ...(actif === so.id ? styles.subTabBtnActif : {}) }}>
+                    {so.label}
+                  </button>
+                ))}
+              </div>
+              <div>
+                {sousOnglets.find(so => so.id === actif)?.type === 'site' && renderSelectionSite(actif, '', true)}
+                {actif === 'classes' && (
+                  <div>
+                    <div style={{ display: 'flex', gap: 0, marginBottom: 14, marginTop: 0 }}>
+                      {siteOrder.map((sk, idx) => (
+                        <button key={`plan-cls-${sk}`} type="button"
+                          onClick={() => setSiteActif(sk)}
+                          style={{ ...styles.subTabBtn, ...(siteActif === sk ? styles.subTabBtnActif : {}) }}>
+                          {siteNames[sk] || `Site ${idx + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                    {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
+                  </div>
+                )}
+                {actif === 'roles' && renderRoles()}
+              </div>
+            </div>
+          );
+        })()}
 
         {onglet === 'resultat' && renderResultat()}
 
