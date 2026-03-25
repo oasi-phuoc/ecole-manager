@@ -787,7 +787,7 @@ export default function TCF() {
                 setAffectationDirty(true);
                 setAffectationDateDebutBySite(prev => ({ ...prev, [siteKey]: e.target.value }));
               }}
-              style={styles.select}
+              style={styles.inputField}
             />
           </label>
           <label style={styles.inlineLabel}>
@@ -796,13 +796,13 @@ export default function TCF() {
               type="time"
               value={getHoraireSite(siteKey, 'matinDebut')}
               onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)}
-              style={styles.select}
+              style={styles.inputField}
             />
             <input
               type="time"
               value={getHoraireSite(siteKey, 'matinFin')}
               onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)}
-              style={styles.select}
+              style={styles.inputField}
             />
           </label>
           <label style={styles.inlineLabel}>
@@ -811,13 +811,13 @@ export default function TCF() {
               type="time"
               value={getHoraireSite(siteKey, 'apresMidiDebut')}
               onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)}
-              style={styles.select}
+              style={styles.inputField}
             />
             <input
               type="time"
               value={getHoraireSite(siteKey, 'apresMidiFin')}
               onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)}
-              style={styles.select}
+              style={styles.inputField}
             />
           </label>
         </div>
@@ -3186,6 +3186,7 @@ const styles = {
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer' },
+  inputField: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, color: '#1e293b', fontFamily: 'inherit' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
