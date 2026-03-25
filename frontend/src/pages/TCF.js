@@ -2426,12 +2426,16 @@ export default function TCF() {
         <button onClick={() => navigate('/dashboard')} style={styles.btnBack}>← Retour</button>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {onglet === 'pool' && (
-            <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
-          )}
           {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
             <>
-              {saveToast && <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✅ {saveToast}</span>}
+              {saveToast && (
+                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4f46e5' }}>
+                  {saveToast}
+                </span>
+              )}
+              {onglet === 'pool' && (
+                <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
+              )}
               <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
             </>
           )}
