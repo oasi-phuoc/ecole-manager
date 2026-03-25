@@ -1992,6 +1992,7 @@ export default function TCF() {
         .conv-footer, .conv-footer * { font-size: 6pt !important; }
         .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
         .conv-date { font-size: 10pt !important; }
+        .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
       </style>
     </head><body>${html}</body></html>`);
     win.document.close();
@@ -2925,7 +2926,7 @@ export default function TCF() {
                     <hr style={hr} />
                     <p style={p}>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
                     <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
-                    <p style={{ ...p, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</p>
+                    <p className="conv-direction" style={{ ...p, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</p>
                   </div>
                 );
               })()
