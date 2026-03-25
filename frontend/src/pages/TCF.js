@@ -2563,11 +2563,11 @@ export default function TCF() {
           const actif = planningsSousOnglet || sousOnglets[0]?.id || '';
           return (
             <div>
-              <div style={{ display: 'flex', gap: 0, marginBottom: 0 }}>
-                {sousOnglets.map(so => (
+              <div style={{ display: 'flex', gap: 0, marginBottom: 0, alignItems: 'flex-end' }}>
+                {sousOnglets.map((so, idx) => (
                   <button key={so.id} type="button"
                     onClick={() => { setPlanningsSousOnglet(so.id); if (so.type === 'site') setSiteActif(so.id); }}
-                    style={{ ...styles.subTabBtn, ...(actif === so.id ? styles.subTabBtnActif : {}) }}>
+                    style={{ ...styles.subTabBtn, ...(actif === so.id ? styles.subTabBtnActif : {}), ...(so.type === 'special' && idx > 0 && sousOnglets[idx - 1]?.type === 'site' ? { marginLeft: 15 } : {}) }}>
                     {so.label}
                   </button>
                 ))}
