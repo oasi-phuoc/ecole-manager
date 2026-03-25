@@ -999,7 +999,7 @@ export default function TCF() {
     return (
       <>
         <div style={{ ...styles.tableWrap, overflowX: 'hidden', width: '100%' }}>
-          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', minWidth: 0 }}>
             <colgroup>
               <col style={{ width: '105px' }} />
               {JOURS.map(j => <col key={j} />)}
@@ -2917,7 +2917,7 @@ export default function TCF() {
                     <hr style={hr} />
                     <p style={p}>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
                     <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
-                    <p style={{ ...p, fontWeight: 700, marginTop: 50, paddingLeft: '9cm' }}>La direction</p>
+                    <p style={{ ...p, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</p>
                   </div>
                 );
               })()
