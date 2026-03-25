@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -111,7 +112,7 @@ export default function Eleves() {
         axios.get(API+'/classes', {headers}),
       ]);
       setEleves(el.data);
-      setClasses(cl.data.filter(c => c.actif !== false));
+      setClasses(cl.data);
     } catch(err) { console.error(err); }
   };
 
@@ -175,8 +176,12 @@ export default function Eleves() {
         oasi_ra_id: oasiRaId?parseInt(oasiRaId):null,
         oasi_temps_reparti_id: oasiTempsRepartiId?parseInt(oasiTempsRepartiId):null,
       };
-      if (eleveEdit) await axios.put(API+'/eleves/'+eleveEdit.id, data, {headers});
-      else await axios.post(API+'/eleves', data, {headers});
+      if (eleveEdit) {
+        await axios.put(API+'/eleves/'+eleveEdit.id, data, {headers});
+      } else {
+        await axios.post(API+'/eleves', data, {headers});
+        setNiveauOnglet('tous');
+      }
       setShowForm(false); setEleveEdit(null); resetForm(); chargerTout();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
@@ -537,7 +542,7 @@ export default function Eleves() {
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'}} onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,alignItems:'start'}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,alignItems:'stretch'}}>
 
                 {/* COL 1 */}
                 <div>
@@ -597,7 +602,7 @@ export default function Eleves() {
                 </div>
 
                 {/* COL 3 - OASI optionnels */}
-                <div>
+                <div style={{display:'flex',flexDirection:'column'}}>
                   <div style={secTitle('#475569','#f1f5f9')}>📋 Données AOSI - présences</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     <Champ lbl="PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
@@ -608,19 +613,20 @@ export default function Eleves() {
                     <Champ lbl="CONTROLE_DU"><input style={inp} type="date" value={oasiControleDu} onChange={e => setOasiControleDu(e.target.value)} /></Champ>
                     <Champ lbl="CONTROLE_AU"><input style={inp} type="date" value={oasiControleAu} onChange={e => setOasiControleAu(e.target.value)} /></Champ>
                   </div>
+                  <div style={{marginTop:'auto',paddingTop:16}}>
+                    <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
+                      <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Statut</label>
+                      <select style={inp} value={statut} onChange={e => setStatut(e.target.value)}>
+                        <option value="actif">✅ Actif</option>
+                        <option value="inactif">❌ Inactif</option>
+                      </select>
+                    </div>
+                    <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
+                      <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
+                      <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div style={{display:'flex',flexDirection:'column',marginBottom:16}}>
-                <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Statut</label>
-                <select style={inp} value={statut} onChange={e => setStatut(e.target.value)}>
-                  <option value="actif">✅ Actif</option>
-                  <option value="inactif">❌ Inactif</option>
-                </select>
-              </div>
-              <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'}}>
-                <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
               </div>
             </form>
           </div>

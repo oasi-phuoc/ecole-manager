@@ -94,12 +94,11 @@ const getNotesEvaluation = async (req, res) => {
 
     const eleves = await pool.query(`
       SELECT e.id,
-        COALESCE(e.nom, u.nom) as nom,
-        COALESCE(e.prenom, u.prenom) as prenom
+        u.nom, u.prenom
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       WHERE e.classe_id = $1 AND LOWER(e.statut) = 'actif'
-      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+      ORDER BY u.nom, u.prenom
     `, [evaluation.rows[0].classe_id]);
 
     const notes = await pool.query('SELECT * FROM notes WHERE evaluation_id = $1', [eval_id]);
@@ -162,11 +161,11 @@ const getBulletin = async (req, res) => {
   try {
     const { classe_id, semestre } = req.query;
     const eleves = await pool.query(`
-      SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom, e.date_debut_cours
+      SELECT e.id, u.nom, u.prenom, e.date_debut_cours
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
-      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+      ORDER BY u.nom, u.prenom
     `, [classe_id]);
 
     const matieres = await pool.query('SELECT * FROM matieres ORDER BY nom');
@@ -215,11 +214,11 @@ const getRapportClasse = async (req, res) => {
   const { classe_id, semestre } = req.query;
   try {
     const elevesRes = await pool.query(`
-      SELECT e.id, COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom
+      SELECT e.id, u.nom, u.prenom
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
-      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+      ORDER BY u.nom, u.prenom
     `, [classe_id]);
 
     const evalsParams = [classe_id];

@@ -134,14 +134,13 @@ const getStatistiques = async (req, res) => {
         const elevesRes = await safeQuery(`
           SELECT
             e.id,
-            COALESCE(e.nom, u.nom) as nom,
-            COALESCE(e.prenom, u.prenom) as prenom,
+            u.nom, u.prenom,
             pv.p1, pv.p2, pv.p3, pv.p4, pv.p5, pv.p6, pv.p7, pv.p8
           FROM eleves e
           LEFT JOIN utilisateurs u ON u.id = e.utilisateur_id
           LEFT JOIN presences_v2 pv ON pv.eleve_id = e.id AND pv.date = CURRENT_DATE
           WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
-          ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+          ORDER BY u.nom, u.prenom
         `, [cl.id], []);
 
         const eleves = elevesRes.rows.map(el => {
@@ -181,8 +180,8 @@ const getStatistiques = async (req, res) => {
           ev.nom as evaluation_nom,
           m.nom as matiere,
           c.nom as classe,
-          COALESCE(e.nom, ue.nom) as eleve_nom,
-          COALESCE(e.prenom, ue.prenom) as eleve_prenom
+          ue.nom as eleve_nom,
+          ue.prenom as eleve_prenom
         FROM notes n
         JOIN evaluations ev ON ev.id = n.evaluation_id
         LEFT JOIN matieres m ON m.id = ev.matiere_id
@@ -210,8 +209,8 @@ const getStatistiques = async (req, res) => {
           o.titre,
           o.contenu,
           c.nom as classe,
-          COALESCE(e.nom, ue.nom) as eleve_nom,
-          COALESCE(e.prenom, ue.prenom) as eleve_prenom
+          ue.nom as eleve_nom,
+          ue.prenom as eleve_prenom
         FROM observations o
         JOIN eleves e ON e.id = o.eleve_id
         LEFT JOIN utilisateurs ue ON ue.id = e.utilisateur_id

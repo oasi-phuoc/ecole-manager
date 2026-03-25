@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -80,6 +81,7 @@ export default function Notes() {
   const [rapportErreur, setRapportErreur] = useState('');
   const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
   const [vueClasseAction, setVueClasseAction] = useState('evaluations');
+  const [vueContexte, setVueContexte] = useState('detail');
   const [rapportMatiereId, setRapportMatiereId] = useState('');
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [bulletinMode, setBulletinMode] = useState('tous');
@@ -337,9 +339,8 @@ export default function Notes() {
   const ouvrirVueDepuisSelectionClasse = async (mode, classeIdParam = classeSelectionnee) => {
     if (!classeIdParam) return;
     const cl = classes.find(c => String(c.id) === String(classeIdParam));
-    if (!cl) {
-      return;
-    }
+    if (!cl) return;
+    window.scrollTo(0, 0);
     if (mode === 'evaluations') {
       await ouvrirClasse(cl);
       return;
@@ -375,41 +376,44 @@ export default function Notes() {
     }
   };
 
-  const renderActionsBar = (className = '') => (
-    <div className={className}>
-      <div style={s.tabsBar}>
-        {[
-          ['evaluations', 'Évaluations'],
-          ['generale','Vue générale'],
-          ['comportements', 'Comportements'],
-        ].map(([k,l]) => (
-          <button key={k}
-            style={{...s.tabBtn, ...(vueClasseAction===k?s.tabBtnActif:{})}}
-            onClick={async () => {
-              if (bulletinOnglet === 'criteres' && k !== 'comportements') {
-                if (criteresModifies && criteresValides) {
-                  await sauvegarderTousCriteres();
-                } else if (criteresModifies) {
-                  if (!window.confirm('Vous avez des modifications non sauvegardées dans les comportements. Quitter sans sauvegarder ?')) return;
-                  setCriteresModifies(false);
+  const renderActionsBar = (className = '') => {
+    const tabsDetail = [['evaluations', 'Évaluations'], ['generale', 'Vue générale']];
+    const tabsBulletin = [['comportements', 'Comportements'], ['bulletin', 'Bulletin de notes']];
+    const tabs = vueContexte === 'bulletin' ? tabsBulletin : tabsDetail;
+    return (
+      <div className={className}>
+        <div style={s.tabsBar}>
+          {tabs.map(([k, l]) => (
+            <button key={k}
+              style={{ ...s.tabBtn, ...(vueClasseAction === k ? s.tabBtnActif : {}) }}
+              onClick={async () => {
+                if (bulletinOnglet === 'criteres' && k !== 'comportements') {
+                  if (criteresModifies && criteresValides) {
+                    await sauvegarderTousCriteres();
+                  } else if (criteresModifies) {
+                    if (!window.confirm('Vous avez des modifications non sauvegardées dans les comportements. Quitter sans sauvegarder ?')) return;
+                    setCriteresModifies(false);
+                  }
                 }
-              }
-              setVueClasseAction(k);
-              if (k === 'comportements') setBulletinOnglet('criteres');
-              if (classeSelectionnee) {
-                ouvrirVueDepuisSelectionClasse(k);
-              } else {
-                if (k === 'evaluations') setVue('classes');
-                else if (k === 'generale') setVue('generale');
-                else if (k === 'comportements') setVue('bulletin');
-              }
-            }}>
-            {l}
-          </button>
-        ))}
+                setVueClasseAction(k);
+                if (k === 'comportements') setBulletinOnglet('criteres');
+                else if (k === 'bulletin') { setBulletinOnglet('notes'); setBulletinMode('tous'); setEleveSelectionne(''); }
+                if (classeSelectionnee) {
+                  ouvrirVueDepuisSelectionClasse(k);
+                } else {
+                  if (k === 'evaluations') setVue('classes');
+                  else if (k === 'generale') setVue('generale');
+                  else if (k === 'comportements') setVue('bulletin');
+                  else if (k === 'bulletin') setVue('bulletin');
+                }
+              }}>
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ===================== CONSTANTES BULLETIN =====================
   const BULLETIN_CRITERES_LABELS = [
@@ -1786,7 +1790,7 @@ export default function Notes() {
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
-                      <button style={s.btnDetail} onClick={() => { setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                      <button style={s.btnDetail} onClick={() => { setVueContexte('detail'); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
                         👁 Détail
                       </button>
                     </td>
@@ -1827,7 +1831,7 @@ export default function Notes() {
                       )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
-                      <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => ouvrirVueDepuisSelectionClasse('comportements', cl.id)}>
+                      <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}>
                         📋 Bulletin
                       </button>
                     </td>

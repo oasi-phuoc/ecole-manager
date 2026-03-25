@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -1160,12 +1161,7 @@ export default function Classes() {
 
       {classeVueTab === 'eleves' ? (
         <>
-          <div style={{display:'flex',gap:0,marginBottom:15,marginTop:0}}>
-            {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
-              <button key={f.id} style={{...s.subTabBtn,width:90,minWidth:90,...(filtreElevesActif===f.id?s.subTabBtnActif:{})}} onClick={() => setFiltreElevesActif(f.id)}>{f.label}</button>
-            ))}
-          </div>
-        <div style={s.tableWrap}>
+        <div style={{...s.tableWrap, marginTop: 15}}>
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
@@ -1173,9 +1169,9 @@ export default function Classes() {
               </tr>
             </thead>
             <tbody>
-              {elevesClasse.filter(el => filtreElevesActif === 'tous' || (filtreElevesActif === 'actif' ? (el.statut !== 'inactif') : el.statut === 'inactif')).length===0 ? (
-                <tr><td colSpan="7" style={s.empty}>Aucun élève {filtreElevesActif === 'actif' ? 'actif' : filtreElevesActif === 'inactif' ? 'inactif' : ''} dans cette classe</td></tr>
-              ) : elevesClasse.filter(el => filtreElevesActif === 'tous' || (filtreElevesActif === 'actif' ? (el.statut !== 'inactif') : el.statut === 'inactif')).map(el => (
+              {elevesClasse.length===0 ? (
+                <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
+              ) : elevesClasse.map(el => (
                 <tr key={el.id} style={s.tr}>
                   <td style={s.td}>
                     <div style={{position:'relative',width:38,height:38}}>

@@ -4,14 +4,12 @@ const getEleves = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT e.*,
-        COALESCE(e.nom, u.nom) as nom,
-        COALESCE(e.prenom, u.prenom) as prenom,
-        COALESCE(e.email, u.email) as email,
+        u.nom, u.prenom, u.email,
         c.nom as classe_nom
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id
-      ORDER BY COALESCE(e.nom, u.nom), COALESCE(e.prenom, u.prenom)
+      ORDER BY u.nom, u.prenom
     `);
     res.json(result.rows);
   } catch (err) {
@@ -42,9 +40,10 @@ const creerEleve = async (req, res) => {
     await client.query('BEGIN');
     const bcrypt = require('bcryptjs');
     const hash = await bcrypt.hash(mot_de_passe || 'Ecole123!', 10);
+    const emailFinal = email && email.trim() ? email.trim() : `eleve.${Date.now()}.${Math.random().toString(36).slice(2)}@ecole.local`;
     const userResult = await client.query(
       'INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-      [nom, prenom, email, hash, 'eleve']
+      [nom, prenom, emailFinal, hash, 'eleve']
     );
     const userId = userResult.rows[0].id;
     const eleveResult = await client.query(
@@ -86,20 +85,20 @@ const modifierEleve = async (req, res) => {
       );
     }
 
-    // Mettre à jour eleves avec tous les champs
+    // Mettre à jour eleves avec tous les champs (nom/prenom/email sont dans utilisateurs)
     await client.query(`
       UPDATE eleves SET
-        nom=$1, prenom=$2, email=$3, classe_id=$4, date_naissance=$5, date_debut_cours=$6, categorie=$7,
-        telephone=$8, adresse=$9, nom_parent=$10, telephone_parent=$11, statut=$12,
-        oasi_prog_nom=$13, oasi_prog_encadrant=$14, oasi_n=$15, oasi_ref=$16, oasi_pos=$17,
-        oasi_nom=$18, oasi_nais=$19, oasi_nationalite=$20,
-        oasi_presence_date=$21, oasi_jour_semaine=$22, oasi_presence_periode=$23,
-        oasi_presence_type=$24, oasi_remarque=$25, oasi_controle_du=$26, oasi_controle_au=$27,
-        oasi_prog_presences=$28, oasi_prog_admin=$29, oasi_as=$30,
-        oasi_prg_id=$31, oasi_prg_occupation_id=$32, oasi_ra_id=$33, oasi_temps_reparti_id=$34
-      WHERE id=$35
+        classe_id=$1, date_naissance=$2, date_debut_cours=$3, categorie=$4,
+        telephone=$5, adresse=$6, nom_parent=$7, telephone_parent=$8, statut=$9,
+        oasi_prog_nom=$10, oasi_prog_encadrant=$11, oasi_n=$12, oasi_ref=$13, oasi_pos=$14,
+        oasi_nom=$15, oasi_nais=$16, oasi_nationalite=$17,
+        oasi_presence_date=$18, oasi_jour_semaine=$19, oasi_presence_periode=$20,
+        oasi_presence_type=$21, oasi_remarque=$22, oasi_controle_du=$23, oasi_controle_au=$24,
+        oasi_prog_presences=$25, oasi_prog_admin=$26, oasi_as=$27,
+        oasi_prg_id=$28, oasi_prg_occupation_id=$29, oasi_ra_id=$30, oasi_temps_reparti_id=$31
+      WHERE id=$32
     `, [
-      nom, prenom, email||null, classe_id||null, date_naissance||null, date_debut_cours||null, categorie||null,
+      classe_id||null, date_naissance||null, date_debut_cours||null, categorie||null,
       telephone||null, adresse||null, nom_parent||null, telephone_parent||null, statut||'actif',
       oasi_prog_nom||null, oasi_prog_encadrant||null,
       oasi_n?parseInt(oasi_n):null, oasi_ref?parseInt(oasi_ref):null, oasi_pos?parseInt(oasi_pos):null,
@@ -177,14 +176,15 @@ const getElevesOASI = async (req, res) => {
   try {
     const { classe_id } = req.query;
     const result = await pool.query(`
-      SELECT e.id, e.nom, e.prenom,
+      SELECT e.id, u.nom, u.prenom,
         e.oasi_prog_nom, e.oasi_prog_encadrant, e.oasi_prog_encadrant as oasi_encadrant, e.oasi_n, e.oasi_ref, e.oasi_pos,
         e.oasi_nom as oasi_nom_complet, e.oasi_nais, e.oasi_nationalite,
         e.oasi_prog_presences, e.oasi_prog_admin, e.oasi_as,
         e.oasi_prg_id, e.oasi_prg_occupation_id, e.oasi_ra_id, e.oasi_temps_reparti_id
       FROM eleves e
+      LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       WHERE e.classe_id = $1 AND (e.statut = 'actif' OR e.statut = 'Actif')
-      ORDER BY e.nom, e.prenom
+      ORDER BY u.nom, u.prenom
     `, [classe_id]);
     res.json(result.rows);
   } catch (err) {

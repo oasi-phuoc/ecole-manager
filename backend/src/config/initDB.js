@@ -228,9 +228,49 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`);
     await pool.query(`ALTER TABLE parametres_mail ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
 
+    // Table présences v2 (par période)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS presences_v2 (
+        id SERIAL PRIMARY KEY,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        date DATE NOT NULL,
+        p1 VARCHAR(5), p2 VARCHAR(5), p3 VARCHAR(5), p4 VARCHAR(5),
+        p5 VARCHAR(5), p6 VARCHAR(5), p7 VARCHAR(5), p8 VARCHAR(5),
+        remarque TEXT,
+        valide BOOLEAN DEFAULT false,
+        UNIQUE(eleve_id, date)
+      )
+    `);
+
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS categorie VARCHAR(20)`);
+
+    // Élèves: photo et champs OASI
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS photo TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prog_nom VARCHAR(200)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prog_encadrant VARCHAR(200)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_n INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_ref INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_pos INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nom VARCHAR(200)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nais VARCHAR(100)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nationalite VARCHAR(100)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_presence_date DATE`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_jour_semaine VARCHAR(50)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_presence_periode VARCHAR(100)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_presence_type VARCHAR(100)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_remarque TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_controle_du DATE`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_controle_au DATE`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prog_presences TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prog_admin TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_as TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prg_id INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_prg_occupation_id INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_ra_id INTEGER`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_temps_reparti_id INTEGER`);
 
     // Bulletin critères (comportement / compétences transversales) par élève et classe
     await pool.query(`

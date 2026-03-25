@@ -19,8 +19,7 @@ const creerObservation = async (req, res) => {
     const eleveRes = await pool.query(`
       SELECT
         e.id,
-        COALESCE(NULLIF(TRIM(e.nom), ''), NULLIF(TRIM(u.nom), '')) AS nom,
-        COALESCE(NULLIF(TRIM(e.prenom), ''), NULLIF(TRIM(u.prenom), '')) AS prenom
+        u.nom, u.prenom
       FROM eleves e
       LEFT JOIN utilisateurs u ON u.id = e.utilisateur_id
       WHERE e.id = $1

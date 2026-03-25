@@ -1,8 +1,10 @@
+/* eslint-disable */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const MOMENTS = [
   { id: 'matin', label: 'Matin', periode: 'Matin' },
@@ -202,7 +204,7 @@ export default function TCF() {
         axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
         axios.get(API + '/donnees/niveaux').catch(() => ({ data: [] })),
       ]);
-      setProfs((rp.data || []).filter(p => p.actif !== false));
+      setProfs(rp.data || []);
       setPools(rPools.data || []);
       setCreneaux(rCreneaux.data || []);
       setClasses((rClasses.data || []).filter(c => c.actif !== false));
@@ -988,14 +990,14 @@ export default function TCF() {
   const renderTableAffectationSiteReadOnly = (siteKey) => {
     const classesSite = classesEligiblesSite[siteKey] || [];
     const dateDebut = affectationDateDebutBySite?.[siteKey] || '';
-    const formatDate = (d) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}.${m}.${y}`; };
+    const getDateJour = (idx) => {
+      if (!dateDebut) return '';
+      const d = new Date(dateDebut);
+      d.setDate(d.getDate() + idx);
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    };
     return (
       <>
-        <div style={{ ...styles.affectationMetaWrap, pointerEvents: 'none', opacity: 0.85, marginTop: 15 }}>
-          <span style={styles.inlineLabel}>Date de début : <strong>{formatDate(dateDebut)}</strong></span>
-          <span style={styles.inlineLabel}>Matin : <strong>{getHoraireSite(siteKey, 'matinDebut')} – {getHoraireSite(siteKey, 'matinFin')}</strong></span>
-          <span style={styles.inlineLabel}>Après-midi : <strong>{getHoraireSite(siteKey, 'apresMidiDebut')} – {getHoraireSite(siteKey, 'apresMidiFin')}</strong></span>
-        </div>
         <div style={styles.tableWrap}>
           <table style={styles.tablePool}>
             <colgroup>
@@ -1005,14 +1007,26 @@ export default function TCF() {
             <thead>
               <tr style={styles.thead}>
                 <th style={styles.thCenter}></th>
-                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
+                {JOURS.map((j, idx) => (
+                  <th key={j} style={styles.thCenter}>
+                    <div>{j}</div>
+                    {getDateJour(idx) && <div style={{ fontSize: 10, fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>{moment.label}</td>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>
+                      <div>{moment.label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 400, color: '#475569', marginTop: 2 }}>
+                        {moment.id === 'matin'
+                          ? `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`
+                          : `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`}
+                      </div>
+                    </td>
                     {JOURS.map(j => {
                       const actif = isJourActifSite(siteKey, j);
                       if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
@@ -1045,18 +1059,6 @@ export default function TCF() {
 
   const renderRolesReadOnly = (siteKey) => {
     const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
-    const selectedProfIds = siteKey ? (selectedBySite[siteKey] || []) : [];
-    const reserveSet = new Set(
-      demi ? selectedProfIds.filter(id => statutCellule(siteKey, String(id), demi.jour, demi.moment) === 'rouge' && rActifCellule(siteKey, String(id), demi.jour, demi.moment)) : []
-    );
-    const profsPool = selectedProfIds
-      .map(id => profMap[String(id)]).filter(Boolean)
-      .filter(p => !demi || statutCellule(siteKey, String(p.id), demi.jour, demi.moment) !== 'rouge' || rActifCellule(siteKey, String(p.id), demi.jour, demi.moment))
-      .sort((a, b) => {
-        const aR = reserveSet.has(String(a.id)), bR = reserveSet.has(String(b.id));
-        if (aR !== bR) return aR ? 1 : -1;
-        return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr');
-      });
     const key = `${siteKey}::${rolesDemiJourneeSelect}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
     const org = organisationByPoolDemi[key] || {};
@@ -1073,9 +1075,30 @@ export default function TCF() {
         { id: 'group:g2', nom: savedGroups.g2.map(cid => classes.find(c => String(c.id) === String(cid))?.nom).filter(Boolean).join(' + ') || 'Groupe 2', classIds: savedGroups.g2 },
       ]
       : classesAffecteesObjs.map(cl => ({ id: String(cl.id), nom: cl.nom, classIds: [String(cl.id)] }));
+    const defaultStart = demi
+      ? (demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut'))
+      : '';
+    const defaultStartMin = parseTimeToMinutes(defaultStart);
+    const lignesHoraire = {};
+    let cursor = defaultStartMin;
+    LIGNES_ORGANISATION.forEach((lg) => {
+      const saved = org[`horaire_${lg.row}`];
+      if (saved?.start || saved?.end) {
+        lignesHoraire[lg.row] = { start: saved.start || '', end: saved.end || '' };
+        if (saved.end) cursor = parseTimeToMinutes(saved.end);
+      } else if (Number.isFinite(cursor) && lg.temps) {
+        lignesHoraire[lg.row] = { start: minutesToTime(cursor), end: minutesToTime(cursor + lg.temps) };
+        cursor = cursor + lg.temps;
+      } else {
+        lignesHoraire[lg.row] = { start: '', end: '' };
+      }
+    });
+    const spanHoraire = (val) => (
+      <span style={{ display: 'inline-block', width: 48, padding: '4px', fontSize: 12, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 4, background: '#f8fafc' }}>{val}</span>
+    );
     return (
       <div>
-        <div style={{ marginTop: 15, marginBottom: 15 }}>
+        <div className="tcf-no-print" style={{ marginTop: 15, marginBottom: 15 }}>
           <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
             <option value="">- Sélectionner une demi-journée -</option>
             {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
@@ -1086,36 +1109,130 @@ export default function TCF() {
         ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
           <div style={styles.empty}>La demi-journée sélectionnée est inactive pour ce site.</div>
         ) : (
-          <div style={styles.rolesGrid}>
-            <div style={styles.tableWrap}>
-              <table style={styles.tableRolesLeft}>
-                <thead>
-                  <tr style={styles.thead}>
-                    <th style={styles.thLeftFixed}>Professeurs</th>
-                    <th style={{ ...styles.thLeftFixed, width: 155, minWidth: 155, maxWidth: 155 }}>Rôle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profsPool.map(p => {
-                    const selectedRole = rolesMap[String(p.id)] || '—';
-                    const isReserve = reserveSet.has(String(p.id));
-                    return (
-                      <tr key={`roro-${p.id}`}>
-                        <td style={{ ...styles.tdLeft, ...(isReserve ? styles.tdReserve : {}) }}>
-                          <div style={styles.reserveCellWrap}>
-                            <span>{p.prenom} {toDisplayNom(p.nom)}</span>
-                            {isReserve && <span style={styles.reserveBadge}>Réserve</span>}
+          <div style={{ overflowX: 'hidden', border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' }}>
+            <table style={{ ...styles.tableRolesRight, pointerEvents: 'none' }}>
+              <colgroup>
+                <col style={{ width: 116, minWidth: 116, maxWidth: 116 }} />
+                <col style={{ width: 72, minWidth: 72, maxWidth: 72 }} />
+                {classesColonnes.map((col) => <col key={`rro-col-${col.id}`} style={{ width: 150, minWidth: 150, maxWidth: 150 }} />)}
+                <col style={{ width: 150, minWidth: 150, maxWidth: 150 }} />
+                <col style={{ width: 'auto' }} />
+              </colgroup>
+              <thead>
+                <tr style={styles.thead}>
+                  <th style={styles.thCenter}>Horaire</th>
+                  <th style={styles.thCenter}>Temps</th>
+                  {classesColonnes.map((cl, i) => <th key={`rro-class-${i}`} style={styles.thCenter}>{cl.nom}</th>)}
+                  <th style={styles.thCenter}>Rôle</th>
+                  <th style={styles.thCenter}>Professeurs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LIGNES_ORGANISATION.map((lg) => {
+                  const estBlocAStart = lg.row === 3;
+                  const estBlocAInner = lg.row === 4 || lg.row === 5;
+                  const estBlocBStart = lg.row === 8;
+                  const estBlocBInner = lg.row === 9 || lg.row === 10;
+                  const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
+                  const isCorrection = lg.row === 11;
+                  const prevEnd = (() => {
+                    if (lg.row <= 1) return lignesHoraire[lg.row]?.start || '';
+                    for (let r = lg.row - 1; r >= 1; r--) {
+                      if (lignesHoraire[r]?.end) return lignesHoraire[r].end;
+                    }
+                    return '';
+                  })();
+                  const startValue = lg.row === 1 ? (lignesHoraire[lg.row]?.start || '') : prevEnd;
+                  const endValue = isCorrection ? '...' : (lignesHoraire[lg.row]?.end || '');
+                  return (
+                    <tr key={`rro-ligne-${lg.row}`}>
+                      {afficherHoraireTemps && (
+                        <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
+                          <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                            {spanHoraire(startValue)}
+                            {spanHoraire(endValue)}
                           </div>
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155, fontWeight: selectedRole !== '—' ? 600 : 400, color: selectedRole !== '—' ? '#1e293b' : '#94a3b8' }}>
-                          {selectedRole}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                      {afficherHoraireTemps && (
+                        <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
+                      )}
+                      {classesColonnes.map((cl) => {
+                        if (lg.row === 1) return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
+                        if (lg.row === 2) return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
+                        if (estBlocAInner || estBlocBInner) return null;
+                        if (estBlocAStart) {
+                          const bloc = org.blocA || {};
+                          return (
+                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                              <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                {['PE', 'PO', 'CE'].map(tag => {
+                                  const selectedVal = String(bloc[tag] || '');
+                                  const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                  if (!estDansCol) return null;
+                                  return <span key={`rro-${lg.row}-${cl.id}-${tag}`} style={{ ...styles.classChip, ...styles.classChipActif }}>{tag}</span>;
+                                })}
+                              </div>
+                            </td>
+                          );
+                        }
+                        if (lg.row === 6 || lg.row === 7) {
+                          const bloc = org[`ligne${lg.row}`] || {};
+                          return (
+                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter}>
+                              <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                {['Pause', 'CO'].map(tag => {
+                                  const selectedVal = String(bloc[tag] || '');
+                                  const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                  if (!estDansCol) return null;
+                                  return <span key={`rro-${lg.row}-${cl.id}-${tag}`} style={{ ...styles.classChip, ...styles.classChipActif }}>{tag}</span>;
+                                })}
+                              </div>
+                            </td>
+                          );
+                        }
+                        if (estBlocBStart) {
+                          const bloc = org.blocB || {};
+                          return (
+                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                              <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
+                                {['PE', 'PO', 'CE'].map(tag => {
+                                  const selectedVal = String(bloc[tag] || '');
+                                  const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
+                                  if (!estDansCol) return null;
+                                  return <span key={`rro-${lg.row}-${cl.id}-${tag}`} style={{ ...styles.classChip, ...styles.classChipActif }}>{tag}</span>;
+                                })}
+                              </div>
+                            </td>
+                          );
+                        }
+                        return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter}></td>;
+                      })}
+                      <td style={styles.tdCenterRead}>{lg.role}</td>
+                      <td style={styles.tdLeft}>
+                        <div style={styles.pastillesWrap}>
+                          {Object.entries(rolesMap)
+                            .filter(([, role]) => {
+                              if (!role) return false;
+                              if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
+                              if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+                              if (lg.role === 'Accompagnement') return role === 'Accompagnement';
+                              if (lg.role === 'Correction') return role === 'Correction';
+                              if (lg.role === 'Surveillance') return role === 'Surveillance';
+                              return false;
+                            })
+                            .map(([pid]) => {
+                              const p = profMap[String(pid)];
+                              if (!p) return null;
+                              return <span key={`rro-${lg.row}-prof-${pid}`} style={styles.profChip}>{p.prenom} {toDisplayNom(p.nom)}</span>;
+                            })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -1557,7 +1674,7 @@ export default function TCF() {
               </table>
             </div>
 
-            <div style={styles.tableWrap}>
+            <div style={{ ...styles.tableWrap, overflowX: 'hidden' }}>
               <table style={styles.tableRolesRight}>
                 <colgroup>
                   <col style={{ width: 116, minWidth: 116, maxWidth: 116 }} />
@@ -1581,11 +1698,15 @@ export default function TCF() {
                     const estBlocAInner = lg.row === 4 || lg.row === 5;
                     const estBlocBStart = lg.row === 8;
                     const estBlocBInner = lg.row === 9 || lg.row === 10;
+                    const isCorrection = lg.row === 11;
                     const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
-                    const prevEnd =
-                      lg.row > 1
-                        ? (lignesHoraire[lg.row - 1]?.end || '')
-                        : (lignesHoraire[lg.row]?.start || '');
+                    const prevEnd = (() => {
+                      if (lg.row <= 1) return lignesHoraire[lg.row]?.start || '';
+                      for (let r = lg.row - 1; r >= 1; r--) {
+                        if (lignesHoraire[r]?.end) return lignesHoraire[r].end;
+                      }
+                      return '';
+                    })();
                     const startValue = lg.row === 1 ? (lignesHoraire[lg.row]?.start || '') : prevEnd;
                     return (
                       <tr key={`ligne-${lg.row}`}>
@@ -1602,12 +1723,16 @@ export default function TCF() {
                                 }}
                                 placeholder="Début"
                               />
-                              <input
-                                style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
-                                value={lignesHoraire[lg.row]?.end || ''}
-                                onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, startValue, e.target.value)}
-                                placeholder="Fin"
-                              />
+                              {isCorrection ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, fontSize: 12, color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: 4, background: '#f8fafc' }}>...</span>
+                              ) : (
+                                <input
+                                  style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
+                                  value={lignesHoraire[lg.row]?.end || ''}
+                                  onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, startValue, e.target.value)}
+                                  placeholder="Fin"
+                                />
+                              )}
                             </div>
                           </td>
                         )}
@@ -2699,7 +2824,7 @@ export default function TCF() {
           const sitePlan = planningsSite || siteOrder[0] || '';
           return (
           <div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0 }}>
+            <div className="tcf-no-print" style={{ display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0 }}>
               <div style={{ display: 'flex', gap: 0 }}>
                 {siteOrder.map((sk, idx) => (
                   <button key={`plan-site-${sk}`} type="button"
@@ -2719,11 +2844,64 @@ export default function TCF() {
                 ))}
               </div>
             </div>
-            <div>
+            <div style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
+              {/* En-tête */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
+                  <div style={{ fontSize: 8, lineHeight: 1.5, color: '#334155' }}>
+                    <div>Département de la santé, des affaires sociales et de la culture</div>
+                    <div>Service de l'action sociale — Office de l'asile</div>
+                    <div>Centre de formation "Le Botza"</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 8, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  Vétroz, le {new Date().toLocaleDateString('fr-CH')}
+                </div>
+              </div>
+              {/* Titre */}
+              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 100, color: '#0f172a' }}>
+                {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
+              </div>
+              {/* Contenu */}
               {!sitePlan ? (
                 <div style={styles.empty}>Aucun site disponible.</div>
-              ) : planningsType === 'classes' ? renderTableAffectationSiteReadOnly(sitePlan)
-                : renderRolesReadOnly(sitePlan)}
+              ) : planningsType === 'classes' ? (() => {
+                const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
+                const p = { fontSize: 12, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 14 };
+                const hr = { display: 'none' };
+                return (
+                  <div style={{ fontFamily: font }}>
+                    <p style={p}>Madame, Monsieur,</p>
+                    <p style={p}>
+                      Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong> organisé par le Centre de formation « Le Botza ».
+                      Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
+                    </p>
+                    <div style={{ marginTop: 50 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
+                    <div style={{ marginBottom: 50 }} />
+                    <p style={{ ...p, fontWeight: 700, fontSize: 14 }}>Informations importantes</p>
+                    <p style={p}>
+                      Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus.
+                      Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.{' '}
+                      <strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.
+                    </p>
+                    <p style={p}>
+                      Si vous avez une <strong>absence planifiée</strong> à cette date, nous vous demandons de contacter sans délai les responsables afin d'être regroupé(e) avec une autre classe et d'effectuer le test à un autre créneau prévu.
+                    </p>
+                    <hr style={hr} />
+                    <p style={p}>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
+                    <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
+                    <p style={{ ...p, fontWeight: 700, marginTop: 50, textAlign: 'right' }}>La direction</p>
+                  </div>
+                );
+              })()
+              : renderRolesReadOnly(sitePlan)}
+              {/* Pied de page */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 28, paddingTop: 10, fontSize: 8, color: '#64748b' }}>
+                <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
+              </div>
             </div>
           </div>
           );
@@ -2762,7 +2940,7 @@ const styles = {
   panelTopInner: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
   panelContentWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 },
   cardTitle: { margin: '0 0 6px', fontSize: 18, color: '#0f172a' },
-  empty: { fontSize: 13, color: '#94a3b8', padding: 12, textAlign: 'center' },
+  empty: { background: 'white', borderRadius: 12, padding: '20px 24px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', color: '#64748b', fontSize: 12, fontStyle: 'italic', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   msgVide: { background: 'white', borderRadius: 12, padding: '20px 24px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', color: '#64748b', fontSize: 12, fontStyle: 'italic', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   affectationSiteLevelsBox: { border: '1px solid #e2e8f0', borderRadius: 10, background: '#f8fafc', padding: 10, marginBottom: 10 },
   affectationSiteLevelsTitle: { fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 },

@@ -14,12 +14,12 @@ const chatbot = async (req, res) => {
 
     // Students
     const elevesRes = await pool.query(`
-      SELECT COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom,
+      SELECT u.nom, u.prenom,
         e.date_naissance, c.nom as classe, COALESCE(e.statut,'actif') as statut
       FROM eleves e
       LEFT JOIN utilisateurs u ON u.id = e.utilisateur_id
       LEFT JOIN classes c ON c.id = e.classe_id
-      ORDER BY c.nom, nom, prenom
+      ORDER BY c.nom, u.nom, u.prenom
       LIMIT 200
     `);
     if (elevesRes.rows.length > 0) {
@@ -33,7 +33,7 @@ const chatbot = async (req, res) => {
     // Today's presences
     const today = new Date().toISOString().split('T')[0];
     const presRes = await pool.query(`
-      SELECT COALESCE(e.nom, u.nom) as nom, COALESCE(e.prenom, u.prenom) as prenom,
+      SELECT u.nom, u.prenom,
         c.nom as classe, pv.p1, pv.p2, pv.p3, pv.p4
       FROM presences_v2 pv
       JOIN eleves e ON e.id = pv.eleve_id
