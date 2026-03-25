@@ -1972,7 +1972,8 @@ export default function TCF() {
   const printConvocation = () => {
     const content = convocationRef.current;
     if (!content) return;
-    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const html = content.innerHTML
+      .replace('Convocation — Test de connaissance du français', 'Convocation<br>Test de connaissance du français');
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
       <style>
@@ -1986,8 +1987,11 @@ export default function TCF() {
         th, td { border: 1px solid #e2e8f0; padding: 4px 2px; font-size: 9px; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
         thead tr { background: #6366f1 !important; color: white !important; }
         thead th { background: #6366f1 !important; color: white !important; }
+        p { font-size: 12pt !important; text-align: justify !important; }
+        .conv-entete, .conv-entete * { font-size: 8pt !important; }
+        .conv-footer, .conv-footer * { font-size: 8pt !important; }
       </style>
-    </head><body>${content.innerHTML}</body></html>`);
+    </head><body>${html}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -2872,7 +2876,7 @@ export default function TCF() {
             <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
               {/* En-tête */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
+              <div className="conv-entete" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
                   <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
@@ -2923,7 +2927,7 @@ export default function TCF() {
               })()
               : renderRolesReadOnly(sitePlan)}
               {/* Pied de page */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 12, color: '#64748b' }}>
+              <div className="conv-footer" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 12, color: '#64748b' }}>
                 <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                 <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
               </div>
