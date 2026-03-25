@@ -2228,7 +2228,7 @@ export default function TCF() {
           const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
           if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
           const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
-        }).filter(s => s.hasData).map(s => ({ ...s, label: s.session }));
+        }).filter(s => s.hasData).map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session }));
         return {
           label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`,
           series,
@@ -2267,7 +2267,7 @@ export default function TCF() {
         const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
         printCharts([{
           label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`,
-          series: sessionsIndiv.map(s => ({ ...s, label: s.session })),
+          series: sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
           nom: toDisplayNom(e?.nom || ''),
           prenom: e?.prenom || '',
           classe,
@@ -2292,7 +2292,7 @@ export default function TCF() {
         const classe = classesMap[String(e.classe_id)]?.nom || '';
         return {
           label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`,
-          series: series.map(s => ({ ...s, label: s.session })),
+          series: series.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
           nom: toDisplayNom(e.nom),
           prenom: e.prenom || '',
           classe,
@@ -2529,7 +2529,7 @@ export default function TCF() {
         {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cet élève.</div>}
         {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(
-          sessionsIndiv.map(s => ({ ...s, label: s.session })),
+          sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
           {
             showTrend: true,
             niveau: niveauIndividuel,
@@ -2845,7 +2845,7 @@ export default function TCF() {
                     const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
                   }).filter(s => s.hasData);
                   const classe = classesMap[String(e.classe_id)]?.nom || '';
-                  return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series: series.map(s => ({ ...s, label: s.session })), nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe, niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''), showTrend: true };
+                  return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series: series.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })), nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe, niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''), showTrend: true };
                 }).filter(c => c.series.length > 0);
                 if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
                 printCharts(charts, isFr, maxScore);
@@ -2863,11 +2863,11 @@ export default function TCF() {
                   const e = eleves.find(ev => String(ev.id) === graphEleveId);
                   const classe = classesMap[String(e?.classe_id)]?.nom || '';
                   const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
-                  printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv.map(s => ({ ...s, label: s.session })), nom: toDisplayNom(e?.nom || ''), prenom: e?.prenom || '', classe, niveau, showTrend: true }], isFr, maxScore);
+                  printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })), nom: toDisplayNom(e?.nom || ''), prenom: e?.prenom || '', classe, niveau, showTrend: true }], isFr, maxScore);
                 } else if (graphVue === 'classe' && graphClasseId && graphSession) {
                   const elevesClasseFiltres = eleves.filter(e => String(e.classe_id) === String(graphClasseId)).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
                   const classe = classes.find(c => String(c.id) === graphClasseId);
-                  const charts = elevesClasseFiltres.map(e => { const series = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, String(e.id)); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData).map(s => ({ ...s, label: s.session })); return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`, series, nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: true }; }).filter(c => c.series.length > 0);
+                  const charts = elevesClasseFiltres.map(e => { const series = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, String(e.id)); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData).map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })); return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`, series, nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: true }; }).filter(c => c.series.length > 0);
                   if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
                   printCharts(charts, isFr, maxScore);
                 }
