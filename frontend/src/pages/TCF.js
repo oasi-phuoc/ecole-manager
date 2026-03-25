@@ -188,39 +188,29 @@ export default function TCF() {
   useEffect(() => {
     const charger = async () => {
       setChargement(true);
-      try {
-        const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres, rNiveaux] = await Promise.all([
-          axios.get(API + '/profs', { headers }),
-          axios.get(API + '/planning/pools', { headers }),
-          axios.get(API + '/planning/creneaux', { headers }),
-          axios.get(API + '/planning/general', { headers }),
-          axios.get(API + '/classes', { headers }),
-          axios.get(API + '/eleves', { headers }),
-          axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
-          axios.get(API + '/donnees/niveaux').catch(() => ({ data: [] })),
-        ]);
-        setProfs((rp.data || []).filter(p => p.actif !== false));
-        setPools(rPools.data || []);
-        setCreneaux(rCreneaux.data || []);
-        setClasses((rClasses.data || []).filter(c => c.actif !== false));
-        setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
-        setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
-        setNiveauxDB(rNiveaux.data || []);
+      const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres, rNiveaux] = await Promise.all([
+        axios.get(API + '/profs', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/planning/pools', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/planning/creneaux', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/planning/general', { headers }).catch(() => ({ data: {} })),
+        axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
+        axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
+        axios.get(API + '/donnees/niveaux').catch(() => ({ data: [] })),
+      ]);
+      setProfs((rp.data || []).filter(p => p.actif !== false));
+      setPools(rPools.data || []);
+      setCreneaux(rCreneaux.data || []);
+      setClasses((rClasses.data || []).filter(c => c.actif !== false));
+      setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
+      setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
+      setNiveauxDB(rNiveaux.data || []);
 
-        const dMap = {};
-        (rGeneral.data?.dispos || []).forEach(d => {
-          dMap[`${d.prof_id}-${d.creneau_id}`] = d.disponible;
-        });
-        setDisposMap(dMap);
-      } catch (err) {
-        setProfs([]);
-        setPools([]);
-        setCreneaux([]);
-        setClasses([]);
-        setEleves([]);
-        setAnneeScolaire('');
-        setDisposMap({});
-      }
+      const dMap = {};
+      (rGeneral.data?.dispos || []).forEach(d => {
+        dMap[`${d.prof_id}-${d.creneau_id}`] = d.disponible;
+      });
+      setDisposMap(dMap);
 
       const poolLocal = lireObjetLocal('tcf_pool_state');
       const rsLocal = lireObjetLocal('tcf_resultats_scores');
