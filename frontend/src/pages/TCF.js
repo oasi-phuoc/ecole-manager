@@ -3034,7 +3034,7 @@ export default function TCF() {
                     })()}
                     <div ref={tableConvocationRef} style={{ marginTop: 25 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
                     <div style={{ marginBottom: 25 }} />
-                    <p style={{ ...p, fontWeight: 700, fontSize: 14 }}>Informations importantes</p>
+                    <p style={{ ...p, fontWeight: 700 }}>Informations importantes</p>
                     <p style={p}>
                       Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus.
                       Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.
