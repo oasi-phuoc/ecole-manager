@@ -2031,7 +2031,7 @@ export default function TCF() {
             <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
           </div>
         </div>
-        <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;margin-top:60px;color:#0f172a;">
+        <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px;margin-top:60px;color:#0f172a;">
           Convocation<br>Test de connaissance du français
         </div>
         <div class="conv-date" style="text-align:right;margin-bottom:40px;">Vétroz, le ${dateVetroz}</div>
@@ -2998,7 +2998,7 @@ export default function TCF() {
                 </div>
               </div>
               {/* Titre */}
-              <div className="conv-titre" style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 20, marginTop: 60, color: '#0f172a' }}>
+              <div className="conv-titre" style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 40, marginTop: 60, color: '#0f172a' }}>
                 {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
               </div>
               {/* Date sous le titre */}
