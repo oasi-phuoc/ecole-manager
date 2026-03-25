@@ -12,6 +12,7 @@ const MOMENTS = [
 ];
 const SESSIONS = ["Test d'août", '1e semestre', '2e semestre'];
 const SESSIONS_COMPAT = ["Test d'août", 'Rentrée scolaire', '1e semestre', '2e semestre'];
+const SESSION_LABEL = { "Test d'août": 'Test de placement' };
 const DEMI_JOURNEES = JOURS.flatMap(j => ([
   { id: `${j}|matin`, label: `${j} matin`, jour: j, moment: 'matin' },
   { id: `${j}|apresMidi`, label: `${j} après-midi`, jour: j, moment: 'apresMidi' },
@@ -1297,7 +1298,7 @@ export default function TCF() {
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
             <option value="">- Sélectionner la session -</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           {resultatVue === 'individuelle' && (
             <>
@@ -2437,7 +2438,7 @@ export default function TCF() {
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.selectOnglet}>
             <option value="">- Sélectionner la session -</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           {graphVue === 'classe' && (
             <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.selectOnglet}>
@@ -2637,7 +2638,7 @@ export default function TCF() {
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
             <option value="">- Sélectionner la session -</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
           </select>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Points :</span>
           <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)}
