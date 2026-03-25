@@ -2912,7 +2912,9 @@ export default function TCF() {
                     <p style={{ ...p, fontWeight: 700, fontSize: 14 }}>Informations importantes</p>
                     <p style={p}>
                       Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus.
-                      Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.<br />
+                      Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.
+                    </p>
+                    <p style={p}>
                       <strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.
                     </p>
                     <p style={p}>
