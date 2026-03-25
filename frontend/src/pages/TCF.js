@@ -2024,7 +2024,11 @@ export default function TCF() {
             <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
             <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale — Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
           </div>
-          <div class="conv-date" style="text-align:right;white-space:nowrap;">Vétroz, le ${dateVetroz}</div>
+          <div style="text-align:right;">
+            <div style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">SCAI</div>
+            <div style="font-size:12px;font-weight:700;color:#374151;">${anneeScolaire || '—'}</div>
+            <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
+          </div>
         </div>
         <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:60px;margin-top:60px;color:#0f172a;">
           Convocation<br>Test de connaissance du français
@@ -2985,8 +2989,10 @@ export default function TCF() {
                     <div>Centre de formation "Le Botza"</div>
                   </div>
                 </div>
-                <div className="conv-date" style={{ fontSize: 12, color: '#475569', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  Vétroz, le {new Date().toLocaleDateString('fr-CH')}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
                 </div>
               </div>
               {/* Titre */}
