@@ -998,10 +998,10 @@ export default function TCF() {
     };
     return (
       <>
-        <div style={{ ...styles.tableWrap, overflowX: 'hidden', display: 'inline-block', width: '100%' }}>
-          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'auto', borderCollapse: 'collapse' }}>
+        <div style={{ ...styles.tableWrap, overflowX: 'hidden', width: '100%' }}>
+          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <colgroup>
-              <col style={{ width: '1px' }} />
+              <col style={{ width: '105px' }} />
               {JOURS.map(j => <col key={j} />)}
             </colgroup>
             <thead>
@@ -1019,7 +1019,7 @@ export default function TCF() {
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, width: 1, whiteSpace: 'nowrap' }}>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2 }}>
                       <div>{moment.label}</div>
                       <div style={{ fontSize: 9, fontWeight: 400, color: '#475569', marginTop: 1 }}>
                         {moment.id === 'matin'
