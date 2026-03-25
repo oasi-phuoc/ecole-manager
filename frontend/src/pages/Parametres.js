@@ -1445,7 +1445,7 @@ const styles = {
   userRole: { fontSize: 11, color: '#7c3aed', marginTop: 1 },
   btnLogout: { width: '100%', padding: '8px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600, fontFamily: 'inherit' },
   main: { marginLeft: 240, flex: 1, padding: '32px 36px', minHeight: '100vh' },
-  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, minHeight: 44 },
+  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, minHeight: 44 },
   titre: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
   topBarRight: { display: 'flex', alignItems: 'center', gap: 12 },
   btnSauverHeader: { padding: '9px 22px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14, fontFamily: 'inherit' },

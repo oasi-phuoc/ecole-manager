@@ -982,11 +982,11 @@ export default function Comptabilite() {
 
 const styles = {
   page: { padding: '20px', background: '#f0f2f5', minHeight: '100vh' },
-  header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20 },
+  header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 24 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
   btnAjouter: { padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
   statCard: { background: 'white', padding: '16px 20px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center' },
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },

@@ -839,8 +839,8 @@ export default function TCF() {
                       if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={styles.tdLeft}>
-                          <div style={styles.pastillesWrap}>
+                        <td key={`${j}-${moment.id}`} style={styles.tdCenter}>
+                          <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                             {classesCell.map((cid) => {
                               const cl = classes.find(c => String(c.id) === String(cid));
                               return (
@@ -991,7 +991,7 @@ export default function TCF() {
     const formatDate = (d) => { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}.${m}.${y}`; };
     return (
       <>
-        <div style={{ ...styles.affectationMetaWrap, pointerEvents: 'none', opacity: 0.85 }}>
+        <div style={{ ...styles.affectationMetaWrap, pointerEvents: 'none', opacity: 0.85, marginTop: 15 }}>
           <span style={styles.inlineLabel}>Date de début : <strong>{formatDate(dateDebut)}</strong></span>
           <span style={styles.inlineLabel}>Matin : <strong>{getHoraireSite(siteKey, 'matinDebut')} – {getHoraireSite(siteKey, 'matinFin')}</strong></span>
           <span style={styles.inlineLabel}>Après-midi : <strong>{getHoraireSite(siteKey, 'apresMidiDebut')} – {getHoraireSite(siteKey, 'apresMidiFin')}</strong></span>
@@ -1018,8 +1018,8 @@ export default function TCF() {
                       if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={styles.tdLeft}>
-                          <div style={styles.pastillesWrap}>
+                        <td key={`${j}-${moment.id}`} style={styles.tdCenter}>
+                          <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                             {classesCell.length === 0
                               ? <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
                               : classesCell.map(cid => {
@@ -2743,7 +2743,7 @@ const styles = {
     minHeight: '100vh',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
