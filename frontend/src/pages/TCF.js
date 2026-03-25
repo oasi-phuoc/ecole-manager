@@ -929,7 +929,7 @@ export default function TCF() {
           placeholder="Nom du site"
         />
         <div style={styles.siteLevelsWrap}>
-          {niveauxDisponibles.map(level => {
+          {niveauxTabs.map(level => {
             const actif = (siteLevels[siteKey] || []).includes(level);
             return (
               <button
