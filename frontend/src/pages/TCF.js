@@ -2695,14 +2695,16 @@ export default function TCF() {
 
         {onglet === 'roles' && renderRoles()}
 
-        {onglet === 'plannings' && (
+        {onglet === 'plannings' && (() => {
+          const sitePlan = planningsSite || siteOrder[0] || '';
+          return (
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0 }}>
               <div style={{ display: 'flex', gap: 0 }}>
                 {siteOrder.map((sk, idx) => (
                   <button key={`plan-site-${sk}`} type="button"
                     onClick={() => setPlanningsSite(sk)}
-                    style={{ ...styles.subTabBtn, ...(planningsSite === sk ? styles.subTabBtnActif : {}) }}>
+                    style={{ ...styles.subTabBtn, ...(sitePlan === sk ? styles.subTabBtnActif : {}) }}>
                     {siteNames[sk] || `Site ${idx + 1}`}
                   </button>
                 ))}
@@ -2718,13 +2720,14 @@ export default function TCF() {
               </div>
             </div>
             <div>
-              {!planningsSite ? (
-                <div style={styles.empty}>Sélectionnez un site.</div>
-              ) : planningsType === 'classes' ? renderTableAffectationSiteReadOnly(planningsSite)
-                : renderRolesReadOnly(planningsSite)}
+              {!sitePlan ? (
+                <div style={styles.empty}>Aucun site disponible.</div>
+              ) : planningsType === 'classes' ? renderTableAffectationSiteReadOnly(sitePlan)
+                : renderRolesReadOnly(sitePlan)}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {onglet === 'resultat' && renderResultat()}
 
