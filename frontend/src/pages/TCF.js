@@ -335,7 +335,9 @@ export default function TCF() {
     }
 
     // Fallback si aucun prof n'est remonté depuis les pools.
-    if (Object.keys(byLevel).length === 0) {
+    const totalProfs = Object.values(byLevel).reduce((acc, arr) => acc + arr.length, 0);
+    if (totalProfs === 0) {
+      Object.keys(byLevel).forEach(k => delete byLevel[k]);
       byLevel['SANS NIVEAU'] = profs.map(p => ({
         id: String(p.id),
         nom: p.nom || '',
