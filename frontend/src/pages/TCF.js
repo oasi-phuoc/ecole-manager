@@ -1010,7 +1010,7 @@ export default function TCF() {
                 {JOURS.map((j, idx) => (
                   <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2 }}>
                     <div>{j}</div>
-                    {getDateJour(idx) && <div style={{ fontSize: 9, fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
+                    {getDateJour(idx) && <div style={{ fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
                   </th>
                 ))}
               </tr>
@@ -1021,7 +1021,7 @@ export default function TCF() {
                   <tr>
                     <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2 }}>
                       <div>{moment.label}</div>
-                      <div style={{ fontSize: 9, fontWeight: 400, color: '#475569', marginTop: 1 }}>
+                      <div style={{ fontWeight: 400, color: '#475569', marginTop: 1 }}>
                         {moment.id === 'matin'
                           ? `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`
                           : `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`}
@@ -1984,7 +1984,7 @@ export default function TCF() {
         div { overflow: visible !important; }
         table { border-collapse: collapse; width: 100% !important; table-layout: fixed; }
         col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
-        th, td { border: 1px solid #e2e8f0; padding: 4px 2px; font-size: 9px; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+        th, td { border: 1px solid #e2e8f0; padding: 4px 6px; font-size: 10pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
         thead tr { background: #6366f1 !important; color: white !important; }
         thead th { background: #6366f1 !important; color: white !important; }
         p { font-size: 12pt !important; text-align: justify !important; }
