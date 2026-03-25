@@ -2907,7 +2907,7 @@ export default function TCF() {
                   <div style={{ fontFamily: font }}>
                     <p style={p}>Madame, Monsieur,</p>
                     <p style={p}>
-                      Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong> organisé par le Centre de formation « Le Botza ».
+                      Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>.
                       Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
                     </p>
                     <div style={{ marginTop: 25 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
