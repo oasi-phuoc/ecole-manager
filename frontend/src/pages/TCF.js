@@ -999,7 +999,7 @@ export default function TCF() {
     };
     return (
       <>
-        <div style={{ ...styles.tableWrap, overflowX: 'hidden', width: '100%' }}>
+        <div style={{ ...styles.tableWrap, overflowX: 'hidden', width: '100%', border: 'none' }}>
           <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', minWidth: 0 }}>
             <colgroup>
               <col style={{ width: '105px' }} />
@@ -1007,9 +1007,9 @@ export default function TCF() {
             </colgroup>
             <thead>
               <tr style={styles.thead}>
-                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1 }}></th>
+                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1, border: 'none' }}></th>
                 {JOURS.map((j, idx) => (
-                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2 }}>
+                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2, border: 'none' }}>
                     <div>{j}</div>
                     {getDateJour(idx) && <div style={{ fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
                   </th>
@@ -1020,7 +1020,7 @@ export default function TCF() {
               {MOMENTS.map((moment, idxMoment) => (
                 <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2 }}>
+                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, border: 'none' }}>
                       <div>{moment.label}</div>
                       <div style={{ fontWeight: 400, color: '#475569', marginTop: 1 }}>
                         {moment.id === 'matin'
@@ -1030,10 +1030,10 @@ export default function TCF() {
                     </td>
                     {JOURS.map(j => {
                       const actif = isJourActifSite(siteKey, j);
-                      if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
+                      if (!actif) return <td key={`${j}-${moment.id}`} style={{ ...styles.dayInactiveCell, border: 'none' }}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px' }}>
+                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px', border: 'none' }}>
                           <div style={{ ...styles.pastillesWrap, justifyContent: 'center', gap: 3 }}>
                             {classesCell.length === 0
                               ? <span style={{ fontSize: 9, color: '#cbd5e1' }}>—</span>
@@ -1047,7 +1047,7 @@ export default function TCF() {
                     })}
                   </tr>
                   {idxMoment === 0 && (
-                    <tr><td style={styles.tdSpacer}></td>{JOURS.map(j => <td key={`sp-${j}`} style={styles.tdSpacer}></td>)}</tr>
+                    <tr><td style={{ ...styles.tdSpacer, border: 'none' }}></td>{JOURS.map(j => <td key={`sp-${j}`} style={{ ...styles.tdSpacer, border: 'none' }}></td>)}</tr>
                   )}
                 </React.Fragment>
               ))}
@@ -1993,7 +1993,7 @@ export default function TCF() {
     div { overflow: visible !important; }
     table { border-collapse: collapse; width: 100% !important; table-layout: fixed; min-width: 0 !important; }
     col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
-    th, td { border: 1px solid #e2e8f0; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+    th, td { border: none; padding: 4px 6px; font-size: 8pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
     thead tr { background: #6366f1 !important; color: white !important; }
     thead th { background: #6366f1 !important; color: white !important; }
     p { font-size: 10pt !important; text-align: justify !important; margin-bottom: 8pt !important; }
@@ -2050,13 +2050,9 @@ export default function TCF() {
 
   const printConvocation = () => {
     const sitePlan = planningsSite || siteOrder[0] || '';
-    if (!classeConvocation) {
-      alert('Veuillez sélectionner une classe avant d\'imprimer.');
-      return;
-    }
-    const cl = classes.find(c => String(c.id) === String(classeConvocation));
+    const cl = classeConvocation ? classes.find(c => String(c.id) === String(classeConvocation)) : null;
     const siteNom = (siteNames[sitePlan] || sitePlan).replace(/\s+/g, '_');
-    const classeNom = (cl?.nom || 'classe').replace(/\s+/g, '_');
+    const classeNom = cl ? cl.nom.replace(/\s+/g, '_') : 'general';
     const filename = `${siteNom}_${classeNom}`;
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
