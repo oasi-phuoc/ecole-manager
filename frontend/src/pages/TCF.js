@@ -2003,6 +2003,7 @@ export default function TCF() {
     .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
     .conv-footer * { font-size: 6pt !important; }
     .conv-titre { font-size: 17pt !important; margin-top: 25pt !important; margin-bottom: 35pt !important; }
+    .conv-entete .conv-scai { font-size: 17pt !important; }
     .conv-date { font-size: 10pt !important; }
     .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
   `;
@@ -2025,7 +2026,7 @@ export default function TCF() {
             <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale — Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">SCAI</div>
+            <div class="conv-scai" style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">SCAI</div>
             <div style="font-size:12px;font-weight:700;color:#374151;">${anneeScolaire || '—'}</div>
             <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
           </div>
