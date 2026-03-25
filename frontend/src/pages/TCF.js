@@ -2412,25 +2412,28 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Sous-onglets niveaux */}
-        {niveaux.length > 0 && (
-          <div style={styles.subTabsRow}>
-            {niveauxTabs.map(n => (
-              <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
-            ))}
+        {/* Tous les sous-onglets sur une ligne */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+          {/* Niveaux */}
+          {niveaux.length > 0 && (
+            <div style={{ display: 'flex', gap: 0 }}>
+              {niveauxTabs.map(n => (
+                <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                  style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+              ))}
+            </div>
+          )}
+          {/* Matière */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.subTabBtn, ...(isFr ? styles.subTabBtnActif : {}) }}>Français</button>
+            <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.subTabBtn, ...(!isFr ? styles.subTabBtnActif : {}) }}>Math</button>
           </div>
-        )}
-        {/* Sous-onglets matière */}
-        <div style={styles.subTabsRow}>
-          <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.subTabBtn, ...(isFr ? styles.subTabBtnActif : {}) }}>Français</button>
-          <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.subTabBtn, ...(!isFr ? styles.subTabBtnActif : {}) }}>Math</button>
-        </div>
-        {/* Sous-onglets vue */}
-        <div style={styles.subTabsRow}>
-          <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'individuelle' ? styles.subTabBtnActif : {}) }}>Individuelle</button>
-          <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'classe' ? styles.subTabBtnActif : {}) }}>Classe</button>
-          <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne</button>
+          {/* Vue */}
+          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+            <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'individuelle' ? styles.subTabBtnActif : {}) }}>Individuelle</button>
+            <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'classe' ? styles.subTabBtnActif : {}) }}>Classe</button>
+            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne</button>
+          </div>
         </div>
         {/* Listes déroulantes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
