@@ -18,13 +18,14 @@ const DEMI_JOURNEES = JOURS.flatMap(j => ([
   { id: `${j}|apresMidi`, label: `${j} après-midi`, jour: j, moment: 'apresMidi' },
 ]));
 const ROLE_CAP = {
+  Appel: Infinity,
   Surveillance: 2,
   Accompagnement: 1,
   'Oral Groupe 1': 2,
   'Oral Groupe 2': 2,
   Correction: Infinity,
 };
-const ROLES_COLONNE = ['Surveillance', 'Accompagnement', 'Oral Groupe 1', 'Oral Groupe 2', 'Correction'];
+const ROLES_COLONNE = ['Appel', 'Surveillance', 'Accompagnement', 'Oral Groupe 1', 'Oral Groupe 2', 'Correction'];
 const LIGNES_ORGANISATION = [
   { row: 1, role: 'Appel', temps: 25, bloc: null },
   { row: 2, role: 'Surveillance', temps: 10, bloc: null },
@@ -115,6 +116,7 @@ export default function TCF() {
   const [siteActif, setSiteActif] = useState('site1');
   const [planningsSite, setPlanningsSite] = useState(null);
   const [planningsType, setPlanningsType] = useState('classes');
+  const [planningsProfId, setPlanningsProfId] = useState('');
   const [classeConvocation, setClasseConvocation] = useState('');
   const [splitByProf, setSplitByProf] = useState({});
   const [poolCellOverrides, setPoolCellOverrides] = useState({});
@@ -133,6 +135,8 @@ export default function TCF() {
   const [resultatEleveId, setResultatEleveId] = useState('');
   const [resultatEleveSearch, setResultatEleveSearch] = useState('');
   const [scores, setScores] = useState({});
+  const [absences, setAbsences] = useState({});
+  const [responsablesTCF, setResponsablesTCF] = useState([]);
 
   const [statSousOnglet, setStatSousOnglet] = useState('tri');
   const [statMatiere, setStatMatiere] = useState('francais');
@@ -212,6 +216,9 @@ export default function TCF() {
       setClasses((rClasses.data || []).filter(c => c.actif !== false));
       setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
       setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
+      const respFields = ['responsable_langues_jeunes', 'responsable_niveau', 'responsable_niveau_csc', 'responsable_niveau_cfr', 'responsable_niveau_epl'];
+      const respNames = respFields.map(f => rParametres?.data?.[f]).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      setResponsablesTCF(respNames.map((name, i) => ({ id: `resp_${i}`, nom: name, prenom: '' })));
       setNiveauxDB(rNiveaux.data || []);
 
       const dMap = {};
@@ -414,6 +421,17 @@ export default function TCF() {
     setSelectedBySite(prev => {
       const cur = prev[siteKey] || [];
       const deja = cur.includes(profId);
+      if (!deja) {
+        // Initialiser toutes les cellules en rouge (réserve) par défaut
+        setPoolCellOverrides(overrides => {
+          const next = { ...overrides };
+          JOURS.forEach(j => MOMENTS.forEach(m => {
+            const key = cleCellulePool(siteKey, profId, j, m.id);
+            next[key] = { statut: 'rouge', rActif: false };
+          }));
+          return next;
+        });
+      }
       return {
         ...prev,
         [siteKey]: deja ? cur.filter(id => id !== profId) : [...cur, profId],
@@ -538,14 +556,16 @@ export default function TCF() {
     setPoolDirty(true);
     const key = cleCellulePool(siteKey, profId, jour, momentId);
     const courant = statutCellule(siteKey, profId, jour, momentId);
-    const suivant = cycleStatut(courant);
+    const rActifCourant = rActifCellule(siteKey, profId, jour, momentId);
+    // Cycle 4 états : vert → orange → rouge → réserve(rouge+R) → vert
+    let suivantStatut, suivantRActif;
+    if (courant === 'vert')                          { suivantStatut = 'orange'; suivantRActif = false; }
+    else if (courant === 'orange')                   { suivantStatut = 'rouge';  suivantRActif = false; }
+    else if (courant === 'rouge' && !rActifCourant)  { suivantStatut = 'rouge';  suivantRActif = true;  }
+    else /* réserve (rouge+R) */                     { suivantStatut = 'vert';   suivantRActif = false; }
     setPoolCellOverrides(prev => ({
       ...prev,
-      [key]: {
-        ...(prev[key] || {}),
-        statut: suivant,
-        rActif: suivant === 'rouge' ? !!prev[key]?.rActif : false,
-      },
+      [key]: { statut: suivantStatut, rActif: suivantRActif },
     }));
   };
 
@@ -680,7 +700,10 @@ export default function TCF() {
   };
 
   const renderTablePoolSite = (siteKey) => {
-    const ids = selectedBySite[siteKey] || [];
+    const ids = [...(selectedBySite[siteKey] || [])].sort((a, b) => {
+      const pa = profMap[a], pb = profMap[b];
+      return (pa?.prenom || '').localeCompare(pb?.prenom || '', 'fr') || (pa?.nom || '').localeCompare(pb?.nom || '', 'fr');
+    });
     if (!ids.length) return <div style={styles.empty}>Aucun professeur sélectionné.</div>;
 
     const countVertsDemiJournee = (jour, momentId) =>
@@ -720,7 +743,6 @@ export default function TCF() {
                   <td style={styles.tdProfPool}>{p ? `${p.prenom} ${toDisplayNom(p.nom)}` : `Prof #${id}`}</td>
                   {JOURS.map(j => MOMENTS.map(m => {
                     const statut = statutCellule(siteKey, id, j, m.id);
-                    const showR = statut === 'rouge';
                     const rActif = rActifCellule(siteKey, id, j, m.id);
                     return (
                       <td
@@ -729,19 +751,10 @@ export default function TCF() {
                         onClick={() => cycleCellule(siteKey, id, j, m.id)}
                       >
                         <div style={styles.cellStatusWrap}>
-                          {renderPastille(statut)}
-                          {showR && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleRCellule(siteKey, id, j, m.id);
-                              }}
-                              style={{ ...styles.rBtn, ...(rActif ? styles.rBtnActif : {}) }}
-                            >
-                              R
-                            </button>
-                          )}
+                          {rActif
+                            ? <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:'50%',background:'#a78bfa',color:'white',fontWeight:700,fontSize:10}}>R</span>
+                            : renderPastille(statut)
+                          }
                         </div>
                       </td>
                     );
@@ -821,39 +834,48 @@ export default function TCF() {
             />
           </label>
         </div>
-        <div style={styles.tableWrap}>
-          <table style={styles.tablePool}>
-            <colgroup>
-              <col style={{ width: 110, minWidth: 110, maxWidth: 110 }} />
-              {JOURS.map((j) => <col key={j} style={{ width: 'auto' }} />)}
-            </colgroup>
-            <thead>
-              <tr style={styles.thead}>
-                <th style={styles.thCenter}></th>
-                {JOURS.map(j => <th key={j} style={styles.thCenter}>{j}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {MOMENTS.map((moment, idxMoment) => (
-                <React.Fragment key={`${siteKey}-${moment.id}`}>
+        {MOMENTS.map((moment, mi) => {
+          const thStyle = { ...styles.thCenter, fontSize: 14, padding: '5px 8px', background: '#6366f1', color: 'white', border: '1px solid #4338ca' };
+          return (
+            <div key={moment.id} style={{ ...styles.tableWrap, marginTop: mi === 1 ? 20 : 0 }}>
+              <table style={{ ...styles.tablePool, width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: 36, minWidth: 36, maxWidth: 36 }} />
+                  {JOURS.map((j) => <col key={j} style={{ width: 'auto' }} />)}
+                </colgroup>
+                <tbody>
                   <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800 }}>{moment.label}</td>
+                    <td rowSpan={2} style={{ background: '#eef2ff', color: '#4338ca', fontWeight: 700, fontSize: 13, padding: '4px 2px', border: '1px solid #a5b4fc', textAlign: 'center', verticalAlign: 'middle', width: 36 }}>
+                      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block' }}>{moment.label}</span>
+                    </td>
+                    {JOURS.map(j => {
+                      const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+                      const eff = classesCell.reduce((acc, cid) => acc + eleves.filter(e => String(e.classe_id) === String(cid)).length, 0);
+                      return (
+                        <td key={j} style={thStyle}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                            <span>{j}</span>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr>
                     {JOURS.map((j) => {
                       const actif = isJourActifSite(siteKey, j);
-                      if (!actif) return <td key={`${j}-${moment.id}`} style={styles.dayInactiveCell}></td>;
+
+                      if (!actif) return <td key={`${j}-${moment.id}`} style={{ ...styles.dayInactiveCell, height: 80 }}></td>;
                       const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
                       return (
-                        <td key={`${j}-${moment.id}`} style={styles.tdCenter}>
+                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, height: 80 }}>
                           <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                             {classesCell.map((cid) => {
                               const cl = classes.find(c => String(c.id) === String(cid));
                               return (
-                                <button
-                                  key={`${j}-${moment.id}-${cid}`}
-                                  type="button"
+                                <button key={`${j}-${moment.id}-${cid}`} type="button"
                                   onClick={() => toggleClasseAffectationSite(siteKey, j, moment.id, cid)}
-                                  style={styles.classChipActif}
-                                >
+                                  style={styles.classChipActif}>
                                   {cl?.nom || cid}
                                 </button>
                               );
@@ -861,12 +883,9 @@ export default function TCF() {
                             {(classesSite || [])
                               .filter(c => !classeDejaUtiliseeDansSite(siteKey, c.id))
                               .map((cl) => (
-                                <button
-                                  key={`${j}-${moment.id}-add-${cl.id}`}
-                                  type="button"
+                                <button key={`${j}-${moment.id}-add-${cl.id}`} type="button"
                                   onClick={() => toggleClasseAffectationSite(siteKey, j, moment.id, cl.id)}
-                                  style={styles.classChip}
-                                >
+                                  style={styles.classChip}>
                                   {cl.nom}
                                 </button>
                               ))}
@@ -875,41 +894,29 @@ export default function TCF() {
                       );
                     })}
                   </tr>
-                  {idxMoment === 0 && (
-                    <tr>
-                      <td style={styles.tdSpacer}></td>
-                      {JOURS.map(j => <td key={`spacer-${j}`} style={styles.tdSpacer}></td>)}
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td style={{ padding: '8px 4px', border: 'none', background: 'white' }}></td>
-                {JOURS.map((j) => (
-                  <td key={`toggle-${j}`} style={{ padding: '8px 4px', textAlign: 'center', border: 'none', background: 'white' }}>
-                    <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
-                      <button
-                        type="button"
-                        onClick={() => { if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
-                        style={{ ...styles.toggleBtnDay, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
-                      >
-                        Actif
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
-                        style={{ ...styles.toggleBtnDay, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}
-                      >
-                        Inactif
-                      </button>
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
-          </table>
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+        <div style={{ display: 'flex', gap: 0, marginTop: 12 }}>
+          <div style={{ width: 36, flexShrink: 0 }}></div>
+          {JOURS.map((j) => (
+            <div key={`toggle-${j}`} style={{ flex: 1, textAlign: 'center', padding: '4px' }}>
+              <div style={{ ...styles.toggleWrap, display: 'inline-flex' }}>
+                <button type="button"
+                  onClick={() => { if (!isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
+                  style={{ ...styles.toggleBtnDay, ...(isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}>
+                  Actif
+                </button>
+                <button type="button"
+                  onClick={() => { if (isJourActifSite(siteKey, j)) toggleJourActifSite(siteKey, j); }}
+                  style={{ ...styles.toggleBtnDay, ...(!isJourActifSite(siteKey, j) ? styles.toggleBtnDayActif : {}) }}>
+                  Inactif
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </>
     );
@@ -985,76 +992,66 @@ export default function TCF() {
         </div>
       ))}
 
-      {renderTablePoolSite(siteKey)}
+      <div style={{marginTop:15}}>{renderTablePoolSite(siteKey)}</div>
     </div>
   );
 
   const renderTableAffectationSiteReadOnly = (siteKey) => {
-    const classesSite = classesEligiblesSite[siteKey] || [];
     const dateDebut = affectationDateDebutBySite?.[siteKey] || '';
     const getDateJour = (idx) => {
       if (!dateDebut) return '';
       const d = new Date(dateDebut);
       d.setDate(d.getDate() + idx);
-      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
     };
+    const joursActifs = JOURS.filter(j => isJourActifSite(siteKey, j));
     return (
       <>
-        <div style={{ ...styles.tableWrap, overflowX: 'hidden', width: '100%', border: 'none' }}>
-          <table style={{ ...styles.tablePool, width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', minWidth: 0 }}>
-            <colgroup>
-              <col style={{ width: '105px' }} />
-              {JOURS.map(j => <col key={j} />)}
-            </colgroup>
-            <thead>
-              <tr style={styles.thead}>
-                <th style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1, border: 'none', fontSize: 16 }}></th>
-                {JOURS.map((j, idx) => (
-                  <th key={j} style={{ ...styles.thCenter, padding: '3px 6px', lineHeight: 1.2, border: 'none', fontSize: 16 }}>
-                    <div>{j}</div>
-                    {getDateJour(idx) && <div style={{ fontWeight: 400, opacity: 0.85 }}>{getDateJour(idx)}</div>}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {MOMENTS.map((moment, idxMoment) => (
-                <React.Fragment key={`ro-${siteKey}-${moment.id}`}>
-                  <tr>
-                    <td style={{ ...styles.tdCenterRead, fontWeight: 800, padding: '3px 4px', lineHeight: 1.2, border: 'none', fontSize: 16 }}>
-                      <div>{moment.label}</div>
-                      <div style={{ fontWeight: 400, color: '#475569', marginTop: 1, fontSize: 16 }}>
-                        {moment.id === 'matin'
-                          ? `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`
-                          : `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`}
-                      </div>
-                    </td>
-                    {JOURS.map(j => {
-                      const actif = isJourActifSite(siteKey, j);
-                      if (!actif) return <td key={`${j}-${moment.id}`} style={{ ...styles.dayInactiveCell, border: 'none' }}></td>;
-                      const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
-                      return (
-                        <td key={`${j}-${moment.id}`} style={{ ...styles.tdCenter, padding: '3px 4px', border: 'none', fontSize: 16 }}>
-                          <div style={{ ...styles.pastillesWrap, justifyContent: 'center', gap: 3 }}>
-                            {classesCell.length === 0
-                              ? <span style={{ fontSize: 16, color: '#cbd5e1' }}>—</span>
-                              : classesCell.map(cid => {
-                                const cl = classes.find(c => String(c.id) === String(cid));
-                                return <span key={cid} style={{ ...styles.classChipActif, cursor: 'default', padding: '2px 6px', fontSize: 16 }}>{cl?.nom || cid}</span>;
-                              })}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                  {idxMoment === 0 && (
-                    <tr><td style={{ ...styles.tdSpacer, border: 'none' }}></td>{JOURS.map(j => <td key={`sp-${j}`} style={{ ...styles.tdSpacer, border: 'none' }}></td>)}</tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {MOMENTS.map((moment, mi) => (
+          <div key={moment.id} style={{ ...styles.tableWrap, overflowX: 'auto', marginTop: mi === 1 ? 20 : 0 }}>
+            <table style={{ ...styles.tableLarge, tableLayout: 'fixed' }}>
+              <tbody>
+                <tr style={styles.thead}>
+                  <td rowSpan={2} className="moment-label-cell" style={{ ...styles.thCenter, width: 36, verticalAlign: 'middle', background: '#eef2ff', color: '#4338ca', fontSize: 16 }}>
+                    <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block', fontWeight: 700 }}>{moment.label}</span>
+                  </td>
+                  {joursActifs.map((j) => {
+                    const date = getDateJour(JOURS.indexOf(j));
+                    const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+                    const eff = classesCell.reduce((acc, cid) => acc + eleves.filter(e => String(e.classe_id) === String(cid)).length, 0);
+                    return (
+                      <td key={j} style={{ ...styles.thCenter, fontSize: 15 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                          <span>{j}{date ? ` - ${date}` : ''}</span>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  {joursActifs.map(j => {
+                    const actif = isJourActifSite(siteKey, j);
+                    if (!actif) return <td key={j} style={{ ...styles.dayInactiveCell, height: 80 }}></td>;
+                    const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+                    return (
+                      <td key={j} style={{ ...styles.tdLeft, verticalAlign: 'middle', padding: '6px 8px', height: 80, textAlign: 'center' }}>
+                        <div style={{ ...styles.pastillesWrap, justifyContent: 'center', alignItems: 'center', gap: 3 }}>
+                          {classesCell.length === 0
+                            ? <span style={{ fontSize: 16, color: '#cbd5e1' }}>—</span>
+                            : classesCell.map(cid => {
+                              const cl = classes.find(c => String(c.id) === String(cid));
+                              return <span key={cid} style={{ border: '1px solid #a5b4fc', background: '#eef2ff', color: '#4338ca', borderRadius: 999, padding: '2px 6px', fontSize: 16, fontWeight: 700, cursor: 'default' }}>{cl?.nom || cid}</span>;
+                            })}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ))}
       </>
     );
   };
@@ -1100,12 +1097,6 @@ export default function TCF() {
     );
     return (
       <div>
-        <div className="tcf-no-print" style={{ marginTop: 15, marginBottom: 15 }}>
-          <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-            <option value="">- Sélectionner une demi-journée -</option>
-            {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
-        </div>
         {!rolesDemiJourneeSelect ? (
           <div style={styles.empty}>Sélectionnez une demi-journée.</div>
         ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
@@ -1216,6 +1207,7 @@ export default function TCF() {
                           {Object.entries(rolesMap)
                             .filter(([, role]) => {
                               if (!role) return false;
+                              if (lg.role === 'Appel') return role === 'Appel';
                               if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
                               if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
                               if (lg.role === 'Accompagnement') return role === 'Accompagnement';
@@ -1224,9 +1216,10 @@ export default function TCF() {
                               return false;
                             })
                             .map(([pid]) => {
-                              const p = profMap[String(pid)];
+                              const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
                               if (!p) return null;
-                              return <span key={`rro-${lg.row}-prof-${pid}`} style={styles.profChip}>{p.prenom} {toDisplayNom(p.nom)}</span>;
+                              const isResp = String(pid).startsWith('resp_');
+                              return <span key={`rro-${lg.row}-prof-${pid}`} style={{ ...styles.profChip, ...(isResp ? { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } : {}) }}>{p.prenom ? `${p.prenom} ${toDisplayNom(p.nom)}` : p.nom}</span>;
                             })}
                         </div>
                       </td>
@@ -1349,6 +1342,7 @@ export default function TCF() {
                     <th style={styles.thClasseFixe}>Classe</th>
                     <th style={styles.thLeft}>Nom</th>
                     <th style={styles.thLeft}>Prénom</th>
+                    <th style={styles.thCenter}>Absence</th>
                     {isFr ? (
                       <>
                         <th style={styles.thCenter}>CO</th>
@@ -1384,12 +1378,20 @@ export default function TCF() {
                         <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
                         <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
                         <td style={styles.tdLeft}>{e.prenom || ''}</td>
+                        <td style={styles.tdCenter}>
+                          <input type="checkbox"
+                            checked={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
+                            onChange={ev => setAbsences(prev => ({ ...prev, [`${resultatMatiere}_${resultatSession}_${e.id}`]: ev.target.checked }))}
+                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#6366f1' }} />
+                        </td>
                         {isFr ? (
                           <>
                             {['co', 'po', 'ce', 'pe'].map(f => (
                               <td key={f} style={styles.tdCenter}>
-                                <input style={styles.scoreInput} type="number" min="0" max="25"
+                                <input style={{ ...styles.scoreInput, opacity: absences[`${resultatMatiere}_${resultatSession}_${e.id}`] ? 0.3 : 1 }}
+                                  type="number" min="0" max="25"
                                   value={row[f] ?? ''}
+                                  disabled={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
                                   onChange={ev => setScore('francais', resultatSession, e.id, f, ev.target.value)} />
                               </td>
                             ))}
@@ -1401,8 +1403,10 @@ export default function TCF() {
                           <>
                             {['p1', 'p2', 'p3', 'p4'].map(f => (
                               <td key={f} style={styles.tdCenter}>
-                                <input style={styles.scoreInput} type="number" min="0" max="25"
+                                <input style={{ ...styles.scoreInput, opacity: absences[`${resultatMatiere}_${resultatSession}_${e.id}`] ? 0.3 : 1 }}
+                                  type="number" min="0" max="25"
                                   value={row[f] ?? ''}
+                                  disabled={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
                                   onChange={ev => setScore('math', resultatSession, e.id, f, ev.target.value)} />
                               </td>
                             ))}
@@ -1415,7 +1419,7 @@ export default function TCF() {
                     );
                   })}
                   {elevesResultat.length === 0 && (
-                    <tr><td colSpan={11} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
+                    <tr><td colSpan={12} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1598,6 +1602,18 @@ export default function TCF() {
             <option value="">Choisir une demi-journée</option>
             {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
+          {rolesDemiJourneeSelect && (() => {
+            const ROLE_MIN = { 'Appel': 1, 'Surveillance': 2, 'Accompagnement': 1, 'Oral Groupe 1': 2, 'Oral Groupe 2': 2, 'Correction': 2 };
+            const counts = {};
+            Object.values(rolesMap).forEach(role => { if (role) counts[role] = (counts[role] || 0) + 1; });
+            const complet = Object.entries(ROLE_MIN).every(([role, min]) => (counts[role] || 0) >= min);
+            if (!complet) return null;
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '6px 16px', fontWeight: 700, fontSize: 14 }}>
+                ✓ Tous les rôles sont affectés
+              </span>
+            );
+          })()}
           {useGroups && (
             <div style={styles.rolesTopRight}>
               <div style={styles.toggleWrap}>
@@ -1627,7 +1643,7 @@ export default function TCF() {
         ) : demi && !isJourActifSite(siteKey, demi.jour) ? (
           <div style={styles.empty}>La demi-journée sélectionnée est inactive pour ce site.</div>
         ) : (
-          <div style={styles.rolesGrid}>
+          <><div style={styles.rolesGrid}>
             <div style={styles.tableWrap}>
               <table style={styles.tableRolesLeft}>
                 <thead>
@@ -1637,6 +1653,30 @@ export default function TCF() {
                   </tr>
                 </thead>
                 <tbody>
+                  {responsablesTCF.length === 0 && (
+                    <tr><td colSpan={2} style={{ ...styles.tdLeft, color: '#94a3b8', fontSize: 12, fontStyle: 'italic', padding: '6px 10px' }}>
+                      Aucun responsable (à configurer dans Paramètres → École)
+                    </td></tr>
+                  )}
+                  {responsablesTCF.map((resp) => {
+                    const selectedRole = rolesMap[String(resp.id)] || '';
+                    return (
+                      <tr key={`role-resp-${resp.id}`}>
+                        <td style={{ ...styles.tdLeft, background: '#eef2ff', color: '#4338ca' }}>
+                          <div style={styles.reserveCellWrap}>
+                            <span>{resp.nom}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca' }}>Resp.</span>
+                          </div>
+                        </td>
+                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
+                          <select value={selectedRole} onChange={(e) => setRoleProf(siteKey, rolesDemiJourneeSelect, resp.id, e.target.value)} style={{ ...styles.selectRole, width: '100%' }}>
+                            <option value="">—</option>
+                            {ROLES_COLONNE.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {profsPool.map((p) => {
                     const selectedRole = rolesMap[String(p.id)] || '';
                     const isReserve = reserveSet.has(String(p.id));
@@ -1659,7 +1699,7 @@ export default function TCF() {
                               }
                               setRoleProf(siteKey, rolesDemiJourneeSelect, p.id, nextRole);
                             }}
-                            style={{ ...styles.select, width: '100%' }}
+                            style={{ ...styles.selectRole, width: '100%' }}
                           >
                             <option value="">—</option>
                             {ROLES_COLONNE.map((r) => {
@@ -1754,7 +1794,8 @@ export default function TCF() {
                                   {['PE', 'PO', 'CE'].map(tag => {
                                     const selectedVal = String(bloc[tag] || '');
                                     const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
-                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    const valeurConnue = selectedVal && classesColonnes.some(col => col.classIds.includes(selectedVal) || selectedVal === col.id);
+                                    const alreadyElsewhere = valeurConnue && !estDansCol;
                                     if (alreadyElsewhere) return null;
                                     const targetValue = cl.id;
                                     return (
@@ -1780,7 +1821,8 @@ export default function TCF() {
                                   {['Pause', 'CO'].map(tag => {
                                     const selectedVal = String(bloc[tag] || '');
                                     const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
-                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    const valeurConnue = selectedVal && classesColonnes.some(col => col.classIds.includes(selectedVal) || selectedVal === col.id);
+                                    const alreadyElsewhere = valeurConnue && !estDansCol;
                                     if (alreadyElsewhere) return null;
                                     const autreTag = tag === 'Pause' ? 'CO' : 'Pause';
                                     const selectedAutre = String(bloc[autreTag] || '');
@@ -1813,7 +1855,8 @@ export default function TCF() {
                                   {['PE', 'PO', 'CE'].map(tag => {
                                     const selectedVal = String(bloc[tag] || '');
                                     const estDansCol = cl.classIds.includes(selectedVal) || selectedVal === cl.id;
-                                    const alreadyElsewhere = selectedVal && !estDansCol;
+                                    const valeurConnue = selectedVal && classesColonnes.some(col => col.classIds.includes(selectedVal) || selectedVal === col.id);
+                                    const alreadyElsewhere = valeurConnue && !estDansCol;
                                     if (alreadyElsewhere) return null;
                                     const targetValue = cl.id;
                                     return (
@@ -1839,6 +1882,7 @@ export default function TCF() {
                             {Object.entries(rolesMap)
                               .filter(([, role]) => {
                                 if (!role) return false;
+                                if (lg.role === 'Appel') return role === 'Appel';
                                 if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
                                 if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
                                 if (lg.role === 'Accompagnement') return role === 'Accompagnement';
@@ -1847,9 +1891,10 @@ export default function TCF() {
                                 return false;
                               })
                               .map(([pid]) => {
-                                const p = profMap[String(pid)];
+                                const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
                                 if (!p) return null;
-                                return <span key={`${lg.row}-prof-${pid}`} style={styles.profChip}>{p.prenom} {toDisplayNom(p.nom)}</span>;
+                                const isResp = String(pid).startsWith('resp_');
+                                return <span key={`${lg.row}-prof-${pid}`} style={{ ...styles.profChip, ...(isResp ? { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } : {}) }}>{p.prenom ? `${p.prenom} ${toDisplayNom(p.nom)}` : p.nom}</span>;
                               })}
                           </div>
                         </td>
@@ -1860,6 +1905,7 @@ export default function TCF() {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
     );
@@ -1994,10 +2040,13 @@ export default function TCF() {
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     div { overflow: visible !important; }
     table { border-collapse: collapse; width: 100% !important; table-layout: fixed; min-width: 0 !important; }
-    col { width: 1% !important; min-width: 0 !important; max-width: none !important; }
-    th, td { border: none; padding: 4px 6px; font-size: 10pt; word-break: break-word; overflow: visible !important; text-align: center; width: 1% !important; }
+    .moment-label-col { width: 28px !important; min-width: 28px !important; max-width: 28px !important; }
+    th, td { padding: 4px 6px; font-size: 10pt !important; word-break: break-word; overflow: visible !important; text-align: center; }
+    .moment-label-cell { width: 28px !important; min-width: 28px !important; max-width: 28px !important; padding: 4px 2px !important; font-size: 10pt !important; }
+    th *, td * { font-size: 10pt !important; }
+    td { border: 1px solid #e2e8f0; }
     thead tr { background: #6366f1 !important; color: white !important; }
-    thead th { background: #6366f1 !important; color: white !important; }
+    thead th { background: #6366f1 !important; color: white !important; border: 1px solid #4338ca !important; }
     p { font-size: 10pt !important; text-align: justify !important; margin-bottom: 8pt !important; }
     .conv-entete, .conv-entete * { font-size: 6pt !important; }
     .conv-footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; }
@@ -2083,6 +2132,283 @@ export default function TCF() {
     win.onload = () => { win.focus(); win.print(); };
   };
 
+  const buildProfPlanningPage = (siteKey, publicBase) => {
+    const joursActifs = JOURS.filter(j => isJourActifSite(siteKey, j));
+    const getDateStr = (jour) => {
+      if (!affectationDateDebutBySite?.[siteKey]) return '';
+      const dt = new Date(affectationDateDebutBySite[siteKey]);
+      dt.setDate(dt.getDate() + JOURS.indexOf(jour));
+      return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}`;
+    };
+    const poolIds = (selectedBySite[siteKey] || []).map(id => String(id));
+    const getProfNom = (pid) => {
+      const p = profMap[String(pid)];
+      if (!p) return '';
+      return p.prenom ? `${p.prenom} ${toDisplayNom(p.nom) || ''}`.trim() : p.nom;
+    };
+    const isReserveCellule = (pid, jour, moment) =>
+      statutCellule(siteKey, pid, jour, moment) === 'rouge' && rActifCellule(siteKey, pid, jour, moment);
+    const getCellProfs = (jour, moment) => {
+      const sortByPrenom = (a, b) => (profMap[a]?.prenom || '').localeCompare(profMap[b]?.prenom || '', 'fr');
+      const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom);
+      const regular = poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').sort(sortByPrenom);
+      const items = [
+        ...reserves.map(pid => ({ nom: getProfNom(pid), isReserve: true })),
+        ...regular.map(pid => ({ nom: getProfNom(pid), isReserve: false })),
+      ].filter(item => item.nom);
+      const chips = items.map(item =>
+        `<div style="display:block;color:${item.isReserve ? '#b91c1c' : '#1e293b'};font-size:10pt;font-weight:${item.isReserve ? '700' : '400'};line-height:1.5">${escapeHtml(item.nom)}</div>`
+      ).join('');
+      return chips;
+    };
+    const getEffectif = (jour, moment) =>
+      poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').length;
+    const buildTable = (moment) => {
+      const label = moment === 'matin' ? 'Matin' : 'Après-midi';
+      const headerCells = joursActifs.map(j => {
+        const eff = getEffectif(j, moment);
+        const date = getDateStr(j);
+        return `<td style="background:#6366f1;color:white;font-weight:700;font-size:10pt;padding:5px 8px;border:1px solid #4338ca">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:9pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
+            <span>${escapeHtml(j)}${date ? ` - ${date}` : ''}</span>
+          </div>
+        </td>`;
+      }).join('');
+      const dataCells = joursActifs.map(j => `<td class="tl" style="vertical-align:top;height:100px">${getCellProfs(j, moment)}</td>`).join('');
+      return `<table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+        <colgroup><col style="width:28px">${joursActifs.map(() => '<col>').join('')}</colgroup>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
+              <span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block">${label}</span>
+            </td>
+            ${headerCells}
+          </tr>
+          <tr>${dataCells}</tr>
+        </tbody>
+      </table>`;
+    };
+    const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
+    const logoPiedUrl = `${publicBase}/logo-pied-page.png`;
+    const nomSite = escapeHtml(siteNames[siteKey] || siteKey);
+    const horaireMatin = `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`;
+    const horaireAM = `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`;
+    return `<div class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <img class="header-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+          <div class="header-admin">
+            <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+            <div>Service de l'action sociale</div>
+            <div>Office de l'asile</div>
+            <div>Centre de formation "Le Botza"</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-scai">SCAI</div>
+          <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
+          <div class="header-sub">CLASSES D'ACCUEIL</div>
+        </div>
+      </div>
+      <div class="page-title">Répartition des professeurs</div>
+      <div style="text-align:right;font-size:11pt;color:#1e293b;margin-bottom:30px">Vétroz, le ${new Date().toLocaleDateString('fr-CH')}</div>
+      <p style="margin:0 0 4px">Lieu : <strong>${nomSite}</strong></p>
+      <p style="margin:0 0 16px">Horaire matin : <strong>${escapeHtml(horaireMatin)}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>${escapeHtml(horaireAM)}</strong></p>
+      ${buildTable('matin')}
+      ${buildTable('apresMidi')}
+      <div style="page-break-before:always;margin-top:24px">
+        <p style="font-weight:700;margin:0 0 6px">Information importante</p>
+        <p style="margin:0 0 8px;text-align:justify">Les professeurs figurant en <strong style="color:#b91c1c">rouge</strong> sont désignés comme <strong>professeurs de réserve</strong>. À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
+        <p style="margin:0 0 8px;text-align:justify">Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables afin que des dispositions alternatives puissent être prises dans les meilleurs délais.</p>
+        <p style="margin:0 0 24px;text-align:justify">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
+        <p style="margin:0 0 4px">Cordialement,</p>
+        <p style="font-weight:700;margin:0;margin-top:48px;text-align:right;padding-right:2cm">La direction</p>
+      </div>
+      <div class="page-footer">
+        <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
+        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
+      </div>
+    </div>`;
+  };
+
+  const printProfPlanning = () => {
+    const sitePlan = planningsSite || siteOrder[0] || '';
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Repartition_professeurs</title><style>${rolesPrintCSS}</style></head><body>${buildProfPlanningPage(sitePlan, publicBase)}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
+  const printAllProfPlannings = () => {
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const pages = siteOrder.map(sk => buildProfPlanningPage(sk, publicBase));
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Repartition_tous_sites</title><style>${rolesPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
+  const rolesPrintCSS = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+    @page { size: A4 portrait; margin: 10mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    .page { page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; }
+    .header-left { display: flex; align-items: flex-start; gap: 10px; }
+    .header-logo { width: 38px; height: auto; object-fit: contain; }
+    .header-admin { font-size: 8pt; color: #334155; line-height: 1.5; }
+    .header-right { text-align: right; }
+    .header-scai { font-size: 17pt; font-weight: 800; color: #1e293b; line-height: 1; }
+    .header-year { font-size: 10pt; font-weight: 700; color: #374151; margin-top: 2px; }
+    .header-sub { font-size: 8pt; font-weight: 700; color: #475569; margin-top: 2px; }
+    .page-title { font-size: 17pt; font-weight: 700; color: #0f172a; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 40px; margin-bottom: 30px; }
+    .page-date-line { font-size: 13pt; font-weight: 400; text-transform: none; letter-spacing: 0; display: block; margin-top: 6px; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #6366f1 !important; color: white !important; padding: 6px 8px; font-size: 10pt; text-align: center; border-bottom: 2px solid #4338ca !important; }
+    td { padding: 5px 8px; font-size: 10pt; border: 1px solid #e2e8f0; vertical-align: middle; }
+    th { border: 1px solid #4338ca !important; }
+    td.tc { text-align: center; }
+    td.tl { text-align: left; }
+    .chip { display: inline-block; background: #ede9fe; color: #4c1d95; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; }
+    .chip-green { display: inline-block; background: #dcfce7; color: #166534; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; border: 1px solid #bbf7d0; }
+    .time { display: inline-block; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 5px; font-size: 9pt; margin: 1px; }
+    .page-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding-top: 8px; }
+    .footer-logo { height: 26px; width: auto; object-fit: contain; }
+    .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
+  `;
+
+  const buildRolesPage = (demiId, siteKey, publicBase) => {
+    const demi = DEMI_JOURNEES.find(d => d.id === demiId);
+    if (!demi) return '';
+    const key = `${siteKey}::${demiId}`;
+    const rolesMap = rolesAffectesByPoolDemi[key] || {};
+    const org = organisationByPoolDemi[key] || {};
+    const classesAffecteesDemi = affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || [];
+    const classesAffecteesObjs = classesAffecteesDemi.map(cid => classes.find(c => String(c.id) === String(cid))).filter(Boolean);
+    const useGroups = classesAffecteesObjs.length > 2;
+    const savedG1 = (org.groups?.g1 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid)));
+    const savedG2 = (org.groups?.g2 || []).map(String).filter(cid => classesAffecteesDemi.includes(String(cid)));
+    const classesColonnes = useGroups
+      ? [
+        { id: 'g1', nom: savedG1.map(cid => classes.find(c => String(c.id) === cid)?.nom).filter(Boolean).join(' + ') || 'Groupe 1', classIds: savedG1 },
+        { id: 'g2', nom: savedG2.map(cid => classes.find(c => String(c.id) === cid)?.nom).filter(Boolean).join(' + ') || 'Groupe 2', classIds: savedG2 },
+      ]
+      : classesAffecteesObjs.map(cl => ({ id: String(cl.id), nom: cl.nom, classIds: [String(cl.id)] }));
+    const defaultStart = demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut');
+    let cursor = parseTimeToMinutes(defaultStart);
+    const lignesHoraire = {};
+    LIGNES_ORGANISATION.forEach(lg => {
+      const saved = org[`horaire_${lg.row}`];
+      if (saved?.start || saved?.end) {
+        lignesHoraire[lg.row] = { start: saved.start || '', end: saved.end || '' };
+        if (saved.end) cursor = parseTimeToMinutes(saved.end);
+      } else if (Number.isFinite(cursor) && lg.temps) {
+        lignesHoraire[lg.row] = { start: minutesToTime(cursor), end: minutesToTime(cursor + lg.temps) };
+        cursor = cursor + lg.temps;
+      } else {
+        lignesHoraire[lg.row] = { start: '', end: '' };
+      }
+    });
+    let dateStr = '';
+    if (affectationDateDebutBySite?.[siteKey]) {
+      const d = new Date(affectationDateDebutBySite[siteKey]);
+      d.setDate(d.getDate() + JOURS.indexOf(demi.jour));
+      dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    }
+    const momentLabel = demi.moment === 'matin' ? 'Matin' : 'Après-midi';
+    const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
+    const logoPiedUrl = `${publicBase}/logo-pied-page.png`;
+    const colgroup = `<col style="width:118px"><col style="width:50px">${classesColonnes.map(() => '<col>').join('')}<col style="width:110px"><col>`;
+    const thead = `<thead><tr><th>Horaire</th><th>Temps</th>${classesColonnes.map(cl => `<th>${escapeHtml(cl.nom)}</th>`).join('')}<th>Rôle</th><th>Professeurs</th></tr></thead>`;
+    const tbody = LIGNES_ORGANISATION.map(lg => {
+      const estBlocAStart = lg.row === 3, estBlocAInner = lg.row === 4 || lg.row === 5;
+      const estBlocBStart = lg.row === 8, estBlocBInner = lg.row === 9 || lg.row === 10;
+      const isCorrection = lg.row === 11;
+      const afficher = !(estBlocAInner || estBlocBInner);
+      const prevEnd = (() => { if (lg.row <= 1) return lignesHoraire[lg.row]?.start || ''; for (let r = lg.row - 1; r >= 1; r--) { if (lignesHoraire[r]?.end) return lignesHoraire[r].end; } return ''; })();
+      const startVal = lg.row === 1 ? (lignesHoraire[lg.row]?.start || '') : prevEnd;
+      const endVal = isCorrection ? '...' : (lignesHoraire[lg.row]?.end || '');
+      const rs = (estBlocAStart || estBlocBStart) ? ' rowspan="3"' : '';
+      const horTd = afficher ? `<td class="tc"${rs}><span class="time">${escapeHtml(startVal)}</span> <span class="time">${escapeHtml(endVal)}</span></td>` : '';
+      const tmpTd = afficher ? `<td class="tc"${rs}>${lg.temps ? `${lg.temps}'` : ''}</td>` : '';
+      const classCells = classesColonnes.map(cl => {
+        if (lg.row === 1) return `<td class="tc">Appel et consignes</td>`;
+        if (lg.row === 2) return `<td class="tc">Préparation PO</td>`;
+        if (estBlocAInner || estBlocBInner) return '';
+        const getChips = (bloc, tags) => tags.filter(tag => { const v = String(bloc[tag] || ''); return cl.classIds.includes(v) || v === cl.id; }).map(tag => `<span class="chip">${tag}</span>`).join('');
+        if (estBlocAStart) return `<td class="tc" rowspan="3">${getChips(org.blocA || {}, ['PE','PO','CE'])}</td>`;
+        if (lg.row === 6 || lg.row === 7) return `<td class="tc">${getChips(org[`ligne${lg.row}`] || {}, ['Pause','CO'])}</td>`;
+        if (estBlocBStart) return `<td class="tc" rowspan="3">${getChips(org.blocB || {}, ['PE','PO','CE'])}</td>`;
+        return `<td class="tc"></td>`;
+      }).join('');
+      const profsHtml = Object.entries(rolesMap).filter(([, role]) => {
+        if (!role) return false;
+        if (lg.role === 'Appel') return role === 'Appel';
+        if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
+        if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+        return role === lg.role;
+      }).map(([pid]) => {
+        const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
+        if (!p) return '';
+        const name = p.prenom ? `${escapeHtml(p.prenom)} ${escapeHtml(toDisplayNom(p.nom) || '')}` : escapeHtml(p.nom);
+        return `<span class="${String(pid).startsWith('resp_') ? 'chip-green' : 'chip'}">${name}</span>`;
+      }).filter(Boolean).join('');
+      return `<tr>${horTd}${tmpTd}${classCells}<td class="tc">${escapeHtml(lg.role)}</td><td class="tl">${profsHtml}</td></tr>`;
+    }).join('');
+    return `<div class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <img class="header-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+          <div class="header-admin">
+            <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+            <div>Service de l'action sociale</div>
+            <div>Office de l'asile</div>
+            <div>Centre de formation "Le Botza"</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-scai">SCAI</div>
+          <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
+          <div class="header-sub">CLASSES D'ACCUEIL</div>
+        </div>
+      </div>
+      <div class="page-title">Répartition des tâches<span class="page-date-line">${dateStr ? `${dateStr} — ` : ''}${escapeHtml(demi.jour)} ${momentLabel}</span></div>
+      <table><colgroup>${colgroup}</colgroup>${thead}<tbody>${tbody}</tbody></table>
+      <div class="page-footer">
+        <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
+        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
+      </div>
+    </div>`;
+  };
+
+  const rolesLandscapeCSS = rolesPrintCSS.replace('@page { size: A4 portrait; margin: 10mm; }', '@page { size: A4 landscape; margin: 10mm; }');
+
+  const printRoles = () => {
+    const sitePlan = planningsSite || siteOrder[0] || '';
+    if (!rolesDemiJourneeSelect) return;
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Roles_${rolesDemiJourneeSelect}</title><style>${rolesLandscapeCSS}</style></head><body>${buildRolesPage(rolesDemiJourneeSelect, sitePlan, publicBase)}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
+  const printAllRoles = () => {
+    const sitePlan = planningsSite || siteOrder[0] || '';
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const demisActives = DEMI_JOURNEES.filter(d => isJourActifSite(sitePlan, d.jour));
+    if (!demisActives.length) return;
+    const pages = demisActives.map(d => buildRolesPage(d.id, sitePlan, publicBase));
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Roles_toutes_demi_journees</title><style>${rolesLandscapeCSS}</style></head><body>${pages.join('')}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
   const printCharts = (charts, isFr, maxScore) => {
     const titleMain = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
@@ -2117,33 +2443,29 @@ export default function TCF() {
       const classe = c.classe || '';
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
       return `<div class="page">
-        <div class="screen-card">
           ${headerHtml}
           <div class="page-title">${titleMain}</div>
           <div class="page-date">${dateVetroz}</div>
           ${nom || prenom ? `<div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>` : ''}
           ${classe ? `<div class="page-classe"><b>Classe :</b> ${classe}</div>` : ''}
           <div class="chart-wrap">${svg}</div>
-          <div class="footer-line">
+          <div class="page-footer">
             <img class="footer-logo" src="${logoPiedUrl}" alt="Logo pied de page" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoPiedFallbackUrl}';}else{this.style.display='none';}" />
             <div class="footer-text">
               <div>Zone Industrielle 4, 1963 Vétroz</div>
               <div>Tél. 027 606 18 60</div>
             </div>
           </div>
-        </div>
       </div>`;
     });
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Graphiques TCF</title>
       <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; }
-        .page { display: flex; flex-direction: column; min-height: 100vh; padding: 0; page-break-after: always; align-items: center; justify-content: flex-start; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+        .page { page-break-after: always; }
         .page:last-child { page-break-after: auto; }
-        .screen-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 12px 24px; width: 800px; max-width: 100%; margin-top: 8px; }
         .page-header { padding-bottom: 14px; margin-bottom: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
         .header-left { display: flex; align-items: flex-start; gap: 10px; }
-        .header-logo-wrap { background: #ffffff; border-radius: 6px; padding: 2px; }
         .header-logo { width: 38px; height: auto; object-fit: contain; display: block; }
         .header-admin { font-size: 8pt; color: #334155; line-height: 1.5; }
         .header-right { text-align: right; }
@@ -2156,7 +2478,7 @@ export default function TCF() {
         .page-classe { font-size: 10pt; color: #1f2937; margin-bottom: 16px; }
         .chart-wrap { overflow-x: auto; display: flex; justify-content: center; }
         .chart-wrap svg { max-width: 100%; height: auto; display: block; }
-        .footer-line { border-top: 1px solid #cbd5e1; margin-top: 10px; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; display: flex; align-items: center; gap: 12px; padding-top: 8px; }
         .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
         .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
         @page { size: A4 portrait; margin: 10mm; }
@@ -2377,7 +2699,7 @@ export default function TCF() {
               <div dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
             {/* Pied de page */}
-            <div style={{ borderTop: '1px solid #cbd5e1', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 10 }}>
               <img
                 src={logoPiedSrc}
                 alt="Logo pied de page"
@@ -2402,7 +2724,7 @@ export default function TCF() {
     };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         {/* Tous les sous-onglets sur une ligne */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
           {/* Niveaux */}
@@ -2814,11 +3136,20 @@ export default function TCF() {
               <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
             </>
           )}
-          {onglet === 'plannings' && (
+          {onglet === 'plannings' && planningsType === 'classes' && (
             <>
-              <button type="button" onClick={printAllConvocations} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Tout imprimer</button>
-              <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>🖨️ Imprimer</button>
+              <button type="button" onClick={printAllConvocations} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Tout imprimer</button>
+              <button type="button" onClick={printConvocation} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
             </>
+          )}
+          {onglet === 'plannings' && planningsType === 'roles' && (
+            <>
+              <button type="button" onClick={printAllRoles} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Tout imprimer</button>
+              <button type="button" onClick={printRoles} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
+            </>
+          )}
+          {onglet === 'plannings' && planningsType === 'professeurs' && (
+            <button type="button" onClick={printProfPlanning} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
           )}
           {onglet === 'graphique' && graphVue !== 'moyenne' && (
             <>
@@ -2840,7 +3171,7 @@ export default function TCF() {
                 }).filter(c => c.series.length > 0);
                 if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
                 printCharts(charts, isFr, maxScore);
-              }} style={styles.btnAjouter}>Tout</button>
+              }} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Tout imprimer</button>
               <button type="button" onClick={() => {
                 const isFr = ongletGraphiqueMatiere === 'francais';
                 const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
@@ -2862,7 +3193,7 @@ export default function TCF() {
                   if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
                   printCharts(charts, isFr, maxScore);
                 }
-              }} style={styles.btnSauver}>Imprimer sélection</button>
+              }} style={{ ...styles.btnSauver, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
             </>
           )}
         </div>
@@ -2945,7 +3276,7 @@ export default function TCF() {
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 0, marginLeft: 20 }}>
-                {[{ id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
+                {[{ id: 'professeurs', label: 'Professeurs' }, { id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
                   <button key={`plan-type-${t.id}`} type="button"
                     onClick={() => setPlanningsType(t.id)}
                     style={{ ...styles.subTabBtn, ...(planningsType === t.id ? styles.subTabBtnActif : {}) }}>
@@ -2964,6 +3295,14 @@ export default function TCF() {
                 </select>
               </div>
             )}
+            {planningsType === 'roles' && (
+              <div className="tcf-no-print" style={{ margin: '15px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
+                  <option value="">Choisir une demi-journée</option>
+                  {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                </select>
+              </div>
+            )}
             <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
               {/* En-tête */}
@@ -2973,6 +3312,7 @@ export default function TCF() {
                   <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
                     <div>Département de la santé, des affaires sociales et de la culture</div>
                     <div>Service de l'action sociale</div>
+                    <div>Office de l'asile</div>
                     <div>Centre de formation "Le Botza"</div>
                   </div>
                 </div>
@@ -2984,12 +3324,24 @@ export default function TCF() {
               </div>
               {/* Titre */}
               <div className="conv-titre" style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 40, marginTop: 60, color: '#0f172a' }}>
-                {planningsType === 'classes' ? 'Convocation — Test de connaissance du français' : 'Test de connaissance du français'}
+                {planningsType === 'roles' ? (() => {
+                  const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
+                  let dateStr = '';
+                  if (demi && affectationDateDebutBySite?.[sitePlan]) {
+                    const d = new Date(affectationDateDebutBySite[sitePlan]);
+                    d.setDate(d.getDate() + JOURS.indexOf(demi.jour));
+                    dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+                  }
+                  const momentLabel = demi?.moment === 'matin' ? 'Matin' : demi?.moment === 'apresMidi' ? 'Après-midi' : '';
+                  return <>Répartition des tâches{demi && dateStr ? <><br /><span style={{ fontSize: 16, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{dateStr} — {demi.jour} {momentLabel}</span></> : null}</>;
+                })() : planningsType === 'professeurs' ? 'Répartition des professeurs' : 'Convocation — Test de connaissance du français'}
               </div>
-              {/* Date sous le titre */}
-              <div className="conv-date" style={{ textAlign: 'right', fontSize: 16, color: '#1e293b', marginBottom: 40 }}>
-                Vétroz, le {new Date().toLocaleDateString('fr-CH')}
-              </div>
+              {/* Date sous le titre (classes + professeurs) */}
+              {(planningsType === 'classes' || planningsType === 'professeurs') && (
+                <div className="conv-date" style={{ textAlign: 'right', fontSize: 16, color: '#1e293b', marginBottom: 40 }}>
+                  Vétroz, le {new Date().toLocaleDateString('fr-CH')}
+                </div>
+              )}
               {/* Contenu */}
               {!sitePlan ? (
                 <div style={styles.empty}>Aucun site disponible.</div>
@@ -3035,6 +3387,107 @@ export default function TCF() {
                     <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
                     <p className="conv-direction" style={{ ...p, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</p>
                   </div>
+                );
+              })()
+              : planningsType === 'professeurs' ? (() => {
+                const joursActifs = JOURS.filter(j => isJourActifSite(sitePlan, j));
+                const poolIds = (selectedBySite[sitePlan] || []).map(id => String(id));
+                const getProfNom = (pid) => {
+                  const p = profMap[String(pid)];
+                  if (!p) return '';
+                  return p.prenom ? `${p.prenom} ${toDisplayNom(p.nom) || ''}`.trim() : p.nom;
+                };
+                const getDateStr = (jour) => {
+                  if (!affectationDateDebutBySite?.[sitePlan]) return '';
+                  const dt = new Date(affectationDateDebutBySite[sitePlan]);
+                  dt.setDate(dt.getDate() + JOURS.indexOf(jour));
+                  return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}`;
+                };
+                const getEffectif = (jour, moment) =>
+                  poolIds.filter(pid => statutCellule(sitePlan, pid, jour, moment) === 'vert').length;
+                const isReserveCellule = (pid, jour, moment) =>
+                  statutCellule(sitePlan, pid, jour, moment) === 'rouge' && rActifCellule(sitePlan, pid, jour, moment);
+                const getCellProfs = (jour, moment) => {
+                  const sortByPrenom = (a, b) => (profMap[a]?.prenom || '').localeCompare(profMap[b]?.prenom || '', 'fr');
+                  const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom);
+                  const regular = poolIds.filter(pid => statutCellule(sitePlan, pid, jour, moment) === 'vert').sort(sortByPrenom);
+                  return [
+                    ...reserves.map(pid => ({ nom: getProfNom(pid), isReserve: true })),
+                    ...regular.map(pid => ({ nom: getProfNom(pid), isReserve: false })),
+                  ].filter(item => item.nom);
+                };
+                const cellStyle = { ...styles.tdLeft, verticalAlign: 'top', padding: '6px 8px' };
+                const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
+                const pStyle = { fontSize: 16, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 6 };
+                const horaireMatin = `${getHoraireSite(sitePlan, 'matinDebut')} – ${getHoraireSite(sitePlan, 'matinFin')}`;
+                const horaireAM = `${getHoraireSite(sitePlan, 'apresMidiDebut')} – ${getHoraireSite(sitePlan, 'apresMidiFin')}`;
+                return (
+                  <>
+                    <div style={{ ...pStyle, marginBottom: 2 }}>Lieu : <strong>{siteNames[sitePlan] || sitePlan}</strong></div>
+                    <div style={{ ...pStyle, marginBottom: 20 }}>Horaire matin : <strong>{horaireMatin}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>{horaireAM}</strong></div>
+                    {['matin', 'apresMidi'].map((moment, mi) => (
+                      <div key={moment} style={{ ...styles.tableWrap, overflowX: 'auto', marginTop: mi === 1 ? 20 : 0 }}>
+                        <table style={{ ...styles.tableLarge, tableLayout: 'fixed' }}>
+                          <tbody>
+                            <tr style={styles.thead}>
+                              <td rowSpan={2} style={{ ...styles.thCenter, width: 36, verticalAlign: 'middle', background: '#eef2ff', color: '#4338ca', fontSize: 16 }}>
+                                <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block', fontWeight: 700 }}>{moment === 'matin' ? 'Matin' : 'Après-midi'}</span>
+                              </td>
+                              {joursActifs.map(j => {
+                                const eff = getEffectif(j, moment);
+                                const date = getDateStr(j);
+                                return (
+                                  <td key={j} style={{ ...styles.thCenter, fontSize: 15 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                                      <span>{j}{date ? ` - ${date}` : ''}</span>
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr>
+                              {joursActifs.map(j => (
+                                <td key={j} style={{ ...cellStyle, height: 120 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {getCellProfs(j, moment).map((item, i) => (
+                                      <span key={i} style={{
+                                        display: 'block',
+                                        color: item.isReserve ? '#b91c1c' : '#1e293b',
+                                        fontSize: 16,
+                                        fontWeight: item.isReserve ? 700 : 400,
+                                        lineHeight: 1.4,
+                                      }}>
+                                        {item.nom}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 28 }}>
+                      <div style={{ ...pStyle, fontWeight: 700, marginBottom: 8 }}>Information importante</div>
+                      <div style={pStyle}>
+                        Les professeurs figurant en <strong style={{ color: '#b91c1c' }}>rouge</strong> sont désignés comme <strong>professeurs de réserve</strong>.
+                        À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve,
+                        afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.
+                      </div>
+                      <div style={{ ...pStyle, marginTop: 10 }}>
+                        Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective
+                        pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables
+                        afin que des dispositions alternatives puissent être prises dans les meilleurs délais.
+                      </div>
+                      <div style={{ ...pStyle, marginTop: 10 }}>
+                        Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.
+                      </div>
+                      <div style={{ ...pStyle, marginTop: 24 }}>Cordialement,</div>
+                      <div style={{ ...pStyle, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</div>
+                    </div>
+                  </>
                 );
               })()
               : renderRolesReadOnly(sitePlan)}
@@ -3142,8 +3595,8 @@ const styles = {
   tdClasseFixe: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdProfPool: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 12px', fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdCenter: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', textAlign: 'center' },
-  tdCenterCell: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 6px', fontSize: 13, color: '#1e293b', textAlign: 'center', cursor: 'pointer' },
-  cellStatusWrap: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 18 },
+  tdCenterCell: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 6px', fontSize: 13, color: '#1e293b', textAlign: 'center', cursor: 'pointer', verticalAlign: 'middle' },
+  cellStatusWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 18 },
   tdCountLabel: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#334155', background: '#f8fafc' },
   tdCountValue: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 12, fontWeight: 700, color: '#1e293b', textAlign: 'center', background: '#f8fafc' },
   tdCenterRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'center', fontWeight: 700 },
@@ -3187,6 +3640,7 @@ const styles = {
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer' },
+  selectRole: { padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer' },
   inputField: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, color: '#1e293b', fontFamily: 'inherit' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
