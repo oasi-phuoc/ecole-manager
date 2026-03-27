@@ -57,11 +57,67 @@ const modifierProf = async (req, res) => {
 };
 
 const supprimerProf = async (req, res) => {
+  const client = await pool.connect();
   try {
-    const result = await pool.query('DELETE FROM utilisateurs WHERE id=$1 AND role=$2 RETURNING id', [req.params.id, 'prof']);
-    if (result.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouve' });
+    await client.query('BEGIN');
+    const id = req.params.id;
+    const check = await client.query('SELECT id FROM utilisateurs WHERE id=$1 AND role=$2', [id, 'prof']);
+    if (check.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Professeur non trouve' }); }
+    // SET NULL sur les colonnes qui acceptent NULL
+    await client.query('UPDATE classes SET prof_principal_id=NULL WHERE prof_principal_id=$1', [id]);
+    await client.query('UPDATE tcf_state SET updated_by=NULL WHERE updated_by=$1', [id]);
+    await client.query('UPDATE documents_administratifs SET auteur_id=NULL WHERE auteur_id=$1', [id]);
+    await client.query('UPDATE inventaire_branches SET auteur_id=NULL WHERE auteur_id=$1', [id]);
+    await client.query('UPDATE observations SET auteur_id=NULL WHERE auteur_id=$1', [id]);
+    // Nettoyer le JSON tcf_state (pool + affectation) pour retirer l'ID du prof
+    const tcfKeys = ['pool', 'affectation', 'resultats'];
+    for (const cle of tcfKeys) {
+      const row = await client.query('SELECT donnees FROM tcf_state WHERE cle=$1', [cle]);
+      if (!row.rows.length) continue;
+      const donnees = row.rows[0].donnees;
+      // selectedBySite : { site1: [id1, id2, ...], ... }
+      if (donnees.selectedBySite) {
+        for (const site of Object.keys(donnees.selectedBySite)) {
+          donnees.selectedBySite[site] = (donnees.selectedBySite[site] || []).filter(pid => String(pid) !== String(id));
+        }
+      }
+      // poolCellOverrides : clés du type "siteKey::profId::jour::moment"
+      if (donnees.poolCellOverrides) {
+        for (const k of Object.keys(donnees.poolCellOverrides)) {
+          if (k.includes(`::${id}::`) || k.endsWith(`::${id}`)) delete donnees.poolCellOverrides[k];
+        }
+      }
+      // rolesByPoolDemi : { "siteKey::demiId": { profId: role, ... } }
+      if (donnees.rolesByPoolDemi) {
+        for (const demi of Object.keys(donnees.rolesByPoolDemi)) {
+          delete donnees.rolesByPoolDemi[demi][String(id)];
+        }
+      }
+      await client.query('UPDATE tcf_state SET donnees=$1 WHERE cle=$2', [JSON.stringify(donnees), cle]);
+    }
+    // DELETE dans toutes les tables liées
+    await client.query('DELETE FROM affectations WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM calendrier_prof WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM disponibilites WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM documents_profs WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM emploi_du_temps WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM evaluations WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM messages WHERE expediteur_id=$1 OR destinataire_id=$1', [id]);
+    await client.query('DELETE FROM notes_personnelles WHERE utilisateur_id=$1', [id]);
+    await client.query('DELETE FROM notifications WHERE utilisateur_id=$1', [id]);
+    await client.query('DELETE FROM planning_branches WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM pool_profs WHERE prof_id=$1', [id]);
+    await client.query('DELETE FROM prof_couleurs WHERE prof_id=$1', [id]);
+    // Supprimer le professeur
+    await client.query('DELETE FROM utilisateurs WHERE id=$1', [id]);
+    await client.query('COMMIT');
     res.json({ message: 'Professeur supprime' });
-  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  } finally {
+    client.release();
+  }
 };
 
 const envoyerAcces = async (req, res) => {

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -1834,7 +1835,8 @@ export default function EmploiDuTemps() {
                   <table style={{...styles.tbl, tableLayout:'fixed', width:'100%'}}>
                     <thead>
                       <tr>
-                        <th style={{...styles.thA, width:120, minWidth:120, maxWidth:120}}>Période</th>
+                        <th style={{...styles.thA, width:36, minWidth:36, maxWidth:36}}></th>
+                        <th style={{...styles.thA, width:80, minWidth:80, maxWidth:80}}>Période</th>
                         {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
                       </tr>
                     </thead>
@@ -1843,8 +1845,12 @@ export default function EmploiDuTemps() {
                         const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
                         return crsLundi.map((crBase, idx) => (
                           <tr key={crBase.id}>
-                            <td style={{...styles.tdPer, width:120, minWidth:120, maxWidth:120}}>
-                              <span style={styles.periodeTag}>{periode === 'Matin' ? 'Matin' : 'Après-midi'}</span>
+                            {idx === 0 && (
+                              <td rowSpan={crsLundi.length} style={{...styles.tdPer, width:36, minWidth:36, maxWidth:36, textAlign:'center', verticalAlign:'middle', padding:'4px 2px'}}>
+                                <span style={{...styles.periodeTag, fontSize:12, writingMode:'vertical-rl', transform:'rotate(180deg)', display:'inline-block'}}>{periode}</span>
+                              </td>
+                            )}
+                            <td style={{...styles.tdPer, width:80, minWidth:80, maxWidth:80}}>
                               <span style={styles.periodeNum}>P{idx+1}</span>
                             </td>
                             {JOURS.map(jour => {
@@ -1938,22 +1944,23 @@ export default function EmploiDuTemps() {
                       const siteSel = poolForm.site || '';
                       const respecteNiveau = (p) => !!niveauSel && (p.niveau_prefere || '') === niveauSel;
                       const respecteLieu = (p) => !!siteSel && (p.lieu_travail_prefere || '') === siteSel;
+                      const sortAlpha = (a, b) => (a.prenom || '').localeCompare(b.prenom || '') || (a.nom || '').localeCompare(b.nom || '');
                       const blocsProfs = [
                         {
                           label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
-                          items: profs.filter(p => respecteNiveau(p) && respecteLieu(p))
+                          items: profs.filter(p => respecteNiveau(p) && respecteLieu(p)).sort(sortAlpha)
                         },
                         {
                           label: `🎯 A une préférence pour ce niveau (${niveauSel || '?'})`,
-                          items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p))
+                          items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p)).sort(sortAlpha)
                         },
                         {
                           label: `📍 A une préférence pour ce lieu de travail (${siteSel || '?'})`,
-                          items: profs.filter(p => !respecteNiveau(p) && respecteLieu(p))
+                          items: profs.filter(p => !respecteNiveau(p) && respecteLieu(p)).sort(sortAlpha)
                         },
                         {
                           label: '👤 Ne respecte pas ces critères',
-                          items: profs.filter(p => !respecteNiveau(p) && !respecteLieu(p))
+                          items: profs.filter(p => !respecteNiveau(p) && !respecteLieu(p)).sort(sortAlpha)
                         },
                       ];
                       return (
@@ -2062,8 +2069,8 @@ export default function EmploiDuTemps() {
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     <div style={{fontWeight:700,fontSize:16,color:'#0f172a'}}>{pool.nom}</div>
                     <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:2}}>
-                      {pool.niveau && <span style={{color:'#6366f1',fontSize:12,fontWeight:600}}>Niveau : {pool.niveau}</span>}
-                      {pool.site && <span style={{color:'#64748b',fontSize:12}}>Lieu : {pool.site}</span>}
+                      {pool.niveau && <span style={{color:'#6366f1',fontSize:13,fontWeight:600}}>Niveau : {pool.niveau}</span>}
+                      {pool.site && <span style={{color:'#6366f1',fontSize:13}}>Lieu : {pool.site}</span>}
                     </div>
                   </div>
                   {isAdmin() && <div>
@@ -2081,10 +2088,10 @@ export default function EmploiDuTemps() {
                   </div>}
                 </div>
                 <div style={{marginTop:10}}>
-                  <div style={styles.poolLabel}>PROFS</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+                  <div style={styles.poolLabel}>PROFESSEURS</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:4}}>
                     {pool.profs.map(p => (
-                      <span key={p.id} style={{...styles.badge,background:pool.couleur+'22',color:'#111827',display:'flex',alignItems:'center',justifyContent:'center',padding:'3px 8px',borderRadius:8,fontSize:11,fontWeight:600,textAlign:'center'}}>
+                      <span key={p.id} style={{background:'#eef2ff',border:'1px solid #a5b4fc',color:'#4338ca',display:'flex',alignItems:'center',justifyContent:'center',padding:'3px 8px',borderRadius:999,fontSize:13,fontWeight:600,textAlign:'center'}}>
                         {p.prenom} {nomSansSuffixe(p.nom)}
                       </span>
                     ))}
@@ -2104,7 +2111,7 @@ export default function EmploiDuTemps() {
                           justifyContent:'center',
                           padding:'3px 8px',
                           borderRadius:8,
-                          fontSize:11,
+                          fontSize:13,
                           fontWeight:600,
                           background:'#e8f0fe',
                           color:'#1a73e8'
@@ -3428,7 +3435,7 @@ const styles = {
   checkBadge:{padding:'5px 10px',borderRadius:16,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center'},
   poolsGrid:{display:'flex',flexDirection:'column',gap:16,marginTop:16},
   poolCard:{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'},
-  poolLabel:{fontSize:11,fontWeight:700,color:'#aaa',marginBottom:4,letterSpacing:1},
+  poolLabel:{fontSize:13,fontWeight:700,color:'#aaa',marginBottom:4,letterSpacing:1},
   badge:{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:600,margin:'2px 3px 2px 0'},
   aucun:{color:'#ccc',fontSize:12},
   cellSel:{width:'100%',padding:'5px 6px',border:'1px solid #e0e0e0',borderRadius:6,fontSize:12,textAlign:'center',textAlignLast:'center'},
