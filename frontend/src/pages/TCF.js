@@ -1893,8 +1893,16 @@ export default function TCF() {
                               .map(([pid]) => {
                                 const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
                                 if (!p) return null;
-                                const isResp = String(pid).startsWith('resp_');
-                                return <span key={`${lg.row}-prof-${pid}`} style={{ ...styles.profChip, ...(isResp ? { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } : {}) }}>{p.prenom ? `${p.prenom} ${toDisplayNom(p.nom)}` : p.nom}</span>;
+                                const ROLE_CHIP_COLORS = {
+                                  'Appel':          { bg: '#dbeafe', border: '#93c5fd', color: '#1e3a8a' },
+                                  'Surveillance':   { bg: '#fef9c3', border: '#fde047', color: '#713f12' },
+                                  'Accompagnement': { bg: '#dcfce7', border: '#86efac', color: '#14532d' },
+                                  'Oral 1':         { bg: '#ede9fe', border: '#c4b5fd', color: '#4c1d95' },
+                                  'Oral 2':         { bg: '#fce7f3', border: '#f9a8d4', color: '#831843' },
+                                  'Correction':     { bg: '#ffedd5', border: '#fdba74', color: '#7c2d12' },
+                                };
+                                const rc = ROLE_CHIP_COLORS[lg.role] || {};
+                                return <span key={`${lg.row}-prof-${pid}`} style={{ ...styles.profChip, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color }}>{p.prenom ? `${p.prenom} ${toDisplayNom(p.nom)}` : p.nom}</span>;
                               })}
                           </div>
                         </td>
@@ -2107,10 +2115,8 @@ export default function TCF() {
 
   const printConvocation = () => {
     const sitePlan = planningsSite || siteOrder[0] || '';
-    const cl = classeConvocation ? classes.find(c => String(c.id) === String(classeConvocation)) : null;
-    const siteNom = (siteNames[sitePlan] || sitePlan).replace(/\s+/g, '_');
-    const classeNom = cl ? cl.nom.replace(/\s+/g, '_') : 'general';
-    const filename = `${siteNom}_${classeNom}`;
+    const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
+    const filename = `${siteNom}_Convocation_classe`;
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
     win.document.close();
@@ -2124,8 +2130,8 @@ export default function TCF() {
     const pages = classesSite.map((cl, i) =>
       `<div style="${i < classesSite.length - 1 ? 'page-break-after:always' : ''}">${buildConvocationPage(cl.id, sitePlan)}</div>`
     );
-    const siteNom = (siteNames[sitePlan] || sitePlan).replace(/\s+/g, '_');
-    const filename = `${siteNom}_toutes_classes`;
+    const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
+    const filename = `${siteNom}_Convocation_classe`;
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
     win.document.close();
@@ -2168,19 +2174,19 @@ export default function TCF() {
       const headerCells = joursActifs.map(j => {
         const eff = getEffectif(j, moment);
         const date = getDateStr(j);
-        return `<td style="background:#6366f1;color:white;font-weight:700;font-size:10pt;padding:5px 8px;border:1px solid #4338ca">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:9pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
+        return `<td style="background:#f8fafc;color:#64748b;font-size:10pt;padding:5px 8px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:9pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
             <span>${escapeHtml(j)}${date ? ` - ${date}` : ''}</span>
           </div>
         </td>`;
       }).join('');
-      const dataCells = joursActifs.map(j => `<td class="tl" style="vertical-align:top;height:100px">${getCellProfs(j, moment)}</td>`).join('');
+      const dataCells = joursActifs.map(j => `<td class="tl" style="vertical-align:top;height:100px;border:1px solid #e2e8f0">${getCellProfs(j, moment)}</td>`).join('');
       return `<table style="width:100%;border-collapse:collapse;margin-bottom:16px">
         <colgroup><col style="width:28px">${joursActifs.map(() => '<col>').join('')}</colgroup>
         <tbody>
           <tr>
-            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
+            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border-right:1px solid #a5b4fc;border-bottom:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
               <span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block">${label}</span>
             </td>
             ${headerCells}
@@ -2235,8 +2241,10 @@ export default function TCF() {
   const printProfPlanning = () => {
     const sitePlan = planningsSite || siteOrder[0] || '';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
+    const filename = `${siteNom}_Répartition_prof`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Repartition_professeurs</title><style>${rolesPrintCSS}</style></head><body>${buildProfPlanningPage(sitePlan, publicBase)}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesPrintCSS}</style></head><body>${buildProfPlanningPage(sitePlan, publicBase)}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -2273,8 +2281,9 @@ export default function TCF() {
     th { border: 1px solid #4338ca !important; }
     td.tc { text-align: center; }
     td.tl { text-align: left; }
-    .chip { display: inline-block; background: #ede9fe; color: #4c1d95; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; }
+    .chip { display: inline-block; background: #eef2ff; color: #3730a3; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; border: 1px solid #c7d2fe; }
     .chip-green { display: inline-block; background: #dcfce7; color: #166534; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; border: 1px solid #bbf7d0; }
+    .chip-tag { display: inline-block; background: #6366f1; color: white; border-radius: 10px; padding: 2px 8px; font-size: 9pt; margin: 1px; border: 1px solid #6366f1; }
     .time { display: inline-block; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 5px; font-size: 9pt; margin: 1px; }
     .page-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding-top: 8px; }
     .footer-logo { height: 26px; width: auto; object-fit: contain; }
@@ -2339,12 +2348,21 @@ export default function TCF() {
         if (lg.row === 1) return `<td class="tc">Appel et consignes</td>`;
         if (lg.row === 2) return `<td class="tc">Préparation PO</td>`;
         if (estBlocAInner || estBlocBInner) return '';
-        const getChips = (bloc, tags) => tags.filter(tag => { const v = String(bloc[tag] || ''); return cl.classIds.includes(v) || v === cl.id; }).map(tag => `<span class="chip">${tag}</span>`).join('');
+        const getChips = (bloc, tags) => tags.filter(tag => { const v = String(bloc[tag] || ''); return cl.classIds.includes(v) || v === cl.id; }).map(tag => `<span class="chip-tag">${tag}</span>`).join('');
         if (estBlocAStart) return `<td class="tc" rowspan="3">${getChips(org.blocA || {}, ['PE','PO','CE'])}</td>`;
         if (lg.row === 6 || lg.row === 7) return `<td class="tc">${getChips(org[`ligne${lg.row}`] || {}, ['Pause','CO'])}</td>`;
         if (estBlocBStart) return `<td class="tc" rowspan="3">${getChips(org.blocB || {}, ['PE','PO','CE'])}</td>`;
         return `<td class="tc"></td>`;
       }).join('');
+      const PDF_ROLE_CHIP = {
+        'Appel':          'background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a',
+        'Surveillance':   'background:#fef9c3;border:1px solid #fde047;color:#713f12',
+        'Accompagnement': 'background:#dcfce7;border:1px solid #86efac;color:#14532d',
+        'Oral 1':         'background:#ede9fe;border:1px solid #c4b5fd;color:#4c1d95',
+        'Oral 2':         'background:#fce7f3;border:1px solid #f9a8d4;color:#831843',
+        'Correction':     'background:#ffedd5;border:1px solid #fdba74;color:#7c2d12',
+      };
+      const chipStyle = PDF_ROLE_CHIP[lg.role] || 'background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3';
       const profsHtml = Object.entries(rolesMap).filter(([, role]) => {
         if (!role) return false;
         if (lg.role === 'Appel') return role === 'Appel';
@@ -2355,7 +2373,7 @@ export default function TCF() {
         const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
         if (!p) return '';
         const name = p.prenom ? `${escapeHtml(p.prenom)} ${escapeHtml(toDisplayNom(p.nom) || '')}` : escapeHtml(p.nom);
-        return `<span class="${String(pid).startsWith('resp_') ? 'chip-green' : 'chip'}">${name}</span>`;
+        return `<span style="display:inline-block;border-radius:10px;padding:2px 8px;font-size:9pt;margin:1px;${chipStyle}">${name}</span>`;
       }).filter(Boolean).join('');
       return `<tr>${horTd}${tmpTd}${classCells}<td class="tc">${escapeHtml(lg.role)}</td><td class="tl">${profsHtml}</td></tr>`;
     }).join('');
@@ -2382,17 +2400,54 @@ export default function TCF() {
         <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
         <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
       </div>
+    </div>
+    <div class="page" style="page-break-before:always">
+      <div class="page-header">
+        <div class="header-left">
+          <img class="header-logo" src="${logoUrl}" onerror="this.style.display='none'" />
+          <div class="header-admin">
+            <div>DÉPARTEMENT DE LA SANTÉ, DES AFFAIRES SOCIALES ET DE LA CULTURE</div>
+            <div>Service de l'action sociale</div>
+            <div>Office de l'asile</div>
+            <div>Centre de formation "Le Botza"</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-scai">SCAI</div>
+          <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
+          <div class="header-sub">CLASSES D'ACCUEIL</div>
+        </div>
+      </div>
+      <div style="font-size:14pt;font-weight:700;color:#334155;margin:18px 0 16px">Description des rôles</div>
+      <div style="font-size:10pt;color:#475569;line-height:1.7">
+        <div style="margin-bottom:14px"><div style="font-size:12pt;font-weight:700;color:#1e293b;margin-bottom:4px">1. Appel</div>Assurer le contrôle des présences avant le début de l'épreuve, puis présenter aux candidats le déroulement de la session ainsi que les consignes à respecter.</div>
+        <div style="margin-bottom:14px"><div style="font-size:12pt;font-weight:700;color:#1e293b;margin-bottom:4px">2. Surveillance</div>Garantir le bon déroulement de l'épreuve écrite : maintien du silence dans la salle, collecte des copies au fur et à mesure que les candidats terminent, ainsi que distribution des documents d'occupation selon les besoins.</div>
+        <div style="margin-bottom:14px"><div style="font-size:12pt;font-weight:700;color:#1e293b;margin-bottom:4px">3. Accompagnement</div>Conduire les candidats depuis la salle d'examen jusqu'à la salle dédiée à l'épreuve orale.</div>
+        <div style="margin-bottom:14px"><div style="font-size:12pt;font-weight:700;color:#1e293b;margin-bottom:4px">4. Oral</div>Faire passer l'épreuve de production orale en quatre phases distinctes :<br><strong>Phase 1 — Vocabulaire :</strong> Le candidat doit poser des questions en lien avec les mots proposés.<br><strong>Phase 2 — Entretien dirigé :</strong> Conduire un échange structuré autour des questions de base proposées dans le document.<br><strong>Phase 3 — Description :</strong> Inviter le candidat à décrire la scène afin d'évaluer sa capacité d'expression et son vocabulaire en contexte.<br><strong>Phase 4 — Dialogue :</strong> Mener une interaction spontanée avec le candidat afin d'évaluer sa capacité à communiquer.</div>
+        <div style="margin-bottom:14px"><div style="font-size:12pt;font-weight:700;color:#1e293b;margin-bottom:4px">5. Correction</div>Procéder à la correction des épreuves écrites selon les critères d'évaluation définis, en garantissant rigueur et homogénéité dans la notation.</div>
+      </div>
+      <div class="page-footer">
+        <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
+        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
+      </div>
     </div>`;
   };
 
   const rolesLandscapeCSS = rolesPrintCSS.replace('@page { size: A4 portrait; margin: 10mm; }', '@page { size: A4 landscape; margin: 10mm; }');
 
+  const jourNumero = (jour) => String(JOURS.indexOf(jour) + 1).padStart(2, '0');
+
   const printRoles = () => {
     const sitePlan = planningsSite || siteOrder[0] || '';
     if (!rolesDemiJourneeSelect) return;
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
+    const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
+    const numDemi = demi ? jourNumero(demi.jour) : '00';
+    const momentLabel = demi?.moment === 'matin' ? 'Matin' : 'Après-midi';
+    const filename = `${siteNom}_Role_${numDemi}-${demi?.jour || ''}-${momentLabel}`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Roles_${rolesDemiJourneeSelect}</title><style>${rolesLandscapeCSS}</style></head><body>${buildRolesPage(rolesDemiJourneeSelect, sitePlan, publicBase)}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${buildRolesPage(rolesDemiJourneeSelect, sitePlan, publicBase)}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -2403,8 +2458,10 @@ export default function TCF() {
     const demisActives = DEMI_JOURNEES.filter(d => isJourActifSite(sitePlan, d.jour));
     if (!demisActives.length) return;
     const pages = demisActives.map(d => buildRolesPage(d.id, sitePlan, publicBase));
+    const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
+    const filename = `${siteNom}_Role_toutes_demi_journees`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Roles_toutes_demi_journees</title><style>${rolesLandscapeCSS}</style></head><body>${pages.join('')}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${pages.join('')}</body></html>`);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };
   };
@@ -3490,7 +3547,34 @@ export default function TCF() {
                   </>
                 );
               })()
-              : renderRolesReadOnly(sitePlan)}
+              : (() => {
+                const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
+                const rolesDesc = [
+                  { num: 1, role: 'Appel', desc: "Assurer le contrôle des présences avant le début de l'épreuve, puis présenter aux candidats le déroulement de la session ainsi que les consignes à respecter." },
+                  { num: 2, role: 'Surveillance', desc: "Garantir le bon déroulement de l'épreuve écrite : maintien du silence dans la salle, collecte des copies au fur et à mesure que les candidats terminent, ainsi que distribution des documents d'occupation selon les besoins." },
+                  { num: 3, role: 'Accompagnement', desc: "Conduire les candidats depuis la salle d'examen jusqu'à la salle dédiée à l'épreuve orale." },
+                  { num: 4, role: 'Oral', desc: <>Faire passer l'épreuve de production orale en quatre phases distinctes :<br/>
+                    <strong>Phase 1 — Vocabulaire :</strong> Le candidat doit poser des questions en lien avec les mots proposés.<br/>
+                    <strong>Phase 2 — Entretien dirigé :</strong> Conduire un échange structuré autour des questions de base proposées dans le document.<br/>
+                    <strong>Phase 3 — Description :</strong> Inviter le candidat à décrire la scène afin d'évaluer sa capacité d'expression et son vocabulaire en contexte.<br/>
+                    <strong>Phase 4 — Dialogue :</strong> Mener une interaction spontanée avec le candidat afin d'évaluer sa capacité à communiquer.</> },
+                  { num: 5, role: 'Correction', desc: "Procéder à la correction des épreuves écrites selon les critères d'évaluation définis, en garantissant rigueur et homogénéité dans la notation." },
+                ];
+                return (
+                  <>
+                    {renderRolesReadOnly(sitePlan)}
+                    <div style={{ marginTop: 20, fontFamily: font }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#334155', marginBottom: 14 }}>Description des rôles</div>
+                      {rolesDesc.map(({ num, role, desc }) => (
+                        <div key={num} style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{num}. {role}</div>
+                          <div style={{ fontSize: 16, color: '#475569', lineHeight: 1.6 }}>{desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
               {/* Pied de page */}
               <div className="conv-footer" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 28, paddingTop: 10, fontSize: 12, color: '#64748b' }}>
                 <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
@@ -3661,7 +3745,7 @@ const styles = {
   tdReserve: { background: '#fee2e2', color: '#7f1d1d', fontWeight: 700 },
   reserveCellWrap: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' },
   reserveBadge: { marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#991b1b' },
-  profChip: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 138, padding: '5px 9px', borderRadius: 999, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: 11, fontWeight: 700 },
+  profChip: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 138, padding: '5px 9px', borderRadius: 999, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: 13, fontWeight: 700 },
   graphWrap: { display: 'flex', alignItems: 'flex-end', gap: 20, minHeight: 240, padding: '12px 8px' },
   graphSessionCol: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
   graphSessionLabel: { fontSize: 12, color: '#334155', fontWeight: 700, textAlign: 'center' },
