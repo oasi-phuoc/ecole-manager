@@ -689,6 +689,10 @@ export default function TCF() {
     if (champ === 'matinFin') return '11:15';
     if (champ === 'apresMidiDebut') return '13:30';
     if (champ === 'apresMidiFin') return '16:15';
+    if (champ === 'matinDebutProf') return getHoraireSite(siteKey, 'matinDebut');
+    if (champ === 'matinFinProf') return getHoraireSite(siteKey, 'matinFin');
+    if (champ === 'apresMidiDebutProf') return getHoraireSite(siteKey, 'apresMidiDebut');
+    if (champ === 'apresMidiFinProf') return getHoraireSite(siteKey, 'apresMidiFin');
     return '';
   };
   const setHoraireSite = (siteKey, champ, value) => {
@@ -803,36 +807,34 @@ export default function TCF() {
               style={styles.inputField}
             />
           </label>
-          <label style={styles.inlineLabel}>
-            Horaire du matin :
-            <input
-              type="time"
-              value={getHoraireSite(siteKey, 'matinDebut')}
-              onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)}
-              style={styles.inputField}
-            />
-            <input
-              type="time"
-              value={getHoraireSite(siteKey, 'matinFin')}
-              onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)}
-              style={styles.inputField}
-            />
-          </label>
-          <label style={styles.inlineLabel}>
-            Horaire de l'après-midi :
-            <input
-              type="time"
-              value={getHoraireSite(siteKey, 'apresMidiDebut')}
-              onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)}
-              style={styles.inputField}
-            />
-            <input
-              type="time"
-              value={getHoraireSite(siteKey, 'apresMidiFin')}
-              onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)}
-              style={styles.inputField}
-            />
-          </label>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire élèves</div>
+              <label style={styles.inlineLabel}>
+                Matin :
+                <input type="time" value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
+                <input type="time" value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.inputField} />
+              </label>
+              <label style={styles.inlineLabel}>
+                Après-midi :
+                <input type="time" value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.inputField} />
+                <input type="time" value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.inputField} />
+              </label>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire professeurs</div>
+              <label style={styles.inlineLabel}>
+                Matin :
+                <input type="time" value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
+                <input type="time" value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.inputField} />
+              </label>
+              <label style={styles.inlineLabel}>
+                Après-midi :
+                <input type="time" value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.inputField} />
+                <input type="time" value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.inputField} />
+              </label>
+            </div>
+          </div>
         </div>
         {MOMENTS.map((moment, mi) => {
           const thStyle = { ...styles.thCenter, fontSize: 14, padding: '5px 8px', background: '#6366f1', color: 'white', border: '1px solid #4338ca' };
@@ -3426,7 +3428,6 @@ export default function TCF() {
                         </p>
                       );
                     })()}
-                    <div ref={tableConvocationRef} style={{ marginTop: 25 }}>{renderTableAffectationSiteReadOnly(sitePlan)}</div>
                     <div style={{ marginBottom: 25 }} />
                     <p style={{ ...p, fontWeight: 700 }}>Informations importantes</p>
                     <p style={p}>
@@ -3476,8 +3477,8 @@ export default function TCF() {
                 const cellStyle = { ...styles.tdLeft, verticalAlign: 'top', padding: '6px 8px' };
                 const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
                 const pStyle = { fontSize: 16, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 6 };
-                const horaireMatin = `${getHoraireSite(sitePlan, 'matinDebut')} – ${getHoraireSite(sitePlan, 'matinFin')}`;
-                const horaireAM = `${getHoraireSite(sitePlan, 'apresMidiDebut')} – ${getHoraireSite(sitePlan, 'apresMidiFin')}`;
+                const horaireMatin = `${getHoraireSite(sitePlan, 'matinDebutProf')} – ${getHoraireSite(sitePlan, 'matinFinProf')}`;
+                const horaireAM = `${getHoraireSite(sitePlan, 'apresMidiDebutProf')} – ${getHoraireSite(sitePlan, 'apresMidiFinProf')}`;
                 return (
                   <>
                     <div style={{ ...pStyle, marginBottom: 2 }}>Lieu : <strong>{siteNames[sitePlan] || sitePlan}</strong></div>

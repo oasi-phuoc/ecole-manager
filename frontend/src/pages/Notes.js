@@ -1108,7 +1108,7 @@ export default function Notes() {
     return (
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
-        <div style={s.header} className="no-print">
+        <div style={{...s.header, marginBottom: 8}} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
@@ -1831,9 +1831,14 @@ export default function Notes() {
                       )}
                     </td>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
-                      <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}>
-                        📋 Bulletin
-                      </button>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                        <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }} title="Comportements">
+                          🎨 Comp.
+                        </button>
+                        <button style={{ ...s.btnDetail, background: '#dbeafe', color: '#1e40af' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }} title="Bulletin de notes">
+                          📋 Bulletin
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

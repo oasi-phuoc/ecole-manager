@@ -131,15 +131,17 @@ export default function Classes() {
     chargerTout();
   };
 
-  const ouvrirDetail = async (c) => {
+  const ouvrirDetail = async (c, tab = 'eleves') => {
     setDetailClasse(c);
-    setClasseVueTab('eleves');
+    setClasseVueTab(tab);
     setEleveDetail(null);
     setObservations([]);
     setInventaireMsg('');
     setInventaireRows([]);
     setBranchesInventaire([]);
     setBrancheInventaireActive(null);
+    setElevesClasse([]);
+    setPlanPositions({});
     try {
       const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
@@ -171,7 +173,6 @@ export default function Classes() {
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
-  const [showPlanClasse, setShowPlanClasse] = useState(false);
   const [planPositions, setPlanPositions] = useState({});
   const [dragEleve, setDragEleve] = useState(null);
 
@@ -687,7 +688,7 @@ export default function Classes() {
     if (classeVueTab === 'plan' && detailClasse?.id) {
       chargerPlanClasse();
     }
-  }, [classeVueTab, brancheInventaireActive?.id]);
+  }, [classeVueTab, detailClasse?.id, brancheInventaireActive?.id]);
 
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
@@ -877,97 +878,6 @@ export default function Classes() {
       </div>
     </div>
   );
-
-  // Vue PLAN DE CLASSE
-  if (showPlanClasse && detailClasse) {
-    const COLS = 7; const ROWS = 11;
-    const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
-
-    return (
-      <div style={{...s.page, padding:'20px 24px'}}>
-        <div style={s.header}>
-          <button style={s.btnBack} onClick={() => setShowPlanClasse(false)}>← Retour liste</button>
-          <h2 style={{...s.title, fontSize:18}}>🪑 Plan de classe — {detailClasse.nom}</h2>
-          <div style={{display:'flex',gap:8}}>
-            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>💾 Sauvegarder</button>
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>🖨️ Imprimer PDF</button>
-            <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>🗑️ Réinitialiser</button>
-          </div>
-        </div>
-
-        <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
-          {/* Grille plan */}
-          <div style={{flex:1,overflowX:'auto'}}>
-            <div style={{fontSize:11,color:'#94a3b8',marginBottom:8,fontWeight:600}}>↑ Tableau / Entrée</div>
-            <table style={{borderCollapse:'collapse',width:'100%',minWidth:700}}>
-              <tbody>
-                {Array.from({length:ROWS}).map((_,row) => (
-                  <tr key={row}>
-                    {row === ROWS-1 ? (
-                      <td colSpan={COLS}
-                        style={{background:'#0f172a',color:'white',textAlign:'center',fontWeight:800,fontSize:13,padding:'10px',borderRadius:6,cursor:'default'}}>
-                        🎓 Bureau du professeur — {detailClasse.prof_prenom||''} {detailClasse.prof_nom||''}
-                      </td>
-                    ) : Array.from({length:COLS}).map((_,col) => {
-                      const key = row+'-'+col;
-                      const eleveId = planPositions[key];
-                      const el = eleveId ? elevesClasse.find(e => String(e.id)===String(eleveId)) : null;
-                      return (
-                        <td key={col}
-                          onDragOver={e => e.preventDefault()}
-                          onDrop={() => dropOnCell(row, col)}
-                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':'white',borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
-                          {el ? (
-                            <div draggable onDragStart={() => setDragEleve(String(el.id))}
-                              style={{cursor:'grab',padding:2}}>
-                              {el.photo
-                                ? <img src={el.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #6366f1',display:'block',margin:'0 auto'}} />
-                                : <div style={{width:36,height:36,borderRadius:'50%',background:'#6366f1',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:800,color:'white',margin:'0 auto'}}>{(el.prenom||'?')[0]}</div>
-                              }
-                              <div style={{fontSize:9,fontWeight:700,color:'#1e293b',marginTop:2,lineHeight:1.1}}>{el.prenom}</div>
-                              <div style={{fontSize:8,color:'#475569'}}>{el.nom}</div>
-                              <button onClick={() => {
-                                const np = {...planPositions}; delete np[key]; setPlanPositions(np);
-                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
-                            </div>
-                          ) : (
-                            <div style={{color:'#e2e8f0',fontSize:10}}>·</div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Panneau élèves */}
-          <div style={{width:160,flexShrink:0}}>
-            <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.05em'}}>
-              Élèves non placés ({elevesNonPlaces.length})
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
-              {elevesNonPlaces.map(el => (
-                <div key={el.id} draggable onDragStart={() => setDragEleve(String(el.id))}
-                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-                  {el.photo
-                    ? <img src={el.photo} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}} />
-                    : <div style={{width:32,height:32,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#6366f1',flexShrink:0}}>{(el.prenom||'?')[0]}</div>
-                  }
-                  <div>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{el.prenom}</div>
-                    <div style={{fontSize:10,color:'#64748b'}}>{el.nom}</div>
-                  </div>
-                </div>
-              ))}
-              {elevesNonPlaces.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const NIVEAUX_STD = [
     {id:'Chance 1',label:'Chance 1',type:'row'},
@@ -1428,13 +1338,16 @@ export default function Classes() {
               <th style={{...s.th, width:1, minWidth:80, whiteSpace:'nowrap'}}>Classe</th>
               <th style={{...s.th, width:1, minWidth:100, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
+              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
+              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
+              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?6:5} style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?9:8} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
@@ -1467,6 +1380,15 @@ export default function Classes() {
                       ))
                     )}
                   </div>
+                </td>
+                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
+                  <button style={{background:'#fef9c3', border:'1px solid #fde68a', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">📋</button>
+                </td>
+                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
+                  <button style={{background:'#e0e7ff', border:'1px solid #c7d2fe', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">📷</button>
+                </td>
+                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
+                  <button style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">🪑</button>
                 </td>
                 <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
                   <button style={{...(c.actif!==false?s.badgeActive:s.badgeInactif),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleActif(c)}>
