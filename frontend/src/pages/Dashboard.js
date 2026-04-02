@@ -92,6 +92,11 @@ export default function Dashboard() {
 
   const isAdmin = user?.role === 'admin';
 
+  const roleKey = user?.role === 'prof' ? 'professeurs'
+                : user?.role === 'employe_admin' ? 'employes_admin'
+                : user?.role === 'responsable' ? 'responsables'
+                : null;
+
   const modules = [
     { label: 'Employés',         path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', adminOnly: true },
     { label: 'Professeurs',      path: '/professeurs',             color: '#6366f1', bg: '#e0e7ff', adminOnly: false, accentKey: 'professeurs' },
@@ -114,7 +119,8 @@ export default function Dashboard() {
     if (isAdmin) return true;
     if (m.adminOnly) return false;
     if (!m.accentKey) return true;
-    const val = accesProfs[m.accentKey];
+    const roleAcces = roleKey ? (accesProfs[roleKey] || {}) : {};
+    const val = roleAcces[m.accentKey];
     return val !== undefined ? val : (ACCES_DEFAUT_PROF[m.accentKey] !== false);
   });
 
