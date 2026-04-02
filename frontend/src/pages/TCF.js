@@ -807,7 +807,7 @@ export default function TCF() {
               style={styles.inputField}
             />
           </label>
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 8 }}>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire élèves</div>
               <label style={styles.inlineLabel}>
@@ -3731,7 +3731,7 @@ const styles = {
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
   tdLeftRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'left', fontWeight: 700 },
-  affectationMetaWrap: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' },
+  affectationMetaWrap: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 },
   inlineLabel: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#334155', flexWrap: 'wrap' },
   dayInactiveCell: { background: '#000000', minHeight: 42, borderBottom: '1px solid #111827', borderRight: '1px solid #111827' },
   pastillesWrap: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' },

@@ -30,11 +30,13 @@ const getElevesClasse = async (req, res) => {
   try {
     const eleves = await pool.query(`
       SELECT e.*,
-        u.nom, u.prenom, u.email
+        COALESCE(u.nom, e.nom) as nom,
+        COALESCE(u.prenom, e.prenom) as prenom,
+        u.email
       FROM eleves e
       LEFT JOIN utilisateurs u ON u.id=e.utilisateur_id
       WHERE e.classe_id=$1
-      ORDER BY u.nom, u.prenom
+      ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `, [req.params.id]);
     res.json(eleves.rows);
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

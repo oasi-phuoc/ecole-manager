@@ -6,6 +6,7 @@ import { colors } from '../styles/theme';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
+const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
@@ -46,7 +47,8 @@ export default function Professeurs({
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:'employe' });
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:'' });
+  const [roleAccesErreur, setRoleAccesErreur] = useState(false);
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
@@ -179,6 +181,11 @@ export default function Professeurs({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (showRoleToggle && !form.role_acces) {
+      setRoleAccesErreur(true);
+      return;
+    }
+    setRoleAccesErreur(false);
     try {
       const payload = {
         ...form,
@@ -199,11 +206,11 @@ export default function Professeurs({
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
-  const resetForm = () => setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau'});
+  const resetForm = () => { setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:''}); setRoleAccesErreur(false); };
 
   const handleEdit = (p) => {
     setProfEdit(p);
-    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
+    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
     setShowForm(true);
   };
 
@@ -363,6 +370,25 @@ export default function Professeurs({
                           </select>
                         </div>
                       </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                        <label style={{fontSize:11,fontWeight:600,marginBottom:2,color:'#475569'}}>Type de professeur</label>
+                        <div style={{display:'flex',gap:0,borderRadius:8,overflow:'hidden',border:'1px solid #e2e8f0'}}>
+                          {['Interne','Externe'].map(t => {
+                            const isExterne = form.type_prof && form.type_prof !== 'Interne';
+                            const actif = t==='Interne' ? !isExterne : isExterne;
+                            return <button key={t} type="button"
+                              onClick={()=>setForm({...form,type_prof:t==='Interne'?'Interne':'Stagiaire'})}
+                              style={{flex:1,padding:'6px 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:actif?(t==='Interne'?'#6366f1':'#f59e0b'):'#f8fafc',color:actif?'white':'#64748b',transition:'background 0.15s'}}>
+                              {t}
+                            </button>;
+                          })}
+                        </div>
+                        {form.type_prof && form.type_prof !== 'Interne' && (
+                          <select style={s.inp} value={form.type_prof} onChange={e=>setForm({...form,type_prof:e.target.value})}>
+                            {TYPES_EXTERN.map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                        )}
+                      </div>
                     </div>
                   </>)}
                 </div>
@@ -390,17 +416,37 @@ export default function Professeurs({
                             {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
                           </select>
                         </div>
+                        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                          <label style={{fontSize:11,fontWeight:600,marginBottom:2,color:'#475569'}}>Type de professeur</label>
+                          <div style={{display:'flex',gap:0,borderRadius:8,overflow:'hidden',border:'1px solid #e2e8f0'}}>
+                            {['Interne','Externe'].map(t => {
+                              const isExterne = form.type_prof && form.type_prof !== 'Interne';
+                              const actif = t==='Interne' ? !isExterne : isExterne;
+                              return <button key={t} type="button"
+                                onClick={()=>setForm({...form,type_prof:t==='Interne'?'Interne':'Stagiaire'})}
+                                style={{flex:1,padding:'6px 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:actif?(t==='Interne'?'#6366f1':'#f59e0b'):'#f8fafc',color:actif?'white':'#64748b',transition:'background 0.15s'}}>
+                                {t}
+                              </button>;
+                            })}
+                          </div>
+                          {form.type_prof && form.type_prof !== 'Interne' && (
+                            <select style={s.inp} value={form.type_prof} onChange={e=>setForm({...form,type_prof:e.target.value})}>
+                              {TYPES_EXTERN.map(t=><option key={t} value={t}>{t}</option>)}
+                            </select>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div style={{fontSize:11,fontWeight:700,color:'#5b21b6',background:'#ede9fe',padding:'5px 12px',borderRadius:6,marginBottom:14,textTransform:'uppercase'}}>🔑 Rôle</div>
-                    <div style={{display:'flex',gap:0,borderRadius:10,overflow:'hidden',border:'1px solid #e2e8f0',marginBottom:8}}>
+                    <div style={{display:'flex',gap:0,borderRadius:10,overflow:'hidden',border:`1px solid ${roleAccesErreur?'#ef4444':'#e2e8f0'}`,marginBottom:4}}>
                       {[{key:'employe',label:'Employé'},{key:'responsable',label:'Responsable'},{key:'admin',label:'Administrateur'}].map(r=>(
-                        <button key={r.key} type="button" onClick={()=>setForm({...form,role_acces:r.key})}
+                        <button key={r.key} type="button" onClick={()=>{setForm({...form,role_acces:r.key});setRoleAccesErreur(false);}}
                           style={{flex:1,padding:'10px 0',border:'none',borderRight:'1px solid #e2e8f0',background:form.role_acces===r.key?'#6366f1':'white',color:form.role_acces===r.key?'white':'#475569',fontWeight:form.role_acces===r.key?700:500,fontSize:13,cursor:'pointer',transition:'all 0.15s'}}>
                           {r.label}
                         </button>
                       ))}
                     </div>
+                    {roleAccesErreur && <p style={{fontSize:12,color:'#ef4444',margin:'0 0 6px',fontWeight:600}}>Le rôle est obligatoire.</p>}
                     <p style={{fontSize:12,color:'#94a3b8',margin:0}}>
                       {form.role_acces==='employe' && 'Accès standard selon la configuration des accès employés.'}
                       {form.role_acces==='responsable' && 'Accès étendu selon la configuration des accès responsables.'}
@@ -633,6 +679,7 @@ export default function Professeurs({
               <th style={s.th}>Email</th>
               <th style={s.th}>Téléphone</th>
               <th style={s.th}>Naissance</th>
+              <th style={{...s.th, width:110, minWidth:110, maxWidth:110}}>Type</th>
               <th style={{...s.th, width:98, minWidth:98, maxWidth:98, textAlign:'center'}}>Documents</th>
               <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Actions</th>}
@@ -640,7 +687,7 @@ export default function Professeurs({
           </thead>
           <tbody>
             {profsFiltres.length===0 ? (
-              <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
+              <tr><td colSpan={isAdmin()?9:8} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
                 <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{nomSansSuffixe(p.nom)}</b></td>
@@ -648,6 +695,12 @@ export default function Professeurs({
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
+                <td style={{...s.td,width:110,minWidth:110,maxWidth:110}}>
+                  {(!p.type_prof || p.type_prof === 'Interne')
+                    ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>Interne</span>
+                    : <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{p.type_prof}</span>
+                  }
+                </td>
                 <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:isAdmin()?1:0.35}} disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)} title="Documents">📁</button></td>
                 <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center'}}>
                   <button style={{...(p.actif!==false?s.badgeActive:s.badgeInactive),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleStatut(p)}>

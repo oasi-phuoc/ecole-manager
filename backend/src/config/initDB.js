@@ -31,6 +31,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS lieu_travail_prefere VARCHAR(100)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_lieu_travail TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS priorite_pref VARCHAR(20)`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS type_prof VARCHAR(50)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS remarque_disponibilites TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS doit_changer_mdp BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS acces_profs JSONB DEFAULT '{}'::jsonb`);
@@ -38,6 +39,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_secret TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS role_acces VARCHAR(20) DEFAULT 'employe'`);
 
     // Table documents professeurs
     await pool.query(`CREATE TABLE IF NOT EXISTS documents_profs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);
@@ -243,6 +245,10 @@ const initDB = async () => {
       )
     `);
 
+    // Élèves: nom/prenom directs (pour élèves sans compte utilisateur, ex: import LORA)
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS nom VARCHAR(200)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS prenom VARCHAR(200)`);
+
     // Élèves: date de début des cours
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS date_debut_cours DATE`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS categorie VARCHAR(20)`);
@@ -346,6 +352,42 @@ const initDB = async () => {
         }
       }
     }
+
+    // Tables Enclassement
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS enclassements (
+        id SERIAL PRIMARY KEY,
+        nom VARCHAR(200),
+        session_tcf VARCHAR(50) NOT NULL DEFAULT 'Test d''août',
+        created_at TIMESTAMP DEFAULT NOW(),
+        created_by INTEGER REFERENCES utilisateurs(id),
+        statut VARCHAR(20) CHECK (statut IN ('brouillon','validé','archivé')) DEFAULT 'brouillon',
+        parametres JSONB NOT NULL DEFAULT '{}'
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS classes_enclassement (
+        id SERIAL PRIMARY KEY,
+        enclassement_id INTEGER NOT NULL REFERENCES enclassements(id) ON DELETE CASCADE,
+        structure VARCHAR(10) CHECK (structure IN ('CSC','CFR')) NOT NULL,
+        nom VARCHAR(50) NOT NULL,
+        capacite_max INTEGER NOT NULL DEFAULT 12
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS affectations_eleves_enc (
+        id SERIAL PRIMARY KEY,
+        classe_id INTEGER NOT NULL REFERENCES classes_enclassement(id) ON DELETE CASCADE,
+        eleve_id INTEGER NOT NULL REFERENCES eleves(id),
+        score_francais INTEGER NOT NULL,
+        score_math INTEGER NOT NULL,
+        score_pondere INTEGER NOT NULL,
+        flagge_plancher BOOLEAN DEFAULT false,
+        motif_flag TEXT,
+        position_serpentin INTEGER NOT NULL,
+        modifie_manuellement BOOLEAN DEFAULT false
+      )
+    `);
 
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
