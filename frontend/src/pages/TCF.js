@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TimePicker from '../components/TimePicker';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -812,26 +813,26 @@ export default function TCF() {
               <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire élèves</div>
               <label style={styles.inlineLabel}>
                 Matin :
-                <input type="time" value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
-                <input type="time" value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.inputField} />
               </label>
               <label style={styles.inlineLabel}>
                 Après-midi :
-                <input type="time" value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.inputField} />
-                <input type="time" value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.inputField} />
               </label>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire professeurs</div>
               <label style={styles.inlineLabel}>
                 Matin :
-                <input type="time" value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
-                <input type="time" value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.inputField} />
               </label>
               <label style={styles.inlineLabel}>
                 Après-midi :
-                <input type="time" value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.inputField} />
-                <input type="time" value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.inputField} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.inputField} />
               </label>
             </div>
           </div>
