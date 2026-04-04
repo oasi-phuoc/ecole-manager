@@ -389,6 +389,62 @@ const initDB = async () => {
       )
     `);
 
+    // Table calendrier
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS calendrier (
+        id SERIAL PRIMARY KEY,
+        titre VARCHAR(200),
+        description TEXT,
+        date_debut DATE NOT NULL,
+        date_fin DATE,
+        type VARCHAR(50) DEFAULT 'Evenement',
+        couleur VARCHAR(20) DEFAULT '#1a73e8',
+        categorie VARCHAR(50) DEFAULT 'evenement',
+        nom_vacance VARCHAR(200),
+        heure_debut TIME,
+        heure_fin TIME,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Table absences
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS absences (
+        id SERIAL PRIMARY KEY,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        date DATE,
+        statut VARCHAR(20) DEFAULT 'absent',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Table devoirs (suivi des devoirs par classe)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS devoirs (
+        id SERIAL PRIMARY KEY,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        titre VARCHAR(200) NOT NULL,
+        matiere VARCHAR(100),
+        date_devoir DATE,
+        date_remise DATE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS suivi_devoirs (
+        id SERIAL PRIMARY KEY,
+        devoir_id INTEGER REFERENCES devoirs(id) ON DELETE CASCADE,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        statut VARCHAR(20) DEFAULT 'non_rendu' CHECK (statut IN ('rendu','non_rendu','partiel','excuse')),
+        commentaire TEXT,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(devoir_id, eleve_id)
+      )
+    `);
+
+    // Colonne permissions (utilisée par le middleware auth)
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb`);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

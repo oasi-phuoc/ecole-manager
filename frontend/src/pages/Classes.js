@@ -142,6 +142,9 @@ export default function Classes() {
     setBrancheInventaireActive(null);
     setElevesClasse([]);
     setPlanPositions({});
+    setDevoirActif(null);
+    setDevoirs([]);
+    setSuiviDevoirs([]);
     try {
       const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
@@ -188,6 +191,12 @@ export default function Classes() {
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
   const [pendingCell, setPendingCell] = useState(null);
   const [classeVueTab, setClasseVueTab] = useState('eleves');
+  const [devoirs, setDevoirs] = useState([]);
+  const [devoirActif, setDevoirActif] = useState(null);
+  const [suiviDevoirs, setSuiviDevoirs] = useState([]);
+  const [showDevoirForm, setShowDevoirForm] = useState(false);
+  const [devoirForm, setDevoirForm] = useState({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
+  const [devoirsLoading, setDevoirsLoading] = useState(false);
   const [branchesInventaire, setBranchesInventaire] = useState([]);
   const [brancheInventaireActive, setBrancheInventaireActive] = useState(null);
   const [inventaireRows, setInventaireRows] = useState([]);
@@ -688,7 +697,65 @@ export default function Classes() {
     if (classeVueTab === 'plan' && detailClasse?.id) {
       chargerPlanClasse();
     }
+    if (classeVueTab === 'devoirs' && detailClasse?.id) {
+      chargerDevoirs(detailClasse.id);
+    }
   }, [classeVueTab, detailClasse?.id, brancheInventaireActive?.id]);
+
+  const chargerDevoirs = async (classeId) => {
+    setDevoirsLoading(true);
+    try {
+      const r = await axios.get(API + '/devoirs?classe_id=' + classeId, { headers });
+      setDevoirs(r.data || []);
+      if (r.data?.length > 0 && !devoirActif) setDevoirActif(r.data[0]);
+    } catch (err) { console.error('Erreur devoirs:', err); }
+    setDevoirsLoading(false);
+  };
+
+  const chargerSuiviDevoir = async (devoirId) => {
+    try {
+      const r = await axios.get(API + '/devoirs/' + devoirId + '/suivi', { headers });
+      setSuiviDevoirs(r.data || []);
+    } catch (err) { console.error('Erreur suivi devoirs:', err); }
+  };
+
+  useEffect(() => {
+    if (devoirActif?.id) chargerSuiviDevoir(devoirActif.id);
+    else setSuiviDevoirs([]);
+  }, [devoirActif?.id]);
+
+  const creerDevoir = async (e) => {
+    e.preventDefault();
+    if (!detailClasse?.id || !devoirForm.titre.trim()) return;
+    try {
+      await axios.post(API + '/devoirs', { ...devoirForm, classe_id: detailClasse.id }, { headers });
+      setShowDevoirForm(false);
+      setDevoirForm({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
+      await chargerDevoirs(detailClasse.id);
+    } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+  };
+
+  const supprimerDevoir = async (id) => {
+    if (!window.confirm('Supprimer ce devoir ?')) return;
+    try {
+      await axios.delete(API + '/devoirs/' + id, { headers });
+      if (devoirActif?.id === id) setDevoirActif(null);
+      await chargerDevoirs(detailClasse.id);
+    } catch (err) { alert('Erreur suppression'); }
+  };
+
+  const majStatutEleve = async (eleveId, statut) => {
+    if (!devoirActif?.id) return;
+    try {
+      await axios.put(API + '/devoirs/' + devoirActif.id + '/suivi/' + eleveId, { statut }, { headers });
+      setSuiviDevoirs(prev => {
+        const existing = prev.find(s => s.eleve_id === eleveId);
+        if (existing) return prev.map(s => s.eleve_id === eleveId ? { ...s, statut } : s);
+        const eleve = elevesClasse.find(el => el.id === eleveId);
+        return [...prev, { eleve_id: eleveId, statut, nom: eleve?.nom || '', prenom: eleve?.prenom || '' }];
+      });
+    } catch (err) { console.error('Erreur maj statut:', err); }
+  };
 
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
@@ -1060,7 +1127,7 @@ export default function Classes() {
       </div>
 
       <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:0}}>
-        {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
+        {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['devoirs','Suivi des devoirs'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
           <button key={k}
             style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:155,minWidth:155,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
             onClick={() => setClasseVueTab(k)}>
@@ -1126,6 +1193,151 @@ export default function Classes() {
           </table>
         </div>
         </>
+      ) : classeVueTab === 'devoirs' ? (
+        <div style={{marginTop:15}}>
+          {/* Barre : liste devoirs + bouton créer */}
+          <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
+            <div style={{flex:'0 0 220px',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
+                <span style={{fontWeight:700,fontSize:13,color:'#334155'}}>Devoirs</span>
+                <button
+                  style={{background:'#6366f1',color:'white',border:'none',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}
+                  onClick={() => setShowDevoirForm(true)}>
+                  + Nouveau
+                </button>
+              </div>
+              {devoirsLoading ? (
+                <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
+              ) : devoirs.length === 0 ? (
+                <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Aucun devoir</div>
+              ) : devoirs.map(d => (
+                <div key={d.id}
+                  onClick={() => setDevoirActif(d)}
+                  style={{padding:'10px 12px',cursor:'pointer',borderLeft:`3px solid ${devoirActif?.id===d.id?'#6366f1':'transparent'}`,background:devoirActif?.id===d.id?'#f5f3ff':'white',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13,color:'#1e293b'}}>{d.titre}</div>
+                    {d.matiere && <div style={{fontSize:11,color:'#64748b'}}>{d.matiere}</div>}
+                    {d.date_remise && <div style={{fontSize:11,color:'#94a3b8'}}>Remise: {new Date(d.date_remise).toLocaleDateString('fr-CH')}</div>}
+                  </div>
+                  <button
+                    style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#ef4444',padding:'0 2px',lineHeight:1}}
+                    onClick={e => { e.stopPropagation(); supprimerDevoir(d.id); }}>🗑️</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Tableau suivi */}
+            <div style={{flex:1,background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',minWidth:0}}>
+              {!devoirActif ? (
+                <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Sélectionnez un devoir pour voir le suivi</div>
+              ) : (
+                <>
+                  <div style={{padding:'10px 14px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <span style={{fontWeight:700,fontSize:14,color:'#1e293b'}}>{devoirActif.titre}</span>
+                      {devoirActif.matiere && <span style={{marginLeft:8,fontSize:12,color:'#64748b'}}>— {devoirActif.matiere}</span>}
+                    </div>
+                    {(() => {
+                      const total = elevesClasse.length;
+                      const rendus = suiviDevoirs.filter(s => s.statut === 'rendu').length;
+                      const partiel = suiviDevoirs.filter(s => s.statut === 'partiel').length;
+                      const nonRendu = suiviDevoirs.filter(s => s.statut === 'non_rendu').length;
+                      return (
+                        <div style={{display:'flex',gap:6,fontSize:11}}>
+                          <span style={{background:'#dcfce7',color:'#166534',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✅ {rendus}</span>
+                          <span style={{background:'#fef9c3',color:'#854d0e',padding:'3px 8px',borderRadius:12,fontWeight:700}}>⚡ {partiel}</span>
+                          <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>❌ {nonRendu}</span>
+                          <span style={{background:'#f1f5f9',color:'#64748b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>— {total - rendus - partiel - nonRendu}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <table style={{width:'100%',borderCollapse:'collapse'}}>
+                    <thead>
+                      <tr style={{background:'#6366f1'}}>
+                        {['Nom','Prénom','Statut'].map((h,i,a) => (
+                          <th key={h} style={{padding:'9px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 8px':i===a.length-1?'0 8px 8px 0':0}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {elevesClasse.length === 0 ? (
+                        <tr><td colSpan="3" style={{padding:30,textAlign:'center',color:'#94a3b8'}}>Aucun élève</td></tr>
+                      ) : elevesClasse.map((el, idx) => {
+                        const suivi = suiviDevoirs.find(s => s.eleve_id === el.id);
+                        const statut = suivi?.statut || 'non_rendu';
+                        const STATUTS = [
+                          { val: 'rendu',     label: '✅ Rendu',     bg: '#dcfce7', color: '#166534' },
+                          { val: 'partiel',   label: '⚡ Partiel',   bg: '#fef9c3', color: '#854d0e' },
+                          { val: 'non_rendu', label: '❌ Non rendu', bg: '#fee2e2', color: '#991b1b' },
+                          { val: 'excuse',    label: '🔵 Excusé',    bg: '#dbeafe', color: '#1e40af' },
+                        ];
+                        return (
+                          <tr key={el.id} style={{background:idx%2===0?'white':'#fafafa',borderBottom:'1px solid #f1f5f9'}}>
+                            <td style={{padding:'8px 14px',fontSize:13,fontWeight:700,color:'#1e293b'}}>{el.nom||'—'}</td>
+                            <td style={{padding:'8px 14px',fontSize:13,color:'#334155'}}>{el.prenom||'—'}</td>
+                            <td style={{padding:'8px 14px'}}>
+                              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                                {STATUTS.map(st => (
+                                  <button key={st.val} type="button"
+                                    onClick={() => majStatutEleve(el.id, st.val)}
+                                    style={{padding:'4px 10px',borderRadius:20,border:`2px solid ${statut===st.val?st.color:'#e2e8f0'}`,background:statut===st.val?st.bg:'white',color:statut===st.val?st.color:'#94a3b8',fontWeight:statut===st.val?700:400,fontSize:12,cursor:'pointer',fontFamily:'inherit',outline:'none'}}>
+                                    {st.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Popup créer devoir */}
+          {showDevoirForm && (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+              onClick={() => setShowDevoirForm(false)}>
+              <div style={{background:'white',borderRadius:14,padding:24,width:400,maxWidth:'95vw',boxShadow:'0 8px 32px rgba(0,0,0,0.15)'}}
+                onClick={e => e.stopPropagation()}>
+                <h3 style={{margin:'0 0 16px',fontSize:16,fontWeight:700,color:'#1e293b'}}>Nouveau devoir</h3>
+                <form onSubmit={creerDevoir}>
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Titre *</label>
+                      <input required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                        value={devoirForm.titre} onChange={e => setDevoirForm({...devoirForm, titre: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière</label>
+                      <input style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                        value={devoirForm.matiere} onChange={e => setDevoirForm({...devoirForm, matiere: e.target.value})} />
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                      <div>
+                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date du devoir</label>
+                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                          value={devoirForm.date_devoir} onChange={e => setDevoirForm({...devoirForm, date_devoir: e.target.value})} />
+                      </div>
+                      <div>
+                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise</label>
+                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                          value={devoirForm.date_remise} onChange={e => setDevoirForm({...devoirForm, date_remise: e.target.value})} />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
+                    <button type="button" style={{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:7,cursor:'pointer',fontSize:13}} onClick={() => setShowDevoirForm(false)}>Annuler</button>
+                    <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Créer</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       ) : classeVueTab === 'inventaire' ? (
         <div style={{paddingTop:0}}>
           {branchesInventaire.length === 0 ? (
@@ -1341,13 +1553,14 @@ export default function Classes() {
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
+              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?9:8} style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?10:9} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
@@ -1383,6 +1596,9 @@ export default function Classes() {
                 </td>
                 <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
                   <button style={{background:'#fef9c3', border:'1px solid #fde68a', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">📋</button>
+                </td>
+                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
+                  <button style={{background:'#fce7f3', border:'1px solid #f9a8d4', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">📝</button>
                 </td>
                 <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
                   <button style={{background:'#e0e7ff', border:'1px solid #c7d2fe', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">📷</button>

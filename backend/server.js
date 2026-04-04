@@ -31,6 +31,7 @@ app.use(cors({
       const host = new URL(origin).hostname;
       if (host === 'localhost' || host === '127.0.0.1') return cb(null, true);
       if (host.endsWith('.onrender.com')) return cb(null, true);
+      if (host.endsWith('.vercel.app')) return cb(null, true);
     } catch {}
     return cb(new Error('Not allowed by CORS'));
   },
@@ -104,6 +105,8 @@ app.use('/api/tcf-state', require('./src/routes/tcfState'));
 app.use('/api/notes-personnelles', require('./src/routes/notesPersonnelles'));
 app.use('/api/chatbot', require('./src/routes/chatbot'));
 app.use('/api/donnees', require('./src/routes/donnees'));
+app.use('/api/enclassements', require('./src/routes/enclassements'));
+app.use('/api/devoirs', require('./src/routes/devoirs'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

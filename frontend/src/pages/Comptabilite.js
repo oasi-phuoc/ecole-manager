@@ -210,9 +210,6 @@ export default function Comptabilite() {
   const totalClasse = elevesClasseFacturation.reduce((acc, e) => acc + totalEleve(e.id), 0);
 
   useEffect(() => {
-    if (onglet === 'factures' && !classeFacturationId && classes.length > 0) setClasseFacturationId(String(classes[0].id));
-  }, [onglet, classeFacturationId, classes]);
-  useEffect(() => {
     if (!classeFacturationId) return;
     setMaterielDistribue(prev => {
       const next = { ...prev };
@@ -318,15 +315,15 @@ export default function Comptabilite() {
               </button>
             ))}
           </div>
+          <div style={{ padding: '12px 0' }}>
+            <select style={{ ...styles.select, minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
+              <option value="">Sélectionner une classe</option>
+              {classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau)).map(c => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+          </div>
           <div style={styles.tabContent}>
-            <div style={{ padding: '15px 16px', borderBottom: '1px solid #f0f0f0' }}>
-              <select style={{ ...styles.select, minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
-                <option value="">— Sélectionner une classe —</option>
-                {classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau)).map(c => (
-                  <option key={c.id} value={c.id}>{c.nom}</option>
-                ))}
-              </select>
-            </div>
             {!classeFacturationId ? (
               <div style={styles.vide}>Sélectionnez une classe pour voir la facturation</div>
             ) : (
@@ -383,7 +380,7 @@ export default function Comptabilite() {
       {onglet === 'paiements' && (
         <>
           {/* Sous-onglets statut paiements */}
-          <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
+          <div style={{ display: 'flex', gap: 0 }}>
             {[
               { key: 'tous', label: 'Tous' },
               { key: 'paye', label: 'Payé' },
@@ -392,13 +389,13 @@ export default function Comptabilite() {
               { key: 'annule', label: 'Annulé' },
             ].map(t => (
               <button key={t.key}
-                style={{ padding: '9px 14px', background: paiementsOnglet === t.key ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: paiementsOnglet === t.key ? 'white' : '#5b21b6', marginRight: 4, outline: 'none', lineHeight: '1', marginBottom: paiementsOnglet === t.key ? -1 : 0, zIndex: paiementsOnglet === t.key ? 2 : 1 }}
+                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: paiementsOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none', marginRight: 4 }}
                 onClick={() => setPaiementsOnglet(t.key)}>
                 {t.label} ({paiements.filter(p => t.key === 'tous' || p.statut === t.key).length})
               </button>
             ))}
           </div>
-        <div style={{ ...styles.tabContent, borderTopLeftRadius: 0 }}>
+        <div style={{ ...styles.tabContent, marginTop: 15 }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 14px', borderBottom: '1px solid #f0f0f0' }}>
             <select style={styles.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
               <option value="">Toutes les classes</option>
@@ -461,126 +458,127 @@ export default function Comptabilite() {
           </div>
         <div style={{ ...styles.tabContent, marginTop: 15 }}>
 
-          {/* Écolage */}
+            {/* Écolage */}
           {prixOnglet === 'ecolage' && (
-            <>
-              <table style={{ ...styles.tableMateriel, border: '2px solid #6366f1', borderRadius: '8px', overflow: 'hidden' }}>
-                <thead>
-                  <tr style={{ background: '#f0f4ff' }}>
-                    {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
-                      <th key={h} style={styles.thMateriel}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {materielsEcolage.length === 0 ? (
-                    ECOLAGE_DEFAUT.map((nom, i) => (
-                      <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                        <td style={styles.tdMateriel}>{nom}</td>
-                        <td style={{ ...styles.tdMateriel, textAlign: 'right', color: '#94a3b8' }}>—</td>
-                        <td style={styles.tdMateriel}>—</td>
-                        <td style={styles.tdMateriel}>—</td>
-                        <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>—</td>
-                        <td style={styles.tdMateriel}>—</td>
-                        <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                          <button style={{ ...styles.btnAjouter, padding: '3px 8px', fontSize: 11 }} onClick={() => { setMaterielForm({ nom, section: 'ecolage', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }); setMaterielEdit(null); setShowMaterielForm(true); }}>Définir</button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : materielsEcolage.map((m, i) => (
-                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={styles.tdMateriel}>{m.nom}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
-                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
-                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
-                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
+            <table style={styles.tableMateriel}>
+              <colgroup>
+                <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  {['Désignation', 'Prix', 'REF', 'Fournisseur', 'Rabais', 'Remarques', 'Action'].map((h, i, arr) => (
+                    <th key={h} style={{ ...styles.thMateriel, borderRadius: i === 0 ? '8px 0 0 8px' : i === arr.length - 1 ? '0 8px 8px 0' : 0 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {materielsEcolage.length === 0 ? (
+                  ECOLAGE_DEFAUT.map((nom, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={styles.tdMateriel}>{nom}</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right', color: '#94a3b8' }}>—</td>
+                      <td style={styles.tdMateriel}>—</td>
+                      <td style={styles.tdMateriel}>—</td>
+                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>—</td>
+                      <td style={styles.tdMateriel}>—</td>
                       <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                        <button style={{ ...styles.btnAjouter, padding: '3px 8px', fontSize: 11 }} onClick={() => { setMaterielForm({ nom, section: 'ecolage', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }); setMaterielEdit(null); setShowMaterielForm(true); }}>Définir</button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
-              </div>
-            </>
+                  ))
+                ) : materielsEcolage.map((m, i) => (
+                  <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <td style={styles.tdMateriel}>{m.nom}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.ref || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.fournisseur || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
 
           {/* Matériel scolaire */}
           {prixOnglet === 'scolaire' && (
-            <>
-              <table style={styles.tableMateriel}>
-                <thead>
-                  <tr style={{ background: '#f8fafc' }}>
-                    {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
-                      <th key={h} style={styles.thMateriel}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {materielsScolaires.length === 0 ? (
-                    <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
-                  ) : materielsScolaires.map((m, i) => (
-                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={styles.tdMateriel}>{m.nom}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
-                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
-                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
-                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
-                      </td>
-                    </tr>
+            <table style={styles.tableMateriel}>
+              <colgroup>
+                <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  {['Désignation', 'Prix', 'REF', 'Fournisseur', 'Rabais', 'Remarques', 'Action'].map((h, i, arr) => (
+                    <th key={h} style={{ ...styles.thMateriel, borderRadius: i === 0 ? '8px 0 0 8px' : i === arr.length - 1 ? '0 8px 8px 0' : 0 }}>{h}</th>
                   ))}
-                </tbody>
-              </table>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
-              </div>
-            </>
+                </tr>
+              </thead>
+              <tbody>
+                {materielsScolaires.length === 0 ? (
+                  <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
+                ) : materielsScolaires.map((m, i) => (
+                  <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <td style={styles.tdMateriel}>{m.nom}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.ref || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.fournisseur || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
 
           {/* Autres fournitures */}
           {prixOnglet === 'fournitures' && (
-            <>
-              <table style={styles.tableMateriel}>
-                <thead>
-                  <tr style={{ background: '#f8fafc' }}>
-                    {['Matériel', 'Prix', 'REF', 'Fournisseur', 'Rabais %', 'Remarques', 'Action'].map(h => (
-                      <th key={h} style={styles.thMateriel}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {materielsFournitures.length === 0 ? (
-                    <tr><td colSpan="7" style={styles.vide}>Aucune fourniture</td></tr>
-                  ) : materielsFournitures.map((m, i) => (
-                    <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={styles.tdMateriel}>{m.nom}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
-                      <td style={styles.tdMateriel}>{m.ref || '—'}</td>
-                      <td style={styles.tdMateriel}>{m.fournisseur || '—'}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
-                      <td style={styles.tdMateriel}>{m.remarques || '—'}</td>
-                      <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
-                      </td>
-                    </tr>
+            <table style={styles.tableMateriel}>
+              <colgroup>
+                <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  {['Désignation', 'Prix', 'REF', 'Fournisseur', 'Rabais', 'Remarques', 'Action'].map((h, i, arr) => (
+                    <th key={h} style={{ ...styles.thMateriel, borderRadius: i === 0 ? '8px 0 0 8px' : i === arr.length - 1 ? '0 8px 8px 0' : 0 }}>{h}</th>
                   ))}
-                </tbody>
-              </table>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
-              </div>
-            </>
+                </tr>
+              </thead>
+              <tbody>
+                {materielsFournitures.length === 0 ? (
+                  <tr><td colSpan="7" style={styles.vide}>Aucune fourniture</td></tr>
+                ) : materielsFournitures.map((m, i) => (
+                  <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <td style={styles.tdMateriel}>{m.nom}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.prix || 0).toFixed(2)} CHF</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.ref || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.fournisseur || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
+                    <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
+                    <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
 
+        </div>
+        {['ecolage', 'scolaire', 'fournitures'].includes(prixOnglet) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 15 }}>
+            <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
+          </div>
+        )}
+        <div style={{ display: 'none' }}>
           {/* Facturation classe */}
           {prixOnglet === 'facturation' && (
             <div style={styles.facturationLayout}>
@@ -901,10 +899,17 @@ export default function Comptabilite() {
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Section</label>
-                  <select style={styles.input} value={materielForm.section} onChange={e => setMaterielForm({ ...materielForm, section: e.target.value })}>
-                    <option value="scolaire">Matériel scolaire</option>
-                    <option value="fournitures">Fournitures</option>
-                  </select>
+                  {!materielEdit ? (
+                    <div style={{ ...styles.input, background: '#f8fafc', color: '#475569', cursor: 'default' }}>
+                      {materielForm.section === 'ecolage' ? 'Écolage' : materielForm.section === 'scolaire' ? 'Matériel scolaire' : 'Autres fournitures'}
+                    </div>
+                  ) : (
+                    <select style={styles.input} value={materielForm.section} onChange={e => setMaterielForm({ ...materielForm, section: e.target.value })}>
+                      <option value="ecolage">Écolage</option>
+                      <option value="scolaire">Matériel scolaire</option>
+                      <option value="fournitures">Autres fournitures</option>
+                    </select>
+                  )}
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Prix</label>
@@ -1027,8 +1032,8 @@ const styles = {
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 },
   btnAnnuler: { padding: '9px 18px', background: '#f5f5f5', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 },
   btnSauver: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  tableMateriel: { width: '100%', borderCollapse: 'collapse' },
-  thMateriel: { padding: '10px 14px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#64748b', borderBottom: '1px solid #e5e7eb' },
+  tableMateriel: { width: '100%', borderCollapse: 'collapse', border: '2px solid #6366f1', borderRadius: 8, overflow: 'hidden', tableLayout: 'fixed' },
+  thMateriel: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' },
   tdMateriel: { padding: '10px 14px', fontSize: 13, color: '#334155', borderBottom: '1px solid #f1f5f9' },
   facturationLayout: { display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, padding: 14 },
   classesList: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#f8fafc' },

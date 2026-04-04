@@ -41,7 +41,7 @@ const creerEleve = async (req, res) => {
   try {
     await client.query('BEGIN');
     const bcrypt = require('bcryptjs');
-    const hash = await bcrypt.hash(mot_de_passe || 'Ecole123!', 10);
+    const hash = await bcrypt.hash(mot_de_passe || 'EcoleManager2024!', 10);
     const emailFinal = email && email.trim() ? email.trim() : `eleve.${Date.now()}.${Math.random().toString(36).slice(2)}@ecole.local`;
     const userResult = await client.query(
       'INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES ($1,$2,$3,$4,$5) RETURNING id',
