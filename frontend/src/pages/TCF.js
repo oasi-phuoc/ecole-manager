@@ -805,12 +805,12 @@ export default function TCF() {
                 setAffectationDirty(true);
                 setAffectationDateDebutBySite(prev => ({ ...prev, [siteKey]: e.target.value }));
               }}
-              style={styles.inputField}
+              style={{ ...styles.inputField, width: 144 }}
             />
           </label>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire élèves</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#000000', marginBottom: 6 }}>Horaire élèves</div>
               <label style={styles.inlineLabel}>
                 Matin :
                 <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
@@ -823,7 +823,7 @@ export default function TCF() {
               </label>
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Horaire professeurs</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#000000', marginBottom: 6 }}>Horaire professeurs</div>
               <label style={styles.inlineLabel}>
                 Matin :
                 <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
@@ -2068,6 +2068,48 @@ export default function TCF() {
     .conv-direction { margin-top: 0 !important; text-align: right !important; padding-right: 50px !important; }
   `;
 
+  const buildGeneralTableHtml = (siteKey) => {
+    const dateDebut = affectationDateDebutBySite?.[siteKey] || '';
+    const getDateJour = (idx) => {
+      if (!dateDebut) return '';
+      const d = new Date(dateDebut);
+      d.setDate(d.getDate() + idx);
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    };
+    const joursActifs = JOURS.filter(j => isJourActifSite(siteKey, j));
+    return MOMENTS.map(moment => {
+      const headerCells = joursActifs.map(j => {
+        const date = getDateJour(JOURS.indexOf(j));
+        const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+        const eff = classesCell.reduce((acc, cid) => acc + eleves.filter(e => String(e.classe_id) === String(cid)).length, 0);
+        return `<td style="background:#f8fafc;color:#64748b;font-size:9pt;padding:5px 8px;border:1px solid #e2e8f0;text-align:center">
+          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:4px">${eff}</span>
+          ${escapeHtml(j)}${date ? ` - ${date}` : ''}
+        </td>`;
+      }).join('');
+      const dataCells = joursActifs.map(j => {
+        const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
+        const chips = classesCell.map(cid => {
+          const cl = classes.find(c => String(c.id) === String(cid));
+          return `<span style="display:inline-block;border:1px solid #a5b4fc;background:#eef2ff;color:#4338ca;border-radius:999px;padding:2px 6px;font-size:9pt;font-weight:700;margin:1px">${escapeHtml(cl?.nom || String(cid))}</span>`;
+        }).join('');
+        return `<td style="border:1px solid #e2e8f0;padding:6px 8px;text-align:center;height:60px;vertical-align:middle">${chips || '<span style="color:#cbd5e1">—</span>'}</td>`;
+      }).join('');
+      return `<table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+        <colgroup><col style="width:28px">${joursActifs.map(() => '<col>').join('')}</colgroup>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
+              <span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block">${escapeHtml(moment.label)}</span>
+            </td>
+            ${headerCells}
+          </tr>
+          <tr>${dataCells}</tr>
+        </tbody>
+      </table>`;
+    }).join('');
+  };
+
   const buildConvocationPage = (classeId, siteKey) => {
     const cl = classes.find(c => String(c.id) === String(classeId));
     const aff = getClasseJourHoraire(siteKey, classeId);
@@ -2098,13 +2140,14 @@ export default function TCF() {
         <div>
           <p>Madame, Monsieur,</p>
           <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.</p>
-          ${classeId ? `<p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>` : ''}
-          <div style="margin-top:25px">${tableHtml}</div>
+          ${classeId
+            ? `<p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>`
+            : `<div style="margin-top:20px;margin-bottom:20px">${buildGeneralTableHtml(siteKey)}</div>`
+          }
           <div style="margin-bottom:25px"></div>
           <p style="font-weight:700;font-size:12pt !important;">Informations importantes</p>
           <p>Vous êtes convoqué(e) <strong>uniquement à la demi-journée correspondant à votre classe</strong>, telle qu'elle figure sur le planning ci-dessus. Veuillez vous présenter à l'heure indiquée — <strong>toute arrivée tardive ne pourra être tolérée</strong>.</p>
           <p><strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.</p>
-          <p>Si vous avez une <strong>absence planifiée</strong> à cette date, nous vous demandons de contacter sans délai les responsables afin d'être regroupé(e) avec une autre classe et d'effectuer le test à un autre créneau prévu.</p>
           <p>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
           <p style="margin-top:24px;">Cordialement,</p>
           <p class="conv-direction">La direction</p>
@@ -2159,37 +2202,48 @@ export default function TCF() {
       statutCellule(siteKey, pid, jour, moment) === 'rouge' && rActifCellule(siteKey, pid, jour, moment);
     const getCellProfs = (jour, moment) => {
       const sortByPrenom = (a, b) => (profMap[a]?.prenom || '').localeCompare(profMap[b]?.prenom || '', 'fr');
-      const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom);
-      const regular = poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').sort(sortByPrenom);
-      const items = [
-        ...reserves.map(pid => ({ nom: getProfNom(pid), isReserve: true })),
-        ...regular.map(pid => ({ nom: getProfNom(pid), isReserve: false })),
-      ].filter(item => item.nom);
-      const chips = items.map(item =>
-        `<div style="display:block;color:${item.isReserve ? '#b91c1c' : '#1e293b'};font-size:10pt;font-weight:${item.isReserve ? '700' : '400'};line-height:1.5">${escapeHtml(item.nom)}</div>`
+      const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
+      const regular = poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
+      const regularHtml = regular.map(nom =>
+        `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`
       ).join('');
-      return chips;
+      if (reserves.length === 0) {
+        return `<table style="width:100%;height:100%;border-collapse:collapse"><tbody>
+          <tr><td style="vertical-align:top;padding:0;text-align:left;border:none">${regularHtml}</td></tr>
+        </tbody></table>`;
+      }
+      const reserveHtml = `<div style="border-top:1px solid #e2e8f0;padding-top:3px">
+        <div style="color:#1e293b;font-size:9pt;font-weight:700;line-height:1.4;text-align:left">Réserve</div>
+        ${reserves.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('')}
+      </div>`;
+      return `<table style="width:100%;height:100%;border-collapse:collapse"><tbody>
+        <tr style="height:100%"><td style="vertical-align:top;padding:0;text-align:left;border:none">${regularHtml}</td></tr>
+        <tr><td style="vertical-align:bottom;padding:0;text-align:left;border:none">${reserveHtml}</td></tr>
+      </tbody></table>`;
     };
     const getEffectif = (jour, moment) =>
       poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').length;
+    const nCols = joursActifs.length;
+    const colPct = nCols > 0 ? `${((100 - 3) / nCols).toFixed(2)}%` : 'auto';
+    const colgroup = `<colgroup><col style="width:28px">${joursActifs.map(() => `<col style="width:${colPct}">`).join('')}</colgroup>`;
     const buildTable = (moment) => {
       const label = moment === 'matin' ? 'Matin' : 'Après-midi';
       const headerCells = joursActifs.map(j => {
         const eff = getEffectif(j, moment);
         const date = getDateStr(j);
-        return `<td style="background:#f8fafc;color:#64748b;font-size:10pt;padding:5px 8px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:9pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
+        return `<td style="background:#f8fafc;color:#64748b;font-size:9pt;padding:4px 6px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center">
+          <div style="display:flex;align-items:center;justify-content:center;gap:5px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
             <span>${escapeHtml(j)}${date ? ` - ${date}` : ''}</span>
           </div>
         </td>`;
       }).join('');
-      const dataCells = joursActifs.map(j => `<td class="tl" style="vertical-align:top;height:100px;border:1px solid #e2e8f0">${getCellProfs(j, moment)}</td>`).join('');
-      return `<table style="width:100%;border-collapse:collapse;margin-bottom:16px">
-        <colgroup><col style="width:28px">${joursActifs.map(() => '<col>').join('')}</colgroup>
+      const dataCells = joursActifs.map(j => `<td style="vertical-align:top;text-align:left;height:120px;border:1px solid #e2e8f0;padding:5px 7px">${getCellProfs(j, moment)}</td>`).join('');
+      return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:14px">
+        ${colgroup}
         <tbody>
           <tr>
-            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border-right:1px solid #a5b4fc;border-bottom:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
+            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
               <span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block">${label}</span>
             </td>
             ${headerCells}
@@ -2203,7 +2257,7 @@ export default function TCF() {
     const nomSite = escapeHtml(siteNames[siteKey] || siteKey);
     const horaireMatin = `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`;
     const horaireAM = `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`;
-    return `<div class="page">
+    const headerHtml = `
       <div class="page-header">
         <div class="header-left">
           <img class="header-logo" src="${logoUrl}" onerror="this.style.display='none'" />
@@ -2219,25 +2273,34 @@ export default function TCF() {
           <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
           <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
-      </div>
+      </div>`;
+    const footerHtml = `
+      <div class="page-footer">
+        <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
+        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
+      </div>`;
+    return `
+    <div class="page">
+      ${headerHtml}
       <div class="page-title">Répartition des professeurs</div>
       <div style="text-align:right;font-size:11pt;color:#1e293b;margin-bottom:30px">Vétroz, le ${new Date().toLocaleDateString('fr-CH')}</div>
       <p style="margin:0 0 4px">Lieu : <strong>${nomSite}</strong></p>
       <p style="margin:0 0 16px">Horaire matin : <strong>${escapeHtml(horaireMatin)}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>${escapeHtml(horaireAM)}</strong></p>
       ${buildTable('matin')}
       ${buildTable('apresMidi')}
-      <div style="page-break-before:always;margin-top:24px">
-        <p style="font-weight:700;margin:0 0 6px">Information importante</p>
-        <p style="margin:0 0 8px;text-align:justify">Les professeurs figurant en <strong style="color:#b91c1c">rouge</strong> sont désignés comme <strong>professeurs de réserve</strong>. À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
-        <p style="margin:0 0 8px;text-align:justify">Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables afin que des dispositions alternatives puissent être prises dans les meilleurs délais.</p>
-        <p style="margin:0 0 24px;text-align:justify">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
-        <p style="margin:0 0 4px">Cordialement,</p>
-        <p style="font-weight:700;margin:0;margin-top:48px;text-align:right;padding-right:2cm">La direction</p>
+      ${footerHtml}
+    </div>
+    <div class="page">
+      ${headerHtml}
+      <div style="margin-top:40px">
+        <p style="font-weight:700;font-size:11pt;margin:0 0 12px">Information importante</p>
+        <p style="margin:0 0 10px;text-align:justify;font-size:10pt;line-height:1.6">Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>. À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
+        <p style="margin:0 0 10px;text-align:justify;font-size:10pt;line-height:1.6">Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables afin que des dispositions alternatives puissent être prises dans les meilleurs délais.</p>
+        <p style="margin:0 0 30px;text-align:justify;font-size:10pt;line-height:1.6">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
+        <p style="font-size:10pt;margin:0 0 4px">Cordialement,</p>
+        <p style="font-weight:700;font-size:10pt;margin:0;margin-top:60px;text-align:right;padding-right:2cm">La direction</p>
       </div>
-      <div class="page-footer">
-        <img class="footer-logo" src="${logoPiedUrl}" onerror="this.style.display='none'" />
-        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
-      </div>
+      ${footerHtml}
     </div>`;
   };
 
@@ -3408,7 +3471,6 @@ export default function TCF() {
               ) : planningsType === 'classes' ? (() => {
                 const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
                 const p = { fontSize: 16, lineHeight: 1.7, color: '#1e293b', fontFamily: font, marginBottom: 14 };
-                const hr = { display: 'none' };
                 return (
                   <div style={{ fontFamily: font }}>
                     <p style={p}>Madame, Monsieur,</p>
@@ -3416,8 +3478,7 @@ export default function TCF() {
                       Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>.
                       Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
                     </p>
-                    {(() => {
-                      if (!classeConvocation) return null;
+                    {classeConvocation ? (() => {
                       const cl = classes.find(c => String(c.id) === String(classeConvocation));
                       const aff = getClasseJourHoraire(sitePlan, classeConvocation);
                       return (
@@ -3428,7 +3489,11 @@ export default function TCF() {
                           Horaire : <strong>{aff?.horaire || '—'}</strong>
                         </p>
                       );
-                    })()}
+                    })() : (
+                      <div style={{ marginTop: 20, marginBottom: 20 }}>
+                        {renderTableAffectationSiteReadOnly(sitePlan)}
+                      </div>
+                    )}
                     <div style={{ marginBottom: 25 }} />
                     <p style={{ ...p, fontWeight: 700 }}>Informations importantes</p>
                     <p style={p}>
@@ -3438,10 +3503,6 @@ export default function TCF() {
                     <p style={p}>
                       <strong>Aucun rattrapage ne sera organisé</strong> en cas d'absence ou de maladie le jour du test.
                     </p>
-                    <p style={p}>
-                      Si vous avez une <strong>absence planifiée</strong> à cette date, nous vous demandons de contacter sans délai les responsables afin d'être regroupé(e) avec une autre classe et d'effectuer le test à un autre créneau prévu.
-                    </p>
-                    <hr style={hr} />
                     <p style={p}>Nous comptons sur votre ponctualité et votre sérieux pour le bon déroulement de cette évaluation. Pour toute question, n'hésitez pas à vous adresser à votre responsable de classe ou à l'administration du centre.</p>
                     <p style={{ ...p, marginTop: 24 }}>Cordialement,</p>
                     <p className="conv-direction" style={{ ...p, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</p>
@@ -3468,12 +3529,9 @@ export default function TCF() {
                   statutCellule(sitePlan, pid, jour, moment) === 'rouge' && rActifCellule(sitePlan, pid, jour, moment);
                 const getCellProfs = (jour, moment) => {
                   const sortByPrenom = (a, b) => (profMap[a]?.prenom || '').localeCompare(profMap[b]?.prenom || '', 'fr');
-                  const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom);
-                  const regular = poolIds.filter(pid => statutCellule(sitePlan, pid, jour, moment) === 'vert').sort(sortByPrenom);
-                  return [
-                    ...reserves.map(pid => ({ nom: getProfNom(pid), isReserve: true })),
-                    ...regular.map(pid => ({ nom: getProfNom(pid), isReserve: false })),
-                  ].filter(item => item.nom);
+                  const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
+                  const regular = poolIds.filter(pid => statutCellule(sitePlan, pid, jour, moment) === 'vert').sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
+                  return { regular, reserves };
                 };
                 const cellStyle = { ...styles.tdLeft, verticalAlign: 'top', padding: '6px 8px' };
                 const font = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -3508,19 +3566,26 @@ export default function TCF() {
                             <tr>
                               {joursActifs.map(j => (
                                 <td key={j} style={{ ...cellStyle, height: 120 }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {getCellProfs(j, moment).map((item, i) => (
-                                      <span key={i} style={{
-                                        display: 'block',
-                                        color: item.isReserve ? '#b91c1c' : '#1e293b',
-                                        fontSize: 16,
-                                        fontWeight: item.isReserve ? 700 : 400,
-                                        lineHeight: 1.4,
-                                      }}>
-                                        {item.nom}
-                                      </span>
-                                    ))}
-                                  </div>
+                                  {(() => {
+                                    const { regular, reserves } = getCellProfs(j, moment);
+                                    return (
+                                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                                        <div>
+                                          {regular.map((nom, i) => (
+                                            <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
+                                          ))}
+                                        </div>
+                                        {reserves.length > 0 && (
+                                          <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: 4 }}>
+                                            <span style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 700, lineHeight: 1.4 }}>Réserve</span>
+                                            {reserves.map((nom, i) => (
+                                              <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               ))}
                             </tr>
@@ -3531,7 +3596,7 @@ export default function TCF() {
                     <div style={{ marginTop: 28 }}>
                       <div style={{ ...pStyle, fontWeight: 700, marginBottom: 8 }}>Information importante</div>
                       <div style={pStyle}>
-                        Les professeurs figurant en <strong style={{ color: '#b91c1c' }}>rouge</strong> sont désignés comme <strong>professeurs de réserve</strong>.
+                        Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>.
                         À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve,
                         afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.
                       </div>
@@ -3727,7 +3792,7 @@ const styles = {
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer' },
   selectRole: { padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer' },
-  inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72 },
+  inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },

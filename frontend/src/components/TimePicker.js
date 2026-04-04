@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useRef } from 'react';
 
 const SIZE = 220;
 const CX = SIZE / 2;
@@ -54,6 +54,7 @@ export default function TimePicker({ value, onChange, style }) {
     setHInput(fmt(hv)); setMInput(fmt(mv));
     setPhase('hours');
     setOpen(true);
+    setTimeout(() => hRef.current && hRef.current.focus(), 0);
   };
 
   const handleOk = () => {
@@ -72,10 +73,22 @@ export default function TimePicker({ value, onChange, style }) {
     setMInput(fmt(val));
   };
 
+  const hRef = useRef(null);
+  const mRef = useRef(null);
+
   const handleHInput = (e) => {
-    setHInput(e.target.value);
-    const v = parseInt(e.target.value);
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+    setHInput(raw);
+    const v = parseInt(raw);
     if (!isNaN(v) && v >= 0 && v <= 23) setH(v);
+    // auto-focus minutes après 2 chiffres valides
+    if (raw.length === 2 && !isNaN(v) && v <= 23) {
+      setPhase('minutes');
+      mRef.current && mRef.current.focus();
+    }
+  };
+  const handleHKeyDown = (e) => {
+    if (e.key === 'Enter') { mRef.current && mRef.current.focus(); }
   };
   const handleHBlur = () => {
     const v = parseInt(hInput);
@@ -84,9 +97,13 @@ export default function TimePicker({ value, onChange, style }) {
   };
 
   const handleMInput = (e) => {
-    setMInput(e.target.value);
-    const v = parseInt(e.target.value);
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+    setMInput(raw);
+    const v = parseInt(raw);
     if (!isNaN(v) && v >= 0 && v <= 59) setM(v);
+  };
+  const handleMKeyDown = (e) => {
+    if (e.key === 'Enter') handleOk();
   };
   const handleMBlur = () => {
     const v = parseInt(mInput);
@@ -127,10 +144,7 @@ export default function TimePicker({ value, onChange, style }) {
     color: active ? '#3b82f6' : '#334155',
     fontFamily: 'inherit', outline: 'none',
     cursor: 'text', padding: 0,
-    MozAppearance: 'textfield',
   });
-
-  const items = phase === 'hours' ? HOUR_ITEMS : MINUTE_ITEMS;
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -154,20 +168,26 @@ export default function TimePicker({ value, onChange, style }) {
             {/* HH : MM */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
-                type="number" min="0" max="23"
+                ref={hRef}
+                type="text" inputMode="numeric"
                 value={hInput}
                 onChange={handleHInput}
+                onKeyDown={handleHKeyDown}
                 onBlur={handleHBlur}
-                onFocus={() => setPhase('hours')}
+                onFocus={e => { setPhase('hours'); e.target.select(); }}
+                placeholder="HH"
                 style={inputBoxStyle(phase === 'hours')}
               />
               <span style={{ fontSize: 26, fontWeight: 800, color: '#334155' }}>:</span>
               <input
-                type="number" min="0" max="59"
+                ref={mRef}
+                type="text" inputMode="numeric"
                 value={mInput}
                 onChange={handleMInput}
+                onKeyDown={handleMKeyDown}
                 onBlur={handleMBlur}
-                onFocus={() => setPhase('minutes')}
+                onFocus={e => { setPhase('minutes'); e.target.select(); }}
+                placeholder="MM"
                 style={inputBoxStyle(phase === 'minutes')}
               />
             </div>
