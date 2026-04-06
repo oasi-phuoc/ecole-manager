@@ -1,7 +1,8 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ICONS_MATERIELS } from '../components/DashboardIcons';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
@@ -31,8 +32,30 @@ const MATERIEL_FACTURATION = [
   { key: 'plume_pilot',   label: 'Plume pilot + 3 cartouches', prix: 14.80, qteDefaut: 1 },
 ];
 
+const ICONES_MATERIELS_LIST = [
+  { key: 'classeur_grand',  label: 'Grand classeur (7 cm)' },
+  { key: 'classeur_petit',  label: 'Petit classeur (4 cm)' },
+  { key: 'cahier_a4',       label: 'Cahier A4' },
+  { key: 'feuilles_dessin', label: 'Feuilles de dessin' },
+  { key: 'photocopies',     label: 'Photocopies / feuilles' },
+  { key: 'agenda',          label: 'Agenda' },
+  { key: 'repertoire',      label: 'Répertoire' },
+  { key: 'crayon',          label: 'Crayon papier' },
+  { key: 'stylo',           label: 'Stylo bille' },
+  { key: 'stylo_plume',     label: 'Stylo plume / Plume pilot' },
+  { key: 'fixpencil',       label: 'Fixpencil (crayon mécanique)' },
+  { key: 'mines',           label: 'Boîte de mines (HB)' },
+  { key: 'crayons_couleur', label: 'Crayons de couleur' },
+  { key: 'gomme',           label: 'Gomme' },
+  { key: 'sports',          label: 'ACM / Sports' },
+  { key: 'deplacement',     label: 'Déplacement' },
+  { key: 'manifestation',   label: 'Manifestations' },
+  { key: 'enseignement',    label: 'Matériel d\'enseignement' },
+];
+
 export default function Comptabilite() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [onglet, setOnglet] = useState('factures');
 
   // Data
@@ -44,6 +67,7 @@ export default function Comptabilite() {
 
   // Paiements sub-tab + filter
   const [paiementsOnglet, setPaiementsOnglet] = useState('tous');
+  const [paiementsNiveau, setPaiementsNiveau] = useState('Tous');
   const [filtreClasse, setFiltreClasse] = useState('');
 
   // Nouvelle facture popup
@@ -70,16 +94,41 @@ export default function Comptabilite() {
   const [prixOnglet, setPrixOnglet] = useState('ecolage');
   const [classeFacturationId, setClasseFacturationId] = useState('');
   const [materielDistribue, setMaterielDistribue] = useState({});
+  const [facturesValidees, setFacturesValidees] = useState({});
+  const [toutesValidations, setToutesValidations] = useState({});
   const [factureImprime, setFactureImprime] = useState(null);
   const [showMaterielForm, setShowMaterielForm] = useState(false);
   const [materielEdit, setMaterielEdit] = useState(null);
-  const [materielForm, setMaterielForm] = useState({ nom: '', section: 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' });
+  const [materielForm, setMaterielForm] = useState({ nom: '', section: 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '', icone: '' });
 
   const headers = {};
 
   useEffect(() => {
     chargerPaiements(); chargerStats(); chargerEleves(); chargerClasses(); chargerMateriels();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.classeFacturationId) {
+      setOnglet('factures');
+      setClasseFacturationId(String(location.state.classeFacturationId));
+    }
+  }, []);
+
+  const chargerToutesValidations = async (elevesListe, annee) => {
+    if (!elevesListe || elevesListe.length === 0) return;
+    const ids = elevesListe.map(e => e.id).join(',');
+    try {
+      const res = await axios.get(API + `/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${annee}`, { headers });
+      const map = {};
+      res.data.forEach(r => { map[r.eleve_id] = r.valide; });
+      setToutesValidations(map);
+      setFacturesValidees(prev => ({ ...map, ...prev }));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (eleves.length > 0) chargerToutesValidations(eleves, anneeScolaireCourante);
+  }, [eleves.length]);
 
   const chargerPaiements = async () => {
     try {
@@ -119,6 +168,10 @@ export default function Comptabilite() {
   const paiementsFiltres = paiements.filter(p => {
     if (paiementsOnglet !== 'tous' && p.statut !== paiementsOnglet) return false;
     if (filtreClasse && p.classe !== filtreClasse) return false;
+    if (paiementsNiveau !== 'Tous') {
+      const classeObj = classes.find(c => c.nom === p.classe);
+      if (!classeObj || !String(classeObj.niveau || '').toUpperCase().includes(paiementsNiveau)) return false;
+    }
     return true;
   });
 
@@ -135,10 +188,10 @@ export default function Comptabilite() {
     setFactureDate(new Date().toISOString().split('T')[0]);
     setFactureCommentaire('');
     setEcolageRows([{ type: 'Ecolage', montantBase: '', prorata: 12 }]);
-    const fournitures = materiels.filter(m => m.section === 'fournitures');
+    const scolaires = materiels.filter(m => (m.section || 'scolaire') === 'scolaire');
     setMaterielRows(
-      fournitures.length > 0
-        ? fournitures.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qte: 0 }))
+      scolaires.length > 0
+        ? scolaires.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qte: 0 }))
         : MATERIEL_FACTURATION.map(m => ({ id: m.key, nom: m.label, prix: m.prix, qte: 0 }))
     );
     setDiversRows([{ desc: '', montant: '' }]);
@@ -191,11 +244,11 @@ export default function Comptabilite() {
   };
 
   // Liste de prix helpers
-  const materielsScolaires = materiels.filter(m => (m.section || 'scolaire') === 'scolaire');
+  const materielsScolaires = materiels.filter(m => m.section === 'scolaire');
   const materielsEcolage = materiels.filter(m => m.section === 'ecolage');
   const materielsFournitures = materiels.filter(m => m.section === 'fournitures');
-  const materielsFacturation = materielsFournitures.length > 0
-    ? materielsFournitures.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qteDefaut: 1 }))
+  const materielsFacturation = materielsScolaires.length > 0
+    ? materielsScolaires.map(m => ({ id: m.id, nom: m.nom, prix: Number(m.prix || 0), qteDefaut: 1 }))
     : MATERIEL_FACTURATION.map(m => ({ id: m.key, nom: m.label, prix: m.prix, qteDefaut: m.qteDefaut }));
   const elevesClasseFacturation = eleves
     .filter(e => String(e.classe_id || '') === String(classeFacturationId || ''))
@@ -209,6 +262,9 @@ export default function Comptabilite() {
   const totalEleve = (eleveId) => materielsFacturation.reduce((acc, m) => acc + Number(m.prix) * Number(materielDistribue[eleveId]?.[m.id] ?? m.qteDefaut), 0);
   const totalClasse = elevesClasseFacturation.reduce((acc, e) => acc + totalEleve(e.id), 0);
 
+  const now0 = new Date();
+  const anneeScolaireCourante = now0.getMonth() >= 8 ? `${now0.getFullYear()}-${now0.getFullYear()+1}` : `${now0.getFullYear()-1}-${now0.getFullYear()}`;
+
   useEffect(() => {
     if (!classeFacturationId) return;
     setMaterielDistribue(prev => {
@@ -218,11 +274,52 @@ export default function Comptabilite() {
     });
   }, [classeFacturationId, eleves.length]);
 
+  useEffect(() => {
+    if (!classeFacturationId || elevesClasseFacturation.length === 0) return;
+    const ids = elevesClasseFacturation.map(e => e.id).join(',');
+    axios.get(API + `/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${anneeScolaireCourante}`, { headers })
+      .then(res => {
+        const map = {};
+        res.data.forEach(r => { map[r.eleve_id] = r.valide; });
+        setFacturesValidees(prev => ({ ...prev, ...map }));
+      }).catch(() => {});
+  }, [classeFacturationId, eleves.length]);
+
+  const toggleValidationFacture = async (eleveId) => {
+    const nouvelEtat = !facturesValidees[eleveId];
+    setFacturesValidees(prev => ({ ...prev, [eleveId]: nouvelEtat }));
+    setToutesValidations(prev => ({ ...prev, [eleveId]: nouvelEtat }));
+    try {
+      await axios.post(API + '/comptabilite/factures/validation', { eleve_id: eleveId, annee_scolaire: anneeScolaireCourante, valide: nouvelEtat }, { headers });
+      // Si EUCMS et on valide, créer automatiquement un paiement en_attente
+      if (nouvelEtat) {
+        const eleve = eleves.find(e => e.id === eleveId);
+        if (eleve?.categorie === 'EUCMS') {
+          const dejaExistant = paiements.some(p => p.eleve_id === eleveId && p.commentaire === `Facture ${anneeScolaireCourante}`);
+          if (!dejaExistant) {
+            const montant = totalEleve(eleveId);
+            await axios.post(API + '/comptabilite', {
+              eleve_id: eleveId,
+              montant,
+              type: 'Ecolage',
+              statut: 'en_attente',
+              commentaire: `Facture ${anneeScolaireCourante}`
+            }, { headers });
+            await chargerPaiements();
+          }
+        }
+      }
+    } catch (e) {
+      setFacturesValidees(prev => ({ ...prev, [eleveId]: !nouvelEtat }));
+      setToutesValidations(prev => ({ ...prev, [eleveId]: !nouvelEtat }));
+    }
+  };
+
   const ouvrirFormMateriel = (m = null) => {
     setMaterielEdit(m);
     setMaterielForm(m
-      ? { nom: m.nom || '', section: m.section || 'scolaire', prix: m.prix != null ? String(m.prix) : '', ref: m.ref || '', fournisseur: m.fournisseur || '', rabais: m.rabais != null ? String(m.rabais) : '', remarques: m.remarques || '' }
-      : { nom: '', section: prixOnglet === 'fournitures' ? 'fournitures' : prixOnglet === 'ecolage' ? 'ecolage' : 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '' }
+      ? { nom: m.nom || '', section: m.section || 'scolaire', prix: m.prix != null ? String(m.prix) : '', ref: m.ref || '', fournisseur: m.fournisseur || '', rabais: m.rabais != null ? String(m.rabais) : '', remarques: m.remarques || '', icone: m.icone || '' }
+      : { nom: '', section: prixOnglet === 'fournitures' ? 'fournitures' : prixOnglet === 'ecolage' ? 'ecolage' : 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '', icone: '' }
     );
     setShowMaterielForm(true);
   };
@@ -241,21 +338,164 @@ export default function Comptabilite() {
     await chargerMateriels();
   };
 
-  const ouvrirFactureImprime = (eleve) => {
+  const calcQRRef = (classeNom, dateStr, eleve) => {
+    // Encode class: keep only digits, pad to 4
+    const classDigits = classeNom.replace(/\D/g,'').padStart(4,'0').slice(-4);
+    // Date: DDMMYYYY from DD.MM.YYYY
+    const parts = (dateStr||'').split('.');
+    const dateDigits = parts.length === 3 ? `${parts[0]}${parts[1]}${parts[2]}` : new Date().toLocaleDateString('fr-CH').split('.').join('');
+    // Student: char codes of first letters, mod 100
+    const n1 = String((eleve.nom||'A').toUpperCase().charCodeAt(0) % 100).padStart(2,'0');
+    const n2 = String((eleve.prenom||'A').toUpperCase().charCodeAt(0) % 100).padStart(2,'0');
+    // Build 26-digit base, pad/truncate
+    const base = `${classDigits}${dateDigits}${n1}${n2}`.replace(/\D/g,'').padStart(26,'0').slice(-26);
+    // Modulo 10 recursive check digit
+    const TABLE = [0,9,4,6,8,2,7,1,3,5];
+    let carry = 0;
+    for (const d of base) carry = TABLE[(carry + parseInt(d)) % 10];
+    const check = (10 - carry) % 10;
+    const ref27 = `${base}${check}`;
+    // Format: XX XXXXX XXXXX XXXXX XXXXX XXXXX
+    return ref27.replace(/^(.{2})(.{5})(.{5})(.{5})(.{5})(.{5})$/, '$1 $2 $3 $4 $5 $6');
+  };
+
+  const calcProrata = (dateDebutCours) => {
+    // 100% = début en août-oct, 75% = novembre, 50% = janvier-mars, 25% = avril-juin
+    if (!dateDebutCours) return 12;
+    const debut = new Date(dateDebutCours);
+    const m = debut.getMonth(); // 0=Jan … 11=Dec
+    // School year starts in August (m=7)
+    if (m >= 7 && m <= 9) return 12; // Aug–Oct → 100% (12/12)
+    if (m === 10) return 9;           // Nov     → 75%  (9/12)
+    if (m === 11 || m <= 2) return 6; // Dec–Mar → 50%  (6/12)
+    return 3;                         // Apr–Jun → 25%  (3/12)
+  };
+
+  const ouvrirFactureImprime = async (eleve) => {
     const classe = classes.find(c => String(c.id) === String(classeFacturationId));
+    const classeNom = classe?.nom || '—';
     const lignes = materielsFacturation.map(m => {
       const qte = Number(materielDistribue[eleve.id]?.[m.id] ?? m.qteDefaut);
       return { ...m, qte, montant: qte * m.prix };
     }).filter(l => l.qte > 0);
-    setFactureImprime({ eleve, classeNom: classe?.nom || '—', dateFacture: new Date().toLocaleDateString('fr-CH'), lignes, total: lignes.reduce((acc, l) => acc + l.montant, 0) });
+    const prorata = calcProrata(eleve.date_debut_cours);
+    const lignesEcolage = materielsEcolage.map(m => ({
+      id: m.id, nom: m.nom, prix: Number(m.prix || 0),
+      prorata, montant: Number(m.prix || 0) * prorata / 12,
+    }));
+    const totalEcolage = lignesEcolage.reduce((acc, l) => acc + l.montant, 0);
+    const totalMateriel = lignes.reduce((acc, l) => acc + l.montant, 0);
+    const dateFacture = new Date().toLocaleDateString('fr-CH');
+    const now = new Date();
+    const annee_scolaire = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
+    const refGeneree = calcQRRef(classeNom, dateFacture, eleve);
+    let reference = refGeneree;
+    try {
+      const resp = await axios.post(API + '/comptabilite/factures/reference', { eleve_id: eleve.id, annee_scolaire, reference: refGeneree }, { headers });
+      reference = resp.data.reference;
+    } catch (e) { /* utilise la référence générée localement si erreur */ }
+    setFactureImprime({ eleve, classeNom, dateFacture, lignes, lignesEcolage, total: totalEcolage + totalMateriel, reference });
   };
   const imprimerFacture = () => {
-    const node = document.getElementById('facture-pdf');
-    if (!node) return;
-    const popup = window.open('', '_blank', 'width=1000,height=800');
+    if (!factureImprime) return;
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const now = new Date();
+    const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
+    const dateStr = now.toLocaleDateString('fr-CH');
+    const { eleve, classeNom, lignes, lignesEcolage, total } = factureImprime;
+    const cg = `<colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup>`;
+    const th = (col1) => `<thead><tr style="background:#6366f1;color:white"><th style="padding:8px 10px;text-align:left">${col1}</th><th style="padding:8px 10px;text-align:right">Prorata</th><th style="padding:8px 10px;text-align:right">Prix</th><th style="padding:8px 10px;text-align:right">Montant</th></tr></thead>`;
+    const tdR = `border:1px solid #dbe3ee;padding:7px 10px;font-size:10pt;text-align:right`;
+    const tdL = `border:1px solid #dbe3ee;padding:7px 10px;font-size:10pt`;
+    const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:10pt;padding:5px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:16px"><span style="font-weight:600">${label}</span><b>${val.toFixed(2)} CHF</b></div>`;
+    const totalEcolageVal = (lignesEcolage||[]).reduce((a,l)=>a+l.montant,0);
+    const totalMaterielVal = lignes.reduce((a,l)=>a+l.montant,0);
+    const ecolageHtml = (lignesEcolage || []).length > 0 ? `
+      <table style="table-layout:fixed">
+        ${cg}${th('Frais d\'écolage')}
+        <tbody>${(lignesEcolage || []).map((l,i) => `
+          <tr style="background:${i%2===0?'white':'#fafafa'}">
+            <td style="${tdL}">${l.nom}</td>
+            <td style="${tdR}">${Math.round(l.prorata/12*100)}%</td>
+            <td style="${tdR}">${Number(l.prix).toFixed(2)} CHF</td>
+            <td style="${tdR};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      ${stLine('Sous-total', totalEcolageVal)}` : '';
+    const lignesHtml = lignes.length > 0 ? `
+      <table style="table-layout:fixed">
+        ${cg}${th('Matériel scolaire')}
+        <tbody>${lignes.map((l,i) => `
+          <tr style="background:${i%2===0?'white':'#fafafa'}">
+            <td style="${tdL}">${l.nom}</td>
+            <td style="${tdR}">${l.qte}</td>
+            <td style="${tdR}">${Number(l.prix).toFixed(2)} CHF</td>
+            <td style="${tdR};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      ${stLine('Sous-total', totalMaterielVal)}` : '';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Facture</title><style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+      @page { size: A4 portrait; margin: 15mm 20mm; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      .entete, .entete * { font-size: 6pt !important; }
+      .scai { font-size: 17pt !important; font-weight: 800; line-height: 1; color: #1e293b; }
+      .footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
+      .footer * { font-size: 6pt !important; }
+      .signature { position: fixed; bottom: 100px; right: 20mm; font-size: 10pt; text-align: right; }
+      .titre { text-align: center; font-weight: 700; font-size: 17pt; letter-spacing: 1px; text-transform: uppercase; margin-top: 25pt; margin-bottom: 20pt; color: #0f172a; }
+      .date { text-align: right; font-size: 10pt; margin-bottom: 20pt; }
+      table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+      thead tr { background: #6366f1; color: white; }
+      thead th { padding: 8px 10px; font-size: 10pt; text-align: left; }
+      p { font-size: 10pt; margin-bottom: 8pt; }
+    </style></head><body>
+      <div class="entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
+          <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="scai">SCAI</div>
+          <div style="font-size:12px;font-weight:700;color:#374151;">${annee}</div>
+          <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
+        </div>
+      </div>
+      <div class="titre">Facture</div>
+      <div class="date">Vétroz, le ${dateStr}</div>
+      <div style="font-size:10pt;color:#64748b;margin-bottom:2px">NOM Prénom</div>
+      <div style="font-size:13pt;font-weight:700;color:#0f172a;margin-bottom:6px">${eleve.nom} ${eleve.prenom}</div>
+      <div style="font-size:10pt;color:#64748b;margin-bottom:2px">Classe</div>
+      <div style="font-size:11pt;color:#334155;margin-bottom:16px">${classeNom}</div>
+      <div style="font-size:9pt;color:#64748b;margin-bottom:16px">Référence : <b style="color:#334155;font-family:monospace;letter-spacing:1px">${factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)}</b></div>
+      ${ecolageHtml}
+      ${lignesHtml}
+      <div style="display:flex;justify-content:space-between;font-size:13pt;font-weight:700;border-top:2px solid #0f172a;padding-top:10px;margin-top:8px">
+        <span>MONTANT DE LA FACTURE</span><b>${Number(total).toFixed(2)} CHF</b>
+      </div>
+      ${eleve.categorie === 'EUCMS' ? (() => {
+        const ref5 = (factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)).replace(/\s/g,'').slice(-5);
+        return `<p style="margin-top:16px;font-size:9pt;color:#1e293b;line-height:1.6">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
+        <p style="margin-top:8px;font-size:9pt;color:#1e293b;line-height:1.6">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${classeNom})</b>.</p>`;
+      })() : ''}
+      <div class="signature">Signature : ____________________________</div>
+      <div class="footer">
+        <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
+        <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
+      </div>
+      ${eleve.categorie === 'EUCMS' ? `
+      <div style="page-break-before:always;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+        <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:100vh;object-fit:contain;" />
+      </div>` : ''}
+    </body></html>`;
+    const popup = window.open('', '_blank', 'width=900,height=800');
     if (!popup) return;
-    popup.document.write(`<html><head><title>Facture</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#111;}table{width:100%;border-collapse:collapse;margin-top:14px;}th,td{border:1px solid #dbe3ee;padding:8px;font-size:12px;}th{background:#f8fafc;text-align:left;}</style></head><body>${node.outerHTML}</body></html>`);
-    popup.document.close(); popup.focus(); popup.print();
+    popup.document.write(html);
+    popup.document.close();
+    popup.onload = () => { popup.focus(); popup.print(); };
   };
 
   return (
@@ -263,32 +503,8 @@ export default function Comptabilite() {
       <div style={styles.header}>
         <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={styles.titre}>Comptabilité</h2>
-        {onglet === 'factures' && (
-          <button style={styles.btnAjouter} onClick={ouvrirNouvelleFacture}>+ Nouvelle facture</button>
-        )}
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div style={styles.statsGrid}>
-          <div style={{ ...styles.statCard, borderTop: '4px solid #34a853' }}>
-            <div style={styles.statValeur}>{parseFloat(stats.total_encaisse).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>Total encaissé</div>
-          </div>
-          <div style={{ ...styles.statCard, borderTop: '4px solid #fbbc04' }}>
-            <div style={styles.statValeur}>{parseFloat(stats.en_attente.total).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>En attente ({stats.en_attente.nb})</div>
-          </div>
-          <div style={{ ...styles.statCard, borderTop: '4px solid #ea4335' }}>
-            <div style={styles.statValeur}>{parseFloat(stats.en_retard.total).toFixed(2)} CHF</div>
-            <div style={styles.statLabel}>En retard ({stats.en_retard.nb})</div>
-          </div>
-          <div style={{ ...styles.statCard, borderTop: '4px solid #6366f1' }}>
-            <div style={styles.statValeur}>{paiements.length}</div>
-            <div style={styles.statLabel}>Total transactions</div>
-          </div>
-        </div>
-      )}
 
       {/* Main tabs */}
       <div style={styles.tabsRow}>
@@ -325,31 +541,80 @@ export default function Comptabilite() {
           </div>
           <div style={styles.tabContent}>
             {!classeFacturationId ? (
-              <div style={styles.vide}>Sélectionnez une classe pour voir la facturation</div>
+              (() => {
+                const classesNiveau = classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau));
+                return (
+                  <div style={styles.tableWrap}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        <th style={styles.thMateriel}>Classe</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Élèves</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#bbf7d0' }}>✓ Validées</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#fecaca' }}>En attente</th>
+                        <th style={styles.thMateriel}>Progression</th>
+                        <th style={styles.thMateriel}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classesNiveau.map((c, idx) => {
+                        const elevesC = eleves.filter(e => String(e.classe_id) === String(c.id));
+                        const total = elevesC.length;
+                        const valides = elevesC.filter(e => toutesValidations[e.id]).length;
+                        const pct = total > 0 ? Math.round(valides / total * 100) : 0;
+                        return (
+                          <tr key={c.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                            <td style={{ ...styles.tdMateriel, fontWeight: 600 }}>{c.nom}</td>
+                            <td style={{ ...styles.tdMateriel, textAlign: 'center', color: '#64748b' }}>{total}</td>
+                            <td style={{ ...styles.tdMateriel, textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{valides}</td>
+                            <td style={{ ...styles.tdMateriel, textAlign: 'center', fontWeight: 700, color: total - valides > 0 ? '#dc2626' : '#16a34a' }}>{total - valides}</td>
+                            <td style={{ ...styles.tdMateriel, minWidth: 120 }}>
+                              <div style={{ background: '#e2e8f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                                <div style={{ background: pct === 100 ? '#16a34a' : '#6366f1', height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width .3s' }} />
+                              </div>
+                              <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{pct}%</div>
+                            </td>
+                            <td style={styles.tdMateriel}>
+                              <button style={{ ...styles.btnDetailFacture, fontSize: 11 }} onClick={() => setClasseFacturationId(String(c.id))}>Ouvrir →</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {classesNiveau.length === 0 && (
+                        <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
+                      )}
+                    </tbody>
+                  </table></div>
+                );
+              })()
             ) : (
               <>
-                <div style={styles.facturationHeader}>
-                  <b>Classe : {(classes.find(c => String(c.id) === String(classeFacturationId)) || {}).nom || '—'}</b>
-                  <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '6px 10px', borderRadius: 10, fontWeight: '700', fontSize: 13 }}>Total classe : {totalClasse.toFixed(2)} CHF</span>
-                </div>
                 <div style={{ overflowX: 'auto' }}>
+                  <div style={styles.tableWrap}>
                   <table style={{ ...styles.tableMateriel, minWidth: 1300 }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
                         <th style={styles.thMateriel}>Nom</th>
                         <th style={styles.thMateriel}>Prénom</th>
-                        {materielsFacturation.map(m => (
-                          <th key={m.id} style={{ ...styles.thMateriel, textAlign: 'center', minWidth: 80, fontSize: 10, lineHeight: 1.2 }} title={m.nom}>{m.nom}</th>
-                        ))}
+                        {materielsFacturation.map(m => {
+                          const IcComp = m.icone ? ICONS_MATERIELS[m.icone] : null;
+                          return (
+                            <th key={m.id} style={{ ...styles.thMateriel, textAlign: 'center', minWidth: IcComp ? 44 : 80, fontSize: 10, lineHeight: 1.2 }} title={m.nom}>
+                              {IcComp ? <span style={{ display: 'flex', justifyContent: 'center', color: 'white' }}><IcComp size={20} active={false} /></span> : m.nom}
+                            </th>
+                          );
+                        })}
                         <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Total</th>
                         <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Détail</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Validé</th>
                       </tr>
                     </thead>
                     <tbody>
                       {elevesClasseFacturation.length === 0 ? (
-                        <tr><td colSpan={materielsFacturation.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
-                      ) : elevesClasseFacturation.map((e, idx) => (
-                        <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <tr><td colSpan={materielsFacturation.length + 5} style={styles.vide}>Aucun élève dans cette classe</td></tr>
+                      ) : elevesClasseFacturation.map((e, idx) => {
+                        const valide = !!facturesValidees[e.id];
+                        return (
+                        <tr key={e.id} style={{ background: valide ? '#f0fdf4' : idx % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={styles.tdMateriel}>{e.nom || '—'}</td>
                           <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           {materielsFacturation.map(m => (
@@ -365,10 +630,19 @@ export default function Comptabilite() {
                           <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                             <button style={styles.btnDetailFacture} onClick={() => ouvrirFactureImprime(e)}>Détail</button>
                           </td>
+                          <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                            <button
+                              onClick={() => toggleValidationFacture(e.id)}
+                              style={{ padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: valide ? '#16a34a' : '#e2e8f0', color: valide ? 'white' : '#64748b', transition: 'all .15s' }}>
+                              {valide ? '✓ Validé' : 'À valider'}
+                            </button>
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </>
             )}
@@ -379,8 +653,18 @@ export default function Comptabilite() {
       {/* ===== PAIEMENTS ===== */}
       {onglet === 'paiements' && (
         <>
-          {/* Sous-onglets statut paiements */}
-          <div style={{ display: 'flex', gap: 0 }}>
+          {/* Niveau + statut sur la même ligne */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
+            <div style={{ display: 'flex', gap: 0 }}>
+              {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
+                <button key={niv}
+                  style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsNiveau === niv ? '#4f46e5' : '#e0e7ff', color: paiementsNiveau === niv ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsNiveau === niv ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
+                  onClick={() => { setPaiementsNiveau(niv); setFiltreClasse(''); }}>
+                  {niv}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginLeft: 15, display: 'flex', gap: 0 }}>
             {[
               { key: 'tous', label: 'Tous' },
               { key: 'paye', label: 'Payé' },
@@ -389,20 +673,21 @@ export default function Comptabilite() {
               { key: 'annule', label: 'Annulé' },
             ].map(t => (
               <button key={t.key}
-                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: paiementsOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none', marginRight: 4 }}
+                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: paiementsOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
                 onClick={() => setPaiementsOnglet(t.key)}>
-                {t.label} ({paiements.filter(p => t.key === 'tous' || p.statut === t.key).length})
+                {t.label}
               </button>
             ))}
+            </div>
           </div>
         <div style={{ ...styles.tabContent, marginTop: 15 }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 14px', borderBottom: '1px solid #f0f0f0' }}>
             <select style={styles.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
               <option value="">Toutes les classes</option>
-              {classes.map(c => <option key={c.id} value={c.nom}>{c.nom}</option>)}
+              {classes.filter(c => paiementsNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(paiementsNiveau)).map(c => <option key={c.id} value={c.nom}>{c.nom}</option>)}
             </select>
           </div>
-          <table style={styles.table}>
+          <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
             <thead>
               <tr style={styles.theadRow}>
                 {['Élève', 'Classe', 'Type', 'Montant', 'Statut', 'Date', 'Actions'].map(h => (
@@ -433,7 +718,7 @@ export default function Comptabilite() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
         </>
       )}
@@ -460,7 +745,7 @@ export default function Comptabilite() {
 
             {/* Écolage */}
           {prixOnglet === 'ecolage' && (
-            <table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -501,12 +786,12 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
 
           {/* Matériel scolaire */}
           {prixOnglet === 'scolaire' && (
-            <table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -535,12 +820,12 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
 
           {/* Autres fournitures */}
           {prixOnglet === 'fournitures' && (
-            <table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -569,7 +854,7 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
 
         </div>
@@ -931,6 +1216,33 @@ export default function Comptabilite() {
                   <label style={styles.label}>Remarques</label>
                   <input style={styles.input} value={materielForm.remarques} onChange={e => setMaterielForm({ ...materielForm, remarques: e.target.value })} />
                 </div>
+                {materielForm.section === 'scolaire' && (
+                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                    <label style={styles.label}>Icône (optionnel — visible dans le tableau de facturation)</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      {ICONES_MATERIELS_LIST.map(ic => {
+                        const Comp = ICONS_MATERIELS[ic.key];
+                        const sel = materielForm.icone === ic.key;
+                        return Comp ? (
+                          <button key={ic.key} type="button" title={ic.label}
+                            style={{ padding: '6px', border: sel ? '2px solid #6366f1' : '1px solid #e2e8f0', borderRadius: 8, background: sel ? '#ede9fe' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sel ? '#6366f1' : '#64748b' }}
+                            onClick={() => setMaterielForm({ ...materielForm, icone: sel ? '' : ic.key })}>
+                            <Comp size={22} active={false} />
+                          </button>
+                        ) : null;
+                      })}
+                    </div>
+                    {materielForm.icone && ICONS_MATERIELS[materielForm.icone] && (() => {
+                      const Comp = ICONS_MATERIELS[materielForm.icone];
+                      return (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          Sélectionné : <span style={{ color: '#6366f1' }}><Comp size={20} active={false} /></span>
+                          <button type="button" style={{ fontSize: 11, color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }} onClick={() => setMaterielForm({ ...materielForm, icone: '' })}>✕ Supprimer</button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
               <div style={styles.formActions}>
                 <button type="button" style={styles.btnAnnuler} onClick={() => setShowMaterielForm(false)}>Annuler</button>
@@ -949,43 +1261,120 @@ export default function Comptabilite() {
               <button style={styles.btnAnnuler} onClick={() => setFactureImprime(null)}>Fermer</button>
               <button style={styles.btnSauver} onClick={imprimerFacture}>🖨️ Imprimer / PDF</button>
             </div>
-            <div id="facture-pdf" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 10, padding: 22, color: '#111' }}>
-              {['Département de la santé, des affaires sociales et de la culture', "Service de l'action sociale", "Office de l'asile", 'Centre de formation "Le Botza"', 'Zone Industrielle 4, 1963 Vétroz', 'Tél. 027 606 18 60'].map((line, i) => (
-                <div key={i} style={{ fontSize: 12, lineHeight: 1.4, marginBottom: i === 5 ? 12 : 0 }}>{line}</div>
-              ))}
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>FINANCE ECOLAGE &amp; MATERIEL GENERAL</div>
-              <div style={{ fontSize: 13, color: '#334155', marginBottom: 10 }}>Facture du matériel scolaire</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12, marginBottom: 12 }}>
-                <div><b>NOM Prénom :</b> {factureImprime.eleve.nom} {factureImprime.eleve.prenom}</div>
-                <div><b>Classe :</b> {factureImprime.classeNom}</div>
-                <div><b>Date :</b> {factureImprime.dateFacture}</div>
+            <div id="facture-pdf" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 10, padding: '28px 32px', color: '#1e293b', fontFamily: "'Century Gothic', CenturyGothic, 'Trebuchet MS', sans-serif" }}>
+              {/* En-tête */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <img src={`${window.location.origin}${process.env.PUBLIC_URL || ''}/logo-etat-du-valais.png`} style={{ width: 38 }} alt="" onError={e => e.target.style.display='none'} />
+                  <div style={{ fontSize: 7 }}>
+                    <div>Département de la santé, des affaires sociales et de la culture</div>
+                    <div>Service de l'action sociale</div>
+                    <div>Office de l'asile</div>
+                    <div>Centre de formation "Le Botza"</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>{(() => { const n = new Date(); return n.getMonth() >= 8 ? `${n.getFullYear()}-${n.getFullYear()+1}` : `${n.getFullYear()-1}-${n.getFullYear()}`; })()}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
+                </div>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
-                <thead>
-                  <tr>
-                    {['Article', 'Prix unitaire', 'Quantité', 'Prix'].map((h, i) => (
-                      <th key={h} style={{ border: '1px solid #dbe3ee', padding: 8, fontSize: 12, background: '#f8fafc', textAlign: i > 0 ? 'right' : 'left' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {factureImprime.lignes.map(l => (
-                    <tr key={l.id}>
-                      <td style={{ border: '1px solid #dbe3ee', padding: 8, fontSize: 12 }}>{l.nom}</td>
-                      <td style={{ border: '1px solid #dbe3ee', padding: 8, fontSize: 12, textAlign: 'right' }}>{fmtCHF(l.prix)}</td>
-                      <td style={{ border: '1px solid #dbe3ee', padding: 8, fontSize: 12, textAlign: 'right' }}>{l.qte}</td>
-                      <td style={{ border: '1px solid #dbe3ee', padding: 8, fontSize: 12, textAlign: 'right' }}>{fmtCHF(l.montant)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '8px 2px' }}>
-                <span>Sous-Total</span><b>{fmtCHF(factureImprime.total)}</b>
+              {/* Titre */}
+              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 20, letterSpacing: 1, textTransform: 'uppercase', marginTop: 32, marginBottom: 16, color: '#0f172a' }}>
+                Facture
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, borderTop: '2px solid #0f172a', paddingTop: 10, marginTop: 8 }}>
+              {/* Date */}
+              <div style={{ textAlign: 'right', fontSize: 12, marginBottom: 24 }}>Vétroz, le {factureImprime.dateFacture}</div>
+              {/* Infos élève */}
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>NOM Prénom</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{factureImprime.eleve.nom} {factureImprime.eleve.prenom}</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Classe</div>
+              <div style={{ fontSize: 12, color: '#334155', marginBottom: 20 }}>{factureImprime.classeNom}</div>
+              {(() => {
+                const ref = factureImprime.reference || calcQRRef(factureImprime.classeNom, factureImprime.dateFacture, factureImprime.eleve);
+                const cg = <colgroup><col/><col style={{width:90}}/><col style={{width:110}}/><col style={{width:110}}/></colgroup>;
+                const thS = (i) => ({ padding:'8px 10px', fontSize:11, color:'white', textAlign:i===0?'left':'right', fontWeight:700 });
+                const tdR = { border:'1px solid #dbe3ee', padding:'7px 10px', fontSize:12, textAlign:'right' };
+                const tdL = { border:'1px solid #dbe3ee', padding:'7px 10px', fontSize:12 };
+                const stRow = (label, val) => (
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'5px 10px', background:'#f1f5f9', border:'1px solid #e2e8f0', borderTop:'none', marginBottom:16 }}>
+                    <span style={{ fontWeight:600 }}>{label}</span><b>{fmtCHF(val)}</b>
+                  </div>
+                );
+                const totalEcol = (factureImprime.lignesEcolage||[]).reduce((a,l)=>a+l.montant,0);
+                const totalMat = (factureImprime.lignes||[]).reduce((a,l)=>a+l.montant,0);
+                const mkThead = (col1) => (
+                  <thead><tr style={{ background:'#6366f1' }}>
+                    {[col1,'Prorata','Prix','Montant'].map((h,i) => <th key={h} style={thS(i)}>{h}</th>)}
+                  </tr></thead>
+                );
+                return <>
+                  <div style={{ fontSize:11, color:'#64748b', marginBottom:16 }}>
+                    Référence : <b style={{ color:'#334155', fontFamily:'monospace', letterSpacing:1 }}>{ref}</b>
+                  </div>
+                  {factureImprime.lignesEcolage?.length > 0 && (<>
+                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+                      {cg}{mkThead("Frais d'écolage")}
+                      <tbody>
+                        {factureImprime.lignesEcolage.map((l,i) => (
+                          <tr key={l.id} style={{ background:i%2===0?'white':'#fafafa' }}>
+                            <td style={tdL}>{l.nom}</td>
+                            <td style={tdR}>{Math.round(l.prorata/12*100)}%</td>
+                            <td style={tdR}>{Number(l.prix).toFixed(2)} CHF</td>
+                            <td style={{...tdR,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {stRow('Sous-total', totalEcol)}
+                  </>)}
+                  {factureImprime.lignes?.length > 0 && (<>
+                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+                      {cg}{mkThead('Matériel scolaire')}
+                      <tbody>
+                        {factureImprime.lignes.map((l,i) => (
+                          <tr key={l.id} style={{ background:i%2===0?'white':'#fafafa' }}>
+                            <td style={tdL}>{l.nom}</td>
+                            <td style={tdR}>{l.qte}</td>
+                            <td style={tdR}>{Number(l.prix).toFixed(2)} CHF</td>
+                            <td style={{...tdR,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {stRow('Sous-total', totalMat)}
+                  </>)}
+                </>;
+              })()}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, borderTop: '2px solid #0f172a', paddingTop: 10, marginTop: 8 }}>
                 <span>MONTANT DE LA FACTURE</span><b>{fmtCHF(factureImprime.total)}</b>
               </div>
-              <div style={{ marginTop: 28, fontSize: 13 }}>Signature : ____________________________</div>
+              {factureImprime.eleve.categorie === 'EUCMS' && (() => {
+                const ref5 = (factureImprime.reference || '').replace(/\s/g,'').slice(-5);
+                return (
+                  <>
+                    <p style={{ marginTop: 20, fontSize: 12, color: '#1e293b', lineHeight: 1.6 }}>
+                      Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.
+                    </p>
+                    <p style={{ marginTop: 8, fontSize: 12, color: '#1e293b', lineHeight: 1.6 }}>
+                      Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence ({ref5})</b> ainsi que la <b>classe ({factureImprime.classeNom})</b>.
+                    </p>
+                  </>
+                );
+              })()}
+              <div style={{ marginTop: 20, fontSize: 12, textAlign: 'right' }}>Signature : ____________________________</div>
+              {/* QR EUCMS */}
+              {factureImprime.eleve.categorie === 'EUCMS' && (
+                <div style={{ marginTop: 32, borderTop: '2px dashed #e2e8f0', paddingTop: 24, textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>Page 2 — Bulletin de versement</div>
+                  <img src={`${window.location.origin}${process.env.PUBLIC_URL || ''}/facture-qr.png`} style={{ maxWidth: '100%', maxHeight: 400, objectFit: 'contain' }} alt="QR facture" />
+                </div>
+              )}
+              {/* Pied de page */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 32, paddingTop: 10, fontSize: 7 }}>
+                <img src={`${window.location.origin}${process.env.PUBLIC_URL || ''}/logo-pied-page.png`} style={{ height: 28, objectFit: 'contain' }} alt="" onError={e => e.target.style.display='none'} />
+                <span>Zone Industrielle 4, 1963 Vétroz<br/>Tél. 027 606 18 60</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1005,36 +1394,37 @@ const styles = {
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },
   tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
-  tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', marginRight: 4, outline: 'none', lineHeight: '1' },
+  tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1' },
   tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tabContent: { background: 'white', borderRadius: '0 12px 12px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden' },
   subTabsRow: { display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid #f0f0f0', flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' },
   subTab: { padding: '7px 13px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#475569', outline: 'none' },
   subTabActif: { background: '#6366f1', color: 'white', border: '1px solid #6366f1' },
   select: { padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  theadRow: { background: '#6366f1', color: 'white' },
-  th: { padding: '12px 14px', textAlign: 'left', fontSize: 13, fontWeight: 600 },
-  tr: { borderBottom: '1px solid #f0f0f0' },
-  td: { padding: '10px 14px', fontSize: 13 },
-  vide: { padding: 40, textAlign: 'center', color: '#888', fontSize: 14 },
-  typeBadge: { background: '#ede9fe', color: '#6366f1', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 },
-  statutBadge: { padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, marginRight: 6 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15 },
-  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: 'white', padding: 28, borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', background: 'white' },
+  theadRow: { background: '#6366f1' },
+  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  tr: { borderBottom: '1px solid #f8fafc' },
+  td: { padding: '12px 16px', fontSize: 13, color: '#374151' },
+  vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
+  typeBadge: { background: '#eef2ff', color: '#3730a3', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
+  statutBadge: { padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
+  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.7 },
+  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.7 },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' },
+  modal: { background: 'white', padding: 28, borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' },
   modalTitre: { fontSize: 18, fontWeight: 700, marginBottom: 18 },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   formChamp: { display: 'flex', flexDirection: 'column', gap: 5 },
-  label: { fontSize: 12, fontWeight: 600, color: '#555' },
-  input: { padding: '9px 10px', border: '1.5px solid #e0e0e0', borderRadius: 7, fontSize: 13, width: '100%', boxSizing: 'border-box', background: 'white' },
+  label: { fontSize: 12, fontWeight: 600, color: '#475569' },
+  input: { padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, width: '100%', boxSizing: 'border-box', background: 'white', outline: 'none', color: '#1e293b' },
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 },
-  btnAnnuler: { padding: '9px 18px', background: '#f5f5f5', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 },
+  btnAnnuler: { padding: '9px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' },
   btnSauver: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  tableMateriel: { width: '100%', borderCollapse: 'collapse', border: '2px solid #6366f1', borderRadius: 8, overflow: 'hidden', tableLayout: 'fixed' },
-  thMateriel: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  tdMateriel: { padding: '10px 14px', fontSize: 13, color: '#334155', borderBottom: '1px solid #f1f5f9' },
+  tableWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tableMateriel: { width: '100%', borderCollapse: 'collapse', background: 'white', tableLayout: 'fixed' },
+  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  tdMateriel: { padding: '12px 16px', fontSize: 13, color: '#374151', borderBottom: '1px solid #f8fafc' },
   facturationLayout: { display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, padding: 14 },
   classesList: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#f8fafc' },
   classesListTitre: { fontWeight: 700, fontSize: 12, color: '#475569', marginBottom: 8 },

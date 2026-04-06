@@ -192,11 +192,10 @@ export default function Dashboard() {
         {isAdmin && (
           <div style={styles.statsRow}>
             {[
-              { icon: '🏫', label: 'Classes', value: stats.classes, color: '#10b981', bg: '#d1fae5' },
-              { icon: '🎓', label: 'Élèves', value: stats.eleves, color: '#f59e0b', bg: '#fef3c7' },
+              { label: 'Classes', value: stats.classes },
+              { label: 'Élèves', value: stats.eleves },
             ].map(s => (
               <div key={s.label} style={styles.statCard}>
-                <div style={{...styles.statIcon, background: s.bg, color: s.color}}>{s.icon}</div>
                 <div style={styles.statValue}>{s.value}</div>
                 <div style={styles.statLabel}>{s.label}</div>
               </div>

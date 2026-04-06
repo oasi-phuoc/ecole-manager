@@ -311,6 +311,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS fournisseur VARCHAR(200)`);
     await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS rabais DECIMAL(5,2) DEFAULT 0`);
     await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS remarques TEXT`);
+    await pool.query(`ALTER TABLE materiels ADD COLUMN IF NOT EXISTS icone VARCHAR(50)`);
     const nbMateriels = await pool.query('SELECT COUNT(*)::int as nb FROM materiels');
     if ((nbMateriels.rows[0]?.nb || 0) === 0) {
       const seed = [
@@ -439,6 +440,30 @@ const initDB = async () => {
         commentaire TEXT,
         updated_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(devoir_id, eleve_id)
+      )
+    `);
+
+    // Table validations factures (une validation par élève par année scolaire)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS factures_validations (
+        id SERIAL PRIMARY KEY,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        annee_scolaire VARCHAR(20) NOT NULL,
+        valide BOOLEAN DEFAULT false,
+        valide_at TIMESTAMP,
+        UNIQUE(eleve_id, annee_scolaire)
+      )
+    `);
+
+    // Table références factures (une référence QR par élève par année scolaire)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS factures_references (
+        id SERIAL PRIMARY KEY,
+        eleve_id INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+        annee_scolaire VARCHAR(20) NOT NULL,
+        reference VARCHAR(35) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(eleve_id, annee_scolaire)
       )
     `);
 

@@ -5,6 +5,9 @@ const { verifierToken, autoriser } = require('../middleware/auth');
 
 router.use(verifierToken);
 router.get('/statistiques', c.getStatistiques);
+router.post('/factures/reference', autoriser('admin'), c.getOrCreateFactureRef);
+router.get('/factures/validation', c.getFacturesValidations);
+router.post('/factures/validation', autoriser('admin'), c.toggleFactureValidation);
 router.get('/materiels', c.getMateriels);
 router.post('/materiels', autoriser('admin'), c.creerMateriel);
 router.put('/materiels/:id', autoriser('admin'), c.modifierMateriel);

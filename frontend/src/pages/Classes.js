@@ -195,6 +195,11 @@ export default function Classes() {
   const [devoirActif, setDevoirActif] = useState(null);
   const [suiviDevoirs, setSuiviDevoirs] = useState([]);
   const [showDevoirForm, setShowDevoirForm] = useState(false);
+  const [devoirSousOnglet, setDevoirSousOnglet] = useState('devoirs');
+  const [devoirBrancheFiltre, setDevoirBrancheFiltre] = useState(null);
+  const [statsAllSuivis, setStatsAllSuivis] = useState({});
+  const [devoirEditId, setDevoirEditId] = useState(null);
+  const [devoirEditForm, setDevoirEditForm] = useState({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
   const [devoirForm, setDevoirForm] = useState({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
   const [devoirsLoading, setDevoirsLoading] = useState(false);
   const [branchesInventaire, setBranchesInventaire] = useState([]);
@@ -724,6 +729,21 @@ export default function Classes() {
     else setSuiviDevoirs([]);
   }, [devoirActif?.id]);
 
+  useEffect(() => {
+    if (devoirSousOnglet !== 'stats' || devoirs.length === 0) return;
+    const chargerTous = async () => {
+      const map = {};
+      await Promise.all(devoirs.map(async d => {
+        try {
+          const r = await axios.get(API + '/devoirs/' + d.id + '/suivi', { headers });
+          map[d.id] = r.data || [];
+        } catch { map[d.id] = []; }
+      }));
+      setStatsAllSuivis(map);
+    };
+    chargerTous();
+  }, [devoirSousOnglet, devoirs]);
+
   const creerDevoir = async (e) => {
     e.preventDefault();
     if (!detailClasse?.id || !devoirForm.titre.trim()) return;
@@ -731,6 +751,17 @@ export default function Classes() {
       await axios.post(API + '/devoirs', { ...devoirForm, classe_id: detailClasse.id }, { headers });
       setShowDevoirForm(false);
       setDevoirForm({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
+      await chargerDevoirs(detailClasse.id);
+    } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+  };
+
+  const sauverEditionDevoir = async (e) => {
+    e.preventDefault();
+    if (!devoirEditId || !devoirEditForm.titre.trim()) return;
+    try {
+      await axios.put(API + '/devoirs/' + devoirEditId, devoirEditForm, { headers });
+      setDevoirEditId(null);
+      if (devoirActif?.id === devoirEditId) setDevoirActif(prev => ({ ...prev, ...devoirEditForm }));
       await chargerDevoirs(detailClasse.id);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
@@ -1194,34 +1225,73 @@ export default function Classes() {
         </div>
         </>
       ) : classeVueTab === 'devoirs' ? (
-        <div style={{marginTop:15}}>
-          {/* Barre : liste devoirs + bouton créer */}
+        <div>
+          {/* Sous-onglets + filtre branches */}
+          <div style={{display:'flex',alignItems:'center',gap:0,flexWrap:'wrap'}}>
+            <div style={s.subTabsBar}>
+              {[['devoirs','Devoirs'],['stats','Stats']].map(([id,label]) => (
+                <button key={id} type="button"
+                  onClick={() => setDevoirSousOnglet(id)}
+                  style={{...s.subTabBtn,...(devoirSousOnglet===id?s.subTabBtnActif:{}),width:'auto',minWidth:90}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {branchesInventaire.length > 0 && (
+              <div style={{display:'flex',gap:0,marginLeft:15}}>
+                <button type="button"
+                  onClick={() => setDevoirBrancheFiltre(null)}
+                  style={{...s.subTabBtn,...(devoirBrancheFiltre===null?s.subTabBtnActif:{}),width:'auto',minWidth:60}}>
+                  Tous
+                </button>
+                {branchesInventaire.map(b => (
+                  <button key={b.id} type="button"
+                    onClick={() => setDevoirBrancheFiltre(b)}
+                    style={{...s.subTabBtn,...(devoirBrancheFiltre?.id===b.id?s.subTabBtnActif:{}),width:'auto',minWidth:60}}>
+                    {b.code || b.nom}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {(() => {
+            const devoirsFiltres = devoirBrancheFiltre
+              ? devoirs.filter(d => d.matiere === devoirBrancheFiltre.code || d.matiere === devoirBrancheFiltre.nom)
+              : devoirs;
+            return <>
+
+          {devoirSousOnglet === 'devoirs' && (<>
+          <div style={{marginTop:15,marginBottom:8}}>
+            <button
+              style={s.btnAdd}
+              onClick={() => setShowDevoirForm(true)}>
+              + Nouveau
+            </button>
+          </div>
           <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
             <div style={{flex:'0 0 220px',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-                <span style={{fontWeight:700,fontSize:13,color:'#334155'}}>Devoirs</span>
-                <button
-                  style={{background:'#6366f1',color:'white',border:'none',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontSize:12,fontWeight:700}}
-                  onClick={() => setShowDevoirForm(true)}>
-                  + Nouveau
-                </button>
-              </div>
               {devoirsLoading ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
-              ) : devoirs.length === 0 ? (
+              ) : devoirsFiltres.length === 0 ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Aucun devoir</div>
-              ) : devoirs.map(d => (
+              ) : devoirsFiltres.map(d => (
                 <div key={d.id}
                   onClick={() => setDevoirActif(d)}
-                  style={{padding:'10px 12px',cursor:'pointer',borderLeft:`3px solid ${devoirActif?.id===d.id?'#6366f1':'transparent'}`,background:devoirActif?.id===d.id?'#f5f3ff':'white',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                  style={{padding:'10px 12px',cursor:'pointer',borderLeft:`3px solid ${devoirActif?.id===d.id?'#6366f1':'transparent'}`,background:devoirActif?.id===d.id?'#f5f3ff':'white',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <div style={{fontWeight:700,fontSize:13,color:'#1e293b'}}>{d.titre}</div>
                     {d.matiere && <div style={{fontSize:11,color:'#64748b'}}>{d.matiere}</div>}
                     {d.date_remise && <div style={{fontSize:11,color:'#94a3b8'}}>Remise: {new Date(d.date_remise).toLocaleDateString('fr-CH')}</div>}
                   </div>
-                  <button
-                    style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#ef4444',padding:'0 2px',lineHeight:1}}
-                    onClick={e => { e.stopPropagation(); supprimerDevoir(d.id); }}>🗑️</button>
+                  <div style={{display:'flex',gap:4,alignItems:'center',flexShrink:0}}>
+                    <button
+                      style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#6366f1',padding:'0 2px',lineHeight:1}}
+                      onClick={e => { e.stopPropagation(); setDevoirEditForm({ titre:d.titre, matiere:d.matiere||'', date_devoir:d.date_devoir?.substring(0,10)||'', date_remise:d.date_remise?.substring(0,10)||'' }); setDevoirEditId(d.id); }}>✏️</button>
+                    <button
+                      style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#ef4444',padding:'0 2px',lineHeight:1}}
+                      onClick={e => { e.stopPropagation(); supprimerDevoir(d.id); }}>🗑️</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1238,16 +1308,18 @@ export default function Classes() {
                       {devoirActif.matiere && <span style={{marginLeft:8,fontSize:12,color:'#64748b'}}>— {devoirActif.matiere}</span>}
                     </div>
                     {(() => {
-                      const total = elevesClasse.length;
-                      const rendus = suiviDevoirs.filter(s => s.statut === 'rendu').length;
-                      const partiel = suiviDevoirs.filter(s => s.statut === 'partiel').length;
-                      const nonRendu = suiviDevoirs.filter(s => s.statut === 'non_rendu').length;
+                      const sm = {};
+                      suiviDevoirs.forEach(s => { sm[s.eleve_id] = s.statut; });
+                      const rendus   = elevesClasse.filter(el => sm[el.id] === 'rendu').length;
+                      const partiel  = elevesClasse.filter(el => sm[el.id] === 'partiel').length;
+                      const excuse   = elevesClasse.filter(el => sm[el.id] === 'excuse').length;
+                      const nonRendu = elevesClasse.filter(el => !sm[el.id] || sm[el.id] === 'non_rendu').length;
                       return (
                         <div style={{display:'flex',gap:6,fontSize:11}}>
-                          <span style={{background:'#dcfce7',color:'#166534',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✅ {rendus}</span>
-                          <span style={{background:'#fef9c3',color:'#854d0e',padding:'3px 8px',borderRadius:12,fontWeight:700}}>⚡ {partiel}</span>
-                          <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>❌ {nonRendu}</span>
-                          <span style={{background:'#f1f5f9',color:'#64748b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>— {total - rendus - partiel - nonRendu}</span>
+                          <span style={{background:'#dcfce7',color:'#166534',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {rendus}</span>
+                          <span style={{background:'#fef9c3',color:'#d97706',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {partiel}</span>
+                          <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✗ {nonRendu}</span>
+                          <span style={{background:'#dbeafe',color:'#1e40af',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {excuse}</span>
                         </div>
                       );
                     })()}
@@ -1267,10 +1339,10 @@ export default function Classes() {
                         const suivi = suiviDevoirs.find(s => s.eleve_id === el.id);
                         const statut = suivi?.statut || 'non_rendu';
                         const STATUTS = [
-                          { val: 'rendu',     label: '✅ Rendu',     bg: '#dcfce7', color: '#166534' },
-                          { val: 'partiel',   label: '⚡ Partiel',   bg: '#fef9c3', color: '#854d0e' },
-                          { val: 'non_rendu', label: '❌ Non rendu', bg: '#fee2e2', color: '#991b1b' },
-                          { val: 'excuse',    label: '🔵 Excusé',    bg: '#dbeafe', color: '#1e40af' },
+                          { val: 'rendu',     label: '✓ Rendu',     bg: '#dcfce7', color: '#166534' },
+                          { val: 'partiel',   label: '✓ Partiel',   bg: '#fef9c3', color: '#d97706' },
+                          { val: 'non_rendu', label: '✗ Non rendu', bg: '#fee2e2', color: '#991b1b' },
+                          { val: 'excuse',    label: '✓ Excusé',    bg: '#dbeafe', color: '#1e40af' },
                         ];
                         return (
                           <tr key={el.id} style={{background:idx%2===0?'white':'#fafafa',borderBottom:'1px solid #f1f5f9'}}>
@@ -1312,9 +1384,14 @@ export default function Classes() {
                         value={devoirForm.titre} onChange={e => setDevoirForm({...devoirForm, titre: e.target.value})} />
                     </div>
                     <div>
-                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière</label>
-                      <input style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
-                        value={devoirForm.matiere} onChange={e => setDevoirForm({...devoirForm, matiere: e.target.value})} />
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière *</label>
+                      <select required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box',background:'white'}}
+                        value={devoirForm.matiere} onChange={e => setDevoirForm({...devoirForm, matiere: e.target.value})}>
+                        <option value="">Sélectionner une branche</option>
+                        {branchesInventaire.map(b => (
+                          <option key={b.id} value={b.code || b.nom}>{b.code ? `${b.code} ${b.nom}` : b.nom}</option>
+                        ))}
+                      </select>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                       <div>
@@ -1337,6 +1414,113 @@ export default function Classes() {
               </div>
             </div>
           )}
+
+          {/* Modal édition devoir */}
+          {devoirEditId && (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center'}}
+              onClick={() => setDevoirEditId(null)}>
+              <div style={{background:'white',borderRadius:14,padding:24,width:400,maxWidth:'95vw',boxShadow:'0 8px 32px rgba(0,0,0,0.15)'}}
+                onClick={e => e.stopPropagation()}>
+                <h3 style={{margin:'0 0 16px',fontSize:16,fontWeight:700,color:'#1e293b'}}>Modifier le devoir</h3>
+                <form onSubmit={sauverEditionDevoir}>
+                  <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Titre *</label>
+                      <input required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                        value={devoirEditForm.titre} onChange={e => setDevoirEditForm({...devoirEditForm, titre: e.target.value})} />
+                    </div>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière *</label>
+                      <select required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box',background:'white'}}
+                        value={devoirEditForm.matiere} onChange={e => setDevoirEditForm({...devoirEditForm, matiere: e.target.value})}>
+                        <option value="">Sélectionner une branche</option>
+                        {branchesInventaire.map(b => (
+                          <option key={b.id} value={b.code || b.nom}>{b.code ? `${b.code} ${b.nom}` : b.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                      <div>
+                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date du devoir</label>
+                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                          value={devoirEditForm.date_devoir} onChange={e => setDevoirEditForm({...devoirEditForm, date_devoir: e.target.value})} />
+                      </div>
+                      <div>
+                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise</label>
+                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                          value={devoirEditForm.date_remise} onChange={e => setDevoirEditForm({...devoirEditForm, date_remise: e.target.value})} />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
+                    <button type="button" style={{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:7,cursor:'pointer',fontSize:13}} onClick={() => setDevoirEditId(null)}>Annuler</button>
+                    <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Enregistrer</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+          </>)}
+
+          {/* Sous-onglet Stats */}
+          {devoirSousOnglet === 'stats' && (
+            <div style={{background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',marginTop:15}}>
+              {devoirsFiltres.length === 0 || elevesClasse.length === 0 ? (
+                <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucune donnée</div>
+              ) : (
+                <table style={{width:'100%',borderCollapse:'collapse'}}>
+                  <thead>
+                    <tr style={{background:'#6366f1'}}>
+                      {['Nom','Prénom','✓ Rendu','✓ Partiel','✗ Non rendu','✓ Excusé','Taux'].map((h,i,a) => (
+                        <th key={h} style={{padding:'9px 12px',textAlign:i>=2?'center':'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 8px':i===a.length-1?'0 8px 8px 0':0}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {elevesClasse.map((el, idx) => {
+                      let rendu = 0, partiel = 0, excuse = 0, nonRendu = 0;
+                      devoirsFiltres.forEach(d => {
+                        const suivisD = statsAllSuivis[d.id] || [];
+                        const s = suivisD.find(s => s.eleve_id === el.id);
+                        const st = s?.statut || 'non_rendu';
+                        if (st === 'rendu') rendu++;
+                        else if (st === 'partiel') partiel++;
+                        else if (st === 'excuse') excuse++;
+                        else nonRendu++;
+                      });
+                      const applicable = rendu + partiel + nonRendu;
+                      const points = rendu * 1 + partiel * 0.5;
+                      const taux = applicable > 0 ? Math.round((points / applicable) * 100) : null;
+                      return (
+                        <tr key={el.id} style={{background:idx%2===0?'white':'#fafafa',borderBottom:'1px solid #f1f5f9'}}>
+                          <td style={{padding:'10px 12px',fontWeight:700,fontSize:13,color:'#1e293b'}}>{el.nom || '—'}</td>
+                          <td style={{padding:'10px 12px',fontSize:13,color:'#334155'}}>{el.prenom || '—'}</td>
+                          <td style={{padding:'10px 12px',textAlign:'center'}}>
+                            <span style={{background:'#dcfce7',color:'#166534',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{rendu}</span>
+                          </td>
+                          <td style={{padding:'10px 12px',textAlign:'center'}}>
+                            <span style={{background:'#fef9c3',color:'#d97706',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{partiel}</span>
+                          </td>
+                          <td style={{padding:'10px 12px',textAlign:'center'}}>
+                            <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{nonRendu}</span>
+                          </td>
+                          <td style={{padding:'10px 12px',textAlign:'center'}}>
+                            <span style={{background:'#dbeafe',color:'#1e40af',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{excuse}</span>
+                          </td>
+                          <td style={{padding:'10px 12px',textAlign:'center'}}>
+                            {taux !== null
+                              ? <span style={{fontWeight:700,fontSize:13,color:taux>=75?'#166534':taux>=50?'#d97706':'#991b1b'}}>{taux}%</span>
+                              : <span style={{color:'#94a3b8',fontSize:12}}>—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </>;})()}
         </div>
       ) : classeVueTab === 'inventaire' ? (
         <div style={{paddingTop:0}}>
@@ -1606,6 +1790,9 @@ export default function Classes() {
                 <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
                   <button style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">🪑</button>
                 </td>
+                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
+                  <button style={{background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">🧾</button>
+                </td>
                 <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
                   <button style={{...(c.actif!==false?s.badgeActive:s.badgeInactif),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleActif(c)}>
                     {c.actif!==false?'✅ Active':'❌ Inactif'}
@@ -1667,10 +1854,10 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tableWrap:{overflowX:'auto',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
-  thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
+  thead:{background:'#6366f1'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'},
   tr:{borderBottom:'1px solid #f8fafc'},
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},

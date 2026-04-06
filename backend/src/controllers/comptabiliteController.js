@@ -95,12 +95,12 @@ const getMateriels = async (req, res) => {
 };
 
 const creerMateriel = async (req, res) => {
-  const { nom, section, prix, ref, fournisseur, rabais, remarques } = req.body;
+  const { nom, section, prix, ref, fournisseur, rabais, remarques, icone } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO materiels (nom, section, prix, ref, fournisseur, rabais, remarques)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null]
+      `INSERT INTO materiels (nom, section, prix, ref, fournisseur, rabais, remarques, icone)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null, icone || null]
     );
     res.status(201).json({ message: 'Materiel cree', materiel: result.rows[0] });
   } catch (err) {
@@ -109,13 +109,13 @@ const creerMateriel = async (req, res) => {
 };
 
 const modifierMateriel = async (req, res) => {
-  const { nom, section, prix, ref, fournisseur, rabais, remarques } = req.body;
+  const { nom, section, prix, ref, fournisseur, rabais, remarques, icone } = req.body;
   try {
     const result = await pool.query(
       `UPDATE materiels
-       SET nom=$1, section=$2, prix=$3, ref=$4, fournisseur=$5, rabais=$6, remarques=$7
-       WHERE id=$8 RETURNING *`,
-      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null, req.params.id]
+       SET nom=$1, section=$2, prix=$3, ref=$4, fournisseur=$5, rabais=$6, remarques=$7, icone=$8
+       WHERE id=$9 RETURNING *`,
+      [nom, section || 'scolaire', prix || 0, ref || null, fournisseur || null, rabais || 0, remarques || null, icone || null, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Materiel non trouve' });
     res.json({ message: 'Materiel modifie', materiel: result.rows[0] });
@@ -133,7 +133,65 @@ const supprimerMateriel = async (req, res) => {
   }
 };
 
+const getFacturesValidations = async (req, res) => {
+  const { eleve_ids, annee_scolaire } = req.query;
+  if (!eleve_ids || !annee_scolaire) return res.json([]);
+  try {
+    const ids = eleve_ids.split(',').map(Number).filter(Boolean);
+    if (ids.length === 0) return res.json([]);
+    const placeholders = ids.map((_, i) => `$${i + 2}`).join(',');
+    const result = await pool.query(
+      `SELECT eleve_id, valide FROM factures_validations WHERE annee_scolaire=$1 AND eleve_id IN (${placeholders})`,
+      [annee_scolaire, ...ids]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const toggleFactureValidation = async (req, res) => {
+  const { eleve_id, annee_scolaire, valide } = req.body;
+  if (!eleve_id || !annee_scolaire) return res.status(400).json({ message: 'Paramètres manquants' });
+  try {
+    await pool.query(
+      `INSERT INTO factures_validations (eleve_id, annee_scolaire, valide, valide_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (eleve_id, annee_scolaire) DO UPDATE SET valide=$3, valide_at=$4`,
+      [eleve_id, annee_scolaire, valide, valide ? new Date() : null]
+    );
+    res.json({ valide });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const getOrCreateFactureRef = async (req, res) => {
+  const { eleve_id, annee_scolaire, reference } = req.body;
+  if (!eleve_id || !annee_scolaire || !reference) {
+    return res.status(400).json({ message: 'eleve_id, annee_scolaire et reference sont requis' });
+  }
+  try {
+    const existing = await pool.query(
+      'SELECT reference FROM factures_references WHERE eleve_id=$1 AND annee_scolaire=$2',
+      [eleve_id, annee_scolaire]
+    );
+    if (existing.rows.length > 0) {
+      return res.json({ reference: existing.rows[0].reference });
+    }
+    const result = await pool.query(
+      'INSERT INTO factures_references (eleve_id, annee_scolaire, reference) VALUES ($1,$2,$3) RETURNING reference',
+      [eleve_id, annee_scolaire, reference]
+    );
+    res.json({ reference: result.rows[0].reference });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
 module.exports = {
   getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques,
-  getMateriels, creerMateriel, modifierMateriel, supprimerMateriel
+  getMateriels, creerMateriel, modifierMateriel, supprimerMateriel,
+  getOrCreateFactureRef,
+  getFacturesValidations, toggleFactureValidation
 };

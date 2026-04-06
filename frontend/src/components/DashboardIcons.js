@@ -45,36 +45,28 @@ export const IconEleves = ({ size, active }) => (
   </>}/>
 );
 
-// ── Branches — livre ouvert ─────────────────────────────────────────────────
+// ── Branches — deux classeurs ───────────────────────────────────────────────
 export const IconBranches = ({ size, active }) => (
   <I size={size} active={active} ch={<>
-    <path fillRule="evenodd" d="M2 4a2 2 0 012-2h7v20L2 18V4z"/>
-    <path fillRule="evenodd" d="M22 4a2 2 0 00-2-2h-7v20l9-4V4z"/>
+    <path fillRule="evenodd" d="M1 4a2 2 0 012-2h7a2 2 0 012 2v16a2 2 0 01-2 2H3a2 2 0 01-2-2V4z M13 4a2 2 0 012-2h6a2 2 0 012 2v16a2 2 0 01-2 2h-6a2 2 0 01-2-2V4z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={active ? 1 : 1.5} d="M4 8h4 M4 12h4 M4 16h4 M16 8h4 M16 12h4 M16 16h4"/>
   </>}/>
 );
 
-// ── Classes — écran / tableau de classe ─────────────────────────────────────
+// ── Classes — table avec en-tête ────────────────────────────────────────────
 export const IconClasses = ({ size, active }) => (
-  <I size={size} active={active} ch={
-    <path fillRule="evenodd" d="
-      M2 4a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H2a2 2 0 01-2-2V4z
-      M9 18v2H7v1h10v-1h-2v-2H9z
-      M4 6h16v8H4V6z
-    "/>
-  }/>
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M2 3a2 2 0 012-2h16a2 2 0 012 2v18a2 2 0 01-2 2H4a2 2 0 01-2-2V3z M4 8h16v13H4V8z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={active ? 1 : 1.5} d="M9 3v18 M15 3v18 M2 13h20 M2 17h20"/>
+  </>}/>
 );
 
-// ── Plannings — calendrier avec créneaux ────────────────────────────────────
+// ── Plannings — horloge ──────────────────────────────────────────────────────
 export const IconPlannings = ({ size, active }) => (
-  <I size={size} active={active} ch={
-    <path fillRule="evenodd" d="
-      M3 5a2 2 0 012-2h14a2 2 0 012 2v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5z
-      M8 2v4h-1V2h1z M16 2v4h-1V2h1z
-      M3 10h18v1H3v-1z
-      M6 13h3v2H6v-2z M11 13h3v2h-3v-2z M16 13h3v2h-3v-2z
-      M6 17h3v2H6v-2z M11 17h3v2h-3v-2z
-    "/>
-  }/>
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M12 1a11 11 0 100 22A11 11 0 0012 1z M12 3a9 9 0 110 18A9 9 0 0112 3z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={2} strokeLinecap="round" d="M12 6v6l4 2.5"/>
+  </>}/>
 );
 
 // ── Présences — clipboard avec coches ──────────────────────────────────────
@@ -125,13 +117,17 @@ export const IconCalendrier = ({ size, active }) => (
   }/>
 );
 
-// ── Comptabilité — pièce CHF ─────────────────────────────────────────────────
+// ── Comptabilité — calculatrice ──────────────────────────────────────────────
 export const IconComptabilite = ({ size, active }) => (
-  <I size={size} active={active} ch={<>
-    <path fillRule="evenodd" d="M12 1a11 11 0 100 22A11 11 0 0012 1z M12 3a9 9 0 110 18A9 9 0 0112 3z"/>
-    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={active ? 1.2 : 1.5}
-      d="M14.5 8.5h-3a2 2 0 100 4h1a2 2 0 110 4H9M12 7v2M12 15v2"/>
-  </>}/>
+  <I size={size} active={active} ch={
+    <path fillRule="evenodd" d="
+      M5 1a2 2 0 00-2 2v18a2 2 0 002 2h14a2 2 0 002-2V3a2 2 0 00-2-2H5z
+      M7 4h10v4H7V4z
+      M7 10h3v2H7v-2z M12 10h2v2h-2v-2z M16 10h2v2h-2v-2z
+      M7 14h3v2H7v-2z M12 14h2v2h-2v-2z M16 14h2v2h-2v-2z
+      M7 18h3v2H7v-2z M12 18h6v2h-6v-2z
+    "/>
+  }/>
 );
 
 // ── Documents — dossier ──────────────────────────────────────────────────────
@@ -169,14 +165,17 @@ export const IconEnclassement = ({ size, active }) => (
   }/>
 );
 
-// ── Sorties scolaires — sac à dos ────────────────────────────────────────────
+// ── Sorties scolaires — bus ──────────────────────────────────────────────────
 export const IconSorties = ({ size, active }) => (
   <I size={size} active={active} ch={
     <path fillRule="evenodd" d="
-      M7 6a5 5 0 0110 0v1h2a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h2V6z
-      M10 6a2 2 0 014 0v1h-4V6z
-      M9 13h6v2H9v-2z
-      M11 11v6h2v-6h-2z
+      M3 5a2 2 0 012-2h14a2 2 0 012 2v10H3V5z
+      M5 5h5v4H5V5z M14 5h5v4h-5V5z
+      M3 9h18v3H3V9z
+      M3 15h18v2H3v-2z
+      M6.5 15a2 2 0 100 4 2 2 0 000-4z
+      M17.5 15a2 2 0 100 4 2 2 0 000-4z
+      M21 8h1a1 1 0 011 1v3a1 1 0 01-1 1h-1V8z
     "/>
   }/>
 );
@@ -191,6 +190,187 @@ export const IconParametres = ({ size, active }) => (
     "/>
   }/>
 );
+
+// ═══════════════════════════════════════════════════════
+// ── Icônes matériels scolaires ──────────────────────────
+// ═══════════════════════════════════════════════════════
+
+// Classeur 7 cm (grand classeur)
+export const IconClasseurGrand = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2V4a2 2 0 00-2-2H5z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.5} d="M9 2v20"/>
+    <circle cx="7" cy="8"  r="1.2" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+    <circle cx="7" cy="12" r="1.2" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+    <circle cx="7" cy="16" r="1.2" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+  </>}/>
+);
+
+// Classeur 4 cm (petit classeur)
+export const IconClasseurPetit = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M5 5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.5} d="M9 5v14"/>
+    <circle cx="7" cy="10" r="1.1" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+    <circle cx="7" cy="14" r="1.1" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+  </>}/>
+);
+
+// Cahier A4
+export const IconCahierA4 = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v16a2 2 0 002 2h16a2 2 0 002-2V4a2 2 0 00-2-2H4z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M7 2v20"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M10 8h8M10 12h8M10 16h5"/>
+  </>}/>
+);
+
+// Feuilles de dessin (page avec coin plié)
+export const IconFeuillesDessin = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M5 1a2 2 0 00-2 2v18a2 2 0 002 2h14a2 2 0 002-2V7l-6-6H5z M15 1v6h6"/>
+  </>}/>
+);
+
+// Photocopies / feuilles (deux feuilles empilées)
+export const IconPhotocopies = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M7 4a2 2 0 00-2 2v13a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H7z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M4 7H3a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-1"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M10 9h6M10 13h6M10 17h4"/>
+  </>}/>
+);
+
+// Agenda (livre avec anneaux en haut)
+export const IconAgenda = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v13a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2H4z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.8} d="M8 2v5M12 2v5M16 2v5"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M2 10h20M6 14h4v4H6v-4z M14 14h4v4h-4v-4z"/>
+  </>}/>
+);
+
+// Répertoire (classeur avec onglets latéraux)
+export const IconRepertoire = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v16a2 2 0 002 2h16a2 2 0 002-2V4a2 2 0 00-2-2H4z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill={active ? '#ffffff55' : 'none'} strokeWidth={1.3} d="M18 2v6h4M18 8v5h4M18 13v5h4"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M6 8h9M6 13h9M6 17h7"/>
+  </>}/>
+);
+
+// Crayon papier
+export const IconCrayon = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={
+    <path fillRule="evenodd" d="M18.4 2.3a3 3 0 014.2 4.3l-.9.9-4.2-4.2.9-1zM15.9 5L20 9.2l-11 11-1.5.3L5 22l.3-2.5.2-1.5L15.9 5zM6 19.5l.5-1.5 1 1-1.5.5z"/>
+  }/>
+);
+
+// Stylo (stylo bille)
+export const IconStylo = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M14 2a2 2 0 012 2v2h-6L5 19l-2 3 3-2 1-1 8.5-15H16V4a2 2 0 00-2-2h-0z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M10 5h6v3h-6V5z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M5.5 20l1-2 1 1-2 1z"/>
+  </>}/>
+);
+
+// Stylo plume (plume pilot)
+export const IconStyloPlume = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M21.5 2C14 2 9 6.5 7.5 13L3 22l9-4.5c6.5-1.5 11-6.5 11-15.5z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M10 12.5a5 5 0 015-5"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.5} d="M3 22l3.5-2"/>
+  </>}/>
+);
+
+// Fixpencil (crayon mécanique)
+export const IconFixpencil = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M10 2a2 2 0 014 0v12l-2 4-2-4V2z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.5} d="M9 2h6M9 5h6"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M11 18v2.5l1 1.5 1-1.5V18h-2z"/>
+  </>}/>
+);
+
+// Boîte de mines (HB)
+export const IconMines = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M4 8a2 2 0 012-2h12a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z M5.5 5a1 1 0 011-1h11a1 1 0 011 1v3h-13V5z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M8 10v5M12 10v5M16 10v5"/>
+  </>}/>
+);
+
+// Crayons de couleur (trois crayons en éventail)
+export const IconCrayonsCouleur = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M7 2a1 1 0 00-1 1v13l2 5 2-5V3a1 1 0 00-1-1H7z M11.5 2a1 1 0 00-1 1v13l2 5 2-5V3a1 1 0 00-1-1h-2z M16 2a1 1 0 00-1 1v13l2 5 2-5V3a1 1 0 00-1-1h-2z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M6 14h4M10.5 14h4M15 14h4"/>
+  </>}/>
+);
+
+// Gomme
+export const IconGomme = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M2 9a2 2 0 012-2h16a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V9z M2 9h9v8H2V9z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.8} d="M2 17h20"/>
+  </>}/>
+);
+
+// ACM / Sports
+export const IconSports = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M7.5 7.5L12 5l4.5 2.5v5L12 15l-4.5-2.5v-5z M12 5v10M7.5 7.5l9 5M7.5 12.5l9-5"/>
+  </>}/>
+);
+
+// Déplacement (bus)
+export const IconDeplacement = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v9H3V7z M1 16h22v1a2 2 0 01-2 2H3a2 2 0 01-2-2v-1z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3} d="M5 7h5v4H5V7z M14 7h5v4h-5V7z M3 11h18"/>
+    <circle cx="7"  cy="18" r="1.5" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+    <circle cx="17" cy="18" r="1.5" stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.2}/>
+  </>}/>
+);
+
+// Manifestations (étoile)
+export const IconManifestation = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={
+    <path fillRule="evenodd" d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/>
+  }/>
+);
+
+// Matériel d'enseignement (tableau/discussion)
+export const IconEnseignement = ({ size = 24, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v11a2 2 0 002 2h7l3 4 3-4h3a2 2 0 002-2V5a2 2 0 00-2-2H4z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.4} d="M7 9h10M7 13h7"/>
+  </>}/>
+);
+
+// Map des icônes matériels par clé
+export const ICONS_MATERIELS = {
+  classeur_grand:    IconClasseurGrand,
+  classeur_petit:    IconClasseurPetit,
+  cahier_a4:         IconCahierA4,
+  feuilles_dessin:   IconFeuillesDessin,
+  photocopies:       IconPhotocopies,
+  agenda:            IconAgenda,
+  repertoire:        IconRepertoire,
+  crayon:            IconCrayon,
+  stylo:             IconStylo,
+  stylo_plume:       IconStyloPlume,
+  fixpencil:         IconFixpencil,
+  mines:             IconMines,
+  crayons_couleur:   IconCrayonsCouleur,
+  gomme:             IconGomme,
+  sports:            IconSports,
+  deplacement:       IconDeplacement,
+  manifestation:     IconManifestation,
+  enseignement:      IconEnseignement,
+};
 
 // Map path → composant icône
 export const ICONS_BY_PATH = {
