@@ -161,11 +161,11 @@ const getBulletin = async (req, res) => {
   try {
     const { classe_id, semestre } = req.query;
     const eleves = await pool.query(`
-      SELECT e.id, u.nom, u.prenom, e.date_debut_cours
+      SELECT e.id, COALESCE(u.nom, e.nom) as nom, COALESCE(u.prenom, e.prenom) as prenom, e.date_debut_cours
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       WHERE e.classe_id = $1 AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
-      ORDER BY u.nom, u.prenom
+      ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `, [classe_id]);
 
     const matieres = await pool.query('SELECT * FROM matieres ORDER BY nom');

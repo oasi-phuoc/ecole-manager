@@ -470,8 +470,12 @@ export default function Bulletins() {
                         <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'pre-line', fontSize: 11, fontWeight: 700, lineHeight: 1.6, margin: '0 auto' }}>{label[0] + '\n' + label[1]}</div>
                       </th>
                     ))}
-                    <th style={{ ...s.th, width: 77, textAlign: 'center', lineHeight: 1.2 }}>Taux<br />prés.</th>
-                    <th style={{ ...s.th, width: 58, textAlign: 'center' }}>Ret.</th>
+                    <th style={{ ...s.th, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 110 }}>
+                      <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'pre-line', fontSize: 11, fontWeight: 700, lineHeight: 1.6, margin: '0 auto' }}>{'Taux\nprés.'}</div>
+                    </th>
+                    <th style={{ ...s.th, textAlign: 'center', verticalAlign: 'bottom', padding: '4px 2px', height: 110 }}>
+                      <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 11, fontWeight: 700, lineHeight: 1.6, margin: '0 auto' }}>Retard</div>
+                    </th>
                     <th style={{ ...s.th, width: 96, textAlign: 'center' }}>Rem.</th>
                   </tr>
                 </thead>
