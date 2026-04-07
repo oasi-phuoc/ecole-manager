@@ -5,6 +5,7 @@ const { verifierToken, autoriser } = require('../middleware/auth');
 
 router.use(verifierToken);
 router.get('/creneaux', c.getCreneaux);
+router.get('/disponibilites', c.getAllDisponibilites);
 router.get('/disponibilites/:prof_id', c.getDisponibilites);
 router.get('/disponibilites/:prof_id/remarque', c.getRemarqueDisponibilites);
 router.post('/disponibilites/:prof_id', c.saveDisponibilites);

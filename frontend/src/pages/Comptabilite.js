@@ -68,7 +68,7 @@ export default function Comptabilite() {
   // Paiements sub-tab + filter
   const [paiementsOnglet, setPaiementsOnglet] = useState('tous');
   const [paiementsNiveau, setPaiementsNiveau] = useState('Tous');
-  const [filtreClasse, setFiltreClasse] = useState('');
+  const [recherchePaiements, setRecherchePaiements] = useState('');
 
   // Nouvelle facture popup
   const [showFacturePopup, setShowFacturePopup] = useState(false);
@@ -167,10 +167,14 @@ export default function Comptabilite() {
   // Filtered paiements for Paiements tab
   const paiementsFiltres = paiements.filter(p => {
     if (paiementsOnglet !== 'tous' && p.statut !== paiementsOnglet) return false;
-    if (filtreClasse && p.classe !== filtreClasse) return false;
     if (paiementsNiveau !== 'Tous') {
       const classeObj = classes.find(c => c.nom === p.classe);
       if (!classeObj || !String(classeObj.niveau || '').toUpperCase().includes(paiementsNiveau)) return false;
+    }
+    if (recherchePaiements.trim()) {
+      const q = recherchePaiements.toLowerCase();
+      const nom = `${p.prenom || ''} ${p.nom || ''}`.toLowerCase();
+      if (!nom.includes(q) && !(p.classe || '').toLowerCase().includes(q) && !String(p.montant || '').includes(q) && !(p.commentaire || '').toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -220,12 +224,25 @@ export default function Comptabilite() {
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
 
-  const ouvrirEdit = (p) => {
+  const ouvrirEdit = async (p) => {
+    let reference = p.reference || '';
+    if (!reference) {
+      try {
+        const now = new Date();
+        const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
+        const r = await axios.get(API + `/comptabilite/factures/reference?eleve_id=${p.eleve_id}&annee_scolaire=${annee}`, { headers });
+        reference = r.data.reference || '';
+      } catch {}
+    }
     setEditForm({
-      id: p.id, eleve_id: p.eleve_id, montant: p.montant,
+      id: p.id, eleve_id: p.eleve_id,
+      nom: p.nom || '', prenom: p.prenom || '',
+      montant: p.montant,
       type: p.type, statut: p.statut,
+      valide: p.valide || false,
       date_paiement: p.date_paiement ? p.date_paiement.split('T')[0] : '',
       commentaire: p.commentaire || '',
+      reference,
     });
     setShowEditPopup(true);
   };
@@ -241,6 +258,35 @@ export default function Comptabilite() {
     if (!window.confirm('Supprimer ce paiement ?')) return;
     await axios.delete(API + '/comptabilite/' + id, { headers });
     chargerPaiements(); chargerStats();
+  };
+
+  const togglePaiementStatut = async (p) => {
+    const nouveauStatut = p.statut === 'paye' ? 'en_attente' : 'paye';
+    const dateP = nouveauStatut === 'paye' ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
+    try {
+      await axios.put(API + '/comptabilite/' + p.id, { ...p, statut: nouveauStatut, date_paiement: dateP }, { headers });
+      chargerPaiements(); chargerStats();
+    } catch (err) { console.error(err); }
+  };
+
+  const setStatutPaiement = async (p, newStatut) => {
+    if (p.valide) return; // blocked when validated
+    if (p.statut === newStatut) return;
+    const dateP = newStatut === 'paye' ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
+    try {
+      await axios.put(API + '/comptabilite/' + p.id, { ...p, statut: newStatut, date_paiement: dateP }, { headers });
+      chargerPaiements(); chargerStats();
+    } catch (err) { console.error(err); }
+  };
+
+  const toggleValidePaiement = async (p) => {
+    const newValide = !p.valide;
+    const newStatut = newValide ? 'paye' : p.statut;
+    const newDate = newValide ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
+    try {
+      await axios.put(API + '/comptabilite/' + p.id, { ...p, valide: newValide, statut: newStatut, date_paiement: newDate }, { headers });
+      chargerPaiements(); chargerStats();
+    } catch (err) { console.error(err); }
   };
 
   // Liste de prix helpers
@@ -291,19 +337,19 @@ export default function Comptabilite() {
     setToutesValidations(prev => ({ ...prev, [eleveId]: nouvelEtat }));
     try {
       await axios.post(API + '/comptabilite/factures/validation', { eleve_id: eleveId, annee_scolaire: anneeScolaireCourante, valide: nouvelEtat }, { headers });
-      // Si EUCMS et on valide, créer automatiquement un paiement en_attente
+      // Lors de la validation d'un élève EUCMS, créer automatiquement un paiement en_attente
       if (nouvelEtat) {
-        const eleve = eleves.find(e => e.id === eleveId);
+        const eleve = eleves.find(e => Number(e.id) === Number(eleveId));
         if (eleve?.categorie === 'EUCMS') {
-          const dejaExistant = paiements.some(p => p.eleve_id === eleveId && p.commentaire === `Facture ${anneeScolaireCourante}`);
+          const dejaExistant = paiements.some(p => Number(p.eleve_id) === Number(eleveId) && p.statut === 'en_attente' && p.type === 'Ecolage');
           if (!dejaExistant) {
             const montant = totalEleve(eleveId);
             await axios.post(API + '/comptabilite', {
-              eleve_id: eleveId,
+              eleve_id: Number(eleveId),
               montant,
               type: 'Ecolage',
               statut: 'en_attente',
-              commentaire: `Facture ${anneeScolaireCourante}`
+              commentaire: ''
             }, { headers });
             await chargerPaiements();
           }
@@ -531,8 +577,8 @@ export default function Comptabilite() {
               </button>
             ))}
           </div>
-          <div style={{ padding: '12px 0' }}>
-            <select style={{ ...styles.select, minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
+          <div style={{ marginTop: 15, marginBottom: 15 }}>
+            <select style={{ padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer', minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
               <option value="">Sélectionner une classe</option>
               {classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau)).map(c => (
                 <option key={c.id} value={c.id}>{c.nom}</option>
@@ -588,9 +634,9 @@ export default function Comptabilite() {
               })()
             ) : (
               <>
+                <div style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
-                  <div style={styles.tableWrap}>
-                  <table style={{ ...styles.tableMateriel, minWidth: 1300 }}>
+                  <table style={{ ...styles.tableMateriel, minWidth: 900, tableLayout: 'auto' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
                         <th style={styles.thMateriel}>Nom</th>
@@ -603,9 +649,9 @@ export default function Comptabilite() {
                             </th>
                           );
                         })}
-                        <th style={{ ...styles.thMateriel, textAlign: 'right' }}>Total</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Détail</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Validé</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'right', width: '1%', whiteSpace: 'nowrap' }}>Montant</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Détail</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Validé</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -614,26 +660,27 @@ export default function Comptabilite() {
                       ) : elevesClasseFacturation.map((e, idx) => {
                         const valide = !!facturesValidees[e.id];
                         return (
-                        <tr key={e.id} style={{ background: valide ? '#f0fdf4' : idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={styles.tdMateriel}>{e.nom || '—'}</td>
                           <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           {materielsFacturation.map(m => (
                             <td key={m.id} style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                               <input type="number" min="0"
-                                style={{ width: 48, padding: '4px 6px', border: '1px solid #dbe3ee', borderRadius: 6, fontSize: 12, textAlign: 'center' }}
+                                disabled={valide}
+                                style={{ width: 48, padding: '4px 6px', border: '1px solid #dbe3ee', borderRadius: 6, fontSize: 12, textAlign: 'center', ...(valide ? { background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed' } : {}) }}
                                 value={materielDistribue[e.id]?.[m.id] ?? m.qteDefaut}
                                 onChange={ev => majQteMateriel(e.id, m.id, ev.target.value)}
                               />
                             </td>
                           ))}
-                          <td style={{ ...styles.tdMateriel, textAlign: 'right', fontWeight: '700', color: '#1a73e8' }}>{totalEleve(e.id).toFixed(2)} CHF</td>
+                          <td style={{ ...styles.tdMateriel, textAlign: 'right', whiteSpace: 'nowrap' }}>{totalEleve(e.id).toFixed(2)} CHF</td>
                           <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                             <button style={styles.btnDetailFacture} onClick={() => ouvrirFactureImprime(e)}>Détail</button>
                           </td>
-                          <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
+                          <td style={{ ...styles.tdMateriel, textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={() => toggleValidationFacture(e.id)}
-                              style={{ padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: valide ? '#16a34a' : '#e2e8f0', color: valide ? 'white' : '#64748b', transition: 'all .15s' }}>
+                              style={{ padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: valide ? '#16a34a' : '#e2e8f0', color: valide ? 'white' : '#64748b', transition: 'all .15s', whiteSpace: 'nowrap' }}>
                               {valide ? '✓ Validé' : 'À valider'}
                             </button>
                           </td>
@@ -642,7 +689,7 @@ export default function Comptabilite() {
                       })}
                     </tbody>
                   </table>
-                  </div>
+                </div>
                 </div>
               </>
             )}
@@ -680,46 +727,78 @@ export default function Comptabilite() {
             ))}
             </div>
           </div>
-        <div style={{ ...styles.tabContent, marginTop: 15 }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 14px', borderBottom: '1px solid #f0f0f0' }}>
-            <select style={styles.select} value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)}>
-              <option value="">Toutes les classes</option>
-              {classes.filter(c => paiementsNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(paiementsNiveau)).map(c => <option key={c.id} value={c.nom}>{c.nom}</option>)}
-            </select>
-          </div>
-          <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
-            <thead>
-              <tr style={styles.theadRow}>
-                {['Élève', 'Classe', 'Type', 'Montant', 'Statut', 'Date', 'Actions'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paiementsFiltres.length === 0 ? (
-                <tr><td colSpan="7" style={styles.vide}>Aucun paiement</td></tr>
-              ) : paiementsFiltres.map(p => {
-                const statut = getStatut(p.statut);
-                return (
-                  <tr key={p.id} style={styles.tr}>
-                    <td style={styles.td}><b>{p.prenom} {p.nom}</b></td>
-                    <td style={styles.td}>{p.classe || '—'}</td>
-                    <td style={styles.td}><span style={styles.typeBadge}>{p.type}</span></td>
-                    <td style={{ ...styles.td, fontWeight: '700', color: '#1a73e8' }}>{parseFloat(p.montant).toFixed(2)} CHF</td>
-                    <td style={styles.td}>
-                      <span style={{ ...styles.statutBadge, background: statut.bg, color: statut.color }}>{statut.label}</span>
-                    </td>
-                    <td style={styles.td}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
-                    <td style={styles.td}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
+        {/* Champ de recherche — hors du bloc blanc */}
+        <div style={{ marginTop: 15, marginBottom: 15 }}>
+          <input
+            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 320, color: '#1e293b' }}
+            placeholder="Rechercher nom, prénom, classe, montant, référence..."
+            value={recherchePaiements}
+            onChange={e => setRecherchePaiements(e.target.value)}
+          />
         </div>
+        <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
+          <thead>
+            <tr style={styles.theadRow}>
+              {[
+                { label: 'Élève', min: false },
+                { label: 'Classe', min: true },
+                { label: 'Montant', min: true },
+                { label: 'Statut', min: false },
+                { label: 'Émis', min: true },
+                { label: 'Date', min: true },
+                { label: 'Validé', min: true },
+                { label: 'Actions', min: true },
+              ].map(h => (
+                <th key={h.label} style={{ ...styles.th, ...(h.min ? { width: '1%', whiteSpace: 'nowrap' } : {}) }}>{h.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paiementsFiltres.length === 0 ? (
+              <tr><td colSpan="8" style={styles.vide}>Aucun paiement</td></tr>
+            ) : paiementsFiltres.map(p => {
+              const PILLS = [
+                { val: 'paye',       label: '✓ Payé',       bg: '#dcfce7', color: '#166534' },
+                { val: 'en_attente', label: '… En attente', bg: '#dbeafe', color: '#1d4ed8' },
+                { val: 'en_retard',  label: '✗ En retard',  bg: '#fef3c7', color: '#d97706' },
+                { val: 'annule',     label: '✗ Annulé',     bg: '#fee2e2', color: '#dc2626' },
+              ];
+              const statut = p.statut || 'en_attente';
+              const valide = !!p.valide;
+              return (
+                <tr key={p.id} style={styles.tr}>
+                  <td style={styles.td}><b>{p.prenom} {p.nom}</b></td>
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{p.classe || '—'}</td>
+                  <td style={{ ...styles.td, color: '#1e293b', whiteSpace: 'nowrap' }}>{parseFloat(p.montant).toFixed(2)} CHF</td>
+                  <td style={styles.td}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {PILLS.map(pill => (
+                        <button key={pill.val} type="button"
+                          onClick={() => !valide && setStatutPaiement(p, pill.val)}
+                          disabled={valide}
+                          style={{ padding: '4px 10px', borderRadius: 20, border: `2px solid ${statut === pill.val ? pill.color : '#e2e8f0'}`, background: statut === pill.val ? pill.bg : 'white', color: statut === pill.val ? pill.color : '#94a3b8', fontWeight: statut === pill.val ? 700 : 400, fontSize: 12, cursor: valide ? 'not-allowed' : 'pointer', outline: 'none', fontFamily: 'inherit', opacity: valide ? 0.6 : 1 }}>
+                          {pill.label}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap', color: '#64748b' }}>{p.emis_at ? new Date(p.emis_at).toLocaleDateString('fr-CH') : '—'}</td>
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
+                  <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => toggleValidePaiement(p)}
+                      style={{ padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: valide ? '#16a34a' : '#e2e8f0', color: valide ? 'white' : '#64748b', transition: 'all .15s', whiteSpace: 'nowrap' }}>
+                      {valide ? '✓ Validé' : 'À valider'}
+                    </button>
+                  </td>
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                    <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
+                    <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table></div>
         </>
       )}
 
@@ -1132,10 +1211,9 @@ export default function Comptabilite() {
               <div style={styles.formGrid}>
                 <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                   <label style={styles.label}>Élève</label>
-                  <select style={styles.input} required value={editForm.eleve_id} onChange={e => setEditForm({ ...editForm, eleve_id: e.target.value })}>
-                    <option value="">-- Choisir --</option>
-                    {eleves.map(e => <option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}
-                  </select>
+                  <div style={{ ...styles.input, background: '#f8fafc', color: '#475569', cursor: 'default', display: 'flex', alignItems: 'center' }}>
+                    {editForm.prenom} {editForm.nom}
+                  </div>
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Montant (CHF)</label>
@@ -1159,7 +1237,11 @@ export default function Comptabilite() {
                 </div>
                 <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                   <label style={styles.label}>Commentaire</label>
-                  <input style={styles.input} type="text" value={editForm.commentaire} onChange={e => setEditForm({ ...editForm, commentaire: e.target.value })} />
+                  <input style={styles.input} type="text" placeholder="" value={editForm.commentaire} onChange={e => setEditForm({ ...editForm, commentaire: e.target.value })} />
+                </div>
+                <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                  <label style={styles.label}>Référence facture</label>
+                  <input style={{ ...styles.input, fontFamily: 'monospace', letterSpacing: 1 }} type="text" placeholder="Ex: 00 00000 00000 00000 00000 00000" value={editForm.reference} onChange={e => setEditForm({ ...editForm, reference: e.target.value })} />
                 </div>
               </div>
               <div style={styles.formActions}>
@@ -1384,7 +1466,7 @@ export default function Comptabilite() {
 }
 
 const styles = {
-  page: { padding: '20px', background: '#f0f2f5', minHeight: '100vh' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh' },
   header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 24 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
@@ -1396,7 +1478,7 @@ const styles = {
   tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
   tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1' },
   tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
-  tabContent: { background: 'white', borderRadius: '0 12px 12px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden' },
+  tabContent: { background: 'white', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden', marginTop: 8 },
   subTabsRow: { display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid #f0f0f0', flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' },
   subTab: { padding: '7px 13px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#475569', outline: 'none' },
   subTabActif: { background: '#6366f1', color: 'white', border: '1px solid #6366f1' },

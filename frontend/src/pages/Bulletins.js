@@ -666,7 +666,7 @@ export default function Bulletins() {
 }
 
 const s = {
-  page: { padding: '24px 28px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, width: 160, minWidth: 160, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
@@ -676,8 +676,8 @@ const s = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
-  tblWrap: { overflowX: 'auto', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
-  tableContainer: { overflowX: 'auto', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tblWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tableContainer: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },

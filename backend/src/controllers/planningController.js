@@ -12,6 +12,11 @@ const getDisponibilites = async (req, res) => {
   res.json(r.rows);
 };
 
+const getAllDisponibilites = async (req, res) => {
+  const r = await pool.query('SELECT prof_id, creneau_id, disponible FROM disponibilites');
+  res.json(r.rows);
+};
+
 const getRemarqueDisponibilites = async (req, res) => {
   try {
     const r = await pool.query(
@@ -384,6 +389,7 @@ const getPlanningClasse = async (req, res) => {
 module.exports = {
   getCreneaux,
   getDisponibilites,
+  getAllDisponibilites,
   getRemarqueDisponibilites,
   saveRemarqueDisponibilites,
   saveDisponibilites,

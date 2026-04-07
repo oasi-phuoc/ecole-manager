@@ -2,15 +2,39 @@ const pool = require('../config/database');
 
 const getPaiements = async (req, res) => {
   try {
+    // Auto-promote en_attente → en_retard after 30 days from emis_at
+    await pool.query(`
+      UPDATE paiements p
+      SET statut = 'en_retard'
+      FROM eleves e
+      JOIN (
+        SELECT DISTINCT ON (eleve_id) eleve_id, valide_at
+        FROM factures_validations
+        WHERE valide = true AND valide_at IS NOT NULL
+        ORDER BY eleve_id, valide_at DESC
+      ) fv ON fv.eleve_id = e.id
+      WHERE p.eleve_id = e.id
+        AND p.statut = 'en_attente'
+        AND p.valide = false
+        AND fv.valide_at < NOW() - INTERVAL '30 days'
+    `);
+
     const { statut, classe_id } = req.query;
     let query = `
-      SELECT p.id, p.montant, p.type, p.statut, p.date_paiement, p.commentaire, p.created_at,
+      SELECT p.id, p.montant, p.type, p.statut, p.date_paiement, p.commentaire, p.reference, p.valide, p.created_at,
         u.nom, u.prenom, e.id as eleve_id,
-        c.nom as classe
+        c.nom as classe,
+        fv.valide_at as emis_at
       FROM paiements p
       JOIN eleves e ON p.eleve_id = e.id
       JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id
+      LEFT JOIN (
+        SELECT DISTINCT ON (eleve_id) eleve_id, valide_at
+        FROM factures_validations
+        WHERE valide = true AND valide_at IS NOT NULL
+        ORDER BY eleve_id, valide_at DESC
+      ) fv ON fv.eleve_id = e.id
       WHERE 1=1
     `;
     const params = [];
@@ -25,11 +49,11 @@ const getPaiements = async (req, res) => {
 };
 
 const creerPaiement = async (req, res) => {
-  const { eleve_id, montant, type, statut, date_paiement, commentaire } = req.body;
+  const { eleve_id, montant, type, statut, date_paiement, commentaire, reference } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO paiements (eleve_id, montant, type, statut, date_paiement, commentaire) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [eleve_id, montant, type, statut || 'en_attente', date_paiement || null, commentaire || null]
+      'INSERT INTO paiements (eleve_id, montant, type, statut, date_paiement, commentaire, reference) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [eleve_id, montant, type, statut || 'en_attente', date_paiement || null, commentaire || null, reference || null]
     );
     res.status(201).json({ message: 'Paiement cree', paiement: result.rows[0] });
   } catch (err) {
@@ -38,11 +62,11 @@ const creerPaiement = async (req, res) => {
 };
 
 const modifierPaiement = async (req, res) => {
-  const { montant, type, statut, date_paiement, commentaire } = req.body;
+  const { montant, type, statut, date_paiement, commentaire, reference, valide } = req.body;
   try {
     const result = await pool.query(
-      'UPDATE paiements SET montant=$1, type=$2, statut=$3, date_paiement=$4, commentaire=$5 WHERE id=$6 RETURNING *',
-      [montant, type, statut, date_paiement || null, commentaire || null, req.params.id]
+      'UPDATE paiements SET montant=$1, type=$2, statut=$3, date_paiement=$4, commentaire=$5, reference=$6, valide=$7 WHERE id=$8 RETURNING *',
+      [montant, type, statut, date_paiement || null, commentaire || null, reference || null, valide || false, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Paiement non trouve' });
     res.json({ message: 'Paiement modifie' });
@@ -166,6 +190,20 @@ const toggleFactureValidation = async (req, res) => {
   }
 };
 
+const getFactureRef = async (req, res) => {
+  const { eleve_id, annee_scolaire } = req.query;
+  if (!eleve_id || !annee_scolaire) return res.json({ reference: null });
+  try {
+    const r = await pool.query(
+      'SELECT reference FROM factures_references WHERE eleve_id=$1 AND annee_scolaire=$2',
+      [eleve_id, annee_scolaire]
+    );
+    res.json({ reference: r.rows[0]?.reference || null });
+  } catch (err) {
+    res.json({ reference: null });
+  }
+};
+
 const getOrCreateFactureRef = async (req, res) => {
   const { eleve_id, annee_scolaire, reference } = req.body;
   if (!eleve_id || !annee_scolaire || !reference) {
@@ -192,6 +230,6 @@ const getOrCreateFactureRef = async (req, res) => {
 module.exports = {
   getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques,
   getMateriels, creerMateriel, modifierMateriel, supprimerMateriel,
-  getOrCreateFactureRef,
+  getFactureRef, getOrCreateFactureRef,
   getFacturesValidations, toggleFactureValidation
 };

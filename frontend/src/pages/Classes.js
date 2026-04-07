@@ -1738,13 +1738,14 @@ export default function Classes() {
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
+              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?10:9} style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?11:10} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
               return (

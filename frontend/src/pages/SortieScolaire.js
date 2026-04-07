@@ -42,7 +42,7 @@ export default function SortieScolaire() {
 }
 
 const styles = {
-  page: { minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '32px 36px' },
+  page: { minHeight: '100vh', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet Mars', sans-serif", padding: '28px 32px' },
   header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24 },
   btnBack: { padding: '8px 16px', borderRadius: 8, border: 'none', background: 'white', color: '#6366f1', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 1px 4px rgba(99,102,241,0.10)' },
   titre: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },

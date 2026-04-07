@@ -56,6 +56,7 @@ export default function EmploiDuTemps() {
   const [onglet, setOnglet] = useState(isAdmin() ? 'pools' : 'plannings');
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
+  const [sousOngletDisp, setSousOngletDisp] = useState('tous');
   const [profs, setProfs] = useState([]);
   const [classes, setClasses] = useState([]);
   const [matieres, setMatieres] = useState([]);
@@ -93,6 +94,7 @@ export default function EmploiDuTemps() {
   const [classeRapideId, setClasseRapideId] = useState('');
   const [classeRapideId2, setClasseRapideId2] = useState('');
   const [remarquesDispo, setRemarquesDispo] = useState('');
+  const [allDispos, setAllDispos] = useState([]);
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
@@ -1697,7 +1699,9 @@ export default function EmploiDuTemps() {
                 axios.get(API + '/profs', { headers }).then(r => {
                   const liste = r.data.filter(x => x.actif !== false);
                   setProfs(liste);
-                  if (!profSelectionne && liste.length > 0) chargerDispos(liste[0].id);
+                }).catch(() => {});
+                axios.get(API + '/planning/disponibilites', { headers }).then(r => {
+                  setAllDispos(r.data);
                 }).catch(() => {});
               }
               if (o.id === 'plannings') {
@@ -1784,7 +1788,16 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:15}}>
+          <div style={styles.affSubTabsBar}>
+            {[{id:'tous', label:'Tous'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => (
+              <button key={tab.id}
+                style={{...styles.affSubTabBtn,...(sousOngletDisp===tab.id?styles.affSubTabBtnActif:{})}}
+                onClick={() => { setSousOngletDisp(tab.id); setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:15,marginTop:15}}>
               <select
                 style={{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
                 value={profSelectionne || ''}
@@ -1800,16 +1813,70 @@ export default function EmploiDuTemps() {
                 }}
               >
                 <option value="">Choisir un professeur</option>
-                {profsTriesPrenomNom.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.prenom} {p.nom}
-                  </option>
-                ))}
+                {(() => {
+                  const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
+                  const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
+                  return profsTriesPrenomNom.filter(p => !profIds || profIds.includes(p.id)).map(p => (
+                    <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>
+                  ));
+                })()}
               </select>
           </div>
 
           {!profSelectionne && (
-            <div style={styles.msgVide}>Sélectionnez d'abord un professeur pour afficher les disponibilités.</div>
+            <div style={{overflowX:'auto',marginTop:8}}>
+              {(() => {
+                const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
+                const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
+                const profsAffiches = profs.filter(p => !profIds || profIds.includes(p.id));
+                return (
+              <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
+                <colgroup>
+                  <col />
+                  <col style={{width:70}} />
+                  {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
+                    <col key={j} style={{width:100}} />
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Professeur</th>
+                    <th style={{...styles.th, textAlign:'center'}}>Taux</th>
+                    {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
+                      <th key={j} style={{...styles.th, textAlign:'center'}}>{j}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {profsAffiches.map(prof => {
+                    const profDispos = allDispos.filter(d => String(d.prof_id) === String(prof.id));
+                    return (
+                      <tr key={prof.id}>
+                        <td style={styles.td}>{prof.prenom} {prof.nom}</td>
+                        <td style={{...styles.td, textAlign:'center'}}>{prof.taux_activite ? `${prof.taux_activite}%` : '—'}</td>
+                        {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(jour => {
+                          const creneauxJour = creneaux.filter(c => c.jour === jour);
+                          const total = creneauxJour.length;
+                          const dispoCount = creneauxJour.filter(cr => {
+                            const stored = profDispos.find(d => Number(d.creneau_id) === Number(cr.id));
+                            return stored ? stored.disponible !== false : true;
+                          }).length;
+                          const color = dispoCount === total && total > 0 ? '#16a34a' : dispoCount === 0 ? '#dc2626' : '#f59e0b';
+                          const title = `${dispoCount}/${total} périodes`;
+                          return (
+                            <td key={jour} style={{...styles.td, textAlign:'center', verticalAlign:'middle'}}>
+                              <span title={title} style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:color,cursor:'default',verticalAlign:'middle'}} />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+                );
+              })()}
+            </div>
           )}
           {profSelectionne && (
             <div style={styles.card}>
@@ -3348,7 +3415,7 @@ export default function EmploiDuTemps() {
 }
 
 const styles = {
-  page:{padding:20,background:'#f8fafc',minHeight:'100vh'},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh'},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:24,width:'100%'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},

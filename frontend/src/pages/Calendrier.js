@@ -189,7 +189,7 @@ export default function Calendrier() {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
   return (
-    <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
       {/* Popup jour */}
       {jourPopup && (

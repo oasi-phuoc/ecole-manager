@@ -526,7 +526,7 @@ export default function Presences() {
   };
 
   return (
-    <div style={{padding:'24px 28px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>

@@ -40,6 +40,8 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS role_acces VARCHAR(20) DEFAULT 'employe'`);
+    await pool.query(`ALTER TABLE paiements ADD COLUMN IF NOT EXISTS valide BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE paiements ADD COLUMN IF NOT EXISTS reference VARCHAR(100)`);
 
     // Table documents professeurs
     await pool.query(`CREATE TABLE IF NOT EXISTS documents_profs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, nom VARCHAR(255) NOT NULL, type VARCHAR(50) DEFAULT 'Autre', contenu TEXT NOT NULL, taille INTEGER, created_at TIMESTAMP DEFAULT NOW());`);

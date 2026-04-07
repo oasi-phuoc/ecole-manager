@@ -1011,7 +1011,7 @@ export default function TCF() {
     return (
       <>
         {MOMENTS.map((moment, mi) => (
-          <div key={moment.id} style={{ ...styles.tableWrap, overflowX: 'auto', marginTop: mi === 1 ? 20 : 0 }}>
+          <div key={moment.id} style={{ ...styles.tableWrap, marginTop: mi === 1 ? 20 : 0 }}>
             <table style={{ ...styles.tableLarge, tableLayout: 'fixed' }}>
               <tbody>
                 <tr style={styles.thead}>
@@ -1720,7 +1720,7 @@ export default function TCF() {
               </table>
             </div>
 
-            <div style={{ ...styles.tableWrap, overflowX: 'hidden' }}>
+            <div style={{ ...styles.tableWrap }}>
               <table style={styles.tableRolesRight}>
                 <colgroup>
                   <col style={{ width: 116, minWidth: 116, maxWidth: 116 }} />
@@ -3543,7 +3543,7 @@ export default function TCF() {
                     <div style={{ ...pStyle, marginBottom: 2 }}>Lieu : <strong>{siteNames[sitePlan] || sitePlan}</strong></div>
                     <div style={{ ...pStyle, marginBottom: 20 }}>Horaire matin : <strong>{horaireMatin}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>{horaireAM}</strong></div>
                     {['matin', 'apresMidi'].map((moment, mi) => (
-                      <div key={moment} style={{ ...styles.tableWrap, overflowX: 'auto', marginTop: mi === 1 ? 20 : 0 }}>
+                      <div key={moment} style={{ ...styles.tableWrap, marginTop: mi === 1 ? 20 : 0 }}>
                         <table style={{ ...styles.tableLarge, tableLayout: 'fixed' }}>
                           <tbody>
                             <tr style={styles.thead}>
@@ -3664,7 +3664,7 @@ export default function TCF() {
 
 const styles = {
   page: {
-    padding: 28,
+    padding: '28px 32px',
     background: '#f8fafc',
     minHeight: '100vh',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
@@ -3733,7 +3733,7 @@ const styles = {
     fontWeight: 800,
   },
 
-  tableWrap: { overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' },
+  tableWrap: { overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
   tablePool: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1180 },
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
