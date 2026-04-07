@@ -679,7 +679,6 @@ export default function Professeurs({
               <th style={s.th}>Email</th>
               <th style={s.th}>Téléphone</th>
               <th style={s.th}>Naissance</th>
-              <th style={{...s.th, width:110, minWidth:110, maxWidth:110}}>Type</th>
               <th style={{...s.th, width:98, minWidth:98, maxWidth:98, textAlign:'center'}}>Documents</th>
               <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Actions</th>}
@@ -695,12 +694,6 @@ export default function Professeurs({
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{...s.td,width:110,minWidth:110,maxWidth:110}}>
-                  {(!p.type_prof || p.type_prof === 'Interne')
-                    ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>Interne</span>
-                    : <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700}}>{p.type_prof}</span>
-                  }
-                </td>
                 <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:isAdmin()?1:0.35}} disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)} title="Documents">📁</button></td>
                 <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center'}}>
                   <button style={{...(p.actif!==false?s.badgeActive:s.badgeInactive),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleStatut(p)}>

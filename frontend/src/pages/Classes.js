@@ -1734,18 +1734,14 @@ export default function Classes() {
               <th style={{...s.th, width:1, minWidth:80, whiteSpace:'nowrap'}}>Classe</th>
               <th style={{...s.th, width:1, minWidth:100, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
-              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
-              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
-              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
-              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
-              <th style={{...s.th, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}></th>
+              <th style={{...s.th, textAlign:'center'}}></th>
               <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
               {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {classesFiltrees.length===0 ? (
-              <tr><td colSpan={isAdmin()?11:10} style={s.empty}>Aucune classe trouvée</td></tr>
+              <tr><td colSpan={isAdmin()?7:6} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
@@ -1779,20 +1775,14 @@ export default function Classes() {
                     )}
                   </div>
                 </td>
-                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
-                  <button style={{background:'#fef9c3', border:'1px solid #fde68a', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">📋</button>
-                </td>
-                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
-                  <button style={{background:'#fce7f3', border:'1px solid #f9a8d4', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">📝</button>
-                </td>
-                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
-                  <button style={{background:'#e0e7ff', border:'1px solid #c7d2fe', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">📷</button>
-                </td>
-                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
-                  <button style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">🪑</button>
-                </td>
-                <td style={{...s.td, width:60, minWidth:60, maxWidth:60, textAlign:'center'}}>
-                  <button style={{background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">🧾</button>
+                <td style={{...s.td, textAlign:'center', whiteSpace:'nowrap'}}>
+                  <div style={{display:'flex', gap:4, justifyContent:'center'}}>
+                    <button style={{background:'#fef9c3', border:'1px solid #fde68a', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">📋</button>
+                    <button style={{background:'#fce7f3', border:'1px solid #f9a8d4', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">📝</button>
+                    <button style={{background:'#e0e7ff', border:'1px solid #c7d2fe', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">📷</button>
+                    <button style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">🪑</button>
+                    <button style={{background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">🧾</button>
+                  </div>
                 </td>
                 <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
                   <button style={{...(c.actif!==false?s.badgeActive:s.badgeInactif),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleActif(c)}>
