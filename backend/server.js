@@ -107,6 +107,7 @@ app.use('/api/chatbot', require('./src/routes/chatbot'));
 app.use('/api/donnees', require('./src/routes/donnees'));
 app.use('/api/enclassements', require('./src/routes/enclassements'));
 app.use('/api/devoirs', require('./src/routes/devoirs'));
+app.use('/api/sorties', require('./src/routes/sorties'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

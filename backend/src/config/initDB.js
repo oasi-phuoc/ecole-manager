@@ -280,6 +280,33 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_ra_id INTEGER`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_temps_reparti_id INTEGER`);
 
+    // Sorties scolaires
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sorties_scolaires (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(20) DEFAULT 'autre',
+        classe1 VARCHAR(100),
+        classe2 VARCHAR(100),
+        titulaires TEXT,
+        autres_accompagnants TEXT,
+        date_sortie DATE,
+        destination TEXT,
+        activites TEXT,
+        lieu_depart TEXT,
+        heure_depart TIME,
+        lieu_retour TEXT,
+        heure_retour TIME,
+        budget DECIMAL(10,2),
+        commentaires TEXT,
+        delai DATE,
+        approuve BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classe1 VARCHAR(100)`);
+    await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classe2 VARCHAR(100)`);
+    await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS approuve BOOLEAN DEFAULT false`);
+
     // Bulletin critères (comportement / compétences transversales) par élève et classe
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bulletin_criteres (
