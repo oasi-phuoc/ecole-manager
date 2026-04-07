@@ -306,6 +306,8 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classe1 VARCHAR(100)`);
     await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classe2 VARCHAR(100)`);
     await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS approuve BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classes_ids TEXT`);
+    await pool.query(`ALTER TABLE sorties_scolaires ADD COLUMN IF NOT EXISTS classes_noms TEXT`);
 
     // Bulletin critères (comportement / compétences transversales) par élève et classe
     await pool.query(`

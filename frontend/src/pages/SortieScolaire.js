@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import TimePicker from '../components/TimePicker';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const getHeaders = () => { const u = JSON.parse(localStorage.getItem('user') || '{}'); return { Authorization: `Bearer ${u.token}` }; };
@@ -13,11 +14,14 @@ const ONGLETS = [
   { id: 'suivi',   label: 'Tableau de suivi' },
 ];
 
+const LIEUX_PREDEFINIS = ['Sion, Synecom', 'Vétroz, Botza'];
+
 const FORM_VIDE = {
-  type: 'automne', classe1: '', classe2: '', titulaires: '', autres_accompagnants: '',
+  type: 'automne', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '',
   date_sortie: '', destination: '', activites: '',
-  lieu_depart: '', heure_depart: '', lieu_retour: '', heure_retour: '',
-  budget: '', commentaires: '', delai: '', approuve: false,
+  lieu_depart: 'Sion, Synecom', lieu_depart_autre: '',
+  heure_depart: '', lieu_retour: '', heure_retour: '',
+  budget: '', commentaires: '',
 };
 
 const fmtDate = (d) => {
@@ -44,18 +48,44 @@ export default function SortieScolaire() {
   const [onglet, setOnglet] = useState('automne');
   const [sousOngletSuivi, setSousOngletSuivi] = useState('automne');
   const [sorties, setSorties] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(FORM_VIDE);
   const [editId, setEditId] = useState(null);
 
   const charger = async () => {
     try {
-      const r = await axios.get(API + '/sorties', { headers: getHeaders() });
-      setSorties(r.data || []);
+      const [sortiesRes, classesRes] = await Promise.all([
+        axios.get(API + '/sorties', { headers: getHeaders() }),
+        axios.get(API + '/classes', { headers: getHeaders() }),
+      ]);
+      setSorties(sortiesRes.data || []);
+      setClasses(classesRes.data || []);
     } catch (e) { console.error(e); }
   };
 
   useEffect(() => { charger(); }, []);
+
+  // Toggle classe sélectionnée
+  const toggleClasse = (cl) => {
+    const ids = form.classes_ids || [];
+    const isSelected = ids.includes(String(cl.id));
+    let newIds, newTitulaires;
+    if (isSelected) {
+      newIds = ids.filter(id => id !== String(cl.id));
+    } else {
+      newIds = [...ids, String(cl.id)];
+    }
+    // Auto-fill titulaires from selected classes
+    const selectedClasses = classes.filter(c => newIds.includes(String(c.id)));
+    const titList = [...new Set(
+      selectedClasses
+        .map(c => c.prof_prenom && c.prof_nom ? `${c.prof_prenom} ${c.prof_nom}` : null)
+        .filter(Boolean)
+    )].join(' et ');
+    const nomsStr = selectedClasses.map(c => c.nom).join(', ');
+    setForm(f => ({ ...f, classes_ids: newIds, classes_noms: nomsStr, titulaires: titList }));
+  };
 
   const ouvrirNouvelle = () => {
     setForm({ ...FORM_VIDE, type: onglet === 'suivi' ? 'automne' : onglet });
@@ -64,23 +94,24 @@ export default function SortieScolaire() {
   };
 
   const ouvrirEdit = (s) => {
+    const ids = s.classes_ids ? s.classes_ids.split(',').map(x => x.trim()).filter(Boolean) : [];
+    const lieuDepart = LIEUX_PREDEFINIS.includes(s.lieu_depart) ? s.lieu_depart : (s.lieu_depart ? 'autre' : 'Sion, Synecom');
     setForm({
       type: s.type || 'autre',
-      classe1: s.classe1 || '',
-      classe2: s.classe2 || '',
+      classes_ids: ids,
+      classes_noms: s.classes_noms || '',
       titulaires: s.titulaires || '',
       autres_accompagnants: s.autres_accompagnants || '',
       date_sortie: s.date_sortie ? s.date_sortie.split('T')[0] : '',
       destination: s.destination || '',
       activites: s.activites || '',
-      lieu_depart: s.lieu_depart || '',
+      lieu_depart: lieuDepart,
+      lieu_depart_autre: lieuDepart === 'autre' ? (s.lieu_depart || '') : '',
       heure_depart: fmtHeure(s.heure_depart),
       lieu_retour: s.lieu_retour || '',
       heure_retour: fmtHeure(s.heure_retour),
       budget: s.budget || '',
       commentaires: s.commentaires || '',
-      delai: s.delai ? s.delai.split('T')[0] : '',
-      approuve: !!s.approuve,
     });
     setEditId(s.id);
     setShowForm(true);
@@ -88,11 +119,17 @@ export default function SortieScolaire() {
 
   const sauvegarder = async (e) => {
     e.preventDefault();
+    const lieuDepart = form.lieu_depart === 'autre' ? form.lieu_depart_autre : form.lieu_depart;
+    const payload = {
+      ...form,
+      classes_ids: (form.classes_ids || []).join(','),
+      lieu_depart: lieuDepart,
+    };
     try {
       if (editId) {
-        await axios.put(API + '/sorties/' + editId, form, { headers: getHeaders() });
+        await axios.put(API + '/sorties/' + editId, payload, { headers: getHeaders() });
       } else {
-        await axios.post(API + '/sorties', form, { headers: getHeaders() });
+        await axios.post(API + '/sorties', payload, { headers: getHeaders() });
       }
       setShowForm(false);
       charger();
@@ -107,14 +144,15 @@ export default function SortieScolaire() {
 
   const toggleApprouve = async (s) => {
     try {
-      await axios.put(API + '/sorties/' + s.id, { ...s, approuve: !s.approuve }, { headers: getHeaders() });
+      const ids = s.classes_ids || '';
+      await axios.put(API + '/sorties/' + s.id, { ...s, classes_ids: ids, approuve: !s.approuve }, { headers: getHeaders() });
       charger();
     } catch (err) { console.error(err); }
   };
 
   const imprimer = (s) => {
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
-    const classes = [s.classe1, s.classe2].filter(Boolean).join('          et          ');
+    const classesNoms = s.classes_noms || [s.classe1, s.classe2].filter(Boolean).join(' et ') || '—';
     const html = `<!DOCTYPE html><html><head>
     <meta charset="UTF-8"/>
     <title>Sortie scolaire</title>
@@ -131,9 +169,7 @@ export default function SortieScolaire() {
       table.f td.lbl { font-style: italic; color: #374151; width: 34%; font-size: 9.5pt; }
       table.f td.val { min-height: 14pt; white-space: pre-wrap; }
       .sep { height: 8pt; }
-      .delai-row { text-align: center; font-size: 11pt; font-weight: 600; margin: 20pt 0 8pt 0; }
-      .delai-date { color: #ea580c; font-weight: 700; }
-      .approve { display: flex; justify-content: flex-end; align-items: flex-end; gap: 16px; margin-top: 24pt; }
+      .approve { display: flex; justify-content: flex-end; align-items: flex-end; gap: 16px; margin-top: 30pt; }
       .approve-label { font-size: 11pt; font-weight: 600; }
       .approve-sig { text-align: right; font-size: 10pt; }
       .approve-line { border-bottom: 1px solid #1e293b; width: 220px; margin-bottom: 4px; }
@@ -160,7 +196,7 @@ export default function SortieScolaire() {
     <div class="titre">Sortie scolaire</div>
 
     <table class="f">
-      <tr><td class="lbl">Classes</td><td class="val">${classes}</td></tr>
+      <tr><td class="lbl">Classes</td><td class="val">${classesNoms}</td></tr>
       <tr><td class="lbl">Titulaires</td><td class="val">${s.titulaires || ''}</td></tr>
       <tr><td class="lbl">Autres accompagnants</td><td class="val">${s.autres_accompagnants || ''}</td></tr>
     </table>
@@ -192,8 +228,6 @@ export default function SortieScolaire() {
       <tr><td class="lbl">Commentaires</td><td class="val" style="min-height:64pt">${(s.commentaires || '').replace(/\n/g, '<br/>')}</td></tr>
     </table>
 
-    ${s.delai ? `<div class="delai-row">Délai : &nbsp;<span class="delai-date">${fmtDateLong(s.delai)}</span></div>` : ''}
-
     <div class="approve">
       <div class="approve-label">Approuvé par :</div>
       <div class="approve-sig">
@@ -215,6 +249,8 @@ export default function SortieScolaire() {
   };
 
   const sortiesOnglet = sorties.filter(s => s.type === onglet);
+  // Classes sorted by nom
+  const classesSorted = [...classes].sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
 
   return (
     <div style={st.page}>
@@ -239,38 +275,37 @@ export default function SortieScolaire() {
       </div>
       <div style={st.tabLine} />
 
-      {/* Content */}
-      <div style={st.content}>
+      {/* Sous-onglets suivi — hors du cadre blanc */}
+      {onglet === 'suivi' && (
+        <div style={st.subTabsBar}>
+          {[{id:'automne',label:'Automne'},{id:'juin',label:'Juin'},{id:'autres',label:'Autres'}].map(o => (
+            <button key={o.id}
+              style={{ ...st.subTabBtn, ...(sousOngletSuivi === o.id ? st.subTabBtnActif : {}) }}
+              onClick={() => setSousOngletSuivi(o.id)}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Suivi tab avec sous-onglets */}
+      {/* Content — 15px sous les onglets, 4 coins arrondis */}
+      <div style={st.content}>
+        {/* Suivi */}
         {onglet === 'suivi' && (
-          <>
-            {/* Sous-onglets style EmploiDuTemps */}
-            <div style={st.subTabsBar}>
-              {[{id:'automne',label:'Automne'},{id:'juin',label:'Juin'},{id:'autres',label:'Autres'}].map(o => (
-                <button key={o.id}
-                  style={{ ...st.subTabBtn, ...(sousOngletSuivi === o.id ? st.subTabBtnActif : {}) }}
-                  onClick={() => setSousOngletSuivi(o.id)}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-            <div style={{ height: 16 }} />
-            <SuiviTable
-              sorties={sorties.filter(s => s.type === sousOngletSuivi)}
-              onEdit={ouvrirEdit}
-              onDelete={supprimer}
-              onPrint={imprimer}
-              onToggleApprouve={toggleApprouve}
-            />
-          </>
+          <SuiviTable
+            sorties={sorties.filter(s => s.type === sousOngletSuivi)}
+            onEdit={ouvrirEdit}
+            onDelete={supprimer}
+            onPrint={imprimer}
+            onToggleApprouve={toggleApprouve}
+          />
         )}
 
-        {/* Automne / Juin / Autres tabs */}
+        {/* Automne / Juin / Autres */}
         {onglet !== 'suivi' && (
           sortiesOnglet.length === 0 ? (
             <div style={st.empty}>
-              Aucune sortie enregistrée pour <b>{ONGLETS.find(o => o.id === onglet)?.label}</b>.
+              Aucune sortie pour <b>{ONGLETS.find(o => o.id === onglet)?.label}</b>.
               <br/><br/>
               <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
             </div>
@@ -284,7 +319,7 @@ export default function SortieScolaire() {
         )}
       </div>
 
-      {/* Popup form */}
+      {/* Form popup */}
       {showForm && (
         <div style={st.overlay} onClick={() => setShowForm(false)}>
           <div style={st.modal} onClick={e => e.stopPropagation()}>
@@ -292,8 +327,9 @@ export default function SortieScolaire() {
               <h3 style={st.modalTitre}>{editId ? 'Modifier' : 'Nouvelle'} sortie scolaire</h3>
               <button style={st.btnClose} onClick={() => setShowForm(false)}>✕</button>
             </div>
-            <form onSubmit={sauvegarder} style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 80px)', paddingRight: 4 }}>
+            <form onSubmit={sauvegarder} style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 80px)', paddingRight: 6 }}>
 
+              {/* Type */}
               <div style={st.formSection}>Type</div>
               <div style={st.grid3}>
                 {['automne', 'juin', 'autres'].map(t => (
@@ -305,35 +341,98 @@ export default function SortieScolaire() {
                 ))}
               </div>
 
-              <div style={st.formSection}>Participants</div>
-              <div style={st.grid2}>
-                <div style={st.field}><label style={st.lbl}>Classe 1</label><input style={st.inp} value={form.classe1} onChange={e => setForm({...form, classe1: e.target.value})} placeholder="Ex: CFR 04" /></div>
-                <div style={st.field}><label style={st.lbl}>Classe 2</label><input style={st.inp} value={form.classe2} onChange={e => setForm({...form, classe2: e.target.value})} placeholder="Ex: CFR 06 (optionnel)" /></div>
-              </div>
-              <div style={st.grid2}>
-                <div style={st.field}><label style={st.lbl}>Titulaires</label><input style={st.inp} value={form.titulaires} onChange={e => setForm({...form, titulaires: e.target.value})} placeholder="Ex: Yaëlle et Rosa" /></div>
-                <div style={st.field}><label style={st.lbl}>Autres accompagnants</label><input style={st.inp} value={form.autres_accompagnants} onChange={e => setForm({...form, autres_accompagnants: e.target.value})} placeholder="Ex: Tania" /></div>
+              {/* Classes */}
+              <div style={st.formSection}>Classes</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {classesSorted.map(cl => {
+                  const sel = (form.classes_ids || []).includes(String(cl.id));
+                  return (
+                    <button key={cl.id} type="button"
+                      onClick={() => toggleClasse(cl)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 20, border: `2px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
+                        background: sel ? '#6366f1' : 'white', color: sel ? 'white' : '#475569',
+                        fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all .12s',
+                      }}>
+                      {cl.nom}
+                    </button>
+                  );
+                })}
               </div>
 
+              {/* Titulaires auto-filled */}
+              <div style={st.grid2}>
+                <div style={st.field}>
+                  <label style={st.lbl}>Titulaires <span style={{ color: '#94a3b8', fontWeight: 400 }}>(auto-rempli)</span></label>
+                  <input style={st.inp} value={form.titulaires} onChange={e => setForm({...form, titulaires: e.target.value})} placeholder="Titulaires des classes sélectionnées" />
+                </div>
+                <div style={st.field}>
+                  <label style={st.lbl}>Autres accompagnants</label>
+                  <input style={st.inp} value={form.autres_accompagnants} onChange={e => setForm({...form, autres_accompagnants: e.target.value})} placeholder="Ex: Tania" />
+                </div>
+              </div>
+
+              {/* Programme */}
               <div style={st.formSection}>Programme</div>
               <div style={st.field}><label style={st.lbl}>Date de la sortie *</label><input style={st.inp} type="date" required value={form.date_sortie} onChange={e => setForm({...form, date_sortie: e.target.value})} /></div>
               <div style={st.field}><label style={st.lbl}>Destination</label><input style={st.inp} value={form.destination} onChange={e => setForm({...form, destination: e.target.value})} placeholder="Ex: Château de Valère, Sion" /></div>
-              <div style={st.field}><label style={st.lbl}>Activités</label><textarea style={{...st.inp, height: 90, resize: 'vertical'}} value={form.activites} onChange={e => setForm({...form, activites: e.target.value})} placeholder="Détail des activités prévues..." /></div>
+              <div style={st.field}><label style={st.lbl}>Activités</label><textarea style={{...st.inp, height: 80, resize: 'vertical'}} value={form.activites} onChange={e => setForm({...form, activites: e.target.value})} placeholder="Détail des activités..." /></div>
 
+              {/* Déplacement */}
               <div style={st.formSection}>Déplacement</div>
-              <div style={st.grid2}>
-                <div style={st.field}><label style={st.lbl}>Lieu de départ</label><input style={st.inp} value={form.lieu_depart} onChange={e => setForm({...form, lieu_depart: e.target.value})} placeholder="Ex: Vétroz, Botza" /></div>
-                <div style={st.field}><label style={st.lbl}>Heure de départ</label><input style={st.inp} type="time" value={form.heure_depart} onChange={e => setForm({...form, heure_depart: e.target.value})} /></div>
-                <div style={st.field}><label style={st.lbl}>Lieu de retour</label><input style={st.inp} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" /></div>
-                <div style={st.field}><label style={st.lbl}>Heure de retour</label><input style={st.inp} type="time" value={form.heure_retour} onChange={e => setForm({...form, heure_retour: e.target.value})} /></div>
+
+              {/* Lieu de départ — toggle */}
+              <div style={st.field}>
+                <label style={st.lbl}>Lieu de départ</label>
+                <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', width: 'fit-content' }}>
+                  {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                    <button key={lieu} type="button"
+                      onClick={() => setForm({...form, lieu_depart: lieu})}
+                      style={{
+                        padding: '8px 14px', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                        background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
+                        color: form.lieu_depart === lieu ? 'white' : '#475569',
+                        borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
+                      }}>
+                      {lieu === 'autre' ? 'Autre' : lieu}
+                    </button>
+                  ))}
+                </div>
+                {form.lieu_depart === 'autre' && (
+                  <input style={{ ...st.inp, marginTop: 8 }} value={form.lieu_depart_autre}
+                    onChange={e => setForm({...form, lieu_depart_autre: e.target.value})}
+                    placeholder="Saisir le lieu de départ..." autoFocus />
+                )}
               </div>
 
+              {/* Heures avec TimePicker */}
+              <div style={st.grid2}>
+                <div style={st.field}>
+                  <label style={st.lbl}>Heure de départ</label>
+                  <TimePicker
+                    value={form.heure_depart}
+                    onChange={e => setForm({...form, heure_depart: e.target.value})}
+                    style={{ ...st.inp, cursor: 'pointer' }}
+                  />
+                </div>
+                <div style={st.field}>
+                  <label style={st.lbl}>Lieu de retour</label>
+                  <input style={st.inp} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
+                </div>
+                <div style={st.field}>
+                  <label style={st.lbl}>Heure de retour</label>
+                  <TimePicker
+                    value={form.heure_retour}
+                    onChange={e => setForm({...form, heure_retour: e.target.value})}
+                    style={{ ...st.inp, cursor: 'pointer' }}
+                  />
+                </div>
+              </div>
+
+              {/* Finances */}
               <div style={st.formSection}>Finances</div>
               <div style={st.field}><label style={st.lbl}>Budget (CHF)</label><input style={st.inp} type="number" step="0.01" min="0" value={form.budget} onChange={e => setForm({...form, budget: e.target.value})} placeholder="Ex: 250.00" /></div>
               <div style={st.field}><label style={st.lbl}>Commentaires</label><textarea style={{...st.inp, height: 80, resize: 'vertical'}} value={form.commentaires} onChange={e => setForm({...form, commentaires: e.target.value})} placeholder="Détails du budget, remarques..." /></div>
-
-              <div style={st.formSection}>Validation</div>
-              <div style={st.field}><label style={st.lbl}>Délai de réponse</label><input style={st.inp} type="date" value={form.delai} onChange={e => setForm({...form, delai: e.target.value})} /></div>
 
               <div style={st.formActions}>
                 <button type="button" style={st.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
@@ -348,7 +447,7 @@ export default function SortieScolaire() {
 }
 
 function SortieCard({ sortie, onEdit, onDelete, onPrint, onToggleApprouve }) {
-  const classes = [sortie.classe1, sortie.classe2].filter(Boolean).join(' + ');
+  const classesNoms = sortie.classes_noms || [sortie.classe1, sortie.classe2].filter(Boolean).join(' + ') || '—';
   return (
     <div style={sc.card}>
       <div style={sc.cardTop}>
@@ -356,16 +455,15 @@ function SortieCard({ sortie, onEdit, onDelete, onPrint, onToggleApprouve }) {
           <div style={sc.cardDate}>{sortie.date_sortie ? new Date(sortie.date_sortie).toLocaleDateString('fr-CH') : '—'}</div>
           <div style={sc.cardDest}>{sortie.destination || '—'}</div>
           <div style={sc.cardMeta}>
-            {classes && <span style={sc.chip}>{classes}</span>}
+            {classesNoms !== '—' && <span style={sc.chip}>{classesNoms}</span>}
             {sortie.titulaires && <span style={sc.chip}>{sortie.titulaires}</span>}
-            {sortie.lieu_depart && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬆ {sortie.lieu_depart} {sortie.heure_depart ? fmtHeure(sortie.heure_depart) : ''}</span>}
-            {sortie.lieu_retour && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬇ {sortie.lieu_retour} {sortie.heure_retour ? fmtHeure(sortie.heure_retour) : ''}</span>}
+            {sortie.lieu_depart && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬆ {sortie.lieu_depart} {fmtHeure(sortie.heure_depart)}</span>}
+            {sortie.lieu_retour && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬇ {sortie.lieu_retour} {fmtHeure(sortie.heure_retour)}</span>}
             {sortie.budget && <span style={{...sc.chip, background:'#d1fae5', color:'#065f46'}}>{parseFloat(sortie.budget).toFixed(2)} CHF</span>}
           </div>
         </div>
         <div style={sc.actions}>
-          <button
-            onClick={() => onToggleApprouve(sortie)}
+          <button onClick={() => onToggleApprouve(sortie)}
             style={{ padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: sortie.approuve ? '#16a34a' : '#e2e8f0', color: sortie.approuve ? 'white' : '#64748b', whiteSpace: 'nowrap' }}>
             {sortie.approuve ? '✓ Approuvé' : 'À approuver'}
           </button>
@@ -385,59 +483,43 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
       Aucune sortie enregistrée pour cet onglet.
     </div>
   );
-
-  const COLS = [
-    { key: 'classe1',     label: 'Classe 1',       w: 90 },
-    { key: 'classe2',     label: 'Classe 2',       w: 90 },
-    { key: 'date_sortie', label: 'Date de la sortie', w: 110 },
-    { key: 'destination', label: 'Destination',    w: null },
-    { key: 'lieu_depart', label: 'Lieu de départ', w: 130 },
-    { key: 'heure_depart',label: 'Heure de départ',w: 90 },
-    { key: 'lieu_retour', label: 'Lieu de retour', w: 130 },
-    { key: 'heure_retour',label: 'Heure de retour',w: 90 },
-    { key: 'budget',      label: 'Budget',          w: 90 },
-    { key: 'approuve',    label: 'Approbation',     w: 110 },
-  ];
-
   return (
     <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e8eaf6' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
-            {COLS.map(c => (
-              <th key={c.key} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', width: c.w || undefined, borderRight: '1px solid rgba(255,255,255,0.15)' }}>
-                {c.label}
-              </th>
+            {['Classes','Date de la sortie','Destination','Lieu de départ','Heure de départ','Lieu de retour','Heure de retour','Budget','Approbation',''].map(h => (
+              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' }}>{h}</th>
             ))}
-            <th style={{ padding: '10px 10px', width: 90, borderRight: '1px solid rgba(255,255,255,0.15)' }}></th>
           </tr>
         </thead>
         <tbody>
-          {sorties.map((s, i) => (
-            <tr key={s.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
-              <td style={sc.td}>{s.classe1 || '—'}</td>
-              <td style={sc.td}>{s.classe2 || ''}</td>
-              <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{s.date_sortie ? new Date(s.date_sortie).toLocaleDateString('fr-CH') : '—'}</td>
-              <td style={{ ...sc.td, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.destination || '—'}</td>
-              <td style={sc.td}>{s.lieu_depart || '—'}</td>
-              <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_depart) || '—'}</td>
-              <td style={sc.td}>{s.lieu_retour || '—'}</td>
-              <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_retour) || '—'}</td>
-              <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
-              <td style={{ ...sc.td, textAlign: 'center' }}>
-                <button
-                  onClick={() => onToggleApprouve(s)}
-                  style={{ padding: '3px 10px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, background: s.approuve ? '#16a34a' : '#e2e8f0', color: s.approuve ? 'white' : '#64748b', whiteSpace: 'nowrap' }}>
-                  {s.approuve ? '✓ Oui' : '—'}
-                </button>
-              </td>
-              <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                <button style={sc.btnPrint} onClick={() => onPrint(s)} title="Imprimer">🖨️</button>
-                <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">✏️</button>
-                <button style={sc.btnDel} onClick={() => onDelete(s.id)} title="Supprimer">🗑️</button>
-              </td>
-            </tr>
-          ))}
+          {sorties.map((s, i) => {
+            const classesNoms = s.classes_noms || [s.classe1, s.classe2].filter(Boolean).join(', ') || '—';
+            return (
+              <tr key={s.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
+                <td style={sc.td}>{classesNoms}</td>
+                <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{s.date_sortie ? new Date(s.date_sortie).toLocaleDateString('fr-CH') : '—'}</td>
+                <td style={{ ...sc.td, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.destination || '—'}</td>
+                <td style={sc.td}>{s.lieu_depart || '—'}</td>
+                <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_depart) || '—'}</td>
+                <td style={sc.td}>{s.lieu_retour || '—'}</td>
+                <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_retour) || '—'}</td>
+                <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
+                <td style={{ ...sc.td, textAlign: 'center' }}>
+                  <button onClick={() => onToggleApprouve(s)}
+                    style={{ padding: '3px 10px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, background: s.approuve ? '#16a34a' : '#e2e8f0', color: s.approuve ? 'white' : '#64748b', whiteSpace: 'nowrap' }}>
+                    {s.approuve ? '✓ Oui' : '—'}
+                  </button>
+                </td>
+                <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                  <button style={sc.btnPrint} onClick={() => onPrint(s)}>🖨️</button>
+                  <button style={sc.btnEdit} onClick={() => onEdit(s)}>✏️</button>
+                  <button style={sc.btnDel} onClick={() => onDelete(s.id)}>🗑️</button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -450,20 +532,17 @@ const st = {
   btnBack: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 500, fontSize: 13, cursor: 'pointer' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, flex: 1 },
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
-  // Tabs style EmploiDuTemps
-  tabsRow: { display: 'flex', gap: 0, marginBottom: 0 },
+  tabsRow: { display: 'flex', gap: 0 },
   onglet: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#5b21b6', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', width: 140, minWidth: 140, textAlign: 'center' },
-  ongletActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
+  ongletActif: { background: '#6366f1', color: 'white', zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   tabLine: { height: 2, background: '#6366f1' },
-  content: { background: 'white', borderRadius: '0 12px 12px 12px', padding: 28, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', minHeight: 200 },
-  // Sub-tabs style EmploiDuTemps
-  subTabsBar: { display: 'flex', gap: 0, alignItems: 'flex-start', marginTop: -15, marginBottom: 0 },
-  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: '#e0e7ff', color: '#3730a3', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', width: 120, minWidth: 120, textAlign: 'center' },
+  content: { background: 'white', borderRadius: 12, padding: 28, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', minHeight: 200, marginTop: 15 },
+  subTabsBar: { display: 'flex', gap: 0, marginTop: 0 },
+  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: '#e0e7ff', color: '#3730a3', lineHeight: 1, zIndex: 1, outline: 'none', width: 120, minWidth: 120, textAlign: 'center' },
   subTabBtnActif: { background: '#4f46e5', color: 'white', marginTop: -1, zIndex: 2, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' },
   empty: { color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' },
-  // Modal
   overlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  modal: { background: 'white', borderRadius: 14, padding: 28, width: 'min(680px, 96vw)', maxHeight: '90vh', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' },
+  modal: { background: 'white', borderRadius: 14, padding: 28, width: 'min(700px, 96vw)', maxHeight: '90vh', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitre: { fontSize: 17, fontWeight: 800, color: '#0f172a' },
   btnClose: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' },
