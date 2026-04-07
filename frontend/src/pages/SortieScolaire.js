@@ -381,51 +381,47 @@ export default function SortieScolaire() {
               {/* Déplacement */}
               <div style={st.formSection}>Déplacement</div>
 
-              {/* Lieu de départ — toggle */}
-              <div style={st.field}>
-                <label style={st.lbl}>Lieu de départ</label>
-                <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', width: 'fit-content' }}>
-                  {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
-                    <button key={lieu} type="button"
-                      onClick={() => setForm({...form, lieu_depart: lieu})}
-                      style={{
-                        padding: '8px 14px', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                        background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
-                        color: form.lieu_depart === lieu ? 'white' : '#475569',
-                        borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
-                      }}>
-                      {lieu === 'autre' ? 'Autre' : lieu}
-                    </button>
-                  ))}
-                </div>
-                {form.lieu_depart === 'autre' && (
-                  <input style={{ ...st.inp, marginTop: 8 }} value={form.lieu_depart_autre}
-                    onChange={e => setForm({...form, lieu_depart_autre: e.target.value})}
-                    placeholder="Saisir le lieu de départ..." autoFocus />
-                )}
-              </div>
-
-              {/* Heures avec TimePicker */}
+              {/* Déplacement grid: lieu départ | heure départ / lieu retour | heure retour */}
               <div style={st.grid2}>
-                <div style={st.field}>
-                  <label style={st.lbl}>Heure de départ</label>
-                  <TimePicker
-                    value={form.heure_depart}
-                    onChange={e => setForm({...form, heure_depart: e.target.value})}
-                    style={{ ...st.inp, cursor: 'pointer' }}
-                  />
+                {/* Col gauche: lieux */}
+                <div>
+                  <div style={st.field}>
+                    <label style={st.lbl}>Lieu de départ</label>
+                    <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                      {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                        <button key={lieu} type="button"
+                          onClick={() => setForm({...form, lieu_depart: lieu})}
+                          style={{
+                            padding: '8px 10px', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
+                            background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
+                            color: form.lieu_depart === lieu ? 'white' : '#475569',
+                            borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
+                          }}>
+                          {lieu === 'autre' ? 'Autre' : lieu}
+                        </button>
+                      ))}
+                    </div>
+                    {form.lieu_depart === 'autre' && (
+                      <input style={{ ...st.inp, marginTop: 6 }} value={form.lieu_depart_autre}
+                        onChange={e => setForm({...form, lieu_depart_autre: e.target.value})}
+                        placeholder="Saisir le lieu de départ..." autoFocus />
+                    )}
+                  </div>
+                  <div style={st.field}>
+                    <label style={st.lbl}>Lieu de retour</label>
+                    <input style={st.inp} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
+                  </div>
                 </div>
-                <div style={st.field}>
-                  <label style={st.lbl}>Lieu de retour</label>
-                  <input style={st.inp} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
-                </div>
-                <div style={st.field}>
-                  <label style={st.lbl}>Heure de retour</label>
-                  <TimePicker
-                    value={form.heure_retour}
-                    onChange={e => setForm({...form, heure_retour: e.target.value})}
-                    style={{ ...st.inp, cursor: 'pointer' }}
-                  />
+                {/* Col droite: heures */}
+                <div>
+                  <div style={st.field}>
+                    <label style={st.lbl}>Heure de départ</label>
+                    <TimePicker value={form.heure_depart} onChange={e => setForm({...form, heure_depart: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
+                  </div>
+                  <div style={st.field}>
+                    <label style={st.lbl}>Heure de retour</label>
+                    <TimePicker value={form.heure_retour} onChange={e => setForm({...form, heure_retour: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
+                  </div>
                 </div>
               </div>
 
