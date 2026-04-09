@@ -262,15 +262,17 @@ export default function Professeurs({
         <h2 style={s.title}>{titre}</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
       </div>
-      <div style={s.tabsBar}>
-        <div style={s.tabsRow}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+        <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
+        <div style={s.toggleGroup}>
           {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
-            <button key={f.id} style={{...s.tabBtn,...(filtreStatut===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreStatut(f.id)}>{f.label}</button>
+            <button key={f.id}
+              style={{...s.toggleBtn, ...(filtreStatut===f.id ? s.toggleBtnActif : {})}}
+              onClick={() => setFiltreStatut(f.id)}>
+              {f.label}
+            </button>
           ))}
         </div>
-      </div>
-      <div style={{marginTop:15,marginBottom:12}}>
-        <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 
       {showForm && (
@@ -678,14 +680,14 @@ export default function Professeurs({
               <th style={s.th}>Email</th>
               <th style={s.th}>Téléphone</th>
               <th style={s.th}>Naissance</th>
-              <th style={{...s.th, width:98, minWidth:98, maxWidth:98, textAlign:'center'}}>Documents</th>
-              <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Statut</th>
-              {isAdmin() && <th style={{...s.th, width:120, minWidth:120, maxWidth:120, textAlign:'center'}}>Actions</th>}
+              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}>Statut</th>
+              <th style={{...s.th, width:76, minWidth:76, maxWidth:76, textAlign:'center'}}></th>
+              {isAdmin() && <th style={{...s.th, width:72, minWidth:72, maxWidth:72, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {profsFiltres.length===0 ? (
-              <tr><td colSpan={isAdmin()?9:8} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
+              <tr><td colSpan={isAdmin()?8:7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
                 <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{nomSansSuffixe(p.nom)}</b></td>
@@ -693,21 +695,41 @@ export default function Professeurs({
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
                 <td style={s.td}>{p.telephone||'—'}</td>
                 <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{...s.td,width:98,minWidth:98,maxWidth:98,textAlign:'center'}}><button style={{...s.btnEdit,background:'#dbeafe',color:'#1e40af',borderRadius:6,padding:'4px 8px',opacity:isAdmin()?1:0.35}} disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)} title="Documents">📁</button></td>
-                <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center'}}>
-                  <button style={{...(p.actif!==false?s.badgeActive:s.badgeInactive),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleStatut(p)}>
-                    {p.actif!==false?'✅ Actif':'❌ Inactif'}
+                <td style={{...s.td,width:48,minWidth:48,maxWidth:48,textAlign:'center',padding:'8px 4px'}}>
+                  <button title={p.actif!==false?'Actif':'Inactif'}
+                    style={{padding:5,background:p.actif!==false?'#dcfce7':'#fee2e2',color:p.actif!==false?'#16a34a':'#dc2626',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',opacity:isAdmin()?1:0.6}}
+                    onClick={() => isAdmin() && toggleStatut(p)}>
+                    <svg width={16} height={16} viewBox="0 0 24 24">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      {p.actif!==false
+                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                      }
+                    </svg>
                   </button>
                 </td>
-                {isAdmin() && (
-                  <td style={{...s.td,width:120,minWidth:120,maxWidth:120,textAlign:'center',whiteSpace:'nowrap'}}>
-                    <button
-                      onClick={() => envoyerAccesEmail(p.id)}
-                      disabled={emailEnvoi[p.id]==='loading'}
-                      title="Envoyer accès par email"
-                      style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:emailEnvoi[p.id]==='loading'?0.4:0.7}}>
-                      {emailEnvoi[p.id]==='loading'?'⏳':emailEnvoi[p.id]==='ok'?'✅':'📧'}
+                <td style={{...s.td,width:76,minWidth:76,maxWidth:76,padding:'8px 4px'}}>
+                  <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center',margin:'0 auto'}}>
+                    <button title="Documents" style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',opacity:isAdmin()?1:0.35}}
+                      disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)}>
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/>
+                      </svg>
                     </button>
+                    {isAdmin() && (
+                      <button title="Envoyer accès par email"
+                        onClick={() => envoyerAccesEmail(p.id)}
+                        disabled={emailEnvoi[p.id]==='loading'}
+                        style={{padding:6,background:emailEnvoi[p.id]==='ok'?'#dcfce7':'#ede9fe',color:emailEnvoi[p.id]==='ok'?'#16a34a':'#6366f1',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:emailEnvoi[p.id]==='loading'?0.4:1}}>
+                        <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                          <path fillRule="evenodd" d="M2 4a2 2 0 012-2h16a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2V4z M4 4l8 7 8-7H4z"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </td>
+                {isAdmin() && (
+                  <td style={{...s.td,width:72,minWidth:72,maxWidth:72,textAlign:'center',whiteSpace:'nowrap',padding:'8px 4px'}}>
                     <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
                     <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>
                   </td>
@@ -750,11 +772,10 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
-  tabsRow: { display: 'flex', gap: 0, alignItems: 'flex-end' },
   tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 280, color: '#1e293b', fontFamily: 'inherit' },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 140, minWidth: 140, textAlign: 'center' },
-  tabBtnActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
+  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
+  toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' },
+  toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
   tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},

@@ -2,7 +2,7 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -53,7 +53,8 @@ export default function EmploiDuTemps() {
     Matin: { ...(source?.Matin || PAUSES_PAR_PERIODE_DEFAUT.Matin) },
     'Après-midi': { ...(source?.['Après-midi'] || PAUSES_PAR_PERIODE_DEFAUT['Après-midi']) },
   });
-  const [onglet, setOnglet] = useState(isAdmin() ? 'pools' : 'plannings');
+  const [searchParams] = useSearchParams();
+  const onglet = searchParams.get('tab') || (isAdmin() ? 'pools' : 'plannings');
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [sousOngletDisp, setSousOngletDisp] = useState('tous');
@@ -120,6 +121,15 @@ export default function EmploiDuTemps() {
   };
 
   useEffect(() => { chargerTout(); chargerDonnees(); }, []);
+
+  useEffect(() => {
+    if (onglet === 'disponibilites') {
+      axios.get(API + '/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
+      axios.get(API + '/planning/disponibilites', { headers }).then(r => setAllDispos(r.data)).catch(() => {});
+    }
+    if (onglet === 'plannings') setSousOngletPlanning('classes');
+    if (onglet === 'affectations') setSousOngletAff('classes');
+  }, [onglet]);
 
   const chargerDonnees = async () => {
     try {
@@ -1680,146 +1690,93 @@ export default function EmploiDuTemps() {
         )}
       </div>
 
-      <div style={styles.onglets}>
-        {[
-          {id:'pools', label:'Pools', adminOnly: true},
-          {id:'disponibilites', label:'Disponibilités', adminOnly: true},
-          {id:'affectations', label:'Affectations', adminOnly: true},
-          {id:'plannings', label:'Plannings', adminOnly: false},
-        ].filter(o => !o.adminOnly || isAdmin()).map(o => (
-          <button key={o.id} style={{...styles.onglet,...(onglet===o.id?styles.ongletActif:{})}}
-            onClick={() => {
-              if (onglet === 'affectations' && o.id !== 'affectations' && !confirmerQuitterSansSauvegarder()) return;
-              if (onglet === 'affectations' && o.id !== 'affectations') {
-                abandonnerChangementsAffectationsCourants();
-              }
-              setOnglet(o.id);
-              if (o.id === 'disponibilites') {
-                axios.get(API + '/profs', { headers }).then(r => {
-                  const liste = r.data.filter(x => x.actif !== false);
-                  setProfs(liste);
-                }).catch(() => {});
-                axios.get(API + '/planning/disponibilites', { headers }).then(r => {
-                  setAllDispos(r.data);
-                }).catch(() => {});
-              }
-              if (o.id === 'plannings') {
-                setSousOngletPlanning('classes');
-              }
-              if (o.id === 'affectations') {
-                setSousOngletAff('classes');
-              }
-            }}>
-            {o.label}
-          </button>
-        ))}
-      </div>
-
       {onglet === 'plannings' && (
-        <>
-          <div style={styles.affSubTabsBar}>
-            {[
-              {id:'classes', label:'Classes'},
-              {id:'salle', label:'Salles'},
-              {id:'professeurs', label:'Professeurs'},
-              {id:'general', label:'Général'},
-            ].map(o => (
-              <button
-                key={o.id}
-                style={{...styles.affSubTabBtn,...(sousOngletPlanning===o.id?styles.affSubTabBtnActif:{})}}
-                onClick={() => {
-                  setSousOngletPlanning(o.id);
-                  if (o.id === 'general') chargerPlanningGeneral(planningPoolId || '');
-                }}
-              >
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+          {sousOngletPlanning === 'classes' && (
+            <select style={styles.selOnglet} value={classePlanningId || ''} onChange={e => {
+              const classeId = e.target.value;
+              setClassePlanningId(classeId);
+              if (classeId) {
+                const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
+                const poolId = poolTrouve ? String(poolTrouve.id) : '';
+                setClassePlanningPoolId(poolId);
+                chargerPlanningClasse(classeId, poolId);
+              } else { setClassePlanningPoolId(''); setPlanningClasse(null); }
+            }}>
+              <option value="">Choisir une classe</option>
+              {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+          )}
+          {sousOngletPlanning === 'professeurs' && (
+            <select style={styles.selOnglet} value={profPlanningId || ''} onChange={e => {
+              const id = e.target.value;
+              setProfPlanningId(id);
+              if (id) chargerPlanningProf(id); else setPlanningProf(null);
+            }}>
+              <option value="">Choisir un professeur</option>
+              {profsTriesPrenomNom.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
+            </select>
+          )}
+          {sousOngletPlanning === 'general' && (
+            <select style={styles.selOnglet} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
+              <option value="">Choisir un pool</option>
+              {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          )}
+          {sousOngletPlanning === 'salle' && (
+            <>
+              <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+                <option value="">Choisir un lieu de travail</option>
+                {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
+              </select>
+              <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+                <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
+                {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
+              </select>
+            </>
+          )}
+          <div style={styles.toggleGroup}>
+            {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
+              <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
+                onClick={() => { setSousOngletPlanning(o.id); if (o.id==='general') chargerPlanningGeneral(planningPoolId||''); }}>
                 {o.label}
               </button>
             ))}
           </div>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
-            {sousOngletPlanning === 'classes' && (
-              <select style={styles.selOnglet} value={classePlanningId || ''} onChange={e => {
-                const classeId = e.target.value;
-                setClassePlanningId(classeId);
-                if (classeId) {
-                  const poolTrouve = pools.find(p => (p.classes || []).some(c => String(c.id) === String(classeId)));
-                  const poolId = poolTrouve ? String(poolTrouve.id) : '';
-                  setClassePlanningPoolId(poolId);
-                  chargerPlanningClasse(classeId, poolId);
-                } else { setClassePlanningPoolId(''); setPlanningClasse(null); }
-              }}>
-                <option value="">Choisir une classe</option>
-                {classesToutesTriees.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              </select>
-            )}
-            {sousOngletPlanning === 'professeurs' && (
-              <select style={styles.selOnglet} value={profPlanningId || ''} onChange={e => {
-                const id = e.target.value;
-                setProfPlanningId(id);
-                if (id) chargerPlanningProf(id); else setPlanningProf(null);
-              }}>
-                <option value="">Choisir un professeur</option>
-                {profsTriesPrenomNom.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
-              </select>
-            )}
-            {sousOngletPlanning === 'general' && (
-              <select style={styles.selOnglet} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
-                <option value="">Choisir un pool</option>
-                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-              </select>
-            )}
-            {sousOngletPlanning === 'salle' && (
-              <>
-                <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
-                  <option value="">Choisir un lieu de travail</option>
-                  {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
-                </select>
-                <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
-                  <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
-                  {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
-                </select>
-              </>
-            )}
-          </div>
-        </>
+        </div>
       )}
 
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={styles.affSubTabsBar}>
-            {[{id:'tous', label:'Tous'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => (
-              <button key={tab.id}
-                style={{...styles.affSubTabBtn,...(sousOngletDisp===tab.id?styles.affSubTabBtnActif:{})}}
-                onClick={() => { setSousOngletDisp(tab.id); setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:12,flexWrap:'wrap',marginBottom:15,marginTop:15}}>
-              <select
-                style={{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',width:300,maxWidth:'100%'}}
-                value={profSelectionne || ''}
-                onChange={async e => {
-                  const profId = e.target.value;
-                  if (!profId) {
-                    setProfSelectionne(null);
-                    setDispos({});
-                    setRemarquesDispo('');
-                    return;
-                  }
-                  await chargerDispos(profId);
-                }}
-              >
-                <option value="">Choisir un professeur</option>
-                {(() => {
-                  const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
-                  const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
-                  return profsTriesPrenomNom.filter(p => !profIds || profIds.includes(p.id)).map(p => (
-                    <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>
-                  ));
-                })()}
-              </select>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+            <select
+              style={styles.selOnglet}
+              value={profSelectionne || ''}
+              onChange={async e => {
+                const profId = e.target.value;
+                if (!profId) { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); return; }
+                await chargerDispos(profId);
+              }}
+            >
+              <option value="">Choisir un professeur</option>
+              {(() => {
+                const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
+                const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
+                return profsTriesPrenomNom.filter(p => !profIds || profIds.includes(p.id)).map(p => (
+                  <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>
+                ));
+              })()}
+            </select>
+            <div style={styles.toggleGroup}>
+              {[{id:'tous', label:'Tous'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => (
+                <button key={tab.id}
+                  style={{...styles.toggleBtn,...(sousOngletDisp===tab.id?styles.toggleBtnActif:{})}}
+                  onClick={() => { setSousOngletDisp(tab.id); setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {!profSelectionne && (
@@ -2198,25 +2155,9 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          {/* Sous-onglets inversés — collés sous les onglets principaux */}
-          <div style={styles.affSubTabsBar}>
-            {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
-              <button key={o.id} style={{...styles.affSubTabBtn,...(sousOngletAff===o.id?styles.affSubTabBtnActif:{})}}
-                onClick={async () => {
-                  if (sousOngletAff !== o.id && !confirmerQuitterSansSauvegarder()) return;
-                  if (sousOngletAff !== o.id) abandonnerChangementsAffectationsCourants();
-                  setSousOngletAff(o.id);
-                  if (o.id === 'profs') await chargerTout();
-                  if (o.id === 'branches' && classePlanningId) await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
-                }}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Listes déroulantes — hors cadre, 15px sous les sous-onglets */}
-          {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
-            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
+          {/* Dropdowns + toggles — une seule ligne */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+            {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
               <select style={styles.selOnglet} value={poolAffId} onChange={e => {
                 if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
                 if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
@@ -2225,42 +2166,56 @@ export default function EmploiDuTemps() {
                 <option value="">Choisir un pool</option>
                 {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
               </select>
+            )}
+            {sousOngletAff === 'branches' && (
+              <>
+                <select style={styles.selOnglet} value={classePlanningPoolId} onChange={e => {
+                  if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                  if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
+                  setClassePlanningPoolId(e.target.value); setClassePlanningId(''); setPlanningClasse(null);
+                }}>
+                  <option value="">Choisir un pool</option>
+                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
+                <select style={styles.selOnglet} value={classePlanningId || ''} disabled={!classePlanningPoolId} onChange={e => {
+                  const classeId = e.target.value;
+                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
+                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
+                  setClassePlanningId(classeId);
+                  if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
+                }}>
+                  <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
+                  {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                </select>
+              </>
+            )}
+            {sousOngletAff === 'salles' && (
+              <>
+                <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+                  <option value="">Choisir un lieu de travail</option>
+                  {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
+                </select>
+                <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+                  <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
+                  {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
+                </select>
+              </>
+            )}
+            <div style={styles.toggleGroup}>
+              {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
+                <button key={o.id} style={{...styles.toggleBtn,...(sousOngletAff===o.id?styles.toggleBtnActif:{})}}
+                  onClick={async () => {
+                    if (sousOngletAff !== o.id && !confirmerQuitterSansSauvegarder()) return;
+                    if (sousOngletAff !== o.id) abandonnerChangementsAffectationsCourants();
+                    setSousOngletAff(o.id);
+                    if (o.id === 'profs') await chargerTout();
+                    if (o.id === 'branches' && classePlanningId) await chargerPlanningClasse(classePlanningId, classePlanningPoolId);
+                  }}>
+                  {o.label}
+                </button>
+              ))}
             </div>
-          )}
-          {sousOngletAff === 'branches' && (
-            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
-              <select style={styles.selOnglet} value={classePlanningPoolId} onChange={e => {
-                if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
-                setClassePlanningPoolId(e.target.value); setClassePlanningId(''); setPlanningClasse(null);
-              }}>
-                <option value="">Choisir un pool</option>
-                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-              </select>
-              <select style={styles.selOnglet} value={classePlanningId || ''} disabled={!classePlanningPoolId} onChange={e => {
-                const classeId = e.target.value;
-                if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
-                if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
-                setClassePlanningId(classeId);
-                if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
-              }}>
-                <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
-                {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-              </select>
-            </div>
-          )}
-          {sousOngletAff === 'salles' && (
-            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:15,marginBottom:15}}>
-              <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
-                <option value="">Choisir un lieu de travail</option>
-                {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
-              </select>
-              <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
-                <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
-                {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
-              </select>
-            </div>
-          )}
+          </div>
 
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
           {sousOngletAff === 'classes' && (
@@ -3144,7 +3099,7 @@ export default function EmploiDuTemps() {
       )}
 
       {/* ===== PLANNING PROFS ===== */}
-      {(onglet === 'prof' || (onglet === 'plannings' && sousOngletPlanning === 'professeurs')) && (
+      {(onglet === 'plannings' && sousOngletPlanning === 'professeurs') && (
         <div>
           {!profPlanningId && (
             <div style={styles.msgVide}>Sélectionnez d'abord un professeur pour afficher son planning.</div>
@@ -3217,7 +3172,7 @@ export default function EmploiDuTemps() {
       )}
 
       {/* ===== PLANNING CLASSES ===== */}
-      {(onglet === 'classe' || (onglet === 'plannings' && sousOngletPlanning === 'classes')) && (
+      {(onglet === 'plannings' && sousOngletPlanning === 'classes') && (
         <div>
           {!classePlanningId && (
             <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher son planning.</div>
@@ -3321,7 +3276,7 @@ export default function EmploiDuTemps() {
       )}
 
       {/* ===== PLANNING GÉNÉRAL ===== */}
-      {(onglet === 'general' || (onglet === 'plannings' && sousOngletPlanning === 'general')) && (
+      {(onglet === 'plannings' && sousOngletPlanning === 'general') && (
         <div>
           {!planningPoolId && (
             <div style={styles.msgVide}>
@@ -3423,14 +3378,11 @@ const styles = {
   noticeBandSuccess:{background:'#ede9fe',color:'#4f46e5'},
   noticeBandInfo:{background:'#ede9fe',color:'#4f46e5'},
   noticeBandError:{background:'#fee2e2',color:'#991b1b'},
-  onglets:{display:'flex',gap:0,marginBottom:15,flexWrap:'wrap',alignItems:'flex-end',borderBottom:'2px solid #6366f1',paddingBottom:0},
-  onglet:{padding:'9px 14px',background:'#ede9fe',border:'none',borderRadius:'10px 10px 0 0',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none',width:140,minWidth:140,textAlign:'center'},
-  ongletActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
+  toggleGroup:{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2},
+  toggleBtn:{padding:'7px 16px',borderRadius:17,border:'none',background:'transparent',cursor:'pointer',fontWeight:600,color:'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'},
+  toggleBtnActif:{background:'#6366f1',color:'white',fontWeight:700},
   affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
-  affSubTabsBar:{display:'flex',gap:0,alignItems:'flex-start',marginBottom:0,paddingTop:0,marginTop:-15},
-  affSubTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',border:'none',cursor:'pointer',fontWeight:700,fontSize:14,background:'#e0e7ff',color:'#3730a3',lineHeight:1,position:'relative',zIndex:1,outline:'none',width:140,minWidth:140,textAlign:'center'},
-  affSubTabBtnActif:{background:'#4f46e5',color:'white',marginTop:-1,zIndex:2,boxShadow:'0 4px 8px rgba(79,70,229,0.22)'},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
   btnSauvegarderAff:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},

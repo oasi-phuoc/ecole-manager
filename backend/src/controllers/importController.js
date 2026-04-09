@@ -144,7 +144,8 @@ const updateLoraEleves = async (req, res) => {
       return parts.length >= 2 ? parts[1].trim() : null;
     };
 
-    let updated = 0, notFound = 0;
+    let updated = 0, notFound = 0, classMatched = 0;
+    const unmatchedCodes = new Set();
 
     for (const row of unique) {
       const ref = parseInt(row[3]);
@@ -153,13 +154,15 @@ const updateLoraEleves = async (req, res) => {
 
       const classeCode = extractClasseCode(row[0]);
       const classeId = classeCode ? (classesMap[classeCode.toLowerCase()] || null) : null;
+      if (classeId) { classMatched++; }
+      else if (classeCode) { unmatchedCodes.add(classeCode); }
 
       await pool.query(`
         UPDATE eleves SET
           oasi_prog_nom=$1, oasi_prog_encadrant=$2, oasi_n=$3, oasi_pos=$4,
           oasi_prog_presences=$5, oasi_prog_admin=$6, oasi_as=$7,
           oasi_prg_id=$8, oasi_prg_occupation_id=$9, oasi_ra_id=$10, oasi_temps_reparti_id=$11,
-          classe_id=COALESCE($13, classe_id)
+          classe_id=$13
         WHERE oasi_ref=$12
       `, [
         row[0]||null, row[1]||null, parseInt2(row[2]), parseInt2(row[4]),
@@ -170,7 +173,11 @@ const updateLoraEleves = async (req, res) => {
       updated++;
     }
 
-    res.json({ message: `Mise à jour terminée : ${updated} mis à jour, ${notFound} introuvable(s)`, updated, notFound });
+    const unmatchedList = [...unmatchedCodes].join(', ');
+    const msg = `Mise à jour terminée : ${updated} mis à jour, ${classMatched} avec classe assignée`
+      + (unmatchedList ? ` — codes non trouvés : ${unmatchedList}` : '')
+      + (notFound ? `, ${notFound} élève(s) introuvable(s)` : '');
+    res.json({ message: msg, updated, notFound, classMatched, unmatchedCodes: [...unmatchedCodes] });
   } catch(err) { res.status(500).json({ message: 'Erreur mise à jour LORA: ' + err.message }); }
 };
 

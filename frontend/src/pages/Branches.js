@@ -73,17 +73,15 @@ export default function Branches() {
         <h2 style={s.title}>Gestion des branches</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}
       </div>
-      <div style={s.tabsBar}>
-        <div style={s.tabsRow}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+        <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+        <div style={s.toggleGroup}>
           {niveaux.map(n => (
-            <button key={n} style={{...s.tabBtn,...(filtreNiveau===n?s.tabBtnActif:{})}} onClick={() => setFiltreNiveau(n)}>
+            <button key={n} style={{...s.toggleBtn,...(filtreNiveau===n?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(n)}>
               {n==='tous'?'Tous':n}
             </button>
           ))}
         </div>
-      </div>
-      <div style={{marginTop:15,marginBottom:12}}>
-        <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
       </div>
 
       {showForm && (
@@ -165,50 +163,22 @@ export default function Branches() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Branche','Abrév.','Suivi','Niveau','Type','Périodes/sem.','Coefficient','Actions'].map(h => (
+              {['Branche','Abrév.','Niveau','Périodes/sem.','Coefficient','Actions'].map(h => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {branchesFiltrees.length===0 ? (
-              <tr><td colSpan="8" style={s.empty}>Aucune branche trouvée</td></tr>
+              <tr><td colSpan="6" style={s.empty}>Aucune branche trouvée</td></tr>
             ) : branchesFiltrees.map((b) => {
               return (
                 <tr key={b.id} style={s.tr}>
-                  <td style={s.td}>
-                    <b style={{color:'#1e293b'}}>{b.nom}</b>
-                  </td>
-                  <td style={s.td}>
-                    <span style={{background:'#eef2ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
-                      {b.designation_courte || '—'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    <span style={{background:b.suivi_notes!==false?'#dcfce7':'#fee2e2',color:b.suivi_notes!==false?'#166534':'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>
-                      {b.suivi_notes!==false ? 'Oui' : 'Non'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    {b.niveau
-                      ? <span style={{background:'#e0e7ff',color:'#3730a3',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:700}}>{b.niveau}</span>
-                      : <span style={{color:'#94a3b8'}}>—</span>}
-                  </td>
-                  <td style={s.td}>
-                    <span style={{background:b.type_branche==='principale'?'#fef3c7':'#f1f5f9',color:b.type_branche==='principale'?'#92400e':'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600}}>
-                      {b.type_branche==='principale'?'⭐ Principale':'📎 Secondaire'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    <span style={{background:'#f0fdf4',color:'#166534',padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:700}}>
-                      {b.periodes_semaine||'—'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    <span style={{background:'#f8fafc',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:12,fontWeight:600}}>
-                      {b.coefficient||1}
-                    </span>
-                  </td>
+                  <td style={s.td}><b style={{color:'#1e293b'}}>{b.nom}</b></td>
+                  <td style={s.td}>{b.designation_courte || '—'}</td>
+                  <td style={s.td}>{b.niveau || '—'}</td>
+                  <td style={s.td}>{b.periodes_semaine || '—'}</td>
+                  <td style={s.td}>{b.coefficient || 1}</td>
                   <td style={s.td}>
                     {isAdmin() && <>
                       <button style={s.btnEdit} onClick={() => handleEdit(b)} title="Modifier">✏️</button>
@@ -254,12 +224,10 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
-  tabsRow: { display: 'flex', gap: 0, alignItems: 'flex-end' },
   tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 280, color: '#1e293b', fontFamily: 'inherit' },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 140, minWidth: 140, textAlign: 'center' },
-  tabBtnActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
-  tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
+  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
+  toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},

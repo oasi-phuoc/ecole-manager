@@ -479,25 +479,26 @@ export default function Eleves() {
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Importer LORA</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'}}>
-        {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
-          const actif = niveauOnglet === k;
-          const label = k === 'tous' ? 'Tous' : k === 'sans' ? 'Sans classe' : k;
-          return (
-            <button key={k}
-              style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:actif?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:actif?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:k==='sans'?140:140,minWidth:k==='sans'?140:140,textAlign:'center',marginBottom:actif?-1:0,zIndex:actif?2:1}}
-              onClick={() => { setNiveauOnglet(k); setRecherche(''); }}
-            >{label}</button>
-          );
-        })}
-      </div>
-      <div style={{marginTop:15,marginBottom:12}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <input
           style={{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'}}
           placeholder="Rechercher un élève, une classe..."
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
         />
+        <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+          {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
+            const actif = niveauOnglet === k;
+            const label = k === 'tous' ? 'Tous' : k === 'sans' ? 'Sans classe' : k;
+            return (
+              <button key={k}
+                style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                onClick={() => { setNiveauOnglet(k); setRecherche(''); }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Modal Import */}
@@ -996,16 +997,14 @@ export default function Eleves() {
               <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Nationalité</th>
               <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Classe</th>
               <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Naissance</th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:110,minWidth:110,maxWidth:110}}>Observations</th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:92,minWidth:92,maxWidth:92}}>Sanctions</th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96}}>Documents</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96}}></th>
               <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:122,minWidth:122,maxWidth:122}}>Statut</th>
               <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86}}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {elevesFiltres.length===0 ? (
-              <tr><td colSpan="11" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
+              <tr><td colSpan="9" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
                 <td style={{padding:'10px 10px',width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>
@@ -1053,9 +1052,25 @@ export default function Eleves() {
                   </select>
                 </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{padding:'10px 10px',width:110,minWidth:110,maxWidth:110,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirObservations(el)} title="Observations">👁 Détail</button></td>
-                <td style={{padding:'10px 10px',width:92,minWidth:92,maxWidth:92,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
-                <td style={{padding:'10px 10px',width:96,minWidth:96,maxWidth:96,textAlign:'center'}}><button style={{padding:'5px 10px',background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:6,cursor:'pointer'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
+                <td style={{padding:'8px 6px',textAlign:'center',width:96,minWidth:96,maxWidth:96}}>
+                  <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center',margin:'0 auto'}}>
+                    <button title="Observations" onClick={() => ouvrirObservations(el)} style={{padding:6,background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/>
+                      </svg>
+                    </button>
+                    <button title="Sanctions" onClick={() => ouvrirSanctions(el)} style={{padding:6,background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/>
+                      </svg>
+                    </button>
+                    <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
                 <td style={{padding:'10px 10px',width:122,minWidth:122,maxWidth:122,textAlign:'center'}}>
                   <button
                     onClick={() => handleToggleStatut(el)}

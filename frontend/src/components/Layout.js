@@ -9,6 +9,13 @@ const W = 185;
 
 const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
 
+const EDT_ONGLETS = [
+  { key: 'pools',          label: 'Pools',          adminOnly: true },
+  { key: 'disponibilites', label: 'Disponibilités', adminOnly: true },
+  { key: 'affectations',   label: 'Affectations',   adminOnly: true },
+  { key: 'plannings',      label: 'Plannings',      adminOnly: false },
+];
+
 const PARAMS_ONGLETS = [
   { key: 'profil',  label: 'Mon profil',              adminOnly: false },
   { key: 'mfa',    label: 'Double authentification',  adminOnly: false },
@@ -24,7 +31,7 @@ const ALL_MODULES = [
   { label: 'Élèves',            path: '/eleves',                  accentKey: 'eleves' },
   { label: 'Branches',          path: '/branches',                accentKey: 'branches' },
   { label: 'Classes',           path: '/classes',                 accentKey: 'classes' },
-  { label: 'Plannings',         path: '/emploi-du-temps',         accentKey: 'emploi_du_temps' },
+  { label: 'Emploi du temps',   path: '/emploi-du-temps',         accentKey: 'emploi_du_temps' },
   { label: 'Présences',         path: '/presences',               accentKey: 'presences' },
   { label: 'Notes',             path: '/notes',                   accentKey: 'notes' },
   { label: 'TCF',               path: '/tcf',                     accentKey: 'tcf' },
@@ -110,6 +117,21 @@ export default function Layout() {
                   </span>
                   {isActive && <span style={s.activeDot} />}
                 </button>
+                {m.path === '/emploi-du-temps' && isActive && (
+                  <div style={s.subNav}>
+                    {EDT_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'pools' : 'plannings');
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/emploi-du-temps?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {m.path === '/parametres' && isActive && (
                   <div style={s.subNav}>
                     {PARAMS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {

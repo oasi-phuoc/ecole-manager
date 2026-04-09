@@ -1672,22 +1672,20 @@ export default function Classes() {
           </div>
         )}
       </div>
-      <div style={s.tabsBar}>
-        <div style={s.tabsRow}>
-          {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
-            <button key={f.id} style={{...s.tabBtn,...(filtreNiveau===f.id?s.tabBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
-          ))}
-        </div>
-      </div>
-      {isAdmin() && (
-        <div style={s.subTabsBar}>
-          {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
-            <button key={f.id} style={{...s.subTabBtn,...(filtreActif===f.id?s.subTabBtnActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
-          ))}
-        </div>
-      )}
-      <div style={{marginTop:15,marginBottom:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+        <div style={s.toggleGroup}>
+          {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
+            <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
+          ))}
+        </div>
+        {isAdmin() && (
+          <div style={s.toggleGroup}>
+            {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
+              <button key={f.id} style={{...s.toggleBtn,...(filtreActif===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -1808,10 +1806,9 @@ const s = {
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
-  tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'},
-  tabsRow:{display:'flex',gap:0,alignItems:'flex-end'},
-  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,color:'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:140,minWidth:140,textAlign:'center'},
-  tabBtnActif:{background:'#6366f1',color:'white',marginBottom:-1,zIndex:2},
+  toggleGroup:{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2},
+  toggleBtn:{padding:'7px 16px',borderRadius:17,border:'none',background:'transparent',cursor:'pointer',fontWeight:600,color:'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'},
+  toggleBtnActif:{background:'#6366f1',color:'white',fontWeight:700},
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:110,minWidth:110,textAlign:'center',border:'none',cursor:'pointer',outline:'none',lineHeight:1},
   subTabBtnActif:{background:'#4f46e5',color:'white',boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
