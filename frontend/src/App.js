@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { fetchSessionUser, clearSessionUser } from './utils/session';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Eleves from './pages/Eleves';
@@ -51,25 +52,27 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/eleves" element={<PrivateRoute><Eleves /></PrivateRoute>} />
-        <Route path="/employes-administratifs" element={<PrivateRoute><EmployesAdministratifs /></PrivateRoute>} />
-        <Route path="/professeurs" element={<PrivateRoute><Professeurs /></PrivateRoute>} />
-        <Route path="/classes" element={<PrivateRoute><Classes /></PrivateRoute>} />
-        <Route path="/branches" element={<PrivateRoute><Branches /></PrivateRoute>} />
-        <Route path="/emploi-du-temps" element={<PrivateRoute><EmploiDuTemps /></PrivateRoute>} />
-        <Route path="/presences" element={<PrivateRoute><Presences /></PrivateRoute>} />
-        <Route path="/notes" element={<PrivateRoute><Notes /></PrivateRoute>} />
-        <Route path="/bulletins" element={<PrivateRoute><Bulletins /></PrivateRoute>} />
-        <Route path="/tcf" element={<PrivateRoute><TCF /></PrivateRoute>} />
-        <Route path="/calendrier" element={<PrivateRoute><Calendrier /></PrivateRoute>} />
-        <Route path="/parametres" element={<PrivateRoute><Parametres /></PrivateRoute>} />
-        <Route path="/comptabilite" element={<PrivateRoute><Comptabilite /></PrivateRoute>} />
-        <Route path="/documents-administratifs" element={<PrivateRoute><DocumentsAdministratifs /></PrivateRoute>} />
-        <Route path="/classes/:classeId/inventaire" element={<PrivateRoute><ClasseInventaire /></PrivateRoute>} />
-        <Route path="/statistiques" element={<PrivateRoute><Statistiques /></PrivateRoute>} />
-        <Route path="/enclassement" element={<PrivateRoute><Enclassement /></PrivateRoute>} />
-        <Route path="/sorties-scolaires" element={<PrivateRoute><SortieScolaire /></PrivateRoute>} />
+        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/eleves" element={<Eleves />} />
+          <Route path="/employes-administratifs" element={<EmployesAdministratifs />} />
+          <Route path="/professeurs" element={<Professeurs />} />
+          <Route path="/classes" element={<Classes />} />
+          <Route path="/branches" element={<Branches />} />
+          <Route path="/emploi-du-temps" element={<EmploiDuTemps />} />
+          <Route path="/presences" element={<Presences />} />
+          <Route path="/notes" element={<Notes />} />
+          <Route path="/bulletins" element={<Bulletins />} />
+          <Route path="/tcf" element={<TCF />} />
+          <Route path="/calendrier" element={<Calendrier />} />
+          <Route path="/parametres" element={<Parametres />} />
+          <Route path="/comptabilite" element={<Comptabilite />} />
+          <Route path="/documents-administratifs" element={<DocumentsAdministratifs />} />
+          <Route path="/classes/:classeId/inventaire" element={<ClasseInventaire />} />
+          <Route path="/statistiques" element={<Statistiques />} />
+          <Route path="/enclassement" element={<Enclassement />} />
+          <Route path="/sorties-scolaires" element={<SortieScolaire />} />
+        </Route>
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { T, colors } from '../styles/theme';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
-import { ICONS_BY_PATH } from '../components/DashboardIcons';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -13,7 +12,6 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [accesProfs, setAccesProfs] = useState({});
-  const [hoveredPath, setHoveredPath] = useState(null);
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [agendaPerso, setAgendaPerso] = useState([]);
   const [observationDetail, setObservationDetail] = useState(null);
@@ -137,46 +135,6 @@ export default function Dashboard() {
 
   return (
     <div style={styles.page}>
-      {/* Sidebar */}
-      <div style={styles.sidebar}>
-        <div style={styles.logo}>
-          <img src="/logo-oasis.webp" alt="Oasis" style={styles.logoImg} />
-        </div>
-        <nav style={styles.nav}>
-          {modules.map(m => {
-            const IconComp = ICONS_BY_PATH[m.path];
-            const isHovered = hoveredPath === m.path;
-            return (
-              <button
-                key={m.path}
-                style={{
-                  ...styles.navItem,
-                  background: isHovered ? '#f3f0ff' : 'transparent',
-                  color: '#6366f1',
-                }}
-                onClick={() => navigate(m.path)}
-                onMouseEnter={() => setHoveredPath(m.path)}
-                onMouseLeave={() => setHoveredPath(null)}
-              >
-                {IconComp && <IconComp size={18} active={isHovered} />}
-                <span style={{
-                  ...styles.navLabel,
-                  color: isHovered ? '#6366f1' : '#4c1d95',
-                }}>{m.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-        <div style={styles.sidebarFooter}>
-          <div style={styles.avatar} title={`${user?.prenom} ${user?.nom}`}>
-            {user?.prenom?.[0]}{user?.nom?.[0]}
-          </div>
-          <div style={styles.userName}>{user?.prenom} {user?.nom}</div>
-          <button style={styles.btnLogout} onClick={deconnexion} title="Déconnexion">↩</button>
-        </div>
-      </div>
-
-      {/* Main */}
       <div style={styles.main}>
         <div style={styles.topBar}>
           <div>
@@ -323,22 +281,8 @@ export default function Dashboard() {
 }
 
 const styles = {
-  page: { display: 'flex', minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  sidebar: { width: 210, background: 'white', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, borderRight: '1px solid #ddd6fe', boxShadow: '2px 0 12px rgba(99,102,241,0.07)' },
-  logo: { padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', borderBottom: '1px solid #ede9fe' },
-  logoImg: { width: 44, height: 'auto', display: 'block' },
-  nav: { flex: 1, padding: '8px 8px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 },
-  navItem: { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: 10, cursor: 'pointer', width: '100%', transition: 'background 0.15s', textAlign: 'left' },
-  navIcon: { width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
-  navLabel: { fontSize: 12, fontWeight: 600, lineHeight: 1.2, flex: 1 },
-  navBadge: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99 },
-  sidebarFooter: { padding: '10px 12px 14px', borderTop: '1px solid #ede9fe', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  userInfo: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  avatar: { width: 34, height: 34, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 },
-  userName: { fontSize: 11, fontWeight: 600, color: '#1e1b4b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  userRole: { fontSize: 8.5, color: '#7c3aed', textAlign: 'center' },
-  btnLogout: { padding: '5px 6px', background: '#ede9fe', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 9.5, color: '#6366f1', fontWeight: 600, textAlign: 'center' },
-  main: { marginLeft: 210, flex: 1, padding: '32px 36px' },
+  page: { minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  main: { padding: '32px 36px' },
   topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   greeting: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
   subGreeting: { fontSize: 13, color: '#64748b', margin: '4px 0 0' },

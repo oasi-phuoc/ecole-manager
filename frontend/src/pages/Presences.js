@@ -530,7 +530,6 @@ export default function Presences() {
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
         <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
           <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
@@ -919,7 +918,7 @@ const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
   tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
-  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:150,minWidth:150,textAlign:'center'},
+  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:140,minWidth:140,textAlign:'center'},
   tabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:150,minWidth:150,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},

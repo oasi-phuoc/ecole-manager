@@ -3243,7 +3243,6 @@ export default function TCF() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <button onClick={() => navigate('/dashboard')} style={styles.btnBack}>← Retour</button>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
@@ -3675,7 +3674,7 @@ const styles = {
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabsRow: { display: 'flex', gap: 0, flexWrap: 'wrap', alignItems: 'flex-end' },
   tabContent: { paddingTop: 0 },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 14, width: 150, minWidth: 150, textAlign: 'center' },
+  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 14, width: 140, minWidth: 140, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -2, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
   btnAjouter: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   btnSauver: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },

@@ -1160,7 +1160,7 @@ export default function Classes() {
       <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:0}}>
         {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['devoirs','Suivi des devoirs'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
           <button key={k}
-            style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:155,minWidth:155,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
+            style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:160,minWidth:160,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
             onClick={() => setClasseVueTab(k)}>
             {l}
           </button>
@@ -1665,7 +1665,6 @@ export default function Classes() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>Gestion des classes</h2>
         {isAdmin() && (
           <div style={{display:'flex',gap:8,marginLeft:'auto',alignItems:'center'}}>
@@ -1811,7 +1810,7 @@ const s = {
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
   tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0,width:'100%',boxSizing:'border-box'},
   tabsRow:{display:'flex',gap:0,alignItems:'flex-end'},
-  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,color:'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:90,minWidth:90,textAlign:'center'},
+  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,color:'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:140,minWidth:140,textAlign:'center'},
   tabBtnActif:{background:'#6366f1',color:'white',marginBottom:-1,zIndex:2},
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:110,minWidth:110,textAlign:'center',border:'none',cursor:'pointer',outline:'none',lineHeight:1},

@@ -204,6 +204,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_cfr VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_epl VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS horaires JSONB DEFAULT '{}'::jsonb`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS date_debut_annee DATE`);
 
     // Table configuration email (admin)
     await pool.query(`

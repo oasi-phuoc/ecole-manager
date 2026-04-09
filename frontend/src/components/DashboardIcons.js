@@ -35,14 +35,18 @@ export const IconProfesseurs = ({ size, active }) => (
   </>}/>
 );
 
-// ── Élèves — groupe ─────────────────────────────────────────────────────────
+// ── Élèves — 3 silhouettes ──────────────────────────────────────────────────
 export const IconEleves = ({ size, active }) => (
-  <I size={size} active={active} ch={<>
-    <path fillRule="evenodd" d="M8 2a3.5 3.5 0 100 7 3.5 3.5 0 000-7z"/>
-    <path fillRule="evenodd" d="M1 21a7 7 0 0114 0H1z"/>
-    <path fillRule="evenodd" d="M17 5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/>
-    <path fillRule="evenodd" d="M13.5 21a5.5 5.5 0 0111 0h-11z"/>
-  </>}/>
+  <I size={size} active={active} ch={
+    <path fillRule="evenodd" d="
+      M5 3a2.5 2.5 0 100 5 2.5 2.5 0 000-5z
+      M12 2a3 3 0 100 6 3 3 0 000-6z
+      M19 3a2.5 2.5 0 100 5 2.5 2.5 0 000-5z
+      M0 22a5.5 5.5 0 0111 0H0z
+      M6.5 22a6 6 0 0112 0h-12z
+      M13 22a5.5 5.5 0 0111 0h-11z
+    "/>
+  }/>
 );
 
 // ── Branches — deux classeurs ───────────────────────────────────────────────
@@ -130,15 +134,19 @@ export const IconComptabilite = ({ size, active }) => (
   }/>
 );
 
-// ── Documents — dossier ──────────────────────────────────────────────────────
+// ── Documents — répertoire classeurs ────────────────────────────────────────
 export const IconDocuments = ({ size, active }) => (
-  <I size={size} active={active} ch={
+  <I size={size} active={active} ch={<>
     <path fillRule="evenodd" d="
-      M3 8a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8z
-      M3 8V6a2 2 0 012-2h3.5l2 2H3z
-      M8 14h8v2H8v-2z M8 17h5v2H8v-2z
+      M2 4a2 2 0 012-2h13a2 2 0 012 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4z
+      M17 2h3a2 2 0 012 2v4h-5V2z
+      M17 9h5v5h-5V9z
+      M17 15h5v3a2 2 0 01-2 2h-3v-5z
     "/>
-  }/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={active ? 1 : 1.4} d="
+      M5 8h10 M5 12h10 M5 16h7
+    "/>
+  </>}/>
 );
 
 // ── Statistiques — barres ────────────────────────────────────────────────────
@@ -167,17 +175,20 @@ export const IconEnclassement = ({ size, active }) => (
 
 // ── Sorties scolaires — bus ──────────────────────────────────────────────────
 export const IconSorties = ({ size, active }) => (
-  <I size={size} active={active} ch={
+  <I size={size} active={active} ch={<>
     <path fillRule="evenodd" d="
-      M3 5a2 2 0 012-2h14a2 2 0 012 2v10H3V5z
-      M5 5h5v4H5V5z M14 5h5v4h-5V5z
-      M3 9h18v3H3V9z
-      M3 15h18v2H3v-2z
-      M6.5 15a2 2 0 100 4 2 2 0 000-4z
-      M17.5 15a2 2 0 100 4 2 2 0 000-4z
-      M21 8h1a1 1 0 011 1v3a1 1 0 01-1 1h-1V8z
+      M2 6a3 3 0 013-3h14a3 3 0 013 3v10H2V6z
+      M2 16h20v1.5a1.5 1.5 0 01-1.5 1.5h-17A1.5 1.5 0 012 17.5V16z
+      M4 7.5h5v3.5H4V7.5z
+      M15 7.5h5v3.5h-5V7.5z
+      M6.5 17.5a2 2 0 100 4 2 2 0 000-4z
+      M17.5 17.5a2 2 0 100 4 2 2 0 000-4z
     "/>
-  }/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3}
+      d="M21 8h1.5a0.5 0.5 0 010 4H21"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.3}
+      d="M11 7.5V16"/>
+  </>}/>
 );
 
 // ── Paramètres — engrenage ───────────────────────────────────────────────────

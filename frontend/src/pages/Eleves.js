@@ -469,7 +469,6 @@ export default function Eleves() {
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
-        <button style={{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'}} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
@@ -486,7 +485,7 @@ export default function Eleves() {
           const label = k === 'tous' ? 'Tous' : k === 'sans' ? 'Sans classe' : k;
           return (
             <button key={k}
-              style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:actif?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:actif?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:k==='sans'?120:90,minWidth:k==='sans'?120:90,textAlign:'center',marginBottom:actif?-1:0,zIndex:actif?2:1}}
+              style={{padding:'9px 0',borderRadius:'10px 10px 0 0',border:'none',background:actif?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,color:actif?'white':'#5b21b6',outline:'none',lineHeight:'1',fontSize:14,width:k==='sans'?140:140,minWidth:k==='sans'?140:140,textAlign:'center',marginBottom:actif?-1:0,zIndex:actif?2:1}}
               onClick={() => { setNiveauOnglet(k); setRecherche(''); }}
             >{label}</button>
           );

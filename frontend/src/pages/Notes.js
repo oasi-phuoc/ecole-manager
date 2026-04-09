@@ -554,7 +554,7 @@ export default function Notes() {
         <div className="no-print" style={s.subTabsBar}>
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
             <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
-              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
+              style={{ ...s.subTabBtn, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
           ))}
@@ -1147,7 +1147,7 @@ export default function Notes() {
         <div className="no-print" style={s.subTabsBar}>
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
             <button key={sem.id} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
-              style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
+              style={{ ...s.subTabBtn, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
               {sem.label}
             </button>
           ))}
@@ -1155,7 +1155,7 @@ export default function Notes() {
             <div style={{ width: 16 }} />
             {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
               <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                style={{ ...s.subTabBtn, width: 120, minWidth: 120, ...(bulletinMode === m.id ? s.subTabBtnActif : {}) }}>
+                style={{ ...s.subTabBtn, ...(bulletinMode === m.id ? s.subTabBtnActif : {}) }}>
                 {m.label}
               </button>
             ))}
@@ -1690,7 +1690,7 @@ export default function Notes() {
             return (
               <button key={sem.id} disabled={disabled}
                 onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
-                style={{ ...s.subTabBtn, width: 150, minWidth: 150, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
+                style={{ ...s.subTabBtn, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
                 {sem.label}
               </button>
             );
@@ -1744,7 +1744,6 @@ export default function Notes() {
   return (
       <div style={s.page}>
         <div style={s.header}>
-          <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
           <h2 style={s.titre}>Saisie des notes</h2>
         </div>
         {/* Onglets niveaux (remplacent les onglets détail) */}
@@ -1755,7 +1754,7 @@ export default function Notes() {
             return [...acc, n];
           }, []))]).map(n => (
             <button key={n} onClick={() => setEvalNiveauFiltre(n)}
-              style={{ ...s.tabBtn, width: 90, minWidth: 90, ...(evalNiveauFiltre === n ? s.tabBtnActif : {}) }}>
+              style={{ ...s.tabBtn, ...(evalNiveauFiltre === n ? s.tabBtnActif : {}) }}>
               {n === 'tous' ? 'Toutes' : n}
             </button>
           ))}
@@ -1855,11 +1854,11 @@ export default function Notes() {
 const s = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
-  tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:150,minWidth:150,textAlign:'center'},
+  tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:140,minWidth:140,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
   tabSelect: {padding:'9px 14px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer'},
   subTabsBar: {display:'flex',gap:0,marginTop:0},
-  subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:130,minWidth:130,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
+  subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:140,minWidth:140,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },

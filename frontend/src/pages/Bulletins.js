@@ -337,7 +337,6 @@ export default function Bulletins() {
     return (
       <div style={s.page}>
         <div style={s.header}>
-          <button style={s.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
           <h2 style={s.titre}>Bulletins de notes</h2>
         </div>
         <div style={s.tabsBar}>

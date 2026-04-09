@@ -53,6 +53,7 @@ export default function TimePicker({ value, onChange, style }) {
     setH(hv); setM(mv);
     setHInput(fmt(hv)); setMInput(fmt(mv));
     setPhase('hours');
+    hDigits.current = ''; mDigits.current = '';
     setOpen(true);
     setTimeout(() => hRef.current && hRef.current.focus(), 0);
   };
@@ -75,37 +76,88 @@ export default function TimePicker({ value, onChange, style }) {
 
   const hRef = useRef(null);
   const mRef = useRef(null);
+  const hDigits = useRef('');
+  const mDigits = useRef('');
 
-  const handleHInput = (e) => {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
-    setHInput(raw);
-    const v = parseInt(raw);
-    if (!isNaN(v) && v >= 0 && v <= 23) setH(v);
-    // auto-focus minutes après 2 chiffres valides
-    if (raw.length === 2 && !isNaN(v) && v <= 23) {
-      setPhase('minutes');
-      mRef.current && mRef.current.focus();
+  const focusMinutes = () => { setPhase('minutes'); setTimeout(() => mRef.current && mRef.current.focus(), 0); };
+
+  const handleHKeyDown = (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      const d = e.key;
+      const prev = hDigits.current;
+      if (prev === '') {
+        // Premier chiffre
+        hDigits.current = d;
+        const v = parseInt(d);
+        setH(v); setHInput(d);
+        // Si > 2, impossible d'avoir un 2e chiffre valide → auto-jump
+        if (v > 2) { hDigits.current = ''; setHInput(fmt(v)); focusMinutes(); }
+      } else {
+        // Deuxième chiffre
+        const combined = prev + d;
+        const v = parseInt(combined);
+        hDigits.current = '';
+        if (v <= 23) {
+          setH(v); setHInput(fmt(v)); focusMinutes();
+        } else {
+          // Combinaison invalide (ex: "29") → recommencer avec ce chiffre
+          const nv = parseInt(d);
+          hDigits.current = d;
+          setH(nv); setHInput(d);
+          if (nv > 2) { hDigits.current = ''; setHInput(fmt(nv)); focusMinutes(); }
+        }
+      }
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      hDigits.current = ''; setHInput(''); setH(0);
+    } else if (e.key === 'Enter' || e.key === ':') {
+      e.preventDefault();
+      hDigits.current = '';
+      const safe = clamp(h, 0, 23); setH(safe); setHInput(fmt(safe));
+      focusMinutes();
     }
   };
-  const handleHKeyDown = (e) => {
-    if (e.key === 'Enter') { mRef.current && mRef.current.focus(); }
-  };
   const handleHBlur = () => {
+    hDigits.current = '';
     const v = parseInt(hInput);
     const safe = isNaN(v) ? 0 : clamp(v, 0, 23);
     setH(safe); setHInput(fmt(safe));
   };
 
-  const handleMInput = (e) => {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
-    setMInput(raw);
-    const v = parseInt(raw);
-    if (!isNaN(v) && v >= 0 && v <= 59) setM(v);
-  };
   const handleMKeyDown = (e) => {
-    if (e.key === 'Enter') handleOk();
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      const d = e.key;
+      const prev = mDigits.current;
+      if (prev === '') {
+        mDigits.current = d;
+        const v = parseInt(d);
+        setM(v); setMInput(d);
+        // Si > 5, impossible d'avoir un 2e chiffre valide (minutes 0-59)
+        if (v > 5) { mDigits.current = ''; setMInput(fmt(v)); }
+      } else {
+        const combined = prev + d;
+        const v = parseInt(combined);
+        mDigits.current = '';
+        if (v <= 59) { setM(v); setMInput(fmt(v)); }
+        else {
+          const nv = parseInt(d);
+          mDigits.current = d;
+          setM(nv); setMInput(d);
+          if (nv > 5) { mDigits.current = ''; setMInput(fmt(nv)); }
+        }
+      }
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      mDigits.current = ''; setMInput(''); setM(0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      mDigits.current = ''; handleOk();
+    }
   };
   const handleMBlur = () => {
+    mDigits.current = '';
     const v = parseInt(mInput);
     const safe = isNaN(v) ? 0 : clamp(v, 0, 59);
     setM(safe); setMInput(fmt(safe));
@@ -171,10 +223,10 @@ export default function TimePicker({ value, onChange, style }) {
                 ref={hRef}
                 type="text" inputMode="numeric"
                 value={hInput}
-                onChange={handleHInput}
+                onChange={() => {}}
                 onKeyDown={handleHKeyDown}
                 onBlur={handleHBlur}
-                onFocus={e => { setPhase('hours'); e.target.select(); }}
+                onFocus={e => { setPhase('hours'); hDigits.current = ''; e.target.select(); }}
                 placeholder="HH"
                 style={inputBoxStyle(phase === 'hours')}
               />
@@ -183,10 +235,10 @@ export default function TimePicker({ value, onChange, style }) {
                 ref={mRef}
                 type="text" inputMode="numeric"
                 value={mInput}
-                onChange={handleMInput}
+                onChange={() => {}}
                 onKeyDown={handleMKeyDown}
                 onBlur={handleMBlur}
-                onFocus={e => { setPhase('minutes'); e.target.select(); }}
+                onFocus={e => { setPhase('minutes'); mDigits.current = ''; e.target.select(); }}
                 placeholder="MM"
                 style={inputBoxStyle(phase === 'minutes')}
               />

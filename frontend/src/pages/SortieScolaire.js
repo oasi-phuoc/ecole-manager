@@ -17,7 +17,7 @@ const ONGLETS = [
 const LIEUX_PREDEFINIS = ['Sion, Synecom', 'Vétroz, Botza'];
 
 const FORM_VIDE = {
-  type: 'automne', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '',
+  type: 'automne', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '', autres_acc_arr: [],
   date_sortie: '', destination: '', activites: '',
   lieu_depart: 'Sion, Synecom', lieu_depart_autre: '',
   heure_depart: '', lieu_retour: '', heure_retour: '',
@@ -31,12 +31,6 @@ const fmtDate = (d) => {
   return dt.toLocaleDateString('fr-CH');
 };
 
-const fmtDateLong = (d) => {
-  if (!d) return '';
-  const dt = new Date(d);
-  if (isNaN(dt)) return d;
-  return dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-};
 
 const fmtHeure = (h) => {
   if (!h) return '';
@@ -49,18 +43,23 @@ export default function SortieScolaire() {
   const [sousOngletSuivi, setSousOngletSuivi] = useState('automne');
   const [sorties, setSorties] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(FORM_VIDE);
   const [editId, setEditId] = useState(null);
+  const [showAddTit, setShowAddTit] = useState(false);
+  const [suiviClasseSelect, setSuiviClasseSelect] = useState(null);
 
   const charger = async () => {
     try {
-      const [sortiesRes, classesRes] = await Promise.all([
+      const [sortiesRes, classesRes, profsRes] = await Promise.all([
         axios.get(API + '/sorties', { headers: getHeaders() }),
         axios.get(API + '/classes', { headers: getHeaders() }),
+        axios.get(API + '/profs', { headers: getHeaders() }),
       ]);
       setSorties(sortiesRes.data || []);
       setClasses(classesRes.data || []);
+      setProfs(profsRes.data || []);
     } catch (e) { console.error(e); }
   };
 
@@ -70,7 +69,7 @@ export default function SortieScolaire() {
   const toggleClasse = (cl) => {
     const ids = form.classes_ids || [];
     const isSelected = ids.includes(String(cl.id));
-    let newIds, newTitulaires;
+    let newIds;
     if (isSelected) {
       newIds = ids.filter(id => id !== String(cl.id));
     } else {
@@ -102,6 +101,7 @@ export default function SortieScolaire() {
       classes_noms: s.classes_noms || '',
       titulaires: s.titulaires || '',
       autres_accompagnants: s.autres_accompagnants || '',
+      autres_acc_arr: (s.autres_accompagnants || '').split(' et ').filter(Boolean),
       date_sortie: s.date_sortie ? s.date_sortie.split('T')[0] : '',
       destination: s.destination || '',
       activites: s.activites || '',
@@ -119,6 +119,10 @@ export default function SortieScolaire() {
 
   const sauvegarder = async (e) => {
     e.preventDefault();
+    if (!form.classes_ids || form.classes_ids.length === 0) {
+      alert('Veuillez sélectionner au moins une classe.');
+      return;
+    }
     const lieuDepart = form.lieu_depart === 'autre' ? form.lieu_depart_autre : form.lieu_depart;
     const payload = {
       ...form,
@@ -256,7 +260,6 @@ export default function SortieScolaire() {
     <div style={st.page}>
       {/* Header */}
       <div style={st.header}>
-        <button style={st.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h1 style={st.titre}>Gestion des sorties scolaires</h1>
         {onglet !== 'suivi' && (
           <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter</button>
@@ -288,36 +291,163 @@ export default function SortieScolaire() {
         </div>
       )}
 
-      {/* Content — 15px sous les onglets, 4 coins arrondis */}
-      <div style={st.content}>
-        {/* Suivi */}
-        {onglet === 'suivi' && (
-          <SuiviTable
-            sorties={sorties.filter(s => s.type === sousOngletSuivi)}
-            onEdit={ouvrirEdit}
-            onDelete={supprimer}
-            onPrint={imprimer}
-            onToggleApprouve={toggleApprouve}
-          />
-        )}
+      {/* Suivi — hors cadre blanc */}
+      {onglet === 'suivi' && (() => {
+        const sortiesDuSousOnglet = sorties.filter(s => s.type === sousOngletSuivi);
+        // Pour chaque classe, trouver si une sortie existe
+        const classesAvecSortie = classesSorted.map(cl => {
+          const sortie = sortiesDuSousOnglet.find(s =>
+            (s.classes_ids || '').split(',').map(x => x.trim()).includes(String(cl.id))
+          );
+          return { ...cl, sortie: sortie || null };
+        });
+        // Grouper par niveau (préfixe avant le numéro)
+        const niveauxMap = {};
+        classesAvecSortie.forEach(cl => {
+          const niv = cl.nom.replace(/\s*\d+.*$/, '').trim() || cl.nom;
+          if (!niveauxMap[niv]) niveauxMap[niv] = [];
+          niveauxMap[niv].push(cl);
+        });
+        const sortieSelectionnee = suiviClasseSelect
+          ? classesAvecSortie.find(cl => cl.id === suiviClasseSelect)?.sortie
+          : null;
 
-        {/* Automne / Juin / Autres */}
-        {onglet !== 'suivi' && (
-          sortiesOnglet.length === 0 ? (
-            <div style={st.empty}>
-              Aucune sortie pour <b>{ONGLETS.find(o => o.id === onglet)?.label}</b>.
-              <br/><br/>
-              <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {sortiesOnglet.map(sortie => (
-                <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
-              ))}
-            </div>
+        // Suivi des professeurs
+        // Tronque le nom composé : "TOUZANI-BOULAADAS" → "TOUZANI"
+        const nomCourt = (fullName) => {
+          const parts = (fullName || '').trim().split(' ');
+          return parts.map((p, i) => i === parts.length - 1 ? p.split('-')[0] : p).join(' ');
+        };
+        const tousProfs = profs.filter(p => p.prenom && p.nom)
+          .map(p => nomCourt(`${p.prenom} ${p.nom}`))
+          .sort((a,b) => a.localeCompare(b,'fr'));
+        const profsAffectes = new Set(
+          sortiesDuSousOnglet.flatMap(s =>
+            (s.titulaires || '').split(' et ').map(p => nomCourt(p)).filter(Boolean)
           )
-        )}
-      </div>
+        );
+
+        return (
+          <div style={{ marginTop: 15 }}>
+            {/* Suivi des professeurs */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                Suivi des professeurs
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                {tousProfs.map(prof => {
+                  const affecte = profsAffectes.has(prof);
+                  return (
+                    <span key={prof} style={{
+                      padding: '5px 16px', borderRadius: 20,
+                      background: affecte ? '#dcfce7' : '#f1f5f9',
+                      color: affecte ? '#15803d' : '#94a3b8',
+                      fontWeight: 700, fontSize: 13,
+                      textAlign: 'center',
+                    }}>
+                      {prof}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Suivi des classes */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  Suivi des classes
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                  Total budgets : {sortiesDuSousOnglet.reduce((sum, s) => sum + (parseFloat(s.budget) || 0), 0).toFixed(2)} CHF
+                </div>
+              </div>
+              {Object.entries(niveauxMap).map(([niv, cls]) => (
+                <div key={niv} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{niv}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {cls.map(cl => {
+                      const actif = suiviClasseSelect === cl.id;
+                      return (
+                        <button key={cl.id} type="button"
+                          onClick={() => cl.sortie ? setSuiviClasseSelect(actif ? null : cl.id) : null}
+                          style={{
+                            padding: '5px 16px', borderRadius: 20, border: actif ? '2px solid #15803d' : '2px solid transparent',
+                            background: cl.sortie ? '#dcfce7' : '#f1f5f9',
+                            color: cl.sortie ? '#15803d' : '#94a3b8',
+                            fontWeight: 700, fontSize: 13,
+                            cursor: cl.sortie ? 'pointer' : 'default',
+                            transition: 'all .12s',
+                          }}>
+                          {cl.nom}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Détail de la sortie sélectionnée */}
+              {sortieSelectionnee && (
+                <div style={{ marginTop: 16, background: 'white', borderRadius: 12, padding: '18px 22px', border: '1px solid #bbf7d0', boxShadow: '0 2px 8px rgba(21,128,61,0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d' }}>
+                      {sortieSelectionnee.classes_noms || '—'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => imprimer(sortieSelectionnee)} style={{ padding: '4px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>🖨️ Imprimer</button>
+                      <button onClick={() => ouvrirEdit(sortieSelectionnee)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 }}>✏️</button>
+                      <button onClick={() => setSuiviClasseSelect(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8', lineHeight: 1 }}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 13, color: '#374151' }}>
+                    {sortieSelectionnee.date_sortie && <div><span style={{ fontWeight: 600 }}>Date :</span> {new Date(sortieSelectionnee.date_sortie).toLocaleDateString('fr-CH')}</div>}
+                    {sortieSelectionnee.destination && <div><span style={{ fontWeight: 600 }}>Destination :</span> {sortieSelectionnee.destination}</div>}
+                    {sortieSelectionnee.titulaires && <div><span style={{ fontWeight: 600 }}>Titulaires :</span> {sortieSelectionnee.titulaires}</div>}
+                    {sortieSelectionnee.autres_accompagnants && <div><span style={{ fontWeight: 600 }}>Autres accompagnants :</span> {sortieSelectionnee.autres_accompagnants}</div>}
+                    {sortieSelectionnee.lieu_depart && <div><span style={{ fontWeight: 600 }}>Départ :</span> {sortieSelectionnee.lieu_depart} {fmtHeure(sortieSelectionnee.heure_depart) ? `à ${fmtHeure(sortieSelectionnee.heure_depart)}` : ''}</div>}
+                    {sortieSelectionnee.lieu_retour && <div><span style={{ fontWeight: 600 }}>Retour :</span> {sortieSelectionnee.lieu_retour} {fmtHeure(sortieSelectionnee.heure_retour) ? `à ${fmtHeure(sortieSelectionnee.heure_retour)}` : ''}</div>}
+                    {sortieSelectionnee.budget && <div><span style={{ fontWeight: 600 }}>Budget :</span> {parseFloat(sortieSelectionnee.budget).toFixed(2)} CHF</div>}
+                    {sortieSelectionnee.activites && <div style={{ gridColumn: '1 / -1' }}><span style={{ fontWeight: 600 }}>Activités :</span> {sortieSelectionnee.activites}</div>}
+                  </div>
+                  <div style={{ marginTop: 10 }}>
+                    <button onClick={() => toggleApprouve(sortieSelectionnee)}
+                      style={{ padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: sortieSelectionnee.approuve ? '#16a34a' : '#e2e8f0', color: sortieSelectionnee.approuve ? 'white' : '#64748b' }}>
+                      {sortieSelectionnee.approuve ? '✓ Approuvé' : 'À approuver'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tableau de suivi existant */}
+            <SuiviTable
+              sorties={sortiesDuSousOnglet}
+              onEdit={ouvrirEdit}
+              onDelete={supprimer}
+              onPrint={imprimer}
+              onToggleApprouve={toggleApprouve}
+            />
+          </div>
+        );
+      })()}
+
+      {/* Automne / Juin / Autres — hors cadre blanc */}
+      {onglet !== 'suivi' && (
+        sortiesOnglet.length === 0 ? (
+          <div style={{ ...st.empty, marginTop: 15 }}>
+            Aucune sortie pour <b>{ONGLETS.find(o => o.id === onglet)?.label}</b>.
+            <br/><br/>
+            <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 15 }}>
+            {sortiesOnglet.map(sortie => (
+              <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
+            ))}
+          </div>
+        )
+      )}
 
       {/* Form popup */}
       {showForm && (
@@ -342,17 +472,17 @@ export default function SortieScolaire() {
               </div>
 
               {/* Classes */}
-              <div style={st.formSection}>Classes</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              <div style={st.formSection}>Classes *</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6, marginBottom: 12 }}>
                 {classesSorted.map(cl => {
                   const sel = (form.classes_ids || []).includes(String(cl.id));
                   return (
                     <button key={cl.id} type="button"
                       onClick={() => toggleClasse(cl)}
                       style={{
-                        padding: '5px 12px', borderRadius: 20, border: `2px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
+                        padding: '6px 10px', borderRadius: 20, border: `2px solid ${sel ? '#6366f1' : '#e2e8f0'}`,
                         background: sel ? '#6366f1' : 'white', color: sel ? 'white' : '#475569',
-                        fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all .12s',
+                        fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all .12s', textAlign: 'center',
                       }}>
                       {cl.nom}
                     </button>
@@ -360,74 +490,103 @@ export default function SortieScolaire() {
                 })}
               </div>
 
-              {/* Titulaires auto-filled */}
-              <div style={st.grid2}>
-                <div style={st.field}>
-                  <label style={st.lbl}>Titulaires <span style={{ color: '#94a3b8', fontWeight: 400 }}>(auto-rempli)</span></label>
-                  <input style={st.inp} value={form.titulaires} onChange={e => setForm({...form, titulaires: e.target.value})} placeholder="Titulaires des classes sélectionnées" />
-                </div>
-                <div style={st.field}>
-                  <label style={st.lbl}>Autres accompagnants</label>
-                  <input style={st.inp} value={form.autres_accompagnants} onChange={e => setForm({...form, autres_accompagnants: e.target.value})} placeholder="Ex: Tania" />
-                </div>
+              {/* Titulaires */}
+              <div style={st.field}>
+                <label style={st.lbl}>Titulaires <span style={{ color: '#94a3b8', fontWeight: 400 }}>(auto-rempli)</span></label>
+                <input style={st.inp} value={form.titulaires} onChange={e => setForm({...form, titulaires: e.target.value})} placeholder="Titulaires des classes sélectionnées" />
               </div>
+
+              {/* Autres accompagnants + bouton Ajouter */}
+              {(() => {
+                const autresArr = (form.autres_accompagnants || '').split(' et ').map(s => s.trim()).filter(Boolean);
+                const tousProfs = profs.filter(p => p.prenom && p.nom).map(p => `${p.prenom} ${p.nom}`).sort((a,b) => a.localeCompare(b,'fr'));
+                const profsDispos = tousProfs.filter(p => !autresArr.includes(p));
+                const addAutre = (nom) => {
+                  const nouveau = autresArr.length > 0 ? `${form.autres_accompagnants} et ${nom}` : nom;
+                  setForm(f => ({ ...f, autres_accompagnants: nouveau }));
+                  setShowAddTit(false);
+                };
+                return (
+                  <div style={st.field}>
+                    <label style={st.lbl}>Autres accompagnants</label>
+                    <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
+                      <input style={{ ...st.inp, flex: 1 }} value={form.autres_accompagnants} onChange={e => setForm({...form, autres_accompagnants: e.target.value})} placeholder="Autres accompagnants non-titulaires" />
+                      <button type="button"
+                        onClick={() => setShowAddTit(v => !v)}
+                        style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#e0e7ff', color: '#4f46e5', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        + Ajouter
+                      </button>
+                      {showAddTit && profsDispos.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'white', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: 220, maxHeight: 220, overflowY: 'auto' }}>
+                          {profsDispos.map(p => (
+                            <div key={p} onClick={() => addAutre(p)}
+                              style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#e0e7ff'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              {p}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Programme */}
               <div style={st.formSection}>Programme</div>
               <div style={st.field}><label style={st.lbl}>Date de la sortie *</label><input style={st.inp} type="date" required value={form.date_sortie} onChange={e => setForm({...form, date_sortie: e.target.value})} /></div>
-              <div style={st.field}><label style={st.lbl}>Destination</label><input style={st.inp} value={form.destination} onChange={e => setForm({...form, destination: e.target.value})} placeholder="Ex: Château de Valère, Sion" /></div>
+              <div style={st.field}><label style={st.lbl}>Destination *</label><input style={st.inp} required value={form.destination} onChange={e => setForm({...form, destination: e.target.value})} placeholder="Ex: Château de Valère, Sion" /></div>
               <div style={st.field}><label style={st.lbl}>Activités</label><textarea style={{...st.inp, height: 80, resize: 'vertical'}} value={form.activites} onChange={e => setForm({...form, activites: e.target.value})} placeholder="Détail des activités..." /></div>
 
-              {/* Déplacement */}
+              {/* Déplacement — chaque ligne = lieu (flex 1) + heure (fixe droite) */}
               <div style={st.formSection}>Déplacement</div>
 
-              {/* Déplacement grid: lieu départ | heure départ / lieu retour | heure retour */}
-              <div style={st.grid2}>
-                {/* Col gauche: lieux */}
-                <div>
-                  <div style={st.field}>
-                    <label style={st.lbl}>Lieu de départ</label>
-                    <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                      {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
-                        <button key={lieu} type="button"
-                          onClick={() => setForm({...form, lieu_depart: lieu})}
-                          style={{
-                            padding: '8px 10px', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
-                            background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
-                            color: form.lieu_depart === lieu ? 'white' : '#475569',
-                            borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
-                          }}>
-                          {lieu === 'autre' ? 'Autre' : lieu}
-                        </button>
-                      ))}
-                    </div>
-                    {form.lieu_depart === 'autre' && (
-                      <input style={{ ...st.inp, marginTop: 6 }} value={form.lieu_depart_autre}
-                        onChange={e => setForm({...form, lieu_depart_autre: e.target.value})}
-                        placeholder="Saisir le lieu de départ..." autoFocus />
-                    )}
+              {/* Ligne départ */}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={st.lbl}>Lieu de départ</label>
+                  <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                      <button key={lieu} type="button"
+                        onClick={() => setForm({...form, lieu_depart: lieu})}
+                        style={{
+                          padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
+                          background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
+                          color: form.lieu_depart === lieu ? 'white' : '#475569',
+                          borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
+                        }}>
+                        {lieu === 'autre' ? 'Autre' : lieu}
+                      </button>
+                    ))}
                   </div>
-                  <div style={st.field}>
-                    <label style={st.lbl}>Lieu de retour</label>
-                    <input style={st.inp} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
-                  </div>
+                  {form.lieu_depart === 'autre' && (
+                    <input style={{ ...st.inp, marginTop: 6, width: '100%', boxSizing: 'border-box' }} value={form.lieu_depart_autre}
+                      onChange={e => setForm({...form, lieu_depart_autre: e.target.value})}
+                      placeholder="Saisir le lieu de départ..." autoFocus />
+                  )}
                 </div>
-                {/* Col droite: heures */}
-                <div>
-                  <div style={st.field}>
-                    <label style={st.lbl}>Heure de départ</label>
-                    <TimePicker value={form.heure_depart} onChange={e => setForm({...form, heure_depart: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
-                  </div>
-                  <div style={st.field}>
-                    <label style={st.lbl}>Heure de retour</label>
-                    <TimePicker value={form.heure_retour} onChange={e => setForm({...form, heure_retour: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
-                  </div>
+                <div style={{ width: 170 }}>
+                  <label style={st.lbl}>Heure de départ</label>
+                  <TimePicker value={form.heure_depart} onChange={e => setForm({...form, heure_depart: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
+                </div>
+              </div>
+
+              {/* Ligne retour — heure toujours alignée avec lieu retour */}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={st.lbl}>Lieu de retour</label>
+                  <input style={{ ...st.inp, width: '100%', boxSizing: 'border-box' }} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
+                </div>
+                <div style={{ width: 170 }}>
+                  <label style={st.lbl}>Heure de retour</label>
+                  <TimePicker value={form.heure_retour} onChange={e => setForm({...form, heure_retour: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
                 </div>
               </div>
 
               {/* Finances */}
               <div style={st.formSection}>Finances</div>
-              <div style={st.field}><label style={st.lbl}>Budget (CHF)</label><input style={st.inp} type="number" step="0.01" min="0" value={form.budget} onChange={e => setForm({...form, budget: e.target.value})} placeholder="Ex: 250.00" /></div>
+              <div style={st.field}><label style={st.lbl}>Budget (CHF) *</label><input style={st.inp} type="number" step="0.01" min="0" required value={form.budget} onChange={e => setForm({...form, budget: e.target.value})} placeholder="Ex: 250.00" /></div>
               <div style={st.field}><label style={st.lbl}>Commentaires</label><textarea style={{...st.inp, height: 80, resize: 'vertical'}} value={form.commentaires} onChange={e => setForm({...form, commentaires: e.target.value})} placeholder="Détails du budget, remarques..." /></div>
 
               <div style={st.formActions}>
@@ -443,20 +602,18 @@ export default function SortieScolaire() {
 }
 
 function SortieCard({ sortie, onEdit, onDelete, onPrint, onToggleApprouve }) {
-  const classesNoms = sortie.classes_noms || [sortie.classe1, sortie.classe2].filter(Boolean).join(' + ') || '—';
+  const classesNoms = sortie.classes_noms || [sortie.classe1, sortie.classe2].filter(Boolean).join(', ') || '';
+  const nbClasses = classesNoms ? classesNoms.split(',').filter(Boolean).length : 0;
+  const classeLabel = nbClasses > 1 ? 'Classes' : 'Classe';
   return (
     <div style={sc.card}>
       <div style={sc.cardTop}>
         <div style={{ flex: 1 }}>
           <div style={sc.cardDate}>{sortie.date_sortie ? new Date(sortie.date_sortie).toLocaleDateString('fr-CH') : '—'}</div>
-          <div style={sc.cardDest}>{sortie.destination || '—'}</div>
-          <div style={sc.cardMeta}>
-            {classesNoms !== '—' && <span style={sc.chip}>{classesNoms}</span>}
-            {sortie.titulaires && <span style={sc.chip}>{sortie.titulaires}</span>}
-            {sortie.lieu_depart && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬆ {sortie.lieu_depart} {fmtHeure(sortie.heure_depart)}</span>}
-            {sortie.lieu_retour && <span style={{...sc.chip, background:'#fef3c7', color:'#92400e'}}>⬇ {sortie.lieu_retour} {fmtHeure(sortie.heure_retour)}</span>}
-            {sortie.budget && <span style={{...sc.chip, background:'#d1fae5', color:'#065f46'}}>{parseFloat(sortie.budget).toFixed(2)} CHF</span>}
-          </div>
+          {classesNoms && <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}><span style={{ fontWeight: 600 }}>{classeLabel} :</span> {classesNoms}</div>}
+          {sortie.titulaires && <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}><span style={{ fontWeight: 600 }}>Titulaires :</span> {sortie.titulaires}</div>}
+          {sortie.autres_accompagnants && <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}><span style={{ fontWeight: 600 }}>Autres accompagnants :</span> {sortie.autres_accompagnants}</div>}
+          {sortie.destination && <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}><span style={{ fontWeight: 600 }}>Destination :</span> {sortie.destination}</div>}
         </div>
         <div style={sc.actions}>
           <button onClick={() => onToggleApprouve(sortie)}

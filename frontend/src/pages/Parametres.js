@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -50,10 +50,11 @@ const MODULES_ACCES_PROFS = [
 ];
 
 export default function Parametres() {
-  const [onglet, setOnglet] = useState('profil');
+  const [searchParams] = useSearchParams();
+  const onglet = searchParams.get('tab') || 'profil';
   const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '', telephone: '', adresse: '', npa: '', lieu: '', sexe: '', date_naissance: '', avs: '', taux_activite: '', periodes_semaine: '', type_contrat: '', type_permis: '', niveau_prefere: '', lieu_travail_prefere: '', remarque_lieu_travail: '', priorite_pref: 'niveau', specialite: '' });
   const [ecole, setEcole] = useState({
-    nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '',
+    nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', date_debut_annee: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
     responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: '',
     sexe_responsable_langues_jeunes: 'M', sexe_responsable_niveau_csc: 'M', sexe_responsable_niveau_cfr: 'M', sexe_responsable_niveau_epl: 'M'
@@ -479,46 +480,10 @@ export default function Parametres() {
     }
   };
 
-  const ONGLETS = [
-    { key: 'profil', label: 'Mon profil', show: true },
-    { key: 'mfa', label: 'Double authentification', show: true },
-    { key: 'ecole', label: 'École', show: isAdmin },
-    { key: 'mail', label: 'Envoi des mails', show: isAdmin },
-    { key: 'acces', label: 'Gestion des accès', show: isAdmin },
-    { key: 'danger', label: 'Réinitialisation', show: isAdmin },
-  ].filter(o => o.show);
-
   const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', mfa: '#0f766e', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
 
   return (
     <div style={styles.page}>
-      <div style={styles.sidebar}>
-        <div style={styles.logo}>
-          <img src="/logo-oasis.webp" alt="Oasis" style={styles.logoImg} />
-        </div>
-        <nav style={styles.nav}>
-          {ONGLETS.map(o => (
-            <button
-              key={o.key}
-              style={{ ...styles.navItem, ...(onglet === o.key ? styles.navItemActif : {}) }}
-              onClick={() => setOnglet(o.key)}
-            >
-              {o.label}
-            </button>
-          ))}
-        </nav>
-        <div style={styles.sidebarFooter}>
-          <div style={styles.userInfo}>
-            <div style={styles.avatar}>{profil.prenom?.[0]}{profil.nom?.[0]}</div>
-            <div>
-              <div style={styles.userName}>{profil.prenom} {profil.nom}</div>
-              <div style={styles.userRole}>{isAdmin ? 'Administrateur' : 'Professeur'}</div>
-            </div>
-          </div>
-          <button style={styles.btnLogout} onClick={() => navigate('/dashboard')}>← Dashboard</button>
-        </div>
-      </div>
-
       <div style={styles.main}>
         <div style={styles.topBar}>
           <h1 style={styles.titre}>Paramètres</h1>
@@ -748,7 +713,7 @@ export default function Parametres() {
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Priorité</label>
                         <div style={{display:'flex',gap:8,marginTop:4}}>
-                          {[['niveau','Niveau'],['lieu','Lieu de travail']].map(([val,lbl]) => (
+                          {[['niveau','Niveau'],['lieu','Lieu de travail'],['aucune','Aucune priorité']].map(([val,lbl]) => (
                             <button key={val} type="button"
                               onClick={() => setProfil({...profil, priorite_pref: val})}
                               style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(profil.priorite_pref===val?'#6366f1':'#e2e8f0'),background:profil.priorite_pref===val?'#e0e7ff':'white',fontWeight:700,cursor:'pointer',fontSize:13,color:profil.priorite_pref===val?'#3730a3':'#64748b'}}>
@@ -944,6 +909,10 @@ export default function Parametres() {
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Année scolaire</label>
                     <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
+                  </div>
+                  <div style={styles.formChamp}>
+                    <label style={styles.label}>Date début de l'année scolaire</label>
+                    <input style={styles.input} type="date" value={ecole.date_debut_annee ? ecole.date_debut_annee.substring(0,10) : ''} onChange={e => setEcole({ ...ecole, date_debut_annee: e.target.value })} />
                   </div>
                 </div>
                 </div>}
@@ -1434,20 +1403,8 @@ export default function Parametres() {
 
 
 const styles = {
-  page: { display: 'flex', minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  sidebar: { width: 240, background: 'white', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, borderRight: '1px solid #ddd6fe', boxShadow: '2px 0 12px rgba(99,102,241,0.07)' },
-  logo: { padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #ede9fe' },
-  logoImg: { width: 90, height: 'auto', display: 'block' },
-  nav: { flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 },
-  navItem: { display: 'flex', alignItems: 'center', padding: '9px 12px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#4c1d95', fontFamily: 'inherit' },
-  navItemActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
-  sidebarFooter: { padding: '16px', borderTop: '1px solid #ede9fe' },
-  userInfo: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
-  avatar: { width: 36, height: 36, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
-  userName: { fontSize: 13, fontWeight: 600, color: '#1e1b4b' },
-  userRole: { fontSize: 11, color: '#7c3aed', marginTop: 1 },
-  btnLogout: { width: '100%', padding: '8px', background: '#ede9fe', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600, fontFamily: 'inherit' },
-  main: { marginLeft: 240, flex: 1, padding: '32px 36px', minHeight: '100vh' },
+  page: { minHeight: '100vh', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  main: { padding: '32px 36px', minHeight: '100vh' },
   topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, minHeight: 44 },
   titre: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },
   topBarRight: { display: 'flex', alignItems: 'center', gap: 12 },

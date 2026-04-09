@@ -32,7 +32,6 @@ export default function Statistiques() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={styles.titre}>📊 Statistiques</h2>
         <button style={styles.btnRefresh} onClick={chargerStats}>🔄 Actualiser</button>
       </div>

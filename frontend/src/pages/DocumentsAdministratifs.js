@@ -177,12 +177,6 @@ export default function DocumentsAdministratifs() {
   return (
     <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{ padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569' }}
-        >
-          ← Retour
-        </button>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents</h2>
       </div>
 
@@ -190,7 +184,7 @@ export default function DocumentsAdministratifs() {
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
         {CATEGORIES.map(cat => (
           <button key={cat}
-            style={{ padding: '9px 14px', background: categorieOnglet === cat ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: categorieOnglet === cat ? 'white' : '#5b21b6', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: categorieOnglet === cat ? -1 : 0, zIndex: categorieOnglet === cat ? 2 : 1 }}
+            style={{ padding: '9px 0', background: categorieOnglet === cat ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: categorieOnglet === cat ? 'white' : '#5b21b6', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: categorieOnglet === cat ? -1 : 0, zIndex: categorieOnglet === cat ? 2 : 1, width: 140, minWidth: 140, textAlign: 'center' }}
             onClick={() => { setCategorieOnglet(cat); setShowForm(false); resetForm(); setMsg(''); }}>
             {cat}
           </button>

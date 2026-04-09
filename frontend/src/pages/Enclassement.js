@@ -585,7 +585,6 @@ export default function Enclassement() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h1 style={s.titre}>Enclassement</h1>
         <button style={{ ...s.btnAction, background: '#6366f1', marginLeft: 'auto' }} onClick={() => { setView('historique'); loadHistorique(); }}>
           📋 Historique ({historique.length})

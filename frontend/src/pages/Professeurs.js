@@ -259,7 +259,6 @@ export default function Professeurs({
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={s.title}>{titre}</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
       </div>
@@ -754,7 +753,7 @@ const s = {
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0, width: '100%', boxSizing: 'border-box' },
   tabsRow: { display: 'flex', gap: 0, alignItems: 'flex-end' },
   tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 280, color: '#1e293b', fontFamily: 'inherit' },
-  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 90, minWidth: 90, textAlign: 'center' },
+  tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', fontSize: 14, width: 140, minWidth: 140, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
   tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},

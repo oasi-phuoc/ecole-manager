@@ -547,7 +547,6 @@ export default function Comptabilite() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <button style={styles.btnRetour} onClick={() => navigate('/dashboard')}>← Retour</button>
         <h2 style={styles.titre}>Comptabilité</h2>
       </div>
 
@@ -1476,7 +1475,7 @@ const styles = {
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },
   tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
-  tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1' },
+  tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', width: 140, minWidth: 140, textAlign: 'center' },
   tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tabContent: { background: 'white', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden', marginTop: 8 },
   subTabsRow: { display: 'flex', gap: 6, padding: '12px 14px', borderBottom: '1px solid #f0f0f0', flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' },
