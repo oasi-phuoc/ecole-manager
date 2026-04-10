@@ -36,6 +36,12 @@ export default function Classes() {
   const [planToast, setPlanToast] = useState(false);
   const [rechercheInventaire, setRechercheInventaire] = useState('');
   const [rechercheDevoirs, setRechercheDevoirs] = useState('');
+  const [rechercheElevesClasse, setRechercheElevesClasse] = useState('');
+  const [showObs, setShowObs] = useState(false);
+  const [obsEleve, setObsEleve] = useState(null);
+  const [showEleveReadOnly, setShowEleveReadOnly] = useState(false);
+  const [eleveReadOnly, setEleveReadOnly] = useState(null);
+  const [derniereActuClasse, setDerniereActuClasse] = useState(null);
   const headers = {};
   const currentUser = getSessionUser() || null;
 
@@ -149,6 +155,8 @@ export default function Classes() {
     setDevoirActif(null);
     setDevoirs([]);
     setSuiviDevoirs([]);
+    setRechercheElevesClasse('');
+    setDerniereActuClasse(null);
     try {
       const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
@@ -159,6 +167,10 @@ export default function Classes() {
       setBranchesInventaire(brs);
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
     } catch(err) { console.error('Erreur chargement branches inventaire:', err); }
+    try {
+      const r = await axios.get(API+'/classes/'+c.id+'/activites-recentes', {headers});
+      setDerniereActuClasse(r.data || null);
+    } catch(err) { setDerniereActuClasse(null); }
   };
 
   const ouvrirEleveDetail = async (eleve) => {
@@ -187,6 +199,7 @@ export default function Classes() {
   const [docsEleve, setDocsEleve] = useState(null);
   const [eleveDocs, setEleveDocs] = useState([]);
   const [docsEleveLoading, setDocsEleveLoading] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
   const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'CV' });
 
   const [showSanctions, setShowSanctions] = useState(false);
@@ -557,6 +570,34 @@ export default function Classes() {
     setDocsEleveLoading(false);
   };
 
+  const ouvrirObservationsClasse = async (el) => {
+    setObsEleve(el); setShowObs(true); setShowObsForm(false); setObsEditId(null);
+    setObsForm({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
+    try { const r = await axios.get(API+'/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
+    catch(err) { setObservations([]); }
+  };
+
+  const sauverObsModal = async (e) => {
+    e.preventDefault();
+    if (!obsEleve) return;
+    try {
+      await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
+      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+      setShowObsForm(false);
+      const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+      setObservations(r.data);
+      try { const r2 = await axios.get(API+'/classes/'+detailClasse.id+'/activites-recentes', {headers}); setDerniereActuClasse(r2.data || null); } catch(e) {}
+    } catch(err) { alert('Erreur: '+err.message); }
+  };
+
+  const imprimerObsEleve = () => {
+    if (!obsEleve) return;
+    const rows = observations.map(obs => `<tr><td>${new Date(obs.created_at).toLocaleDateString('fr-CH')}</td><td style="font-weight:700">${obs.titre||''}</td><td>${obs.contenu||''}</td><td>${obs.mesure_prise||'—'}</td><td>${obs.auteur_prenom||''} ${obs.auteur_nom||''}</td><td style="text-align:center">${obs.intervention_responsable?'<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🚨 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}</td><td style="text-align:center">${obs.demande_entretien?'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🤝 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}</td></tr>`).join('');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Observations - ${obsEleve.prenom} ${obsEleve.nom}</title><style>body{font-family:'Century Gothic',sans-serif;padding:32px;color:#1e293b}h1{font-size:20px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#64748b;margin-bottom:24px}table{width:100%;border-collapse:collapse;background:white}th{background:#f1f5f9;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #e2e8f0}td{padding:10px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:top}@media print{.no-print{display:none}@page{margin:1.5cm}}</style></head><body><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h1>📋 Observations — ${obsEleve.prenom} ${obsEleve.nom}</h1><div class="sub">Classe : ${detailClasse?.nom||'—'} · ${observations.length} observation(s) · Généré le ${new Date().toLocaleDateString('fr-CH')}</div></div><button class="no-print" onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">🖨️ Imprimer</button></div><table><thead><tr><th>Date</th><th>Titre</th><th>Remarque</th><th>Mesure prise</th><th>Auteur</th><th>Intervention</th><th>Entretien</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    win.document.close();
+  };
+
   const uploadDocumentEleve = async (file, type) => {
     if (file.size > 5*1024*1024) { alert('Fichier trop grand (max 5MB)'); return; }
     const reader = new FileReader();
@@ -575,6 +616,13 @@ export default function Classes() {
       const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
     } catch(err) { alert('Erreur téléchargement'); }
+  };
+
+  const previsualiserDocumentEleve = async (doc) => {
+    try {
+      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      setDocPreview({ url: r.data.contenu, nom: r.data.nom });
+    } catch(err) { alert('Erreur prévisualisation'); }
   };
 
   const supprimerDocumentEleve = async (docId) => {
@@ -835,6 +883,13 @@ export default function Classes() {
     });
   };
 
+  const referenceObsPreview = (() => {
+    if (!obsEleve) return '';
+    const nom = String(obsEleve.nom || '').trim();
+    const prenom = String(obsEleve.prenom || '').trim();
+    return `${(prenom[0]||'X').toUpperCase()}${(nom[0]||'X').toUpperCase()}-${String((observations?.length || 0) + 1).padStart(2, '0')}`;
+  })();
+
   // Modal zoom photo
   const ModalZoom = () => photoZoom ? (
     <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
@@ -1067,6 +1122,9 @@ export default function Classes() {
                     </div>
                   </div>
                   <div style={{display:'flex',gap:6}}>
+                    <button onClick={() => previsualiserDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Visualiser">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
                     <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Télécharger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
@@ -1077,6 +1135,22 @@ export default function Classes() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {docPreview && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setDocPreview(null)}>
+          <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
+              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>✕ Fermer</button>
+            </div>
+            {docPreview.url.match(/^data:image\//i) ? (
+              <img src={docPreview.url} alt={docPreview.nom} style={{maxWidth:'100%',maxHeight:'100%',borderRadius:8,objectFit:'contain',background:'white'}} />
+            ) : (
+              <iframe src={docPreview.url} title={docPreview.nom} style={{width:'100%',flex:1,borderRadius:8,border:'none'}} />
+            )}
           </div>
         </div>
       )}
@@ -1175,6 +1249,169 @@ export default function Classes() {
           </div>
         </div>
       )}
+      {showObs && obsEleve && (
+        <div style={s.overlay}>
+          <div style={{...s.modal, width:'95vw', maxWidth:1100, maxHeight:'90vh', overflowY:'auto', padding:24}}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>📋 Observations — {obsEleve.prenom} {obsEleve.nom}</h3>
+              <button style={s.btnClose} onClick={() => setShowObs(false)}>✕</button>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <span style={{fontSize:12,color:'#64748b'}}>Total: <b>{observations.length}</b> observation(s)</span>
+              <div style={{display:'flex',gap:8}}>
+                <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerObsEleve}>📄 Rapport PDF</button>
+                <button style={{...s.btnAdd,background:'#10b981'}} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
+              </div>
+            </div>
+            {showObsForm && (
+              <form onSubmit={sauverObsModal} style={{background:'#f8fafc',borderRadius:10,padding:16,marginBottom:16,border:'1px solid #e2e8f0'}}>
+                <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:8,fontSize:12,color:'#64748b'}}>
+                  <span>✍️ Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
+                  <span>📅 {new Date().toLocaleDateString('fr-CH')}</span>
+                  <span>🔖 <b>{referenceObsPreview}</b></span>
+                </div>
+                <div style={s.field}>
+                  <label style={s.lbl}>Titre *</label>
+                  <input style={s.inp} required value={obsForm.titre} onChange={e => setObsForm({...obsForm,titre:e.target.value})} placeholder="Ex: Comportement en classe..." />
+                </div>
+                <div style={{...s.field,marginTop:10}}>
+                  <label style={s.lbl}>Remarque *</label>
+                  <textarea style={{...s.inp,minHeight:70,resize:'vertical'}} required value={obsForm.contenu} onChange={e => setObsForm({...obsForm,contenu:e.target.value})} placeholder="Saisir votre observation..." />
+                </div>
+                <div style={{...s.field,marginTop:10}}>
+                  <label style={s.lbl}>Mesure prise *</label>
+                  <textarea style={{...s.inp,minHeight:60,resize:'vertical'}} required value={obsForm.mesure_prise} onChange={e => setObsForm({...obsForm,mesure_prise:e.target.value})} placeholder="Ex: Avertissement oral, convocation..." />
+                </div>
+                <div style={{display:'flex',gap:12,marginTop:14}}>
+                  <button type="button" onClick={() => setObsForm({...obsForm,intervention_responsable:!obsForm.intervention_responsable})}
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
+                    🚨 Intervention responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
+                  </button>
+                  <button type="button" onClick={() => setObsForm({...obsForm,demande_entretien:!obsForm.demande_entretien})}
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
+                    🤝 Demande entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
+                  </button>
+                </div>
+                <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
+                  <button type="button" style={s.btnCancel} onClick={() => setShowObsForm(false)}>Annuler</button>
+                  <button type="submit" style={{...s.btnSave,background:'#10b981'}}>Sauvegarder</button>
+                </div>
+              </form>
+            )}
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              {observations.length===0 ? (
+                <div style={{textAlign:'center',color:'#94a3b8',padding:30,fontSize:13}}>Aucune observation enregistrée</div>
+              ) : observations.map(obs => {
+                const peutModifier = isAdmin() || (currentUser && obs.auteur_id === currentUser.id);
+                return obsEditId === obs.id ? (
+                  <form key={obs.id} onSubmit={async (e) => {
+                    e.preventDefault();
+                    await axios.put(API+'/observations/'+obs.id, obsEditForm, {headers});
+                    setObsEditId(null);
+                    const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+                    setObservations(r.data);
+                  }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
+                    <div style={s.field}><label style={s.lbl}>Titre</label><input style={s.inp} value={obsEditForm.titre} onChange={e => setObsEditForm({...obsEditForm,titre:e.target.value})} required /></div>
+                    <div style={{...s.field,marginTop:10}}><label style={s.lbl}>Remarque</label><textarea style={{...s.inp,minHeight:60,resize:'vertical'}} value={obsEditForm.contenu} onChange={e => setObsEditForm({...obsEditForm,contenu:e.target.value})} required /></div>
+                    <div style={{...s.field,marginTop:10}}><label style={s.lbl}>Mesure prise</label><textarea style={{...s.inp,minHeight:50,resize:'vertical'}} value={obsEditForm.mesure_prise||''} onChange={e => setObsEditForm({...obsEditForm,mesure_prise:e.target.value})} /></div>
+                    <div style={{display:'flex',gap:10,marginTop:12}}>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_responsable:!obsEditForm.intervention_responsable})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsEditForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>🚨 Intervention : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b></button>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,demande_entretien:!obsEditForm.demande_entretien})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsEditForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>🤝 Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b></button>
+                    </div>
+                    <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
+                      <button type="button" style={s.btnCancel} onClick={() => setObsEditId(null)}>Annuler</button>
+                      <button type="submit" style={{...s.btnSave,background:'#10b981'}}>Sauvegarder</button>
+                    </div>
+                  </form>
+                ) : (
+                  <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                        <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
+                        <span style={{fontSize:11,color:'#64748b'}}>{obs.reference_obs ? `${obs.reference_obs} - ` : ''}{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
+                      </div>
+                      {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                      </div>}
+                    </div>
+                    <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
+                    {obs.mesure_prise && <div style={{fontSize:12,color:'#475569',marginTop:6,background:'#f1f5f9',padding:'4px 10px',borderRadius:6}}>📋 <b>Mesure :</b> {obs.mesure_prise}</div>}
+                    <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
+                      <span style={{fontSize:11,color:'#94a3b8'}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</span>
+                      {obs.intervention_responsable && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🚨 Intervention</span>}
+                      {obs.demande_entretien && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🤝 Entretien</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEleveReadOnly && eleveReadOnly && (
+        <div style={s.overlay}>
+          <div style={{...s.modal, width:'95vw', maxWidth:900, maxHeight:'90vh', overflowY:'auto', padding:32}}>
+            <div style={s.modalHeader}>
+              <div style={{display:'flex',alignItems:'center',gap:14}}>
+                {eleveReadOnly.photo ? (
+                  <img src={eleveReadOnly.photo} alt="photo" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'3px solid #e2e8f0'}} />
+                ) : (
+                  <div style={{width:52,height:52,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:'#6366f1',fontWeight:700}}>{(eleveReadOnly.prenom||'?')[0]}</div>
+                )}
+                <h3 style={s.modalTitle}>🎓 {eleveReadOnly.prenom} {eleveReadOnly.nom}</h3>
+              </div>
+              <button style={s.btnClose} onClick={() => setShowEleveReadOnly(false)}>✕</button>
+            </div>
+            {(() => {
+              const ro = {padding:'8px 10px',border:'1px solid #f1f5f9',borderRadius:7,fontSize:12,color:'#1e293b',width:'100%',boxSizing:'border-box',background:'#f8fafc'};
+              const Lbl = ({l, v}) => (
+                <div style={{display:'flex',flexDirection:'column',marginBottom:0}}>
+                  <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{l}</label>
+                  <div style={ro}>{v||'—'}</div>
+                </div>
+              );
+              const secTitle = (txt,color,bg) => <div style={{fontSize:11,fontWeight:700,color,background:bg,padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.05em',gridColumn:'1/-1'}}>{txt}</div>;
+              return (
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,marginTop:20}}>
+                  {secTitle('Informations personnelles','#1e40af','#dbeafe')}
+                  <Lbl l="Nom" v={eleveReadOnly.nom} />
+                  <Lbl l="Prénom" v={eleveReadOnly.prenom} />
+                  <Lbl l="Email" v={eleveReadOnly.email} />
+                  <Lbl l="Date de naissance" v={eleveReadOnly.date_naissance ? new Date(eleveReadOnly.date_naissance).toLocaleDateString('fr-CH') : eleveReadOnly.oasi_nais ? new Date(eleveReadOnly.oasi_nais).toLocaleDateString('fr-CH') : null} />
+                  <Lbl l="Date début cours" v={eleveReadOnly.date_debut_cours ? new Date(eleveReadOnly.date_debut_cours).toLocaleDateString('fr-CH') : null} />
+                  <Lbl l="Catégorie" v={eleveReadOnly.categorie} />
+                  <div style={{gridColumn:'1/-1'}}>
+                    <div style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Adresse</div>
+                    <div style={ro}>{eleveReadOnly.adresse||'—'}</div>
+                  </div>
+                  <Lbl l="Téléphone" v={eleveReadOnly.telephone} />
+                  <Lbl l="Nationalité" v={eleveReadOnly.oasi_nationalite} />
+                  <Lbl l="Statut" v={eleveReadOnly.statut === 'actif' ? '✅ Actif' : '❌ Inactif'} />
+                  {secTitle('Contact / responsable légal','#166534','#dcfce7')}
+                  <Lbl l="Nom parent / contact" v={eleveReadOnly.nom_parent || eleveReadOnly.personne_contact} />
+                  <Lbl l="Téléphone parent" v={eleveReadOnly.telephone_parent} />
+                  <div />
+                  {(eleveReadOnly.oasi_n || eleveReadOnly.oasi_ref || eleveReadOnly.oasi_nom) && (<>
+                    {secTitle('Données OASI','#6b21a8','#f3e8ff')}
+                    <Lbl l="N" v={eleveReadOnly.oasi_n} />
+                    <Lbl l="REF" v={eleveReadOnly.oasi_ref} />
+                    <Lbl l="POS" v={eleveReadOnly.oasi_pos} />
+                    <Lbl l="NOM" v={eleveReadOnly.oasi_nom} />
+                    <Lbl l="PROG_NOM" v={eleveReadOnly.oasi_prog_nom} />
+                    <Lbl l="PROG_ENCADRANT" v={eleveReadOnly.oasi_prog_encadrant} />
+                    <Lbl l="AS" v={eleveReadOnly.oasi_as} />
+                    <Lbl l="PRG_ID" v={eleveReadOnly.oasi_prg_id} />
+                    <Lbl l="RA_ID" v={eleveReadOnly.oasi_ra_id} />
+                  </>)}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {planToast && (
         <div style={{position:'fixed',bottom:24,right:24,background:'#6366f1',color:'white',padding:'12px 20px',borderRadius:10,fontWeight:700,fontSize:14,boxShadow:'0 4px 20px rgba(99,102,241,0.4)',zIndex:3000}}>
           ✓ Plan sauvegardé !
@@ -1200,20 +1437,46 @@ export default function Classes() {
 
       {classeVueTab === 'eleves' ? (
         <>
-        <div style={{...s.tableWrap, marginTop: 15}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginTop:12,marginBottom:0}}>
+          <input
+            style={s.tabSearch}
+            placeholder="Rechercher un élève..."
+            value={rechercheElevesClasse}
+            onChange={e => setRechercheElevesClasse(e.target.value)}
+          />
+          {derniereActuClasse && (
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',background: derniereActuClasse.type === 'sanction' ? '#fff7ed' : '#eef2ff',borderRadius:10,fontSize:12,fontWeight:600,color: derniereActuClasse.type === 'sanction' ? '#9a3412' : '#3730a3',boxShadow:'0 2px 8px rgba(99,102,241,0.15)',maxWidth:420,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>
+              <span>{derniereActuClasse.type === 'sanction' ? '⚠️' : '📋'}</span>
+              <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>
+                <b>{derniereActuClasse.eleve_prenom} {derniereActuClasse.eleve_nom}</b>
+                {' · '}
+                {derniereActuClasse.titre || derniereActuClasse.infraction}
+                {' · '}
+                <span style={{fontWeight:400,color:'#94a3b8'}}>{new Date(derniereActuClasse.date).toLocaleDateString('fr-CH')}</span>
+              </span>
+            </div>
+          )}
+        </div>
+        <div style={{...s.tableWrap, marginTop:10, maxHeight:'calc(100vh - 270px)', overflowY:'auto'}}>
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
-                {['Photo','Nom','Prénom','Contact','','',''].map((h,i) => <th key={i} style={s.th}>{h}</th>)}
+                <th style={{...s.th,width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>Photo</th>
+                <th style={s.th}>Nom</th>
+                <th style={s.th}>Prénom</th>
+                <th style={s.th}>Nationalité</th>
+                <th style={s.th}>Naissance</th>
+                <th style={{...s.th,width:110,minWidth:110,maxWidth:110,textAlign:'center'}}></th>
+                <th style={{...s.th,width:42,minWidth:42,maxWidth:42,textAlign:'center'}}></th>
               </tr>
             </thead>
             <tbody>
-              {elevesClasse.length===0 ? (
-                <tr><td colSpan="7" style={s.empty}>Aucun élève dans cette classe</td></tr>
-              ) : elevesClasse.map(el => (
+              {elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase())).length===0 ? (
+                <tr><td colSpan="7" style={s.empty}>Aucun élève trouvé</td></tr>
+              ) : elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase())).map(el => (
                 <tr key={el.id} style={s.tr}>
-                  <td style={s.td}>
-                    <div style={{position:'relative',width:38,height:38}}>
+                  <td style={{...s.td,width:62,minWidth:62,maxWidth:62,textAlign:'center',padding:'8px 6px'}}>
+                    <div style={{position:'relative',width:38,height:38,margin:'0 auto'}}>
                       {el.photo ? (
                         <img src={el.photo} alt="photo" onClick={() => setPhotoZoom(el.photo)} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',cursor:'pointer'}} />
                       ) : (
@@ -1235,30 +1498,32 @@ export default function Classes() {
                               setElevesClasse(r.data);
                             } catch(err) {
                               alert('Erreur upload photo: ' + (err.response?.data?.message || err.message || 'fichier non supporte'));
-                            } finally {
-                              ev.target.value = '';
-                            }
+                            } finally { ev.target.value = ''; }
                           }} />
                         </label>
                       )}
                     </div>
                   </td>
-                  <td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
+                  <td style={{...s.td,fontWeight:700,color:'#1e293b'}}>{el.nom || '—'}</td>
                   <td style={s.td}>{el.prenom || '—'}</td>
-                  <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>
-                  <td style={s.td}>
-                    <button style={{...s.iconBtn,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/></svg>
-                    </button>
+                  <td style={s.td}>{el.oasi_nationalite || '—'}</td>
+                  <td style={s.td}>{el.date_naissance ? new Date(el.date_naissance).toLocaleDateString('fr-CH') : el.oasi_nais ? new Date(el.oasi_nais).toLocaleDateString('fr-CH') : '—'}</td>
+                  <td style={{...s.td,width:110,minWidth:110,maxWidth:110,padding:'8px 6px',textAlign:'center'}}>
+                    <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center'}}>
+                      <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/></svg>
+                      </button>
+                      <button title="Observations" onClick={() => ouvrirObservationsClasse(el)} style={{padding:6,background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
+                      </button>
+                      <button title="Sanctions" onClick={() => ouvrirSanctions(el)} style={{padding:6,background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/></svg>
+                      </button>
+                    </div>
                   </td>
-                  <td style={s.td}>
-                    <button style={{...s.iconBtn,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/></svg>
-                    </button>
-                  </td>
-                  <td style={s.td}>
-                    <button style={{...s.iconBtn,background:'#e0e7ff',color:'#3730a3'}} onClick={() => ouvrirEleveDetail(el)} title="Détail">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                  <td style={{...s.td,width:42,minWidth:42,maxWidth:42,padding:'8px 4px',textAlign:'center'}}>
+                    <button title="Détail élève" onClick={() => { setEleveReadOnly(el); setShowEleveReadOnly(true); }} style={{padding:6,background:'#f0fdf4',color:'#15803d',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
+                      <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                     </button>
                   </td>
                 </tr>

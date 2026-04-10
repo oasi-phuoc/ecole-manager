@@ -68,6 +68,7 @@ export default function Eleves() {
   const [docsEleve, setDocsEleve] = useState(null);
   const [eleveDocs, setEleveDocs] = useState([]);
   const [docsEleveLoading, setDocsEleveLoading] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
   const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'Autre' });
   const [showSanctions, setShowSanctions] = useState(false);
   const [sanctionsEleve, setSanctionsEleve] = useState(null);
@@ -248,6 +249,13 @@ export default function Eleves() {
       const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
     } catch(err) { alert('Erreur téléchargement'); }
+  };
+
+  const previsualiserDocumentEleve = async (doc) => {
+    try {
+      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      setDocPreview({ url: r.data.contenu, nom: r.data.nom });
+    } catch(err) { alert('Erreur prévisualisation'); }
   };
 
   const supprimerDocumentEleve = async (docId) => {
@@ -674,12 +682,35 @@ export default function Eleves() {
                     </div>
                   </div>
                   <div style={{display:'flex',gap:6}}>
-                    <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Télécharger">⬇️</button>
-                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Supprimer">🗑️</button>}
+                    <button onClick={() => previsualiserDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Visualiser">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Télécharger">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>}
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {docPreview && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:1300}} onClick={() => setDocPreview(null)}>
+          <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
+              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>✕ Fermer</button>
+            </div>
+            {docPreview.url.match(/^data:image\//i) ? (
+              <img src={docPreview.url} alt={docPreview.nom} style={{maxWidth:'100%',maxHeight:'100%',borderRadius:8,objectFit:'contain',background:'white'}} />
+            ) : (
+              <iframe src={docPreview.url} title={docPreview.nom} style={{width:'100%',flex:1,borderRadius:8,border:'none'}} />
+            )}
           </div>
         </div>
       )}
