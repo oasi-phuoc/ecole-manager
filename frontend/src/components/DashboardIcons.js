@@ -383,6 +383,29 @@ export const ICONS_MATERIELS = {
   enseignement:      IconEnseignement,
 };
 
+// ── Sondage — clipboard avec radio buttons ───────────────────────────────────
+export const IconSondage = ({ size, active }) => (
+  <I size={size} active={active} ch={
+    <path fillRule="evenodd" d="
+      M8 1a1 1 0 00-1 1v1H5a2 2 0 00-2 2v15a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2h-2V2a1 1 0 00-1-1H8z
+      M9 2h6v1a1 1 0 01-1 1h-4a1 1 0 01-1-1V2z
+      M7 10a2 2 0 100 4 2 2 0 000-4z
+      M7 15.5a2 2 0 100 4 2 2 0 000-4z
+      M11 11.5h6v1h-6v-1z
+      M11 17h4v1h-4v-1z
+    "/>
+  }/>
+);
+
+// ── Visite de classes — maison avec loupe ────────────────────────────────────
+export const IconVisiteClasses = ({ size, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M12 2L1 10.5h2.5V21a1 1 0 001 1H9v-6h3v3.5a5 5 0 006.5-7.1V10.5H21L12 2z"/>
+    <circle cx="16.5" cy="16.5" r="3.5" stroke={active ? 'white' : 'currentColor'} fill={active ? 'none' : 'none'} strokeWidth={1.8}/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={2} strokeLinecap="round" d="M19 19l2.5 2.5"/>
+  </>}/>
+);
+
 // Map path → composant icône
 export const ICONS_BY_PATH = {
   '/employes-administratifs': IconEmployes,
@@ -398,7 +421,9 @@ export const ICONS_BY_PATH = {
   '/comptabilite':            IconComptabilite,
   '/documents-administratifs':IconDocuments,
   '/statistiques':            IconStatistiques,
+  '/sondage':                 IconSondage,
   '/enclassement':            IconEnclassement,
+  '/visite-classes':          IconVisiteClasses,
   '/sorties-scolaires':       IconSorties,
   '/parametres':              IconParametres,
 };

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -56,7 +56,11 @@ const ICONES_MATERIELS_LIST = [
 export default function Comptabilite() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [onglet, setOnglet] = useState('factures');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onglet = searchParams.get('tab') || 'factures';
+  const setOnglet = (tab) => setSearchParams({ tab });
+  const [rechercheFactures, setRechercheFactures] = useState('');
+  const [recherchePrix, setRecherchePrix] = useState('');
 
   // Data
   const [paiements, setPaiements] = useState([]);
@@ -109,7 +113,7 @@ export default function Comptabilite() {
 
   useEffect(() => {
     if (location.state?.classeFacturationId) {
-      setOnglet('factures');
+      setSearchParams({ tab: 'factures' });
       setClasseFacturationId(String(location.state.classeFacturationId));
     }
   }, []);
@@ -551,53 +555,36 @@ export default function Comptabilite() {
       </div>
 
 
-      {/* Main tabs */}
-      <div style={styles.tabsRow}>
-        {[
-          { key: 'factures', label: 'Factures' },
-          { key: 'paiements', label: 'Paiements' },
-          { key: 'prix', label: 'Liste de prix' },
-        ].map(t => (
-          <button key={t.key} style={{ ...styles.tab, ...(onglet === t.key ? styles.tabActif : {}) }} onClick={() => setOnglet(t.key)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {/* ===== FACTURES ===== */}
       {onglet === 'factures' && (
         <>
-          <div style={{ display: 'flex', gap: 0 }}>
-            {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
-              <button key={niv}
-                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: facturesNiveau === niv ? '#4f46e5' : '#e0e7ff', color: facturesNiveau === niv ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: facturesNiveau === niv ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
-                onClick={() => { setFacturesNiveau(niv); setClasseFacturationId(''); }}>
-                {niv}
-              </button>
-            ))}
-          </div>
-          <div style={{ marginTop: 15, marginBottom: 15 }}>
-            <select style={{ padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer', minWidth: 240 }} value={classeFacturationId} onChange={e => setClasseFacturationId(e.target.value)}>
-              <option value="">Sélectionner une classe</option>
-              {classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau)).map(c => (
-                <option key={c.id} value={c.id}>{c.nom}</option>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+            <input style={styles.tabSearch} placeholder="Rechercher une classe ou un élève..." value={rechercheFactures} onChange={e => { setRechercheFactures(e.target.value); setClasseFacturationId(''); }} />
+            <div style={styles.toggleGroup}>
+              {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
+                <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }}
+                  onClick={() => { setFacturesNiveau(niv); setClasseFacturationId(''); setRechercheFactures(''); }}>
+                  {niv}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div style={styles.tabContent}>
             {!classeFacturationId ? (
               (() => {
-                const classesNiveau = classes.filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau));
+                const classesNiveau = classes
+                  .filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau))
+                  .filter(c => !rechercheFactures || (c.nom || '').toLowerCase().includes(rechercheFactures.toLowerCase()));
                 return (
                   <div style={styles.tableWrap}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
                     <thead>
                       <tr>
+                        <th style={{ ...styles.thMateriel, width: 44, textAlign: 'center' }}></th>
                         <th style={styles.thMateriel}>Classe</th>
                         <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Élèves</th>
                         <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#bbf7d0' }}>✓ Validées</th>
                         <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#fecaca' }}>En attente</th>
                         <th style={styles.thMateriel}>Progression</th>
-                        <th style={styles.thMateriel}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -608,6 +595,11 @@ export default function Comptabilite() {
                         const pct = total > 0 ? Math.round(valides / total * 100) : 0;
                         return (
                           <tr key={c.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                            <td style={{ ...styles.tdMateriel, textAlign: 'center', padding: '8px 6px' }}>
+                              <button style={{ background: '#e0e7ff', border: '1px solid #c7d2fe', borderRadius: 7, cursor: 'pointer', padding: '5px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setClasseFacturationId(String(c.id))} title="Voir le détail">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              </button>
+                            </td>
                             <td style={{ ...styles.tdMateriel, fontWeight: 600 }}>{c.nom}</td>
                             <td style={{ ...styles.tdMateriel, textAlign: 'center', color: '#64748b' }}>{total}</td>
                             <td style={{ ...styles.tdMateriel, textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{valides}</td>
@@ -617,9 +609,6 @@ export default function Comptabilite() {
                                 <div style={{ background: pct === 100 ? '#16a34a' : '#6366f1', height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width .3s' }} />
                               </div>
                               <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{pct}%</div>
-                            </td>
-                            <td style={styles.tdMateriel}>
-                              <button style={{ ...styles.btnDetailFacture, fontSize: 11 }} onClick={() => setClasseFacturationId(String(c.id))}>Ouvrir →</button>
                             </td>
                           </tr>
                         );
@@ -699,42 +688,20 @@ export default function Comptabilite() {
       {/* ===== PAIEMENTS ===== */}
       {onglet === 'paiements' && (
         <>
-          {/* Niveau + statut sur la même ligne */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
-            <div style={{ display: 'flex', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+            <input style={styles.tabSearch} placeholder="Rechercher nom, prénom, classe, montant..." value={recherchePaiements} onChange={e => setRecherchePaiements(e.target.value)} />
+            <div style={styles.toggleGroup}>
               {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
-                <button key={niv}
-                  style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsNiveau === niv ? '#4f46e5' : '#e0e7ff', color: paiementsNiveau === niv ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsNiveau === niv ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
-                  onClick={() => { setPaiementsNiveau(niv); setFiltreClasse(''); }}>
-                  {niv}
-                </button>
+                <button key={niv} style={{ ...styles.toggleBtn, ...(paiementsNiveau === niv ? styles.toggleBtnActif : {}) }}
+                  onClick={() => { setPaiementsNiveau(niv); setFiltreClasse(''); }}>{niv}</button>
               ))}
             </div>
-            <div style={{ marginLeft: 15, display: 'flex', gap: 0 }}>
-            {[
-              { key: 'tous', label: 'Tous' },
-              { key: 'paye', label: 'Payé' },
-              { key: 'en_attente', label: 'En attente' },
-              { key: 'en_retard', label: 'En retard' },
-              { key: 'annule', label: 'Annulé' },
-            ].map(t => (
-              <button key={t.key}
-                style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: paiementsOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: paiementsOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: paiementsOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
-                onClick={() => setPaiementsOnglet(t.key)}>
-                {t.label}
-              </button>
-            ))}
+            <div style={styles.toggleGroup}>
+              {[{ key: 'tous', label: 'Tous' }, { key: 'paye', label: 'Payé' }, { key: 'en_attente', label: 'En attente' }, { key: 'en_retard', label: 'En retard' }, { key: 'annule', label: 'Annulé' }].map(t => (
+                <button key={t.key} style={{ ...styles.toggleBtn, ...(paiementsOnglet === t.key ? styles.toggleBtnActif : {}) }} onClick={() => setPaiementsOnglet(t.key)}>{t.label}</button>
+              ))}
             </div>
           </div>
-        {/* Champ de recherche — hors du bloc blanc */}
-        <div style={{ marginTop: 15, marginBottom: 15 }}>
-          <input
-            style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 320, color: '#1e293b' }}
-            placeholder="Rechercher nom, prénom, classe, montant, référence..."
-            value={recherchePaiements}
-            onChange={e => setRecherchePaiements(e.target.value)}
-          />
-        </div>
         <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
           <thead>
             <tr style={styles.theadRow}>
@@ -790,8 +757,12 @@ export default function Comptabilite() {
                     </button>
                   </td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                    <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)}>✏️</button>
-                    <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)}>🗑️</button>
+                    <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)} title="Modifier">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)} title="Supprimer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </td>
                 </tr>
               );
@@ -804,22 +775,15 @@ export default function Comptabilite() {
       {/* ===== LISTE DE PRIX ===== */}
       {onglet === 'prix' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: 0 }}>
-              {[
-                { key: 'ecolage',     label: 'Écolage' },
-                { key: 'scolaire',    label: 'Matériel scolaire' },
-                { key: 'fournitures', label: 'Autres fournitures' },
-              ].map(t => (
-                <button key={t.key}
-                  style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: prixOnglet === t.key ? '#4f46e5' : '#e0e7ff', color: prixOnglet === t.key ? 'white' : '#3730a3', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none', boxShadow: prixOnglet === t.key ? '0 4px 6px rgba(79,70,229,0.18)' : 'none' }}
-                  onClick={() => setPrixOnglet(t.key)}>
-                  {t.label}
-                </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+            <input style={styles.tabSearch} placeholder="Rechercher un article..." value={recherchePrix} onChange={e => setRecherchePrix(e.target.value)} />
+            <div style={styles.toggleGroup}>
+              {[{ key: 'ecolage', label: 'Écolage' }, { key: 'scolaire', label: 'Matériel scolaire' }, { key: 'fournitures', label: 'Autres fournitures' }].map(t => (
+                <button key={t.key} style={{ ...styles.toggleBtn, ...(prixOnglet === t.key ? styles.toggleBtnActif : {}) }} onClick={() => setPrixOnglet(t.key)}>{t.label}</button>
               ))}
             </div>
           </div>
-        <div style={{ ...styles.tabContent, marginTop: 15 }}>
+        <div style={{ ...styles.tabContent, marginTop: 0 }}>
 
             {/* Écolage */}
           {prixOnglet === 'ecolage' && (
@@ -858,8 +822,12 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -892,8 +860,12 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -926,8 +898,12 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)}>✏️</button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)}>🗑️</button>
+                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1465,7 +1441,7 @@ export default function Comptabilite() {
 }
 
 const styles = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 24 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
@@ -1474,6 +1450,10 @@ const styles = {
   statCard: { background: 'white', padding: '16px 20px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center' },
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },
+  tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 280, color: '#1e293b' },
+  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
+  toggleBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
   tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', width: 140, minWidth: 140, textAlign: 'center' },
   tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
@@ -1490,8 +1470,8 @@ const styles = {
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
   typeBadge: { background: '#eef2ff', color: '#3730a3', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
   statutBadge: { padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.7 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.7 },
+  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.7, display: 'inline-flex', alignItems: 'center', padding: 2 },
+  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.7, display: 'inline-flex', alignItems: 'center', padding: 2 },
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' },
   modal: { background: 'white', padding: 28, borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' },
   modalTitre: { fontSize: 18, fontWeight: 700, marginBottom: 18 },

@@ -3369,7 +3369,7 @@ export default function EmploiDuTemps() {
 }
 
 const styles = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh'},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:24,width:'100%'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},

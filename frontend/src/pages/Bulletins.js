@@ -676,7 +676,7 @@ const s = {
   subTabsBar: { display: 'flex', gap: 0, marginTop: 0 },
   subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: '#e0e7ff', color: '#3730a3', fontWeight: 700, width: 160, minWidth: 160, textAlign: 'center', border: 'none', cursor: 'pointer', outline: 'none', position: 'relative', zIndex: 1, lineHeight: 1 },
   subTabBtnActif: { background: '#4f46e5', color: 'white', zIndex: 2, boxShadow: '0 4px 6px rgba(79,70,229,0.18)' },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 45, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
   tblWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },

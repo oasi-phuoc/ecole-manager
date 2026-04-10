@@ -9,11 +9,47 @@ const W = 185;
 
 const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
 
+const CLASSES_DETAIL_TABS = [
+  { key: 'eleves',        label: 'Liste des élèves' },
+  { key: 'inventaire',    label: 'Inventaire' },
+  { key: 'devoirs',       label: 'Suivi des devoirs' },
+  { key: 'plan',          label: 'Plan de classe' },
+  { key: 'trombinoscope', label: 'Trombinoscope' },
+];
+
+const PRESENCES_ONGLETS = [
+  { key: 'saisie', label: 'Saisie' },
+  { key: 'apercu', label: 'Aperçu du mois' },
+  { key: 'stats',  label: 'Statistiques' },
+];
+
+const TCF_ONGLETS = [
+  { key: 'pool',        label: 'Pool',         adminOnly: true },
+  { key: 'affectation', label: 'Affectation',  adminOnly: true },
+  { key: 'resultats',   label: 'Résultats',    adminOnly: false },
+  { key: 'plannings',   label: 'Plannings',    adminOnly: false },
+  { key: 'graphique',   label: 'Graphique',    adminOnly: false },
+  { key: 'stats',       label: 'Statistiques', adminOnly: false },
+];
+
+const COMPTA_ONGLETS = [
+  { key: 'factures',  label: 'Factures',      adminOnly: true },
+  { key: 'paiements', label: 'Paiements',     adminOnly: false },
+  { key: 'prix',      label: 'Liste de prix', adminOnly: true },
+];
+
 const EDT_ONGLETS = [
   { key: 'pools',          label: 'Pools',          adminOnly: true },
   { key: 'disponibilites', label: 'Disponibilités', adminOnly: true },
   { key: 'affectations',   label: 'Affectations',   adminOnly: true },
   { key: 'plannings',      label: 'Plannings',      adminOnly: false },
+];
+
+const NOTES_ONGLETS = [
+  { key: 'evaluations',   label: 'Évaluations',      adminOnly: false },
+  { key: 'generale',      label: 'Vue générale',      adminOnly: false },
+  { key: 'comportements', label: 'Comportements',     adminOnly: false },
+  { key: 'bulletin',      label: 'Bulletin de notes', adminOnly: false },
 ];
 
 const PARAMS_ONGLETS = [
@@ -39,10 +75,24 @@ const ALL_MODULES = [
   { label: 'Comptabilité',      path: '/comptabilite',            accentKey: 'comptabilite' },
   { label: 'Documents',         path: '/documents-administratifs',accentKey: 'documents' },
   { label: 'Statistiques',      path: '/statistiques',            accentKey: 'statistiques' },
+  { label: 'Sondage',           path: '/sondage',                 accentKey: 'sondage' },
   { label: 'Enclassement',      path: '/enclassement',            accentKey: 'enclassement' },
+  { label: 'Visite de classes', path: '/visite-classes',          accentKey: 'visite_classes' },
   { label: 'Sorties scolaires', path: '/sorties-scolaires',       accentKey: 'sorties_scolaires' },
   { label: 'Paramètres',        path: '/parametres' },
 ];
+
+const PinIcon = ({ pinned }) => (
+  <svg width={12} height={12} viewBox="0 0 24 24"
+    fill={pinned ? '#6366f1' : 'none'}
+    stroke={pinned ? '#6366f1' : '#cbd5e1'}
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+    style={{ display: 'block', flexShrink: 0 }}>
+    <line x1="12" y1="17" x2="12" y2="22"/>
+    <path d="M5 17H19V15C14 15 14 9 12 9C10 9 10 15 5 15V17Z"/>
+    <line x1="12" y1="9" x2="12" y2="3"/>
+  </svg>
+);
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -51,6 +101,14 @@ export default function Layout() {
   const [accesProfs, setAccesProfs] = useState({});
   const [hoveredPath, setHoveredPath] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [pinnedPaths, setPinnedPaths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_pinned');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return ALL_MODULES.map(m => m.path);
+  });
 
   useEffect(() => {
     const init = async () => {
@@ -67,6 +125,13 @@ export default function Layout() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const close = () => setShowMoreMenu(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [showMoreMenu]);
 
   const deconnexion = async () => {
     try { await axios.post(API + '/auth/logout'); } catch {}
@@ -89,6 +154,18 @@ export default function Layout() {
     return val !== undefined ? val : (ACCES_DEFAUT_PROF[m.accentKey] !== false);
   });
 
+  const togglePin = (path, e) => {
+    e.stopPropagation();
+    setPinnedPaths(prev => {
+      const next = prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path];
+      localStorage.setItem('sidebar_pinned', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const pinnedModules   = modules.filter(m => pinnedPaths.includes(m.path));
+  const unpinnedModules = modules.filter(m => !pinnedPaths.includes(m.path));
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       {/* Sidebar fixe */}
@@ -99,11 +176,10 @@ export default function Layout() {
         </div>
 
         <nav style={s.nav}>
-          {modules.map(m => {
+          {pinnedModules.map(m => {
             const IconComp = ICONS_BY_PATH[m.path];
             const isActive = location.pathname === m.path || location.pathname.startsWith(m.path + '/');
             const isHov = hoveredPath === m.path;
-            const highlight = isActive || isHov;
             return (
               <React.Fragment key={m.path}>
                 <button
@@ -115,8 +191,89 @@ export default function Layout() {
                   <span style={{ ...s.navLabel, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 600 }}>
                     {m.label}
                   </span>
-                  {isActive && <span style={s.activeDot} />}
+                  {isHov && (
+                    <span onClick={e => togglePin(m.path, e)} title="Désépingler" style={s.pinBtn}>
+                      <PinIcon pinned={true} />
+                    </span>
+                  )}
                 </button>
+                {m.path === '/classes' && isActive && (() => {
+                  const params = new URLSearchParams(location.search);
+                  const detailId = params.get('detail');
+                  if (!detailId) return null;
+                  const activeTab = params.get('tab') || 'eleves';
+                  return (
+                    <div style={s.subNav}>
+                      {CLASSES_DETAIL_TABS.map(o => (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: activeTab===o.key ? '#ddd6fe' : 'transparent', color: activeTab===o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab===o.key ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/classes?detail=${detailId}&tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+                {m.path === '/presences' && isActive && (
+                  <div style={s.subNav}>
+                    {PRESENCES_ONGLETS.map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'saisie';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/presences?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {m.path === '/tcf' && isActive && (
+                  <div style={s.subNav}>
+                    {TCF_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'pool';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/tcf?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {m.path === '/comptabilite' && isActive && (
+                  <div style={s.subNav}>
+                    {COMPTA_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'factures';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/comptabilite?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {m.path === '/notes' && isActive && (
+                  <div style={s.subNav}>
+                    {NOTES_ONGLETS.map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'evaluations';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/notes?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {m.path === '/emploi-du-temps' && isActive && (
                   <div style={s.subNav}>
                     {EDT_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
@@ -150,6 +307,43 @@ export default function Layout() {
               </React.Fragment>
             );
           })}
+
+          {/* Bouton "..." pour les items non épinglés */}
+          {unpinnedModules.length > 0 && (
+            <div style={{ position: 'relative', marginTop: 4 }}>
+              <button
+                style={{ ...s.navItem, justifyContent: 'center', gap: 0, background: showMoreMenu ? '#ede9fe' : 'transparent' }}
+                onClick={e => { e.stopPropagation(); setShowMoreMenu(v => !v); }}
+                title="Autres modules">
+                <div style={s.moreBtn}>
+                  <span style={s.moreDot}/><span style={s.moreDot}/><span style={s.moreDot}/>
+                </div>
+              </button>
+              {showMoreMenu && (
+                <div style={s.moreDropdown} onClick={e => e.stopPropagation()}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 12px 4px' }}>
+                    Modules non épinglés
+                  </div>
+                  {unpinnedModules.map(m => {
+                    const IconComp = ICONS_BY_PATH[m.path];
+                    const isActive = location.pathname === m.path || location.pathname.startsWith(m.path + '/');
+                    return (
+                      <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
+                        onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
+                        onClick={() => { navigate(m.path); setShowMoreMenu(false); }}>
+                        {IconComp && <IconComp size={15} active={isActive} />}
+                        <span style={{ ...s.navLabel, flex: 1, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 500 }}>{m.label}</span>
+                        <span onClick={e => { togglePin(m.path, e); }} title="Épingler" style={s.pinBtn}>
+                          <PinIcon pinned={false} />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         <div style={s.footer}>
@@ -188,6 +382,10 @@ const s = {
   logoImg: { height: 36, objectFit: 'contain', cursor: 'pointer' },
   nav: { flex: 1, padding: '6px 8px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 },
   navItem: { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, padding: '8px 10px', border: 'none', borderRadius: 8, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 0.12s', position: 'relative', color: '#6366f1' },
+  pinBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 4, cursor: 'pointer', flexShrink: 0, opacity: 0.7, transition: 'opacity 0.1s' },
+  moreBtn: { display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 99, background: '#ede9fe' },
+  moreDot: { display: 'block', width: 5, height: 5, borderRadius: '50%', background: '#6366f1' },
+  moreDropdown: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(99,102,241,0.15)', border: '1px solid #ede9fe', zIndex: 200, padding: '4px 4px 8px' },
   navLabel: { fontSize: 12, lineHeight: 1.2, flex: 1 },
   activeDot: { width: 5, height: 5, borderRadius: '50%', background: '#6366f1', flexShrink: 0 },
   subNav: { display: 'flex', flexDirection: 'column', gap: 1, paddingLeft: 8, marginTop: 1 },

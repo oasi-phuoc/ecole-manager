@@ -2,7 +2,7 @@ import { peutModifierPresences, isAdmin, getUser } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -29,7 +29,9 @@ export default function Presences() {
   const [presences, setPresences] = useState({});
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [onglet, setOnglet] = useState('saisie');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onglet = searchParams.get('tab') || 'saisie';
+  const setOnglet = (tab) => setSearchParams({ tab });
   const [statistiques, setStatistiques] = useState([]);
   const [valide, setValide] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -48,6 +50,7 @@ export default function Presences() {
   const headers = {};
 
   useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);
+  useEffect(() => { if (onglet === 'apercu') chargerApercuMois(); }, [onglet]);
   useEffect(() => {
     const classeDepuisDashboard = location.state?.classe_id;
     if (classeDepuisDashboard && classes.length > 0) {
@@ -529,13 +532,10 @@ export default function Presences() {
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-          <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-          <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-          {isAdmin() && <>
+        {isAdmin() && (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
             <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
               {importLoading ? 'Import...' : 'Importer LORA'}
               <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
@@ -544,8 +544,8 @@ export default function Presences() {
             <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
               {exportLoading ? 'Export...' : 'Exporter LORA'}
             </button>
-          </>}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Résultat import */}
@@ -562,54 +562,53 @@ export default function Presences() {
         </div>
       )}
 
-      {/* Onglets */}
-      <div style={s.tabsBar}>
-        {[['saisie','Saisie'],['apercu','Aperçu du mois'],['stats','Statistiques']].map(([k,l]) => (
-          <button key={k} style={{...s.tabBtn,...(onglet===k?s.tabBtnActif:{})}} onClick={() => { setOnglet(k); if(k==='apercu') chargerApercuMois(); }}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {/* Sous-onglets période — Statistiques uniquement */}
-      {onglet === 'stats' && (
-        <div style={s.subTabsBar}>
-          {[
-            { id: '1sem', label: '1er semestre' },
-            { id: '2sem', label: '2e semestre' },
-            { id: 'libre', label: 'Date libre' },
-          ].map(p => (
-            <button key={p.id} style={{...s.subTabBtn, ...(statsPeriode===p.id?s.subTabBtnActif:{})}}
-              onClick={() => {
-                setStatsPeriode(p.id);
-                const now = new Date();
-                const y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-                if (p.id === '1sem') { setStatsDateDebut(`${y}-08-01`); setStatsDateFin(`${y+1}-01-31`); }
-                else if (p.id === '2sem') { setStatsDateDebut(`${y+1}-02-01`); setStatsDateFin(`${y+1}-07-31`); }
-                else {
-                  const yy = now.getFullYear(), mm = String(now.getMonth()+1).padStart(2,'0');
-                  const lastDay = new Date(yy, now.getMonth()+1, 0).getDate();
-                  setStatsDateDebut(`${yy}-${mm}-01`); setStatsDateFin(`${yy}-${mm}-${String(lastDay).padStart(2,'0')}`);
-                }
-              }}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Classe select — sous les onglets */}
-      <div style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12}}>
+      {/* Classe select + date en ligne */}
+      <div style={{marginTop:8,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
-        {onglet === 'stats' && statsPeriode === 'libre' && <>
-          <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
-          <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
-          <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
-          <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
-        </>}
+        {onglet === 'saisie' && (
+          <>
+            <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+            <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          </>
+        )}
+        {onglet === 'stats' && (
+          <>
+            <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+              {[
+                { id: '1sem', label: '1er semestre' },
+                { id: '2sem', label: '2e semestre' },
+                { id: 'libre', label: 'Date libre' },
+              ].map(p => (
+                <button key={p.id}
+                  style={{padding:'7px 14px',borderRadius:17,border:'none',background:statsPeriode===p.id?'#6366f1':'transparent',color:statsPeriode===p.id?'white':'#6d28d9',cursor:'pointer',fontWeight:statsPeriode===p.id?700:600,fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                  onClick={() => {
+                    setStatsPeriode(p.id);
+                    const now = new Date();
+                    const y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+                    if (p.id === '1sem') { setStatsDateDebut(`${y}-08-01`); setStatsDateFin(`${y+1}-01-31`); }
+                    else if (p.id === '2sem') { setStatsDateDebut(`${y+1}-02-01`); setStatsDateFin(`${y+1}-07-31`); }
+                    else {
+                      const yy = now.getFullYear(), mm = String(now.getMonth()+1).padStart(2,'0');
+                      const lastDay = new Date(yy, now.getMonth()+1, 0).getDate();
+                      setStatsDateDebut(`${yy}-${mm}-01`); setStatsDateFin(`${yy}-${mm}-${String(lastDay).padStart(2,'0')}`);
+                    }
+                  }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {statsPeriode === 'libre' && <>
+              <span style={{fontSize:13,color:'#334155',fontWeight:700}}>Entre :</span>
+              <input type="date" value={statsDateDebut} onChange={e => setStatsDateDebut(e.target.value)} style={s.inp} />
+              <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
+              <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
+            </>}
+          </>
+        )}
       </div>
 
       {onglet === 'saisie' && (
@@ -657,7 +656,7 @@ export default function Presences() {
                 {valide ? '✅ Présences validées' : 'Valider les présences'}
               </button>
               <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'8px 18px',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
-                💾 Sauvegarder
+                Sauvegarder
               </button>
             </div>
           </div>
@@ -916,13 +915,7 @@ export default function Presences() {
 
 const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
-  tabsBar:{display:'flex',alignItems:'flex-end',gap:0,marginBottom:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
-  tabBtn:{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,boxShadow:'none',width:140,minWidth:140,textAlign:'center'},
-  tabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
-  subTabsBar:{display:'flex',gap:0,marginTop:0},
-  subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:150,minWidth:150,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
-  subTabBtnActif:{background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
   td:{padding:'8px',fontSize:13,color:'#374151'},

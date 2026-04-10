@@ -170,7 +170,7 @@ export default function Statistiques() {
 const styles = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh' },
   loading: { padding: '40px', textAlign: 'center', fontSize: '18px' },
-  header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
+  header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' },
   titre: { fontSize: '24px', fontWeight: '700', flex: 1 },
   btnRefresh: { padding: '10px 20px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },

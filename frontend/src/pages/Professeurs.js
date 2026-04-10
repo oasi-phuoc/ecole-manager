@@ -678,11 +678,11 @@ export default function Professeurs({
               <th style={{...s.th, width:170, minWidth:170, whiteSpace:'nowrap'}}>Nom</th>
               <th style={{...s.th, width:150, minWidth:150, whiteSpace:'nowrap'}}>Prénom</th>
               <th style={s.th}>Email</th>
-              <th style={s.th}>Téléphone</th>
-              <th style={s.th}>Naissance</th>
-              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}>Statut</th>
+              <th style={{...s.th, textAlign:'center'}}>Téléphone</th>
+              <th style={{...s.th, textAlign:'center'}}>Naissance</th>
               <th style={{...s.th, width:76, minWidth:76, maxWidth:76, textAlign:'center'}}></th>
-              {isAdmin() && <th style={{...s.th, width:72, minWidth:72, maxWidth:72, textAlign:'center'}}>Actions</th>}
+              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}>Statut</th>
+              {isAdmin() && <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -693,22 +693,9 @@ export default function Professeurs({
                 <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{nomSansSuffixe(p.nom)}</b></td>
                 <td style={{...s.td,width:150,minWidth:150,whiteSpace:'nowrap'}}>{p.prenom}</td>
                 <td style={{...s.td,color:'#6366f1'}}>{p.email}</td>
-                <td style={s.td}>{p.telephone||'—'}</td>
-                <td style={s.td}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
-                <td style={{...s.td,width:48,minWidth:48,maxWidth:48,textAlign:'center',padding:'8px 4px'}}>
-                  <button title={p.actif!==false?'Actif':'Inactif'}
-                    style={{padding:5,background:p.actif!==false?'#dcfce7':'#fee2e2',color:p.actif!==false?'#16a34a':'#dc2626',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',opacity:isAdmin()?1:0.6}}
-                    onClick={() => isAdmin() && toggleStatut(p)}>
-                    <svg width={16} height={16} viewBox="0 0 24 24">
-                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
-                      {p.actif!==false
-                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
-                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
-                      }
-                    </svg>
-                  </button>
-                </td>
-                <td style={{...s.td,width:76,minWidth:76,maxWidth:76,padding:'8px 4px'}}>
+                <td style={{...s.td,textAlign:'center'}}>{p.telephone||'—'}</td>
+                <td style={{...s.td,textAlign:'center'}}>{p.date_naissance?new Date(p.date_naissance).toLocaleDateString('fr-CH'):'—'}</td>
+                <td style={{...s.td,width:76,minWidth:76,maxWidth:76,padding:'10px 4px'}}>
                   <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center',margin:'0 auto'}}>
                     <button title="Documents" style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',opacity:isAdmin()?1:0.35}}
                       disabled={!isAdmin()} onClick={() => isAdmin() && ouvrirDocuments(p)}>
@@ -728,10 +715,27 @@ export default function Professeurs({
                     )}
                   </div>
                 </td>
+                <td style={{...s.td,width:48,minWidth:48,maxWidth:48,padding:'10px 4px',display:'table-cell',verticalAlign:'middle',textAlign:'center'}}>
+                  <button title={p.actif!==false?'Actif':'Inactif'}
+                    style={{padding:5,background:p.actif!==false?'#dcfce7':'#fee2e2',color:p.actif!==false?'#16a34a':'#dc2626',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'inline-flex',alignItems:'center',justifyContent:'center',opacity:isAdmin()?1:0.6}}
+                    onClick={() => isAdmin() && toggleStatut(p)}>
+                    <svg width={16} height={16} viewBox="0 0 24 24">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      {p.actif!==false
+                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                      }
+                    </svg>
+                  </button>
+                </td>
                 {isAdmin() && (
-                  <td style={{...s.td,width:72,minWidth:72,maxWidth:72,textAlign:'center',whiteSpace:'nowrap',padding:'8px 4px'}}>
-                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">✏️</button>
-                    <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">🗑️</button>
+                  <td style={{...s.td,width:86,minWidth:86,maxWidth:86,textAlign:'center',whiteSpace:'nowrap',padding:'10px 10px'}}>
+                    <button style={s.btnEdit} onClick={() => handleEdit(p)} title="Modifier">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button style={s.btnDel} onClick={() => handleDelete(p.id)} title="Supprimer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </td>
                 )}
               </tr>
@@ -788,6 +792,6 @@ const s = {
   badgePrimary:{background:'#e0e7ff',color:'#3730a3',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   badgeInactive:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
 };

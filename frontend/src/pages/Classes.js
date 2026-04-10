@@ -2,7 +2,7 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -32,6 +32,10 @@ export default function Classes() {
   const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
   const [loraImportLoading, setLoraImportLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [planToast, setPlanToast] = useState(false);
+  const [rechercheInventaire, setRechercheInventaire] = useState('');
+  const [rechercheDevoirs, setRechercheDevoirs] = useState('');
   const headers = {};
   const currentUser = getSessionUser() || null;
 
@@ -133,7 +137,7 @@ export default function Classes() {
 
   const ouvrirDetail = async (c, tab = 'eleves') => {
     setDetailClasse(c);
-    setClasseVueTab(tab);
+    setSearchParams({ detail: c.id, tab });
     setEleveDetail(null);
     setObservations([]);
     setInventaireMsg('');
@@ -190,7 +194,7 @@ export default function Classes() {
   const [eleveSanctions, setEleveSanctions] = useState([]);
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
   const [pendingCell, setPendingCell] = useState(null);
-  const [classeVueTab, setClasseVueTab] = useState('eleves');
+  const classeVueTab = searchParams.get('tab') || 'eleves';
   const [devoirs, setDevoirs] = useState([]);
   const [devoirActif, setDevoirActif] = useState(null);
   const [suiviDevoirs, setSuiviDevoirs] = useState([]);
@@ -296,7 +300,8 @@ export default function Classes() {
   const sauverPlanClasse = async () => {
     try {
       await axios.post(API+'/plan-classe/'+detailClasse.id, {positions: planPositions}, {headers});
-      alert('Plan sauvegardé !');
+      setPlanToast(true);
+      setTimeout(() => setPlanToast(false), 3000);
     } catch(err) { alert('Erreur sauvegarde'); }
   };
 
@@ -322,25 +327,31 @@ export default function Classes() {
       cells += '</tr><tr>';
     }
 
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head>
+    const htmlContent = `<!DOCTYPE html><html><head>
       <title>Plan de classe - ${detailClasse.nom}</title>
       <style>
-        body{font-family:'Century Gothic',sans-serif;padding:24px;background:#f8fafc}
-        h1{font-size:20px;font-weight:800;margin-bottom:4px}
-        .sub{font-size:12px;color:#64748b;margin-bottom:20px}
-        table{border-collapse:collapse;width:100%;background:white;border-radius:8px}
-        .no-print{margin-bottom:16px}
-        @media print{.no-print{display:none}body{padding:12px}@page{margin:1cm}}
+        @page{size:A4 portrait;margin:1cm}
+        body{font-family:'Century Gothic',sans-serif;padding:12px;background:white;width:100%;box-sizing:border-box}
+        h1{font-size:16px;font-weight:800;margin-bottom:2px}
+        .sub{font-size:11px;color:#64748b;margin-bottom:12px}
+        table{border-collapse:collapse;width:100%;background:white;table-layout:fixed}
+        td{border:1px solid #e2e8f0;padding:4px;text-align:center;vertical-align:middle}
       </style></head><body>
-      <div class="no-print">
-        <button onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
-      </div>
-      <h1>🏫 Plan de classe — ${detailClasse.nom}</h1>
+      <h1>Plan de classe — ${detailClasse.nom}</h1>
       <div class="sub">${detailClasse.annee_scolaire||''} · Titulaire : ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</div>
       <table><tbody><tr>${cells}</tr></tbody></table>
-    </body></html>`);
-    win.document.close();
+    </body></html>`;
+    const blob = new Blob([htmlContent], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.src = url;
+    iframe.onload = () => {
+      iframe.contentWindow.print();
+      URL.revokeObjectURL(url);
+      setTimeout(() => document.body.removeChild(iframe), 2000);
+    };
   };
 
   const dropOnCell = (row, col) => {
@@ -478,29 +489,31 @@ export default function Classes() {
       </div>
     `).join('');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
+    const htmlContent = `<!DOCTYPE html><html><head>
         <title>Trombinoscope - ${detailClasse.nom}</title>
         <style>
-          body { font-family: 'Century Gothic', sans-serif; padding: 18px; color: #1e293b; background: white; }
-          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-          @media print {
-            body { padding: 10px; background: white; }
-            .no-print { display: none; }
-            @page { margin: 1cm; }
-          }
+          @page { size: A4 portrait; margin: 1cm; }
+          body { font-family: 'Century Gothic', sans-serif; padding: 10px; color: #1e293b; background: white; width: 100%; box-sizing: border-box; }
+          h1 { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
         </style>
       </head>
       <body>
-        <button class="no-print" onclick="window.print()" style="margin-bottom:10px;padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
+        <h1>Trombinoscope — ${detailClasse.nom}</h1>
         <div class="grid">${cards}</div>
       </body>
-      </html>
-    `);
-    win.document.close();
+      </html>`;
+    const blob = new Blob([htmlContent], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.src = url;
+    iframe.onload = () => {
+      iframe.contentWindow.print();
+      URL.revokeObjectURL(url);
+      setTimeout(() => document.body.removeChild(iframe), 2000);
+    };
   };
 
   const tauxPresence = (eleve) => {
@@ -706,6 +719,16 @@ export default function Classes() {
       chargerDevoirs(detailClasse.id);
     }
   }, [classeVueTab, detailClasse?.id, brancheInventaireActive?.id]);
+
+  useEffect(() => {
+    const detailId = searchParams.get('detail');
+    if (!detailId && detailClasse) {
+      setDetailClasse(null);
+    } else if (detailId && !detailClasse && classes.length > 0) {
+      const c = classes.find(x => String(x.id) === String(detailId));
+      if (c) ouvrirDetail(c, searchParams.get('tab') || 'eleves');
+    }
+  }, [searchParams.get('detail'), classes.length]);
 
   const chargerDevoirs = async (classeId) => {
     setDevoirsLoading(true);
@@ -951,14 +974,18 @@ export default function Classes() {
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
                     {peutModifier && <>
-                      <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Modifier">✏️</button>
+                      <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
                       <button onClick={async () => {
                         if (window.confirm('Supprimer cette observation ?')) {
                           await axios.delete(API+'/observations/'+obs.id, {headers});
                           const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
                           setObservations(r.data);
                         }
-                      }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Supprimer">🗑️</button>
+                      }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
                     </>}
                   </div>
                 </div>
@@ -1040,8 +1067,12 @@ export default function Classes() {
                     </div>
                   </div>
                   <div style={{display:'flex',gap:6}}>
-                    <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Télécharger">⬇️</button>
-                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Supprimer">🗑️</button>}
+                    <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Télécharger">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>}
                   </div>
                 </div>
               ))}
@@ -1111,7 +1142,9 @@ export default function Classes() {
                                     <span style={{fontSize:16}}>✅</span>
                                     <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}</span>
                                     <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
-                                    {isAdmin() && <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0}} title="Retirer">🗑️</button>}
+                                    {isAdmin() && <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',padding:0,display:'inline-flex',alignItems:'center'}} title="Retirer">
+                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                    </button>}
                                   </div>
                                 ) : (
                                   isAdmin() ? (
@@ -1142,29 +1175,27 @@ export default function Classes() {
           </div>
         </div>
       )}
+      {planToast && (
+        <div style={{position:'fixed',bottom:24,right:24,background:'#6366f1',color:'white',padding:'12px 20px',borderRadius:10,fontWeight:700,fontSize:14,boxShadow:'0 4px 20px rgba(99,102,241,0.4)',zIndex:3000}}>
+          ✓ Plan sauvegardé !
+        </div>
+      )}
       <div style={s.header}>
-        <button style={s.btnBack} onClick={() => setDetailClasse(null)}>← Retour classes</button>
+        <button style={s.btnBack} onClick={() => { setDetailClasse(null); setSearchParams({}); }}>← Retour classes</button>
         <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
         {classeVueTab === 'plan' && (
           <div style={{display:'flex',gap:8,marginLeft:'auto'}}>
-            <button style={{...s.btnAdd,background:'#10b981'}} onClick={sauverPlanClasse}>Sauvegarder</button>
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer PDF</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer</button>
             <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>
           </div>
         )}
         {classeVueTab === 'trombinoscope' && (
           <button style={{...s.btnAdd,background:'#6366f1',marginLeft:'auto'}} onClick={imprimerTrombinoscope}>Imprimer</button>
         )}
-      </div>
-
-      <div style={{display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',marginBottom:0}}>
-        {[['eleves','Liste des élèves'],['inventaire','Inventaire'],['devoirs','Suivi des devoirs'],['plan','Plan de classe'],['trombinoscope','Trombinoscope']].map(([k,l]) => (
-          <button key={k}
-            style={{padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:classeVueTab===k?'#6366f1':'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:classeVueTab===k?'white':'#5b21b6',outline:'none',lineHeight:'1',width:160,minWidth:160,textAlign:'center',marginBottom:classeVueTab===k?-1:0,zIndex:classeVueTab===k?2:1,position:'relative'}}
-            onClick={() => setClasseVueTab(k)}>
-            {l}
-          </button>
-        ))}
+        {classeVueTab === 'devoirs' && devoirSousOnglet === 'devoirs' && (
+          <button style={{...s.btnAdd,marginLeft:'auto'}} onClick={() => setShowDevoirForm(true)}>+ Ajouter</button>
+        )}
       </div>
 
       {classeVueTab === 'eleves' ? (
@@ -1173,7 +1204,7 @@ export default function Classes() {
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
-                {['Photo','Nom','Prénom','Contact','Documents','Sanctions','Observations'].map(h => <th key={h} style={s.th}>{h}</th>)}
+                {['Photo','Nom','Prénom','Contact','','',''].map((h,i) => <th key={i} style={s.th}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -1215,9 +1246,21 @@ export default function Classes() {
                   <td style={{...s.td,fontWeight:700}}>{el.nom || '—'}</td>
                   <td style={s.td}>{el.prenom || '—'}</td>
                   <td style={s.td}>{el.nom_parent || el.personne_contact || '—'}</td>
-                  <td style={s.td}><button style={{...s.btnDetail,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">📁</button></td>
-                  <td style={s.td}><button style={{...s.btnDetail,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">⚠️</button></td>
-                  <td style={s.td}><button style={s.btnDetail} onClick={() => ouvrirEleveDetail(el)}>👁 Détail</button></td>
+                  <td style={s.td}>
+                    <button style={{...s.iconBtn,background:'#dbeafe',color:'#1e40af'}} onClick={() => ouvrirDocumentsEleve(el)} title="Documents">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/></svg>
+                    </button>
+                  </td>
+                  <td style={s.td}>
+                    <button style={{...s.iconBtn,background:'#fff7ed',color:'#c2410c'}} onClick={() => ouvrirSanctions(el)} title="Sanctions">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/></svg>
+                    </button>
+                  </td>
+                  <td style={s.td}>
+                    <button style={{...s.iconBtn,background:'#e0e7ff',color:'#3730a3'}} onClick={() => ouvrirEleveDetail(el)} title="Détail">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1226,50 +1269,34 @@ export default function Classes() {
         </>
       ) : classeVueTab === 'devoirs' ? (
         <div>
-          {/* Sous-onglets + filtre branches */}
-          <div style={{display:'flex',alignItems:'center',gap:0,flexWrap:'wrap'}}>
-            <div style={s.subTabsBar}>
-              {[['devoirs','Devoirs'],['stats','Stats']].map(([id,label]) => (
-                <button key={id} type="button"
-                  onClick={() => setDevoirSousOnglet(id)}
-                  style={{...s.subTabBtn,...(devoirSousOnglet===id?s.subTabBtnActif:{}),width:'auto',minWidth:90}}>
-                  {label}
-                </button>
-              ))}
-            </div>
+          {/* Search + filtre branches + sous-onglets */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,flexWrap:'wrap'}}>
+            <input style={s.tabSearch} placeholder="Rechercher un devoir..." value={rechercheDevoirs} onChange={e => setRechercheDevoirs(e.target.value)} />
             {branchesInventaire.length > 0 && (
-              <div style={{display:'flex',gap:0,marginLeft:15}}>
-                <button type="button"
-                  onClick={() => setDevoirBrancheFiltre(null)}
-                  style={{...s.subTabBtn,...(devoirBrancheFiltre===null?s.subTabBtnActif:{}),width:'auto',minWidth:60}}>
-                  Tous
-                </button>
+              <div style={s.toggleGroup}>
+                <button type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre===null?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(null)}>Tous</button>
                 {branchesInventaire.map(b => (
-                  <button key={b.id} type="button"
-                    onClick={() => setDevoirBrancheFiltre(b)}
-                    style={{...s.subTabBtn,...(devoirBrancheFiltre?.id===b.id?s.subTabBtnActif:{}),width:'auto',minWidth:60}}>
+                  <button key={b.id} type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre?.id===b.id?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(b)}>
                     {b.code || b.nom}
                   </button>
                 ))}
               </div>
             )}
+            <div style={s.toggleGroup}>
+              {[['devoirs','Devoirs'],['stats','Stats']].map(([id,label]) => (
+                <button key={id} type="button" style={{...s.toggleBtn,...(devoirSousOnglet===id?s.toggleBtnActif:{})}} onClick={() => setDevoirSousOnglet(id)}>{label}</button>
+              ))}
+            </div>
           </div>
 
           {(() => {
-            const devoirsFiltres = devoirBrancheFiltre
-              ? devoirs.filter(d => d.matiere === devoirBrancheFiltre.code || d.matiere === devoirBrancheFiltre.nom)
-              : devoirs;
+            const devoirsFiltres = devoirs
+              .filter(d => !devoirBrancheFiltre || d.matiere === devoirBrancheFiltre.code || d.matiere === devoirBrancheFiltre.nom)
+              .filter(d => !rechercheDevoirs || (d.titre||'').toLowerCase().includes(rechercheDevoirs.toLowerCase()) || (d.matiere||'').toLowerCase().includes(rechercheDevoirs.toLowerCase()));
             return <>
 
           {devoirSousOnglet === 'devoirs' && (<>
-          <div style={{marginTop:15,marginBottom:8}}>
-            <button
-              style={s.btnAdd}
-              onClick={() => setShowDevoirForm(true)}>
-              + Nouveau
-            </button>
-          </div>
-          <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap',marginTop:15}}>
             <div style={{flex:'0 0 220px',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
               {devoirsLoading ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
@@ -1285,12 +1312,12 @@ export default function Classes() {
                     {d.date_remise && <div style={{fontSize:11,color:'#94a3b8'}}>Remise: {new Date(d.date_remise).toLocaleDateString('fr-CH')}</div>}
                   </div>
                   <div style={{display:'flex',gap:4,alignItems:'center',flexShrink:0}}>
-                    <button
-                      style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#6366f1',padding:'0 2px',lineHeight:1}}
-                      onClick={e => { e.stopPropagation(); setDevoirEditForm({ titre:d.titre, matiere:d.matiere||'', date_devoir:d.date_devoir?.substring(0,10)||'', date_remise:d.date_remise?.substring(0,10)||'' }); setDevoirEditId(d.id); }}>✏️</button>
-                    <button
-                      style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#ef4444',padding:'0 2px',lineHeight:1}}
-                      onClick={e => { e.stopPropagation(); supprimerDevoir(d.id); }}>🗑️</button>
+                    <button style={s.btnEdit} onClick={e => { e.stopPropagation(); setDevoirEditForm({ titre:d.titre, matiere:d.matiere||'', date_devoir:d.date_devoir?.substring(0,10)||'', date_remise:d.date_remise?.substring(0,10)||'' }); setDevoirEditId(d.id); }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button style={s.btnDel} onClick={e => { e.stopPropagation(); supprimerDevoir(d.id); }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1527,14 +1554,15 @@ export default function Classes() {
           {branchesInventaire.length === 0 ? (
             <div style={s.empty}>Aucune branche pour ce niveau</div>
           ) : (
-            <div style={{display:'flex',gap:0,flexWrap:'wrap',marginBottom:8}}>
-              {branchesInventaire.map(b => (
-                <button key={b.id}
-                  onClick={() => setBrancheInventaireActive(b)}
-                  style={{...s.subTabBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.subTabBtnActif:{}),width:'auto',minWidth:80}}>
-                  {b.code || b.nom}
-                </button>
-              ))}
+            <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,marginBottom:8,flexWrap:'wrap'}}>
+              <input style={s.tabSearch} placeholder="Rechercher un document..." value={rechercheInventaire} onChange={e => setRechercheInventaire(e.target.value)} />
+              <div style={s.toggleGroup}>
+                {branchesInventaire.map(b => (
+                  <button key={b.id} style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}} onClick={() => setBrancheInventaireActive(b)}>
+                    {b.code || b.nom}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
@@ -1570,11 +1598,11 @@ export default function Classes() {
                   <tbody>
                     {inventaireLoading ? (
                       <tr><td colSpan="7" style={s.empty}>Chargement...</td></tr>
-                    ) : inventaireRows.length===0 ? (
+                    ) : inventaireRows.filter(l => !rechercheInventaire || (l.nom_document||'').toLowerCase().includes(rechercheInventaire.toLowerCase())).length===0 ? (
                       <tr><td colSpan="7" style={s.empty}>Aucune ligne d'inventaire</td></tr>
                     ) : (() => {
                       let compteurNumero = 0;
-                      return inventaireRows.map(l => {
+                      return inventaireRows.filter(l => !rechercheInventaire || (l.nom_document||'').toLowerCase().includes(rechercheInventaire.toLowerCase())).map(l => {
                         const sansNumero = !!l.sans_numero;
                         const numeroAffiche = sansNumero ? '—' : String(++compteurNumero);
                         const isEditing = inventaireEditId === l.id;
@@ -1610,8 +1638,12 @@ export default function Classes() {
                                   <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
                                 </td>
                                 <td style={{...s.td, textAlign:'right'}}>
-                                  <button style={s.btnEdit} onClick={() => sauvegarderEditionInventaire(l.id)}>✅</button>
-                                  <button style={s.btnDel} onClick={() => setInventaireEditId(null)}>✕</button>
+                                  <button style={s.btnEdit} onClick={() => sauvegarderEditionInventaire(l.id)} title="Enregistrer">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  </button>
+                                  <button style={s.btnDel} onClick={() => setInventaireEditId(null)} title="Annuler">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                  </button>
                                 </td>
                               </>
                             ) : (
@@ -1624,21 +1656,12 @@ export default function Classes() {
                                   <span style={s.visaBadge}>{getVisaInitiales(l)}</span>
                                 </td>
                                 <td style={{...s.td, textAlign:'right'}}>
-                                  <button
-                                    style={s.btnEdit}
-                                    onClick={() => {
-                                      setInventaireEditId(l.id);
-                                      setInventaireEditForm({
-                                        date_document: l.date_document ? l.date_document.substring(0,10) : '',
-                                        nom_document: l.nom_document || '',
-                                        sans_numero: !!l.sans_numero,
-                                        remarques: l.remarques || '',
-                                      });
-                                    }}
-                                  >
-                                    ✏️
+                                  <button style={s.btnEdit} onClick={() => { setInventaireEditId(l.id); setInventaireEditForm({ date_document: l.date_document ? l.date_document.substring(0,10) : '', nom_document: l.nom_document || '', sans_numero: !!l.sans_numero, remarques: l.remarques || '' }); }} title="Modifier">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                   </button>
-                                  <button style={s.btnDel} onClick={() => supprimerLigneInventaire(l.id)}>🗑️</button>
+                                  <button style={s.btnDel} onClick={() => supprimerLigneInventaire(l.id)} title="Supprimer">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                  </button>
                                 </td>
                               </>
                             )}
@@ -1743,7 +1766,11 @@ export default function Classes() {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
-                <td style={{...s.td, width:1, whiteSpace:'nowrap', textAlign:'center'}}><button style={s.btnDetail} onClick={() => ouvrirDetail(c)}>👁 Détail</button></td>
+                <td style={{...s.td, width:1, whiteSpace:'nowrap', textAlign:'center'}}>
+                  <button style={{...s.iconBtn,background:'#e0e7ff',color:'#3730a3'}} onClick={() => ouvrirDetail(c)} title="Voir le détail">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                  </button>
+                </td>
                 <td style={{...s.td, width:1, whiteSpace:'nowrap'}}>
                   <div style={{fontWeight:700,color:'#1e293b'}}>{c.nom}</div>
                 </td>
@@ -1774,21 +1801,43 @@ export default function Classes() {
                 </td>
                 <td style={{...s.td, textAlign:'center', whiteSpace:'nowrap'}}>
                   <div style={{display:'flex', gap:4, justifyContent:'center'}}>
-                    <button style={{background:'#fef9c3', border:'1px solid #fde68a', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">📋</button>
-                    <button style={{background:'#fce7f3', border:'1px solid #f9a8d4', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">📝</button>
-                    <button style={{background:'#e0e7ff', border:'1px solid #c7d2fe', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">📷</button>
-                    <button style={{background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">🪑</button>
-                    <button style={{background:'#fef3c7', border:'1px solid #fcd34d', borderRadius:7, cursor:'pointer', fontSize:18, padding:'4px 8px', lineHeight:1}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">🧾</button>
+                    <button style={{...s.iconBtn,background:'#fef9c3',color:'#a16207'}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9zM7 4a2 2 0 00-2 2v13a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H7zm2 5a1 1 0 000 2h6a1 1 0 100-2H9zm0 4a1 1 0 000 2h4a1 1 0 100-2H9z"/></svg>
+                    </button>
+                    <button style={{...s.iconBtn,background:'#fce7f3',color:'#be185d'}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v1.5H8V13zm0 3h6v1.5H8V16z"/></svg>
+                    </button>
+                    <button style={{...s.iconBtn,background:'#e0e7ff',color:'#4338ca'}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 12a4 4 0 100-8 4 4 0 000 8zm-8 8a8 8 0 1116 0H4z"/></svg>
+                    </button>
+                    <button style={{...s.iconBtn,background:'#f0fdf4',color:'#15803d'}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z"/></svg>
+                    </button>
+                    <button style={{...s.iconBtn,background:'#fef3c7',color:'#b45309'}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v1.5H8V13zm0 3h6v1.5H8V16z"/></svg>
+                    </button>
                   </div>
                 </td>
-                <td style={{...s.td, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>
-                  <button style={{...(c.actif!==false?s.badgeActive:s.badgeInactif),cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}} onClick={() => toggleActif(c)}>
-                    {c.actif!==false?'✅ Active':'❌ Inactif'}
+                <td style={{...s.td, width:48, minWidth:48, maxWidth:48, textAlign:'center', padding:'10px 4px'}}>
+                  <button title={c.actif!==false?'Active':'Inactif'}
+                    style={{padding:5,background:c.actif!==false?'#dcfce7':'#fee2e2',color:c.actif!==false?'#16a34a':'#dc2626',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',opacity:isAdmin()?1:0.6}}
+                    onClick={() => toggleActif(c)}>
+                    <svg width={16} height={16} viewBox="0 0 24 24">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      {c.actif!==false
+                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                      }
+                    </svg>
                   </button>
                 </td>
                 {isAdmin() && <td style={{...s.td, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>
-                  <button style={s.btnEdit} onClick={() => handleEdit(c)}>✏️</button>
-                  <button style={s.btnDel} onClick={() => handleDelete(c.id)}>🗑️</button>
+                  <button style={s.btnEdit} onClick={() => handleEdit(c)} title="Modifier">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button style={s.btnDel} onClick={() => handleDelete(c.id)} title="Supprimer">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
                 </td>}
               </tr>
               );
@@ -1864,7 +1913,8 @@ const s = {
   badge:{display:'inline-flex',alignItems:'center',padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   badgeInactif:{background:'#f1f5f9',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
-  btnDetail:{padding:'5px 10px',background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:4},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:14,marginRight:4,opacity:0.6},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:14,opacity:0.6},
+  btnDetail:{padding:'5px 10px',background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:4,display:'inline-flex',alignItems:'center',gap:4},
+  iconBtn:{padding:6,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center'},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:4,opacity:0.65,display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.65,display:'inline-flex',alignItems:'center',padding:2},
 };

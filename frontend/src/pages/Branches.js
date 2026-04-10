@@ -144,7 +144,7 @@ export default function Branches() {
                     <button key={t} type="button"
                       onClick={() => setForm({...form,type_branche:t})}
                       style={{flex:1,padding:'10px',borderRadius:8,border:'2px solid '+(form.type_branche===t?'#6366f1':'#e2e8f0'),background:form.type_branche===t?'#e0e7ff':'#f8fafc',color:form.type_branche===t?'#3730a3':'#64748b',cursor:'pointer',fontWeight:700,fontSize:13,textTransform:'capitalize',transition:'all 0.15s'}}>
-                      {t==='principale'?'⭐ Principale':'📎 Secondaire'}
+                      {t==='principale'?'Principale':'Secondaire'}
                     </button>
                   ))}
                 </div>
@@ -163,9 +163,12 @@ export default function Branches() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              {['Branche','Abrév.','Niveau','Périodes/sem.','Coefficient','Actions'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
+              <th style={s.th}>Branche</th>
+              <th style={s.th}>Abrév.</th>
+              <th style={s.th}>Niveau</th>
+              <th style={s.th}>Périodes/sem.</th>
+              <th style={s.th}>Coefficient</th>
+              <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -179,10 +182,14 @@ export default function Branches() {
                   <td style={s.td}>{b.niveau || '—'}</td>
                   <td style={s.td}>{b.periodes_semaine || '—'}</td>
                   <td style={s.td}>{b.coefficient || 1}</td>
-                  <td style={s.td}>
+                  <td style={{...s.td, width:86, minWidth:86, maxWidth:86, padding:'10px 10px', textAlign:'center'}}>
                     {isAdmin() && <>
-                      <button style={s.btnEdit} onClick={() => handleEdit(b)} title="Modifier">✏️</button>
-                      <button style={s.btnDel} onClick={() => handleDelete(b.id)} title="Supprimer">🗑️</button>
+                      <button style={s.btnEdit} onClick={() => handleEdit(b)} title="Modifier">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button style={s.btnDel} onClick={() => handleDelete(b.id)} title="Supprimer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
                     </>}
                   </td>
                 </tr>
@@ -235,6 +242,6 @@ const s = {
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'12px 16px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
 };

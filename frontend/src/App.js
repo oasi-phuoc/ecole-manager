@@ -22,6 +22,8 @@ import DocumentsAdministratifs from './pages/DocumentsAdministratifs';
 import ClasseInventaire from './pages/ClasseInventaire';
 import Enclassement from './pages/Enclassement';
 import SortieScolaire from './pages/SortieScolaire';
+import Sondage from './pages/Sondage';
+import VisiteClasses from './pages/VisiteClasses';
 
 const PrivateRoute = ({ children }) => {
   const [checking, setChecking] = useState(true);
@@ -71,6 +73,8 @@ function App() {
           <Route path="/classes/:classeId/inventaire" element={<ClasseInventaire />} />
           <Route path="/statistiques" element={<Statistiques />} />
           <Route path="/enclassement" element={<Enclassement />} />
+          <Route path="/visite-classes" element={<VisiteClasses />} />
+          <Route path="/sondage" element={<Sondage />} />
           <Route path="/sorties-scolaires" element={<SortieScolaire />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" />} />

@@ -2,7 +2,7 @@
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -109,6 +109,8 @@ export default function Notes() {
   const [criteresModifies, setCriteresModifies] = useState(false);
   const [criteresValides, setCriteresValides] = useState(false);
   const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [rechercheClasses, setRechercheClasses] = useState('');
   const printRef = useRef();
   const navigate = useNavigate();
   const headers = {};
@@ -395,6 +397,7 @@ export default function Notes() {
                     setCriteresModifies(false);
                   }
                 }
+                setSearchParams({ tab: k });
                 setVueClasseAction(k);
                 if (k === 'comportements') setBulletinOnglet('criteres');
                 else if (k === 'bulletin') { setBulletinOnglet('notes'); setBulletinMode('tous'); setEleveSelectionne(''); }
@@ -441,19 +444,21 @@ export default function Notes() {
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
             <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${parseFloat(evaluationOuverte.points_max)}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
-          <div style={s.moyenneBox}>
-            <div style={s.moyenneLabel}>Moyenne classe</div>
-            <div style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</div>
+          <div style={{ ...s.moyenneBox, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={s.moyenneLabel}>Moy. classe</span>
+            <span style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
           </div>
-          {toast.message && (
-            <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : toast.type === 'info' ? { background: '#e0e7ff', color: '#3730a3' } : { background: '#d1fae5', color: '#065f46' }) }}>{toast.message}</span>
-          )}
           {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
             <button style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
               disabled={!ok} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</button>
           ); })()}
         </div>
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
+        {toast.message && (
+          <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#6366f1', color: 'white', padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}>
+            {toast.message}
+          </div>
+        )}
         <div style={s.tableContainer}>
           <table style={s.tbl}>
             <thead>
@@ -1113,13 +1118,13 @@ export default function Notes() {
         <div style={{...s.header, marginBottom: 8}} className="no-print">
           <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
+          {toast.message && (
+            <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#6366f1', color: 'white', padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}>
+              {toast.message}
+            </div>
+          )}
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {toast.message && (
-                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : toast.type === 'info' ? { background: '#e0e7ff', color: '#3730a3' } : { background: '#d1fae5', color: '#065f46' }) }}>
-                  {toast.message}
-                </span>
-              )}
               <button
                 onClick={validerCriteres}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
@@ -1131,7 +1136,7 @@ export default function Notes() {
               <button
                 onClick={sauvegarderTousCriteres}
                 style={{ padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#6366f1', color: 'white', transition: 'all 0.2s' }}>
-                💾 Sauvegarder
+                Sauvegarder
               </button>
             </div>
           )}
@@ -1736,32 +1741,44 @@ export default function Notes() {
   const classesVisibles = isAdmin()
     ? classes.filter(c => c.actif !== false)
     : classes.filter(c => c.actif !== false && String(c.prof_principal_id) === String(currentUser.id));
-  const niveauxDispo = ['tous', ...([...new Set(classesVisibles.map(c => c.niveau).filter(Boolean))].sort())];
-  const classesFiltrees = evalNiveauFiltre === 'tous'
-    ? classesVisibles
-    : classesVisibles.filter(c => c.niveau === evalNiveauFiltre);
+  const classesFiltrees = (() => {
+    let filtered = evalNiveauFiltre === 'tous' ? classesVisibles : classesVisibles.filter(c => c.niveau === evalNiveauFiltre);
+    if (rechercheClasses) {
+      const q = rechercheClasses.toLowerCase();
+      filtered = filtered.filter(c => (c.nom || '').toLowerCase().includes(q));
+    }
+    return filtered;
+  })();
+
+  const niveauxPills = ['tous', ...([...new Set(classesVisibles.map(c => c.niveau).filter(Boolean))].sort().reduce((acc, n) => {
+    if (n === 'CSC') return [n, ...acc];
+    return [...acc, n];
+  }, []))];
 
   return (
       <div style={s.page}>
         <div style={s.header}>
-          <h2 style={s.titre}>Saisie des notes</h2>
+          <h2 style={s.titre}>Notes</h2>
         </div>
-        {/* Onglets niveaux (remplacent les onglets détail) */}
-        <div style={s.tabsBar}>
-          {(['tous', ...([...new Set(classesVisibles.map(c => c.niveau).filter(Boolean))].sort().reduce((acc, n) => {
-            // CSC avant CFR
-            if (n === 'CSC') return [n, ...acc];
-            return [...acc, n];
-          }, []))]).map(n => (
-            <button key={n} onClick={() => setEvalNiveauFiltre(n)}
-              style={{ ...s.tabBtn, ...(evalNiveauFiltre === n ? s.tabBtnActif : {}) }}>
-              {n === 'tous' ? 'Toutes' : n}
-            </button>
-          ))}
+        {/* Barre de recherche + toggles niveaux */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <input type="text" placeholder="Rechercher une classe..." value={rechercheClasses}
+            onChange={e => setRechercheClasses(e.target.value)}
+            style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, width: 220, outline: 'none' }} />
+          <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            {niveauxPills.map(n => (
+              <button key={n} onClick={() => setEvalNiveauFiltre(n)}
+                style={evalNiveauFiltre === n
+                  ? { padding: '6px 14px', borderRadius: 99, border: 'none', background: '#6366f1', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }
+                  : { padding: '6px 14px', borderRadius: 99, border: 'none', background: 'transparent', color: '#4c1d95', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                {n === 'tous' ? 'Toutes' : n}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tableau des classes */}
-        <div style={{ ...s.tblWrap, marginTop: 15 }}>
+        <div style={s.tblWrap}>
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
               <tr style={s.theadRow}>
@@ -1776,7 +1793,6 @@ export default function Notes() {
               {classesFiltrees.length === 0 ? (
                 <tr><td colSpan={5} style={s.vide}>Aucune classe disponible.</td></tr>
               ) : classesFiltrees.map((cl, i) => {
-                // Badges notes (même logique que Classes.js)
                 const niveauClasse = String(cl?.niveau || '').toUpperCase();
                 const branchesNiveau = branches.filter(b => String(b.niveau || '').toUpperCase() === niveauClasse && b.suivi_notes !== false);
                 const badgesNotes = branchesNiveau.map(b => ({
@@ -1784,15 +1800,16 @@ export default function Notes() {
                   label: (b.designation_courte || b.nom || '').toString().trim(),
                   nb: suiviNotesClasse[`${cl.id}-${b.id}`] || 0
                 }));
-                // Responsables (prof → matieres) depuis affectations
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
                 const titulaires = respClasse.filter(r => r.est_titulaire);
                 const autresProfs = respClasse.filter(r => !r.est_titulaire);
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
-                      <button style={s.btnDetail} onClick={() => { setVueContexte('detail'); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
-                        👁 Détail
+                      <button style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => { setSearchParams({tab:'evaluations'}); setVueContexte('detail'); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Détail
                       </button>
                     </td>
                     <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{cl.nom}</td>
@@ -1808,7 +1825,6 @@ export default function Notes() {
                     <td style={{ ...s.td, width: '100%' }}>
                       {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {/* Ligne 1 : titulaire */}
                           {titulaires.map(r => (
                             <span key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
                               <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, marginRight: 5 }}>Titulaire</span>
@@ -1816,7 +1832,6 @@ export default function Notes() {
                               {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
                             </span>
                           ))}
-                          {/* Ligne 2 : tous les autres profs sur une seule ligne */}
                           {autresProfs.length > 0 && (
                             <span style={{ fontSize: 12, color: '#475569' }}>
                               {autresProfs.map((r, idx) => (
@@ -1833,11 +1848,17 @@ export default function Notes() {
                     </td>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }} title="Comportements">
-                          🎨 Comp.
+                        <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                          onClick={() => { setSearchParams({tab:'comportements'}); setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}
+                          title="Comportements">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          Comp.
                         </button>
-                        <button style={{ ...s.btnDetail, background: '#dbeafe', color: '#1e40af' }} onClick={() => { setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }} title="Bulletin de notes">
-                          📋 Bulletin
+                        <button style={{ ...s.btnDetail, background: '#dbeafe', color: '#1e40af', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                          onClick={() => { setSearchParams({tab:'bulletin'}); setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }}
+                          title="Bulletin de notes">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                          Bulletin
                         </button>
                       </div>
                     </td>
@@ -1852,7 +1873,7 @@ export default function Notes() {
 }
 
 const s = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:140,minWidth:140,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},

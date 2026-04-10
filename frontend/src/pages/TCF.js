@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
 
@@ -100,7 +100,9 @@ export default function TCF() {
   const navigate = useNavigate();
   const headers = useMemo(() => ({}), []);
 
-  const [onglet, setOnglet] = useState('pool');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const onglet = searchParams.get('tab') || 'pool';
+  const setOnglet = (tab) => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', tab); return p; });
   const [profs, setProfs] = useState([]);
   const [pools, setPools] = useState([]);
   const [creneaux, setCreneaux] = useState([]);
@@ -1251,41 +1253,23 @@ export default function TCF() {
     return (
       <div>
         {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
-          {/* Niveaux */}
-          <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+          <div style={styles.pillGroup}>
             {niveauxTabs.map(n => (
-              <button key={n}
-                onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
-                style={{ ...styles.subTabBtn, ...(resultatNiveau === n ? styles.subTabBtnActif : {}) }}>
-                {n}
-              </button>
+              <button key={n} onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
+                style={{ ...styles.pillBtn, ...(resultatNiveau === n ? styles.pillBtnActif : {}) }}>{n}</button>
             ))}
           </div>
-
-          {/* Matière */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+          <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
-              <button key={val}
-                onClick={() => setResultatMatiere(val)}
-                style={{ ...styles.subTabBtn, ...(resultatMatiere === val ? styles.subTabBtnActif : {}) }}>
-                {label}
-              </button>
+              <button key={val} onClick={() => setResultatMatiere(val)}
+                style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-
-          {/* Vue */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+          <div style={styles.pillGroup}>
             {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
-              <button key={val}
-                onClick={() => {
-                  setResultatVue(val);
-                  if (val === 'individuelle') setResultatClasseId('');
-                  else { setResultatEleveId(''); setResultatEleveSearch(''); }
-                }}
-                style={{ ...styles.subTabBtn, ...(resultatVue === val ? styles.subTabBtnActif : {}) }}>
-                {label}
-              </button>
+              <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
+                style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
         </div>
@@ -2849,26 +2833,26 @@ export default function TCF() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
           {/* Niveaux */}
           {niveaux.length > 0 && (
-            <div style={{ display: 'flex', gap: 0 }}>
+            <div style={styles.pillGroup}>
               {niveauxTabs.map(n => (
                 <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                  style={{ ...styles.subTabBtn, ...(niveauActif === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+                  style={{ ...styles.pillBtn, ...(niveauActif === n ? styles.pillBtnActif : {}) }}>{n}</button>
               ))}
             </div>
           )}
           {/* Matière */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
-            <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.subTabBtn, ...(isFr ? styles.subTabBtnActif : {}) }}>Français</button>
-            <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.subTabBtn, ...(!isFr ? styles.subTabBtnActif : {}) }}>Math</button>
+          <div style={styles.pillGroup}>
+            <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
+            <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
           </div>
           {/* Vue */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
-            <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'individuelle' ? styles.subTabBtnActif : {}) }}>Élève</button>
-            <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'classe' ? styles.subTabBtnActif : {}) }}>Classe</button>
-            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.subTabBtn, ...(graphVue === 'moyenne' ? styles.subTabBtnActif : {}) }}>Moyenne globale</button>
+          <div style={styles.pillGroup}>
+            <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
+            <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
+            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Moyenne globale</button>
           </div>
         </div>
         {/* Listes déroulantes */}
@@ -3037,39 +3021,31 @@ export default function TCF() {
     return (
       <div>
         {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
-          {/* Niveaux */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
           {niveaux.length > 0 && (
-            <div style={{ display: 'flex', gap: 0 }}>
+            <div style={styles.pillGroup}>
               {niveauxTabs.map(n => (
                 <button key={n} type="button" onClick={() => setStatNiveau(n)}
-                  style={{ ...styles.subTabBtn, ...(niveauActifStat === n ? styles.subTabBtnActif : {}) }}>{n}</button>
+                  style={{ ...styles.pillBtn, ...(niveauActifStat === n ? styles.pillBtnActif : {}) }}>{n}</button>
               ))}
             </div>
           )}
-
-          {/* Matière */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+          <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
               <button key={val} onClick={() => setStatMatiere(val)}
-                style={{ ...styles.subTabBtn, ...(statMatiere === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+                style={{ ...styles.pillBtn, ...(statMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-
-          {/* Fort/Faible */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+          <div style={styles.pillGroup}>
             {[['fort','Fort'],['faible','Faible']].map(([val,label]) => (
-              <button key={val}
-                onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
-                style={{ ...styles.subTabBtn, ...(statSens === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+              <button key={val} onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
+                style={{ ...styles.pillBtn, ...(statSens === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-
-          {/* Croissant/Décroissant */}
-          <div style={{ display: 'flex', gap: 0, marginLeft: 15 }}>
+          <div style={styles.pillGroup}>
             {[['croissant','Croissant'],['decroissant','Décroissant']].map(([val,label]) => (
               <button key={val} onClick={() => setStatOrdre(val)}
-                style={{ ...styles.subTabBtn, ...(statOrdre === val ? styles.subTabBtnActif : {}) }}>{label}</button>
+                style={{ ...styles.pillBtn, ...(statOrdre === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
         </div>
@@ -3255,7 +3231,7 @@ export default function TCF() {
               {onglet === 'pool' && (
                 <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
               )}
-              <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>💾 Sauvegarder</button>
+              <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>Sauvegarder</button>
             </>
           )}
           {onglet === 'plannings' && planningsType === 'classes' && (
@@ -3321,27 +3297,6 @@ export default function TCF() {
         </div>
       </div>
 
-      <div style={styles.tabsBar}>
-        <div style={styles.tabsRow}>
-          {[
-            { id: 'pool', label: 'Pool' },
-            { id: 'classes', label: 'Classes' },
-            { id: 'roles', label: 'Rôles' },
-            { id: 'plannings', label: 'Plannings' },
-            { id: 'resultat', label: 'Résultats' },
-            { id: 'statistique', label: 'Statistiques' },
-            { id: 'graphique', label: 'Graphiques' },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => handleTabChange(t.id)}
-              style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
       <div style={styles.tabContent}>
         {onglet === 'pool' && (
           <div>
@@ -3387,21 +3342,21 @@ export default function TCF() {
           const sitePlan = planningsSite || siteOrder[0] || '';
           return (
           <div>
-            <div className="tcf-no-print" style={{ display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0 }}>
-              <div style={{ display: 'flex', gap: 0 }}>
+            <div className="tcf-no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+              <div style={styles.pillGroup}>
                 {siteOrder.map((sk, idx) => (
                   <button key={`plan-site-${sk}`} type="button"
                     onClick={() => setPlanningsSite(sk)}
-                    style={{ ...styles.subTabBtn, ...(sitePlan === sk ? styles.subTabBtnActif : {}) }}>
+                    style={{ ...styles.pillBtn, ...(sitePlan === sk ? styles.pillBtnActif : {}) }}>
                     {siteNames[sk] || `Site ${idx + 1}`}
                   </button>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 0, marginLeft: 20 }}>
+              <div style={styles.pillGroup}>
                 {[{ id: 'professeurs', label: 'Professeurs' }, { id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
                   <button key={`plan-type-${t.id}`} type="button"
                     onClick={() => setPlanningsType(t.id)}
-                    style={{ ...styles.subTabBtn, ...(planningsType === t.id ? styles.subTabBtnActif : {}) }}>
+                    style={{ ...styles.pillBtn, ...(planningsType === t.id ? styles.pillBtnActif : {}) }}>
                     {t.label}
                   </button>
                 ))}
@@ -3671,6 +3626,9 @@ const styles = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
+  pillGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
+  pillBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  pillBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, marginBottom: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabsRow: { display: 'flex', gap: 0, flexWrap: 'wrap', alignItems: 'flex-end' },
   tabContent: { paddingTop: 0 },

@@ -199,7 +199,7 @@ export default function ClasseInventaire() {
 
 const s = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 45, flexWrap: 'wrap' },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   title: { margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' },
   msg: { marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: '#fee2e2', color: '#991b1b', fontSize: 13, fontWeight: 600 },

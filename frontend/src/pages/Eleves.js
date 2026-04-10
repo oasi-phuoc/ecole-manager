@@ -998,7 +998,7 @@ export default function Eleves() {
               <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Classe</th>
               <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Naissance</th>
               <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96}}></th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:122,minWidth:122,maxWidth:122}}>Statut</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:48,minWidth:48,maxWidth:48}}>Statut</th>
               <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86}}>Actions</th>
             </tr>
           </thead>
@@ -1054,6 +1054,11 @@ export default function Eleves() {
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'8px 6px',textAlign:'center',width:96,minWidth:96,maxWidth:96}}>
                   <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center',margin:'0 auto'}}>
+                    <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/>
+                      </svg>
+                    </button>
                     <button title="Observations" onClick={() => ouvrirObservations(el)} style={{padding:6,background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
                         <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/>
@@ -1064,25 +1069,29 @@ export default function Eleves() {
                         <path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/>
                       </svg>
                     </button>
-                    <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
-                        <path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/>
-                      </svg>
-                    </button>
                   </div>
                 </td>
-                <td style={{padding:'10px 10px',width:122,minWidth:122,maxWidth:122,textAlign:'center'}}>
-                  <button
-                    onClick={() => handleToggleStatut(el)}
-                    style={el.statut==='actif'?{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:isAdmin()?'pointer':'default',opacity:isAdmin()?1:0.6}}
-                  >
-                    {el.statut==='actif'?'✅ Actif':'❌ Inactif'}
+                <td style={{padding:'10px 4px',width:48,minWidth:48,maxWidth:48,textAlign:'center'}}>
+                  <button title={el.statut==='actif'?'Actif':'Inactif'}
+                    style={{padding:5,background:el.statut==='actif'?'#dcfce7':'#fee2e2',color:el.statut==='actif'?'#16a34a':'#dc2626',border:'none',borderRadius:8,cursor:isAdmin()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',opacity:isAdmin()?1:0.6}}
+                    onClick={() => handleToggleStatut(el)}>
+                    <svg width={16} height={16} viewBox="0 0 24 24">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      {el.statut==='actif'
+                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                      }
+                    </svg>
                   </button>
                 </td>
                 <td style={{padding:'10px 10px',width:86,minWidth:86,maxWidth:86,textAlign:'center'}}>
                   {isAdmin() && <>
-                    <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7}} onClick={() => handleEdit(el)}>✏️</button>
-                    <button style={{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7}} onClick={() => handleDelete(el.id)}>🗑️</button>
+                    <button style={{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleEdit(el)} title="Modifier">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleDelete(el.id)} title="Supprimer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </>}
                 </td>
               </tr>
