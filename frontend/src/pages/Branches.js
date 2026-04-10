@@ -165,10 +165,10 @@ export default function Branches() {
             <tr style={s.thead}>
               <th style={s.th}>Branche</th>
               <th style={s.th}>Abrév.</th>
-              <th style={s.th}>Niveau</th>
-              <th style={s.th}>Périodes/sem.</th>
-              <th style={s.th}>Coefficient</th>
-              <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}>Actions</th>
+              <th style={{...s.th, textAlign:'center'}}>Niveau</th>
+              <th style={{...s.th, textAlign:'center'}}>Périodes</th>
+              <th style={{...s.th, textAlign:'center'}}>Coefficient</th>
+              <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}></th>
             </tr>
           </thead>
           <tbody>
@@ -179,9 +179,9 @@ export default function Branches() {
                 <tr key={b.id} style={s.tr}>
                   <td style={s.td}><b style={{color:'#1e293b'}}>{b.nom}</b></td>
                   <td style={s.td}>{b.designation_courte || '—'}</td>
-                  <td style={s.td}>{b.niveau || '—'}</td>
-                  <td style={s.td}>{b.periodes_semaine || '—'}</td>
-                  <td style={s.td}>{b.coefficient || 1}</td>
+                  <td style={{...s.td, textAlign:'center'}}>{b.niveau || '—'}</td>
+                  <td style={{...s.td, textAlign:'center'}}>{b.periodes_semaine || '—'}</td>
+                  <td style={{...s.td, textAlign:'center'}}>{b.coefficient || 1}</td>
                   <td style={{...s.td, width:86, minWidth:86, maxWidth:86, padding:'10px 10px', textAlign:'center'}}>
                     {isAdmin() && <>
                       <button style={s.btnEdit} onClick={() => handleEdit(b)} title="Modifier">
@@ -204,7 +204,7 @@ export default function Branches() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -235,10 +235,10 @@ const s = {
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
-  tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{maxHeight:'calc(100vh - 200px)',overflowY:'auto',overflowX:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'},
+  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',background:'#f8fafc',position:'sticky',top:0,zIndex:1},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'12px 16px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},

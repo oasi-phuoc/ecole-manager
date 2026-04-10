@@ -1746,7 +1746,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={{...s.tableWrap, marginTop:15}}>
+      <div style={{...s.tableWrap, marginTop:15, maxHeight:'calc(100vh - 220px)', overflowY:'auto'}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -1754,9 +1754,9 @@ export default function Classes() {
               <th style={{...s.th, width:1, minWidth:80, whiteSpace:'nowrap'}}>Classe</th>
               <th style={{...s.th, width:1, minWidth:100, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
-              <th style={{...s.th, textAlign:'center'}}></th>
-              <th style={{...s.th, width:118, minWidth:118, maxWidth:118, textAlign:'center'}}>Statut</th>
-              {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}>Actions</th>}
+              <th style={{...s.th, width:1, whiteSpace:'nowrap', textAlign:'center'}}></th>
+              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}></th>
+              {isAdmin() && <th style={{...s.th, width:92, minWidth:92, maxWidth:92, textAlign:'center'}}></th>}
             </tr>
           </thead>
           <tbody>
@@ -1799,7 +1799,7 @@ export default function Classes() {
                     )}
                   </div>
                 </td>
-                <td style={{...s.td, textAlign:'center', whiteSpace:'nowrap'}}>
+                <td style={{...s.td, width:1, textAlign:'center', whiteSpace:'nowrap'}}>
                   <div style={{display:'flex', gap:4, justifyContent:'center'}}>
                     <button style={{...s.iconBtn,background:'#fef9c3',color:'#a16207'}} onClick={() => ouvrirDetail(c, 'inventaire')} title="Inventaire">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 000 2h6a1 1 0 100-2H9zM7 4a2 2 0 00-2 2v13a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H7zm2 5a1 1 0 000 2h6a1 1 0 100-2H9zm0 4a1 1 0 000 2h4a1 1 0 100-2H9z"/></svg>
@@ -1850,7 +1850,7 @@ export default function Classes() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -1893,7 +1893,7 @@ const s = {
   tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:1},
   tr:{borderBottom:'1px solid #f8fafc'},
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},

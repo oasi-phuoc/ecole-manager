@@ -681,8 +681,8 @@ export default function Professeurs({
               <th style={{...s.th, textAlign:'center'}}>Téléphone</th>
               <th style={{...s.th, textAlign:'center'}}>Naissance</th>
               <th style={{...s.th, width:76, minWidth:76, maxWidth:76, textAlign:'center'}}></th>
-              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}>Statut</th>
-              {isAdmin() && <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}>Actions</th>}
+              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}></th>
+              {isAdmin() && <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}></th>}
             </tr>
           </thead>
           <tbody>
@@ -749,7 +749,7 @@ export default function Professeurs({
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -781,10 +781,10 @@ const s = {
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
-  tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{maxHeight:'calc(100vh - 200px)',overflowY:'auto',overflowX:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#f8fafc',position:'sticky',top:0,zIndex:1},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
