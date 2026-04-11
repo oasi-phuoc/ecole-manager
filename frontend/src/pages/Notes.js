@@ -2,7 +2,7 @@
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -68,6 +68,8 @@ export default function Notes() {
   const [elevesNotes, setElevesNotes] = useState([]);
   const [bulletins, setBulletins] = useState([]);
   const [bulletinStatsPresences, setBulletinStatsPresences] = useState([]);
+  const [bulletinStatsS1, setBulletinStatsS1] = useState([]);
+  const [bulletinStatsS2, setBulletinStatsS2] = useState([]);
   const [bulletinCriteres, setBulletinCriteres] = useState([]);
   const [bulletinRemarqueEdit, setBulletinRemarqueEdit] = useState({});
   const [eleveSelectionne, setEleveSelectionne] = useState(null);
@@ -113,6 +115,7 @@ export default function Notes() {
   const [rechercheClasses, setRechercheClasses] = useState('');
   const printRef = useRef();
   const navigate = useNavigate();
+  const location = useLocation();
   const headers = {};
   const currentUser = getSessionUser() || {};
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
@@ -135,7 +138,7 @@ export default function Notes() {
       else if (tab === 'comportements') { setVue('bulletin'); setVueClasseAction('comportements'); setVueContexte('bulletin'); setBulletinOnglet('criteres'); }
       else if (tab === 'bulletin') { setVue('bulletin'); setVueClasseAction('bulletin'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
     }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     chargerClasses(); chargerMatieres(); chargerParametresEcole();
@@ -150,7 +153,7 @@ export default function Notes() {
     axios.get(API + '/notes/semestre-config', { headers }).then(r => {
       const bloque = r.data?.sem1_bloque === true;
       setSem1Bloque(bloque);
-      if (bloque) { setEvalSemestre('2'); }
+      if (bloque && !isAdmin()) { setEvalSemestre('2'); setBulletinSemestre('2'); }
     }).catch(() => {});
   }, []);
 
@@ -206,18 +209,23 @@ export default function Notes() {
   const chargerBulletinId = async (classeId, sem) => {
     try {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
-      const [bulletinRes, statsRes, criteresRes, bS1Res, bS2Res, cr1Res, cr2Res] = await Promise.all([
+      const today = new Date(); const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1;
+      const [bulletinRes, statsRes, criteresRes, bS1Res, bS2Res, cr1Res, cr2Res, stats1Res, stats2Res] = await Promise.all([
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId + (() => { const today = new Date(); const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1; return semVal === '1' ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31` : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`; })(), { headers }),
+        axios.get(API + '/presences/statistiques?classe_id=' + classeId + (semVal === '1' ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31` : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`), { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
         axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
         axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
+        axios.get(API + '/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee}-08-01&date_fin=${annee}-12-31`, { headers }),
+        axios.get(API + '/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`, { headers }),
       ]);
       const bulletinData = bulletinRes.data || [];
       setBulletins(bulletinData);
       setBulletinStatsPresences(statsRes.data || []);
+      setBulletinStatsS1(stats1Res.data || []);
+      setBulletinStatsS2(stats2Res.data || []);
       const criteresData = criteresRes.data || [];
       setBulletinCriteres(criteresData);
       setCriteresLocaux(criteresData);
@@ -353,6 +361,15 @@ export default function Notes() {
       alert('Sélectionnez un élève avant impression.');
       return;
     }
+    if (vue === 'bulletin') {
+      const node = printRef.current;
+      if (!node) return;
+      const popup = window.open('', '_blank', 'width=1000,height=800');
+      if (!popup) return;
+      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@page{size:A4;margin:2cm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}.bulletin-pdf-page{page-break-after:always;box-shadow:none!important;border:none!important;margin:0!important;padding:0!important;}.no-print{display:none!important;}</style></head><body>${node.innerHTML}</body></html>`);
+      popup.document.close(); popup.focus(); popup.print();
+      return;
+    }
     window.print();
   };
   const classeNom = classeObj?.nom || '';
@@ -463,7 +480,7 @@ export default function Notes() {
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
             <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${parseFloat(evaluationOuverte.points_max)}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
-          {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
+          {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
           <div style={{ ...s.moyenneBox, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={s.moyenneLabel}>Moy. classe</span>
             <span style={{ ...s.moyenneValeur, fontSize: 14 }}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
@@ -675,6 +692,8 @@ export default function Notes() {
           const cr1 = criteresSem1.find(c => Number(c.eleve_id) === Number(bulletinPopupEleve)) || {};
           const cr2 = criteresSem2.find(c => Number(c.eleve_id) === Number(bulletinPopupEleve)) || {};
           const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(bulletinPopupEleve));
+          const stS1 = bulletinStatsS1.find(s => Number(s.eleve_id) === Number(bulletinPopupEleve));
+          const stS2 = bulletinStatsS2.find(s => Number(s.eleve_id) === Number(bulletinPopupEleve));
           const pm1 = bdS1?.parMatiere || {};
           const pm2 = bdS2?.parMatiere || {};
           const allNames = [...new Set([...Object.keys(pm1), ...Object.keys(pm2)])].sort();
@@ -686,11 +705,12 @@ export default function Notes() {
           const allN = [...principales, ...secondaires];
           const moyG1 = moyBr(allN, pm1); const moyG2 = moyBr(allN, pm2);
           const moyAnn = moyG1 != null && moyG2 != null ? (moyG1 + moyG2) / 2 : null;
-          const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
-          const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
-          const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
+          const showS2popup = bulletinSemestre === '2';
+          const splitRem = (t) => { if (!t || !t.trim()) return []; const s = t.trim().split('\n').filter(Boolean); if (s.length > 1) return s; return t.trim().split(/\.\s+(?=[A-ZÀ-Ü])/).map((r, i, a) => i < a.length - 1 ? r + '.' : r).filter(Boolean); };
+          const rem1 = splitRem(cr1.remarques);
+          const rem2 = splitRem(cr2.remarques);
           const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', background: v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444' }} /> : <span style={{ color: '#aaa' }}>—</span>;
-          const tblBorder = { border: '1px solid #c7d2fe' };
+          const tblBorder = {};
           const thL = { ...s.th, border: 'none', textAlign: 'left', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const thC = { ...s.th, border: 'none', textAlign: 'center', width: 44, whiteSpace: 'nowrap', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const tdC = { ...s.td, border: 'none', textAlign: 'center', padding: '4px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
@@ -714,7 +734,7 @@ export default function Notes() {
                       if (!node) return;
                       const popup = window.open('', '_blank', 'width=1000,height=800');
                       if (!popup) return;
-                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`);
+                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:10mm;}*{box-sizing:border-box;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:none;padding:5px 14px;font-size:13px;}tr{border-bottom:none;}#bulletin-popup-pdf{min-height:calc(297mm - 20mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
                       popup.document.close(); popup.focus(); popup.print();
                     }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
@@ -728,67 +748,84 @@ export default function Notes() {
                 ) : (
                   <div id="bulletin-popup-pdf">
                     {/* En-tête */}
+                    {(() => { const _now = new Date(); const _as = _now.getMonth() >= 7 ? `${_now.getFullYear()}-${_now.getFullYear()+1}` : `${_now.getFullYear()-1}-${_now.getFullYear()}`; return (<>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <img src="/logo-etat-du-valais.png" alt="" style={{ width: 32, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
-                        <div style={{ fontSize: 10, lineHeight: 1.4, color: '#334155', fontFamily: font }}>
+                        <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
+                        <div style={{ fontSize: 10, lineHeight: 1.5, color: '#334155', fontFamily: font }}>
                           <div>Département de la santé, des affaires sociales et de la culture</div>
-                          <div>Service de l'action sociale — Office de l'asile</div>
+                          <div>Service de l'action sociale</div>
+                          <div>Office de l'asile</div>
                           <div>Centre de formation "Le Botza"</div>
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: '#475569', fontFamily: font }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
-                    </div>
-                    {/* Titre + Élève */}
-                    <div className="bulletin-titre-eleve" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 30, marginBottom: 30 }}>
-                      <div style={{ fontWeight: 900, fontSize: 18, fontFamily: font }}>BULLETIN DE NOTES</div>
                       <div style={{ textAlign: 'right', fontFamily: font }}>
-                        <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.nom} {eleveInfo.prenom}</div>
+                        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{_as}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
+                      </div>
+                    </div>
+                    </>); })()}
+                    {/* Titre + Élève */}
+                    <div className="bulletin-titre-eleve" style={{ marginTop: 50, marginBottom: 16 }}>
+                      <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: font, textTransform: 'uppercase', marginBottom: 15 }}>Bulletin de notes</div>
+                      <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: font, marginBottom: 12 }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                      <div style={{ fontFamily: font, paddingLeft: 14, paddingRight: 14 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
                         <div style={{ fontSize: 12, color: '#475569' }}>{classeNom}</div>
                       </div>
                     </div>
                     {/* Tableaux */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches principales</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
                             {principales.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
-                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
+                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{showS2popup && moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
                           </tbody>
                         </table>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}><th style={thL}>Branches secondaires</th><th style={thC}>S1</th><th style={thC}>S2</th></tr></thead>
                           <tbody>
                             {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
-                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
-                            <tr><td colSpan={3} style={{ height: 12, padding: 0, border: 'none', background: 'white' }}></td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
-                            <tr><td colSpan={3} style={{ height: 6, padding: 0, border: 'none', background: 'white' }}></td></tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
+                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{showS2popup && moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
+                            <tr><td colSpan={3} style={{ height: 10, padding: 0, border: 'none', background: 'white' }}></td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{showS2popup && moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700, color: '#000000' }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#000000' }} colSpan={2}>{showS2popup && moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
                           </tbody>
                         </table>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
-                          <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 32 }}>S1</th><th style={{ ...thC, width: 32 }}>S2</th></tr></thead>
+                          <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 40 }}>S1</th><th style={{ ...thC, width: 40 }}>S2</th></tr></thead>
                           <tbody style={{ height: '100%' }}>
-                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={{ ...tdL, fontSize: 11 }}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{dot(cr2['c' + (idx + 1)])}</td></tr>))}
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={tdL}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{showS2popup ? dot(cr2['c' + (idx + 1)]) : <span style={{ color: '#aaa' }}>—</span>}</td></tr>))}
+                            <tr style={{ ...s.tr, height: '1px' }}><td style={tdL}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
+                            <tr style={{ ...s.tr, height: '1px' }}><td style={tdL}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                    {/* Absences + Observations sous les deux tableaux */}
-                    <div style={{ display: 'flex', gap: 10, marginTop: 10, fontFamily: font }}>
-                      <div style={{ padding: 6, fontSize: 12, flex: 1 }}><div>Abs. excusées : <b>{st?.excuses ?? 0}</b></div><div>Non excusées : <b>{st?.absents ?? 0}</b></div></div>
-                      <div style={{ ...s.card, padding: 6, flex: 2, minHeight: 80 }}><div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>{obs1 && <div style={{ fontSize: 11 }}>{obs1}</div>}{obs2 && <div style={{ fontSize: 11 }}>{obs2}</div>}{!obs1 && !obs2 && <div style={{ fontSize: 11, color: '#aaa' }}>—</div>}</div>
+                    {/* Observations sous les deux tableaux */}
+                    <div style={{ ...s.card, padding: '6px 14px', marginTop: 50, marginBottom: 100, fontFamily: font, minHeight: 100, height: 'auto' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Observations</div>
+                      {rem1.length > 0 && <>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>1er semestre</div>
+                        {rem1.map((r, i) => <div key={i} style={{ fontSize: 13 }}>{r}</div>)}
+                      </>}
+                      {showS2popup && rem2.length > 0 && <>
+                        {rem1.length > 0 && <div style={{ height: 10 }} />}
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>2e semestre</div>
+                        {rem2.map((r, i) => <div key={i} style={{ fontSize: 13 }}>{r}</div>)}
+                      </>}
                     </div>
                     {/* Signatures + Pied de page — poussés en bas à l'impression */}
                     <div className="bulletin-bas-page">
                       {/* Signatures */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: font }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: font, marginBottom: 75, paddingLeft: 14, paddingRight: 14 }}>
                         {[
                           { label: 'Titulaire', nom: [classeObj?.prof_prenom, classeObj?.prof_nom].filter(Boolean).join(' ') },
                           { label: 'Responsable de niveau', nom: respNiveauNom },
@@ -802,7 +839,7 @@ export default function Notes() {
                         ))}
                       </div>
                       {/* Pied de page */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 20, paddingTop: 8, fontSize: 11, color: '#64748b', fontFamily: font }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, fontSize: 11, color: '#64748b', fontFamily: font }}>
                         <img src="/logo-pied-page.png" alt="" style={{ height: 19, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                         <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
                       </div>
@@ -1060,6 +1097,8 @@ export default function Notes() {
       await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
     }
     setBulletinCriteres([...criteresLocaux]);
+    if (bulletinSemestre === '1') setCriteresSem1([...criteresLocaux]);
+    else setCriteresSem2([...criteresLocaux]);
     setCriteresModifies(false);
     showToast('Changements sauvegardés.', 'info');
   };
@@ -1114,6 +1153,10 @@ export default function Notes() {
         mettreAJourCritereLocal(b.eleve.id, { c1: 'vert', c2: 'vert', c3: 'vert', c4: 'vert', c5: 'vert', c6: 'vert', c7: 'vert', c8: 'vert', c9: 'vert', c10: 'vert' });
       }
     };
+    const toutEstVert = bulletins.length > 0 && bulletins.every(b => {
+      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id));
+      return cr && ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10'].every(k => cr[k] === 'vert');
+    });
 
     const toggleValide = async (eleveId) => {
       const cr = bulletinCriteres.find(c => Number(c.eleve_id) === Number(eleveId));
@@ -1123,12 +1166,12 @@ export default function Notes() {
     return (
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
-        <div style={{...s.header, marginBottom: 8}} className="no-print">
+        <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
+              {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
               <button
                 onClick={validerCriteres}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
@@ -1153,13 +1196,17 @@ export default function Notes() {
         {/* Sous-onglets semestre + mode */}
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
-            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-              <button key={sem.id} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
-                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinSemestre === sem.id ? '#6366f1' : 'transparent', color: bulletinSemestre === sem.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: bulletinSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                {sem.label}
-              </button>
-            ))}
+            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
+              const disabled = (sem.id === '2' && !sem1Bloque) || (sem.id === '1' && sem1Bloque && !isAdmin());
+              return (
+                <button key={sem.id} disabled={disabled} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinSemestre === sem.id ? '#6366f1' : 'transparent', color: bulletinSemestre === sem.id ? 'white' : '#6d28d9', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: bulletinSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: disabled ? 0.4 : 1 }}>
+                  {sem.label}
+                </button>
+              );
+            })}
           </div>
+          {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
           {bulletinOnglet === 'notes' && (
             <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
@@ -1171,7 +1218,11 @@ export default function Notes() {
             </div>
           )}
           {bulletinOnglet === 'criteres' && (
-            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+            <button type="button" onClick={toutVert}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (toutEstVert ? '#10b981' : '#e2e8f0'), background: toutEstVert ? '#ecfdf5' : 'white', color: toutEstVert ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
+              <div style={{ width: 36, height: 20, borderRadius: 10, background: toutEstVert ? '#10b981' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
+                <div style={{ position: 'absolute', top: 2, left: toutEstVert ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
+              </div>
               Tout mettre au vert
             </button>
           )}
@@ -1189,8 +1240,8 @@ export default function Notes() {
 
         {bulletinOnglet === 'criteres' && (
           <>
-            <div className="no-print" style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>Titulaire : {titulaireNom}</div>
+            <div className="no-print" style={{ marginBottom: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 0 }}>Titulaire : {titulaireNom}</div>
             </div>
 
             <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
@@ -1298,7 +1349,7 @@ export default function Notes() {
                 if (selected.includes('transfertDepuis')) parts.push(`Transféré(e) dans cette classe suite ${params.transfertDepuisSuite} le ${fmtDate(params.transfertDepuisDate)}.`);
                 if (selected.includes('suspension')) parts.push(`Suspension de scolarité du ${fmtDate(params.suspensionDu)} au ${fmtDate(params.suspensionAu)}.`);
                 if (selected.includes('ateliers')) parts.push("Participation aux ateliers, certaines évaluations n'ont pas été effectuées.");
-                return parts.join(' ');
+                return parts.join('\n');
               };
               const previewText = buildText();
               const inStyle = { padding: '6px 10px', borderRadius: 6, border: '1px solid #6366f1', fontSize: 13, outline: 'none', background: 'white' };
@@ -1400,6 +1451,8 @@ export default function Notes() {
                 const cr1 = criteresSem1.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
                 const cr2 = criteresSem2.find(c => Number(c.eleve_id) === Number(eleve.id)) || {};
                 const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(eleve.id));
+                const stS1 = bulletinStatsS1.find(s => Number(s.eleve_id) === Number(eleve.id));
+                const stS2 = bulletinStatsS2.find(s => Number(s.eleve_id) === Number(eleve.id));
                 const pm1 = bdS1?.parMatiere || {};
                 const pm2 = bdS2?.parMatiere || {};
                 const allNames = [...new Set([...Object.keys(pm1), ...Object.keys(pm2)])].sort();
@@ -1410,39 +1463,43 @@ export default function Notes() {
                 const allN = [...principales, ...secondaires];
                 const moyG1 = moyBranches(allN, pm1); const moyG2 = moyBranches(allN, pm2);
                 const moyAnn = moyG1 != null && moyG2 != null ? (moyG1 + moyG2) / 2 : null;
-                const obs1 = cr1.remarques && String(cr1.remarques).trim() ? `1er sem. : ${cr1.remarques}` : null;
-                const obs2 = cr2.remarques && String(cr2.remarques).trim() ? `2e sem. : ${cr2.remarques}` : null;
-                const observations = [obs1, obs2].filter(Boolean).join(' — ') || '—';
+                const showS2 = bulletinSemestre === '2';
+                const splitRem = (t) => { if (!t || !t.trim()) return []; const s = t.trim().split('\n').filter(Boolean); if (s.length > 1) return s; return t.trim().split(/\.\s+(?=[A-ZÀ-Ü])/).map((r, i, a) => i < a.length - 1 ? r + '.' : r).filter(Boolean); };
+                const rem1 = splitRem(cr1.remarques);
+                const rem2 = splitRem(cr2.remarques);
                 const thL = { ...s.th, textAlign: 'left' };
                 const thC = { ...s.th, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
                 const tdC = { ...s.td, textAlign: 'center', padding: '4px 6px' };
                 return (
                   <div key={eleve.id} className="bulletin-pdf-page" style={{ ...s.bulletinPDF, pageBreakAfter: bi < elevesToShow.length - 1 ? 'always' : 'auto', marginBottom: 24 }}>
-                    {/* En-tête : logo+org à gauche, date à droite */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                    {/* En-tête : logo+org à gauche, SCAI à droite */}
+                    {(() => { const _now = new Date(); const _as = _now.getMonth() >= 7 ? `${_now.getFullYear()}-${_now.getFullYear()+1}` : `${_now.getFullYear()-1}-${_now.getFullYear()}`; return (<>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                         <img src="/logo-etat-du-valais.png" alt="Logo État du Valais" style={{ width: 38, height: 'auto', objectFit: 'contain', display: 'block', backgroundColor: 'white', padding: 2 }} />
-                        <div style={{ fontSize: 11, lineHeight: 1.4, color: '#334155' }}>
+                        <div style={{ fontSize: 10, lineHeight: 1.5, color: '#334155' }}>
                           <div>Département de la santé, des affaires sociales et de la culture</div>
-                          <div>Service de l'action sociale — Office de l'asile</div>
+                          <div>Service de l'action sociale</div>
+                          <div>Office de l'asile</div>
                           <div>Centre de formation "Le Botza"</div>
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: '#475569', textAlign: 'right' }}>
-                        Vétroz, le {new Date().toLocaleDateString('fr-CH')}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{_as}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
                       </div>
                     </div>
-                    {/* Titre centré */}
-                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, margin: '8px 0 6px' }}>
-                      BULLETIN DE NOTES
-                    </div>
-                    {/* Classe + élève sur même ligne */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-                      <span><b>{classeNom}</b></span>
-                      <span><b>{eleve.prenom} {eleve.nom}</b></span>
+                    </>); })()}
+                    {/* Titre centré + élève à gauche */}
+                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, margin: '50px 0 15px', textTransform: 'uppercase' }}>Bulletin de notes</div>
+                    <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', marginBottom: 8 }}>Vétroz, le {new Date().toLocaleDateString('fr-CH')}</div>
+                    <div style={{ fontSize: 13, marginBottom: 10, paddingLeft: 14, paddingRight: 14 }}>
+                      <div><b>{eleve.prenom} {eleve.nom}</b></div>
+                      <div style={{ color: '#475569', fontSize: 12 }}>{classeNom}</div>
                     </div>
                     {/* 2 colonnes : notes (60%) | comportement (40%) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 12 }}>
                       {/* Colonne gauche : branches principales + secondaires empilées */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
@@ -1456,13 +1513,13 @@ export default function Notes() {
                               <tr key={nom} style={s.tr}>
                                 <td style={s.td}>{nom}</td>
                                 <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
-                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{showS2 && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
                               </tr>
                             ))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}>
                               <td style={s.td}>Moyenne</td>
                               <td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td>
-                              <td style={tdC}>{moyP2 != null ? fmtNote(moyP2) : '—'}</td>
+                              <td style={tdC}>{showS2 && moyP2 != null ? fmtNote(moyP2) : '—'}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1477,22 +1534,23 @@ export default function Notes() {
                               <tr key={nom} style={s.tr}>
                                 <td style={s.td}>{nom}</td>
                                 <td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td>
-                                <td style={tdC}>{pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
+                                <td style={tdC}>{showS2 && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td>
                               </tr>
                             ))}
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}>
                               <td style={s.td}>Moyenne</td>
                               <td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td>
-                              <td style={tdC}>{moyS2 != null ? fmtNote(moyS2) : '—'}</td>
+                              <td style={tdC}>{showS2 && moyS2 != null ? fmtNote(moyS2) : '—'}</td>
                             </tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                            <tr><td colSpan={3} style={{ height: 10, padding: 0, border: 'none', background: 'white' }}></td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}>
                               <td style={s.td}>Moyenne semestrielle</td>
                               <td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td>
-                              <td style={tdC}>{moyG2 != null ? fmtNote(moyG2) : '—'}</td>
+                              <td style={tdC}>{showS2 && moyG2 != null ? fmtNote(moyG2) : '—'}</td>
                             </tr>
-                            <tr style={{ ...s.tr, background: '#eef2ff', fontWeight: 700 }}>
+                            <tr style={{ ...s.tr, fontWeight: 700, color: '#000000' }}>
                               <td style={s.td}>Moyenne annuelle</td>
-                              <td style={{ ...tdC, fontWeight: 900, color: '#6366f1' }} colSpan={2}>{moyAnn != null ? fmtNote(moyAnn) : '—'}</td>
+                              <td style={{ ...tdC, fontWeight: 900, color: '#000000' }} colSpan={2}>{showS2 && moyAnn != null ? fmtNote(moyAnn) : '—'}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1502,41 +1560,55 @@ export default function Notes() {
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={s.theadRow}>
                             <th style={thL}>Comportement</th>
-                            <th style={{ ...thC, width: 34 }}>S1</th>
-                            <th style={{ ...thC, width: 34 }}>S2</th>
+                            <th style={{ ...thC, width: 40 }}>S1</th>
+                            <th style={{ ...thC, width: 40 }}>S2</th>
                           </tr></thead>
                           <tbody>
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => {
                               const key = 'c' + (idx + 1);
                               return (
                                 <tr key={idx} style={s.tr}>
-                                  <td style={{ ...s.td, fontSize: 11 }}>{label.join(' ')}</td>
+                                  <td style={s.td}>{label.join(' ')}</td>
                                   <td style={tdC}>{dot(cr1[key])}</td>
-                                  <td style={tdC}>{dot(cr2[key])}</td>
+                                  <td style={tdC}>{showS2 ? dot(cr2[key]) : <span style={{ color: '#aaa' }}>—</span>}</td>
                                 </tr>
                               );
                             })}
+                            <tr style={s.tr}><td style={s.td}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
+                            <tr style={s.tr}><td style={s.td}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
                           </tbody>
                         </table>
-                        {/* Absences + Observations dans colonne droite */}
-                        <div style={{ ...s.card, padding: 8, marginTop: 8, fontSize: 12 }}>
-                          <span>Absences excusées : <b>{st?.excuses ?? 0}</b></span>
-                          <span style={{ marginLeft: 12 }}>Non excusées : <b>{st?.absents ?? 0}</b></span>
-                        </div>
-                        <div style={{ ...s.card, padding: 8, marginTop: 8 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>Observations</div>
-                          <div style={{ fontSize: 11 }}>{observations}</div>
-                        </div>
                       </div>
                     </div>
+                    {/* Observations pleine largeur sous les deux tableaux */}
+                    <div style={{ ...s.card, padding: '6px 14px', marginTop: 50, marginBottom: 100, width: '100%', boxSizing: 'border-box', minHeight: 100, height: 'auto' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Observations</div>
+                      {rem1.length > 0 && <>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>1er semestre</div>
+                        {rem1.map((r, i) => <div key={i} style={{ fontSize: 13 }}>{r}</div>)}
+                      </>}
+                      {showS2 && rem2.length > 0 && <>
+                        {rem1.length > 0 && <div style={{ height: 10 }} />}
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>2e semestre</div>
+                        {rem2.map((r, i) => <div key={i} style={{ fontSize: 13 }}>{r}</div>)}
+                      </>}
+                    </div>
                     {/* Signatures avec trait noir au-dessus */}
-                    <div style={{ ...s.signatures, marginTop: 16 }}>
-                      <div style={s.signatureBox}><div style={{ ...s.signatureLine, borderTop: '2px solid #000' }}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(classeObj?.prof_sexe)} titulaire</div></div>
-                      <div style={s.signatureBox}><div style={{ ...s.signatureLine, borderTop: '2px solid #000' }}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableNiveauSexe)} responsable de niveau{responsableNiveauNom ? ` (${responsableNiveauNom})` : ''}</div></div>
-                      <div style={s.signatureBox}><div style={{ ...s.signatureLine, borderTop: '2px solid #000' }}></div><div style={s.signatureLabel}>Signature {articleSelonSexe(responsableCoursSexe)} responsable des cours{responsableCoursNom ? ` (${responsableCoursNom})` : ''}</div></div>
+                    <div style={{ ...s.signatures, marginTop: 16, marginBottom: 75, paddingLeft: 14, paddingRight: 14 }}>
+                      {[
+                        { label: 'Titulaire', nom: [classeObj?.prof_prenom, classeObj?.prof_nom].filter(Boolean).join(' ') },
+                        { label: 'Responsable de niveau', nom: responsableNiveauNom },
+                        { label: 'Responsable des cours', nom: responsableCoursNom },
+                      ].map(({ label, nom }, i) => (
+                        <div key={i} style={s.signatureBox}>
+                          <div style={{ ...s.signatureLine, borderTop: '0.5px solid #000' }}></div>
+                          <div style={{ ...s.signatureLabel, fontWeight: 700, color: '#334155' }}>{label}</div>
+                          {nom && <div style={{ fontSize: 11, color: '#334155' }}>{nom}</div>}
+                        </div>
+                      ))}
                     </div>
                     {/* Pied de page */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 8, fontSize: 11, color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, fontSize: 11, color: '#64748b' }}>
                       <img src="/logo-pied-page.png" alt="" style={{ height: 30, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                       <span>Zone Industrielle 4, 1963 Vétroz — Tél. 027 606 18 60</span>
                     </div>
@@ -1677,17 +1749,20 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
         </div>
-        <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, marginBottom: 16 }}>
-          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
-            const disabled = sem.id === '2' && !sem1Bloque;
-            return (
-              <button key={sem.id} disabled={disabled}
-                onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
-                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: evalSemestre === sem.id ? '#6366f1' : 'transparent', color: evalSemestre === sem.id ? 'white' : '#6d28d9', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: evalSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: disabled ? 0.4 : 1 }}>
-                {sem.label}
-              </button>
-            );
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
+              const disabled = (sem.id === '2' && !sem1Bloque) || (sem.id === '1' && sem1Bloque && !isAdmin());
+              return (
+                <button key={sem.id} disabled={disabled}
+                  onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: evalSemestre === sem.id ? '#6366f1' : 'transparent', color: evalSemestre === sem.id ? 'white' : '#6d28d9', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: evalSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: disabled ? 0.4 : 1 }}>
+                  {sem.label}
+                </button>
+              );
+            })}
+          </div>
+          {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
         <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
@@ -1752,7 +1827,6 @@ export default function Notes() {
               const next = !sem1Bloque;
               await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
               setSem1Bloque(next);
-              if (next) setEvalSemestre('2');
             }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
               {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
             </button>
@@ -1894,10 +1968,10 @@ const s = {
   tblWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
-  theadRow: { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+  theadRow: { background: '#f8fafc', borderBottom: 'none' },
   th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
-  tr: { borderBottom: '1px solid #f8fafc' },
-  td: { padding: '10px 14px', fontSize: 13, color: '#374151' },
+  tr: { borderBottom: 'none' },
+  td: { padding: '5px 14px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },
   typeBadge: { background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   btnOuvrir: { padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, marginRight: 6 },
