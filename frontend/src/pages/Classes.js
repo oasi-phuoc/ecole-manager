@@ -327,7 +327,7 @@ export default function Classes() {
         const el = elevesClasse.find(e => String(e.id) === String(itemId));
         const special = ELEMENTS_SPECIAUX_PLAN.find(x => x.id === itemId);
         cells += `<td style="border:1px solid #e2e8f0;padding:0;text-align:center;background:${itemId?'#f0f4ff':'#f8fafc'};vertical-align:middle;overflow:hidden">
-          <div style="height:83px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:4px;box-sizing:border-box">
+          <div style="height:21mm;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:2mm;box-sizing:border-box">
           ${el ? `
             <div style="font-size:11px;font-weight:700;color:#1e293b;line-height:1.3">${el.prenom}</div>
             <div style="font-size:10px;color:#475569;line-height:1.3">${el.nom}</div>
@@ -343,13 +343,14 @@ export default function Classes() {
     const htmlContent = `<!DOCTYPE html><html><head>
       <title>Plan de classe - ${detailClasse.nom}</title>
       <style>
-        @page{size:A4 portrait;margin:1cm}
-        html,body{height:100%;margin:0}
-        body{font-family:'Century Gothic',sans-serif;padding:8px 12px;background:white;box-sizing:border-box;display:flex;flex-direction:column;height:calc(100% - 16px)}
-        h1{font-size:16px;font-weight:800;margin:0 0 2px 0;flex-shrink:0}
-        .sub{font-size:11px;color:#64748b;margin:0 0 8px 0;flex-shrink:0}
-        table{border-collapse:collapse;width:calc(100% - 35px);background:white;table-layout:fixed;flex:1;margin:0 auto}
-        tr{height:85px}
+        @page{size:A4 portrait;margin:10mm}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0}
+        body{font-family:'Century Gothic',sans-serif;padding:4mm 6mm;background:white}
+        h1{font-size:13pt;font-weight:800;margin:0 0 1mm 0;line-height:1.2}
+        .sub{font-size:9pt;color:#64748b;margin:0 0 2mm 0;line-height:1.2}
+        table{border-collapse:collapse;width:100%;background:white;table-layout:fixed}
+        tr{height:21mm}
         td{border:1px solid #e2e8f0;padding:0;text-align:center;vertical-align:middle;overflow:hidden}
       </style></head><body>
       <h1>Plan de classe — ${detailClasse.nom}</h1>
@@ -1503,16 +1504,12 @@ export default function Classes() {
         </div>
       )}
 
-      {planToast && (
-        <div style={{position:'fixed',bottom:24,right:24,background:'#6366f1',color:'white',padding:'12px 20px',borderRadius:10,fontWeight:700,fontSize:14,boxShadow:'0 4px 20px rgba(99,102,241,0.4)',zIndex:3000}}>
-          ✓ Plan sauvegardé !
-        </div>
-      )}
       <div style={s.header}>
         <button style={s.btnBack} onClick={() => { setDetailClasse(null); setSearchParams({}); }}>← Retour classes</button>
         <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
         {classeVueTab === 'plan' && (
-          <div style={{display:'flex',gap:8,marginLeft:'auto'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+            {planToast && <div style={{padding:'8px 14px',borderRadius:8,background:'#dcfce7',color:'#166534',fontWeight:700,fontSize:13}}>Plan sauvegardé !</div>}
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</button>
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer</button>
             <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>
