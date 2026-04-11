@@ -118,6 +118,25 @@ export default function Notes() {
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
 
+  // Réagit aux changements de l'URL (sidebar Notes)
+  useEffect(() => {
+    const classeId = searchParams.get('classeId');
+    const tab = searchParams.get('tab');
+    if (!classeId) {
+      setVue('classes');
+      setClasseSelectionnee('');
+      setClasseObj(null);
+      return;
+    }
+    // Si la classe est déjà chargée, changer de vue selon l'onglet cliqué
+    if (classeSelectionnee && String(classeSelectionnee) === String(classeId)) {
+      if (tab === 'generale') { setVue('generale'); setVueClasseAction('generale'); setVueContexte('detail'); }
+      else if (tab === 'evaluations') { setVue('matieres'); setVueClasseAction('evaluations'); setVueContexte('detail'); }
+      else if (tab === 'comportements') { setVue('bulletin'); setVueClasseAction('comportements'); setVueContexte('bulletin'); setBulletinOnglet('criteres'); }
+      else if (tab === 'bulletin') { setVue('bulletin'); setVueClasseAction('bulletin'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     chargerClasses(); chargerMatieres(); chargerParametresEcole();
     // Données pour le tableau des classes

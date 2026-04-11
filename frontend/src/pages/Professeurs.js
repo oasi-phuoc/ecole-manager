@@ -46,8 +46,8 @@ export default function Professeurs({
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:'' });
+  const [showInactif, setShowInactif] = useState(false);
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'' });
   const [roleAccesErreur, setRoleAccesErreur] = useState(false);
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
   const [niveauxDB, setNiveauxDB] = useState([]);
@@ -206,7 +206,7 @@ export default function Professeurs({
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
-  const resetForm = () => { setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'niveau',role_acces:''}); setRoleAccesErreur(false); };
+  const resetForm = () => { setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''}); setRoleAccesErreur(false); };
 
   const handleEdit = (p) => {
     setProfEdit(p);
@@ -233,7 +233,7 @@ export default function Professeurs({
         .toLowerCase()
         .includes(recherche.toLowerCase())
     );
-    const matchS = filtreStatut==='tous' || (filtreStatut==='actif'&&p.actif!==false) || (filtreStatut==='inactif'&&p.actif===false);
+    const matchS = p.actif !== false || showInactif;
     return matchR && matchS;
   });
   const niveauxPreferesSelectionnes = form.niveau_prefere ? form.niveau_prefere.split(',').filter(Boolean) : [];
@@ -264,15 +264,11 @@ export default function Professeurs({
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
-        <div style={s.toggleGroup}>
-          {[{id:'tous',label:'Tous'},{id:'actif',label:'Actifs'},{id:'inactif',label:'Inactifs'}].map(f => (
-            <button key={f.id}
-              style={{...s.toggleBtn, ...(filtreStatut===f.id ? s.toggleBtnActif : {})}}
-              onClick={() => setFiltreStatut(f.id)}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowInactif(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
+        </button>
       </div>
 
       {showForm && (
@@ -561,6 +557,10 @@ export default function Professeurs({
                     <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Priorité</label>
                       <div style={{display:'flex',gap:8}}>
+                        <button type="button" onClick={() => setForm({...form, priorite_pref:''})}
+                          style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(!form.priorite_pref?'#6366f1':'#e2e8f0'),background:!form.priorite_pref?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
+                          Aucune préférence
+                        </button>
                         <button type="button" onClick={() => setForm({...form, priorite_pref:'niveau'})}
                           style={{padding:'8px 14px',borderRadius:8,border:'2px solid '+(form.priorite_pref==='niveau'?'#6366f1':'#e2e8f0'),background:form.priorite_pref==='niveau'?'#e0e7ff':'white',fontWeight:700,cursor:'pointer'}}>
                           Niveau

@@ -15,7 +15,7 @@ export default function Classes() {
   const [showForm, setShowForm] = useState(false);
   const [classeEdit, setClasseEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
-  const [filtreActif, setFiltreActif] = useState('actif');
+  const [showInactif, setShowInactif] = useState(false);
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
@@ -327,7 +327,7 @@ export default function Classes() {
         const el = elevesClasse.find(e => String(e.id) === String(itemId));
         const special = ELEMENTS_SPECIAUX_PLAN.find(x => x.id === itemId);
         cells += `<td style="border:1px solid #e2e8f0;padding:0;text-align:center;background:${itemId?'#f0f4ff':'#f8fafc'};vertical-align:middle;overflow:hidden">
-          <div style="height:88px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:4px;box-sizing:border-box">
+          <div style="height:83px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:4px;box-sizing:border-box">
           ${el ? `
             <div style="font-size:11px;font-weight:700;color:#1e293b;line-height:1.3">${el.prenom}</div>
             <div style="font-size:10px;color:#475569;line-height:1.3">${el.nom}</div>
@@ -348,8 +348,8 @@ export default function Classes() {
         body{font-family:'Century Gothic',sans-serif;padding:8px 12px;background:white;box-sizing:border-box;display:flex;flex-direction:column;height:calc(100% - 16px)}
         h1{font-size:16px;font-weight:800;margin:0 0 2px 0;flex-shrink:0}
         .sub{font-size:11px;color:#64748b;margin:0 0 8px 0;flex-shrink:0}
-        table{border-collapse:collapse;width:100%;background:white;table-layout:fixed;flex:1}
-        tr{height:90px}
+        table{border-collapse:collapse;width:calc(100% - 35px);background:white;table-layout:fixed;flex:1;margin:0 auto}
+        tr{height:85px}
         td{border:1px solid #e2e8f0;padding:0;text-align:center;vertical-align:middle;overflow:hidden}
       </style></head><body>
       <h1>Plan de classe — ${detailClasse.nom}</h1>
@@ -878,7 +878,7 @@ export default function Classes() {
 
   const classesFiltrees = classes.filter(c => {
     const matchR = (c.nom+' '+(c.niveau||'')).toLowerCase().includes(recherche.toLowerCase());
-    const matchA = filtreActif==='tous' || (filtreActif==='actif'&&c.actif!==false) || (filtreActif==='inactif'&&c.actif===false);
+    const matchA = c.actif !== false || showInactif;
     const niveauClasse = String(c.niveau || '').toUpperCase();
     const matchN = filtreNiveau==='tous' || niveauClasse===filtreNiveau;
     return matchR && matchA && matchN;
@@ -2032,13 +2032,11 @@ export default function Classes() {
             <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
           ))}
         </div>
-        {isAdmin() && (
-          <div style={s.toggleGroup}>
-            {[{id:'actif',label:'Actives'},{id:'inactif',label:'Inactives'}].map(f => (
-              <button key={f.id} style={{...s.toggleBtn,...(filtreActif===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreActif(f.id)}>{f.label}</button>
-            ))}
-          </div>
-        )}
+        <button
+          onClick={() => setShowInactif(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          {showInactif ? 'Masquer inactives' : 'Afficher inactives'}
+        </button>
       </div>
 
       {showForm && (

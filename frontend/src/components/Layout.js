@@ -259,21 +259,23 @@ export default function Layout() {
                     })}
                   </div>
                 )}
-                {m.path === '/notes' && isActive && new URLSearchParams(location.search).get('classeId') && (
-                  <div style={s.subNav}>
-                    {NOTES_ONGLETS.map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'evaluations';
-                      const isTabActive = activeTab === o.key;
-                      return (
+                {m.path === '/notes' && isActive && (() => {
+                  const params = new URLSearchParams(location.search);
+                  const classeId = params.get('classeId');
+                  if (!classeId) return null;
+                  const activeTab = params.get('tab') || 'evaluations';
+                  return (
+                    <div style={s.subNav}>
+                      {NOTES_ONGLETS.map(o => (
                         <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/notes?tab=${o.key}`); }}>
+                          style={{ ...s.subNavItem, background: activeTab === o.key ? '#ddd6fe' : 'transparent', color: activeTab === o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab === o.key ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/notes?tab=${o.key}&classeId=${classeId}`); }}>
                           {o.label}
                         </button>
-                      );
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  );
+                })()}
                 {m.path === '/emploi-du-temps' && isActive && (
                   <div style={s.subNav}>
                     {EDT_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
