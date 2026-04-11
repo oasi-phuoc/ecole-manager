@@ -259,7 +259,7 @@ export default function Layout() {
                     })}
                   </div>
                 )}
-                {m.path === '/notes' && isActive && (
+                {m.path === '/notes' && isActive && new URLSearchParams(location.search).get('classeId') && (
                   <div style={s.subNav}>
                     {NOTES_ONGLETS.map(o => {
                       const activeTab = new URLSearchParams(location.search).get('tab') || 'evaluations';

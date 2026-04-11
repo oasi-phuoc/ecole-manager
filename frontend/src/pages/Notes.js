@@ -444,9 +444,10 @@ export default function Notes() {
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
             <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${parseFloat(evaluationOuverte.points_max)}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
+          {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
           <div style={{ ...s.moyenneBox, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={s.moyenneLabel}>Moy. classe</span>
-            <span style={s.moyenneValeur}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
+            <span style={{ ...s.moyenneValeur, fontSize: 14 }}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
           </div>
           {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
             <button style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
@@ -454,11 +455,6 @@ export default function Notes() {
           ); })()}
         </div>
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
-        {toast.message && (
-          <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#6366f1', color: 'white', padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}>
-            {toast.message}
-          </div>
-        )}
         <div style={s.tableContainer}>
           <table style={s.tbl}>
             <thead>
@@ -550,26 +546,27 @@ export default function Notes() {
           }
         `}</style>
         <div style={s.header} className="no-print">
-          <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
+          <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Vue générale — {classeNom}</h2>
         </div>
-        {renderActionsBar('no-print')}
-
         {/* Sous-onglets Vue générale */}
-        <div className="no-print" style={s.subTabsBar}>
-          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-            <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
-              style={{ ...s.subTabBtn, ...(generaleSemestre === sem.id ? s.subTabBtnActif : {}) }}>
-              {sem.label}
-            </button>
-          ))}
-          <div style={{ width: 16 }} />
-          {[['tous','Tous'],['eleve','Par élève'],['branche','Par branche']].map(([val,label]) => (
-            <button key={val} onClick={() => setVueGeneraleMode(val)}
-              style={{...s.subTabBtn,...(vueGeneraleMode===val?s.subTabBtnActif:{})}}>
-              {label}
-            </button>
-          ))}
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
+              <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: generaleSemestre === sem.id ? '#6366f1' : 'transparent', color: generaleSemestre === sem.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: generaleSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                {sem.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            {[['tous','Tous'],['eleve','Par élève'],['branche','Par branche']].map(([val,label]) => (
+              <button key={val} onClick={() => setVueGeneraleMode(val)}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: vueGeneraleMode === val ? '#6366f1' : 'transparent', color: vueGeneraleMode === val ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: vueGeneraleMode === val ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Branche/élève dropdown */}
@@ -619,7 +616,6 @@ export default function Notes() {
                   {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>second.</th>
                   <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>générale</th>
-                  <th style={{ ...s.th, textAlign: 'center' }}>Bulletin</th>
                 </tr>
               </thead>
               <tbody>
@@ -634,12 +630,6 @@ export default function Notes() {
                       {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: ms !== null ? (ms >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{ms !== null ? fmtNote(ms) : '—'}</td>
                       <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, background: '#eef2ff', color: mg !== null ? (mg >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
-                      <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <button style={s.btnDetail} onClick={() => {
-                          if (bulletinsSem1.length === 0 && classeSelectionnee) chargerBulletinId(classeSelectionnee);
-                          setBulletinPopupEleve(eleve.id);
-                        }}>Détail</button>
-                      </td>
                     </tr>
                   );
                 })}
@@ -648,7 +638,6 @@ export default function Notes() {
                   {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={s.td}></td>
                   {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                  <td style={s.td}></td>
                   <td style={s.td}></td>
                   <td style={s.td}></td>
                 </tr>
@@ -923,7 +912,7 @@ export default function Notes() {
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } }`}</style>
         <div style={s.header} className="no-print">
-          <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
+          <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>👤 Notes par élève — {classeNom}</h2>
           <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
             <option value="">-- Choisir un élève --</option>
@@ -1116,15 +1105,11 @@ export default function Notes() {
       <div style={s.page}>
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
         <div style={{...s.header, marginBottom: 8}} className="no-print">
-          <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
+          <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
-          {toast.message && (
-            <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#6366f1', color: 'white', padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}>
-              {toast.message}
-            </div>
-          )}
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
               <button
                 onClick={validerCriteres}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
@@ -1146,47 +1131,42 @@ export default function Notes() {
             </button>
           )}
         </div>
-        {renderActionsBar('no-print')}
-
-        {/* Sous-onglets semestre (+ Tous/Par élève pour Bulletin de notes) */}
-        <div className="no-print" style={s.subTabsBar}>
-          {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
-            <button key={sem.id} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
-              style={{ ...s.subTabBtn, ...(bulletinSemestre === sem.id ? s.subTabBtnActif : {}) }}>
-              {sem.label}
-            </button>
-          ))}
-          {bulletinOnglet === 'notes' && <>
-            <div style={{ width: 16 }} />
-            {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
-              <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                style={{ ...s.subTabBtn, ...(bulletinMode === m.id ? s.subTabBtnActif : {}) }}>
-                {m.label}
+        {/* Sous-onglets semestre + mode */}
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
+              <button key={sem.id} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinSemestre === sem.id ? '#6366f1' : 'transparent', color: bulletinSemestre === sem.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: bulletinSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                {sem.label}
               </button>
             ))}
-          </>}
+          </div>
+          {bulletinOnglet === 'notes' && (
+            <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              {[{ id: 'tous', label: 'Tous' }, { id: 'eleve', label: 'Par élève' }].map(m => (
+                <button key={m.id} onClick={() => setBulletinMode(m.id)}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinMode === m.id ? '#6366f1' : 'transparent', color: bulletinMode === m.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: bulletinMode === m.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {bulletinOnglet === 'criteres' && (
+            <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
+              Tout mettre au vert
+            </button>
+          )}
         </div>
 
-        {/* Dropdowns : niveau + classe + élève/tout-vert */}
-        {(() => {
-          const niveaux = [...new Set(classes.map(c => c.niveau).filter(Boolean))].sort();
-          const classesFiltrees = bulletinNiveau ? classes.filter(c => c.niveau === bulletinNiveau) : classes;
-          return (
-            <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-              {bulletinOnglet === 'notes' && bulletinMode === 'eleve' && (
-                <select style={{...s.tabSelect, width:220}} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-                  <option value="">Choisir un élève</option>
-                  {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{nomSansSuffixe(b.eleve.nom)} {b.eleve.prenom}</option>)}
-                </select>
-              )}
-              {bulletinOnglet === 'criteres' && (
-                <button type="button" style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={toutVert}>
-                  Tout mettre au vert
-                </button>
-              )}
-            </div>
-          );
-        })()}
+        {/* Dropdown élève */}
+        {bulletinOnglet === 'notes' && bulletinMode === 'eleve' && (
+          <div className="no-print" style={{ marginBottom: 15 }}>
+            <select style={{ ...s.tabSelect, width: 220 }} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
+              <option value="">Choisir un élève</option>
+              {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{nomSansSuffixe(b.eleve.nom)} {b.eleve.prenom}</option>)}
+            </select>
+          </div>
+        )}
 
         {bulletinOnglet === 'criteres' && (
           <>
@@ -1558,7 +1538,7 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={async () => { await chargerEvaluationsId(classeSelectionnee, null); setVue('matieres'); }}>← Retour</button>
           <h2 style={s.titre}>{matiereObj?.nom} — {classeNom}</h2>
-          {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Nouvelle évaluation</button>}
+          {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Ajouter</button>}
         </div>
 
         {showForm && (
@@ -1675,27 +1655,16 @@ export default function Notes() {
     return (
       <div style={s.page}>
         <div style={s.header}>
-          <button style={s.btnRetour} onClick={() => setVue('classes')}>← Retour</button>
+          <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
-          {isAdmin() && (
-            <button onClick={async () => {
-              const next = !sem1Bloque;
-              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
-              setSem1Bloque(next);
-              if (next) setEvalSemestre('2');
-            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
-            </button>
-          )}
         </div>
-        {renderActionsBar('')}
-        <div style={s.subTabsBar}>
+        <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, marginBottom: 16 }}>
           {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
-            const disabled = sem.id === '1' && sem1Bloque && !isAdmin();
+            const disabled = sem.id === '2' && !sem1Bloque;
             return (
               <button key={sem.id} disabled={disabled}
                 onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
-                style={{ ...s.subTabBtn, ...(evalSemestre === sem.id ? s.subTabBtnActif : {}), ...(disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: evalSemestre === sem.id ? '#6366f1' : 'transparent', color: evalSemestre === sem.id ? 'white' : '#6d28d9', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: evalSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: disabled ? 0.4 : 1 }}>
                 {sem.label}
               </button>
             );
@@ -1759,6 +1728,16 @@ export default function Notes() {
       <div style={s.page}>
         <div style={s.header}>
           <h2 style={s.titre}>Notes</h2>
+          {isAdmin() && (
+            <button onClick={async () => {
+              const next = !sem1Bloque;
+              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
+              setSem1Bloque(next);
+              if (next) setEvalSemestre('2');
+            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
+            </button>
+          )}
         </div>
         {/* Barre de recherche + toggles niveaux */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -1806,10 +1785,9 @@ export default function Notes() {
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
-                      <button style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                        onClick={() => { setSearchParams({tab:'evaluations'}); setVueContexte('detail'); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        Détail
+                      <button style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}
+                        onClick={() => { setSearchParams({tab:'evaluations', classeId: cl.id}); setVueContexte('detail'); setVueClasseAction('evaluations'); ouvrirVueDepuisSelectionClasse('evaluations', cl.id); }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                       </button>
                     </td>
                     <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{cl.nom}</td>
@@ -1849,13 +1827,13 @@ export default function Notes() {
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                         <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                          onClick={() => { setSearchParams({tab:'comportements'}); setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}
+                          onClick={() => { setSearchParams({tab:'comportements', classeId: cl.id}); setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}
                           title="Comportements">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                           Comp.
                         </button>
                         <button style={{ ...s.btnDetail, background: '#dbeafe', color: '#1e40af', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                          onClick={() => { setSearchParams({tab:'bulletin'}); setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }}
+                          onClick={() => { setSearchParams({tab:'bulletin', classeId: cl.id}); setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }}
                           title="Bulletin de notes">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                           Bulletin

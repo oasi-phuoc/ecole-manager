@@ -534,8 +534,20 @@ export default function Presences() {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
-        {isAdmin() && (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
+          {onglet === 'saisie' && classeSelectionnee && (<>
+            {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#dcfce7',color:'#166534',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
+            <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
+              <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
+                <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
+              </div>
+              {valide ? 'Présences validées' : 'Valider les présences'}
+            </button>
+            <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'8px 18px',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
+              Sauvegarder
+            </button>
+          </>)}
+          {isAdmin() && (<>
             <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
               {importLoading ? 'Import...' : 'Importer LORA'}
               <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
@@ -544,8 +556,8 @@ export default function Presences() {
             <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
               {exportLoading ? 'Export...' : 'Exporter LORA'}
             </button>
-          </div>
-        )}
+          </>)}
+        </div>
       </div>
 
       {/* Résultat import */}
@@ -636,32 +648,14 @@ export default function Presences() {
             </div>
           )}
 
-          {/* Barre validation + sauvegarde */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              {/* Légende */}
-              {[['P','#10b981','Présent'],['A','#ef4444','Absent'],['R','#f59e0b','Retard'],['E','#3b82f6','Excusé'],['C','#8b5cf6','Congé']].map(([k,c,l]) => (
-                <span key={k} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,color:c,fontWeight:700}}>
-                  <span style={{width:18,height:18,borderRadius:4,background:c,color:'white',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800}}>{k}</span>{l}
-                </span>
-              ))}
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <span style={{fontSize:13,color:'#64748b'}}>{eleves.length} élève(s)</span>
-              {/* Bouton bascule validation */}
-              <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
-                <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
-                  <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
-                </div>
-                {valide ? '✅ Présences validées' : 'Valider les présences'}
-              </button>
-              <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'8px 18px',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
-                Sauvegarder
-              </button>
-            </div>
+          {/* Légende */}
+          <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 20px',borderBottom:'1px solid #f1f5f9'}}>
+            {[['P','#10b981','Présent'],['A','#ef4444','Absent'],['R','#f59e0b','Retard'],['E','#3b82f6','Excusé'],['C','#8b5cf6','Congé']].map(([k,c,l]) => (
+              <span key={k} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,color:c,fontWeight:700}}>
+                <span style={{width:18,height:18,borderRadius:4,background:c,color:'white',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800}}>{k}</span>{l}
+              </span>
+            ))}
           </div>
-
-          {sauvegarde && <div style={{padding:'10px 20px',background:'#ecfdf5',color:'#059669',fontWeight:700,fontSize:13}}>✅ Présences sauvegardées !</div>}
 
           {eleves.length === 0 ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucun élève actif dans cette classe</div>
@@ -677,12 +671,12 @@ export default function Presences() {
                 </colgroup>
                 <thead>
                   <tr style={{background:'#f8fafc'}}>
-                    <th style={s.th} rowSpan={2}>NOM</th>
+                    <th style={{...s.th,borderRadius:'8px 0 0 8px'}} rowSpan={2}>NOM</th>
                     <th style={s.th} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,fontSize:10,textAlign:'center'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{...s.th,fontSize:13,textAlign:'center'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
                     <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>Matin</th>
                     <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>Après-midi</th>
-                    <th style={s.th} rowSpan={2}>Remarques</th>
+                    <th style={{...s.th,borderRadius:'0 8px 8px 0'}} rowSpan={2}>Remarques</th>
                   </tr>
                   <tr style={{background:'#f8fafc'}}>
                     {PERIODES.map(i => (

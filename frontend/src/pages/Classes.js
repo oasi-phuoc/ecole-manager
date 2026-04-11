@@ -26,7 +26,7 @@ export default function Classes() {
   const [showObsForm, setShowObsForm] = useState(false);
   const [photoZoom, setPhotoZoom] = useState(null);
   const [obsEditId, setObsEditId] = useState(null);
-  const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+  const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
   const [obsForm, setObsForm] = useState({ titre:'', contenu:'', mesure_prise:'', intervention_responsable:false, demande_entretien:false });
   const [filtreElevesActif, setFiltreElevesActif] = useState('actif');
   const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
@@ -34,6 +34,7 @@ export default function Classes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [planToast, setPlanToast] = useState(false);
+  const [sanctionToast, setSanctionToast] = useState('');
   const [rechercheInventaire, setRechercheInventaire] = useState('');
   const [rechercheDevoirs, setRechercheDevoirs] = useState('');
   const [rechercheElevesClasse, setRechercheElevesClasse] = useState('');
@@ -185,7 +186,7 @@ export default function Classes() {
     e.preventDefault();
     try {
       await axios.post(API+'/observations/eleve/'+eleveDetail.id, obsForm, {headers});
-      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
       const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
       setObservations(r.data);
@@ -206,6 +207,8 @@ export default function Classes() {
   const [sanctionsEleve, setSanctionsEleve] = useState(null);
   const [eleveSanctions, setEleveSanctions] = useState([]);
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
+  const [sanctionsObservations, setSanctionsObservations] = useState([]);
+  const [editSanction, setEditSanction] = useState(null);
   const [pendingCell, setPendingCell] = useState(null);
   const classeVueTab = searchParams.get('tab') || 'eleves';
   const [devoirs, setDevoirs] = useState([]);
@@ -253,12 +256,8 @@ export default function Classes() {
         <td>${obs.contenu||''}</td>
         <td>${obs.mesure_prise||'—'}</td>
         <td>${obs.auteur_prenom||''} ${obs.auteur_nom||''}</td>
-        <td style="text-align:center">
-          ${obs.intervention_responsable?'<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🚨 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}
-        </td>
-        <td style="text-align:center">
-          ${obs.demande_entretien?'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🤝 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}
-        </td>
+        <td style="text-align:center;font-size:12px">${obs.intervention_responsable?'Oui':'Non'}</td>
+        <td style="text-align:center;font-size:12px">${obs.demande_entretien?'Oui':'Non'}</td>
       </tr>
     `).join('');
 
@@ -327,14 +326,15 @@ export default function Classes() {
         const itemId = planPositions[key];
         const el = elevesClasse.find(e => String(e.id) === String(itemId));
         const special = ELEMENTS_SPECIAUX_PLAN.find(x => x.id === itemId);
-        cells += `<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;width:80px;height:80px;background:${itemId?'#f0f4ff':'#f8fafc'};vertical-align:middle">
+        cells += `<td style="border:1px solid #e2e8f0;padding:0;text-align:center;background:${itemId?'#f0f4ff':'#f8fafc'};vertical-align:middle;overflow:hidden">
+          <div style="height:88px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:4px;box-sizing:border-box">
           ${el ? `
-            ${el.photo?`<img src="${el.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #6366f1;margin:0 auto;display:block"/>`:`<div style="width:44px;height:44px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#6366f1;margin:0 auto">${(el.prenom||'?')[0]}</div>`}
-            <div style="font-size:10px;font-weight:700;color:#1e293b;margin-top:3px;line-height:1.2">${el.prenom}</div>
-            <div style="font-size:9px;color:#475569">${el.nom}</div>
+            <div style="font-size:11px;font-weight:700;color:#1e293b;line-height:1.3">${el.prenom}</div>
+            <div style="font-size:10px;color:#475569;line-height:1.3">${el.nom}</div>
           ` : special ? `
-            <div style="display:inline-block;padding:6px 8px;border-radius:8px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:800;line-height:1.2">${special.icon} ${special.label}</div>
+            <div style="display:inline-block;padding:4px 6px;border-radius:6px;background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:800;line-height:1.2">${special.label}</div>
           ` : ''}
+          </div>
         </td>`;
       }
       cells += '</tr><tr>';
@@ -344,11 +344,13 @@ export default function Classes() {
       <title>Plan de classe - ${detailClasse.nom}</title>
       <style>
         @page{size:A4 portrait;margin:1cm}
-        body{font-family:'Century Gothic',sans-serif;padding:12px;background:white;width:100%;box-sizing:border-box}
-        h1{font-size:16px;font-weight:800;margin-bottom:2px}
-        .sub{font-size:11px;color:#64748b;margin-bottom:12px}
-        table{border-collapse:collapse;width:100%;background:white;table-layout:fixed}
-        td{border:1px solid #e2e8f0;padding:4px;text-align:center;vertical-align:middle}
+        html,body{height:100%;margin:0}
+        body{font-family:'Century Gothic',sans-serif;padding:8px 12px;background:white;box-sizing:border-box;display:flex;flex-direction:column;height:calc(100% - 16px)}
+        h1{font-size:16px;font-weight:800;margin:0 0 2px 0;flex-shrink:0}
+        .sub{font-size:11px;color:#64748b;margin:0 0 8px 0;flex-shrink:0}
+        table{border-collapse:collapse;width:100%;background:white;table-layout:fixed;flex:1}
+        tr{height:90px}
+        td{border:1px solid #e2e8f0;padding:0;text-align:center;vertical-align:middle;overflow:hidden}
       </style></head><body>
       <h1>Plan de classe — ${detailClasse.nom}</h1>
       <div class="sub">${detailClasse.annee_scolaire||''} · Titulaire : ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</div>
@@ -402,27 +404,22 @@ export default function Classes() {
                         <td key={col}
                           onDragOver={e => e.preventDefault()}
                           onDrop={() => dropOnCell(row, col)}
-                          style={{border:'1.5px solid #e2e8f0',width:70,height:72,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':(special?special.bg:'white'),borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
+                          style={{border:'1.5px solid #e2e8f0',width:53,height:54,textAlign:'center',verticalAlign:'middle',background:el?'#e0e7ff':(special?special.bg:'white'),borderRadius:4,cursor:'default',transition:'background 0.1s',position:'relative'}}>
                           {el ? (
                             <div draggable onDragStart={() => setDragEleve(String(el.id))}
-                              style={{cursor:'grab',padding:2}}>
-                              {el.photo
-                                ? <img src={el.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid #6366f1',display:'block',margin:'0 auto'}} />
-                                : <div style={{width:36,height:36,borderRadius:'50%',background:'#6366f1',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:800,color:'white',margin:'0 auto'}}>{(el.prenom||'?')[0]}</div>
-                              }
-                              <div style={{fontSize:9,fontWeight:700,color:'#1e293b',marginTop:2,lineHeight:1.1}}>{el.prenom}</div>
-                              <div style={{fontSize:8,color:'#475569'}}>{el.nom}</div>
+                              style={{cursor:'grab',padding:'2px 1px'}}>
+                              <div style={{fontSize:11,fontWeight:700,color:'#1e293b',lineHeight:1.2}}>{el.prenom}</div>
+                              <div style={{fontSize:10,color:'#475569',lineHeight:1.2}}>{el.nom}</div>
                               <button onClick={() => {
                                 const np = {...planPositions}; delete np[key]; setPlanPositions(np);
-                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
+                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:9,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
                             </div>
                           ) : special ? (
-                            <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:'4px 2px',width:'100%',boxSizing:'border-box'}}>
-                              <div style={{width:36,height:36,borderRadius:8,background:special.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,margin:'0 auto'}}>{special.icon}</div>
-                              <div style={{fontSize:8,fontWeight:700,color:special.text,textAlign:'center',lineHeight:1.2,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:66,margin:'2px auto 0'}}>{special.label}</div>
+                            <div draggable onDragStart={() => setDragEleve(special.id)} style={{cursor:'grab',padding:'2px 1px',width:'100%',boxSizing:'border-box'}}>
+                              <div style={{fontSize:11,fontWeight:700,color:special.text,textAlign:'center',lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:50,margin:'0 auto'}}>{special.label}</div>
                               <button onClick={() => {
                                 const np = {...planPositions}; delete np[key]; setPlanPositions(np);
-                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:10,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
+                              }} style={{position:'absolute',top:1,right:2,background:'none',border:'none',fontSize:9,cursor:'pointer',color:'#94a3b8',lineHeight:1}}>✕</button>
                             </div>
                           ) : (
                             <div style={{color:'#e2e8f0',fontSize:10}}>·</div>
@@ -443,26 +440,14 @@ export default function Classes() {
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'70vh',overflowY:'auto'}}>
               {elementsSpeciaux.map(sp => (
                 <div key={sp.id} draggable onDragStart={() => setDragEleve(sp.id)}
-                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)',width:'100%',maxWidth:'100%',boxSizing:'border-box'}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:sp.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:sp.text,flexShrink:0}}>
-                    {sp.icon}
-                  </div>
-                  <div style={{width:'100%',maxWidth:'100%',boxSizing:'border-box'}}>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{sp.label}</div>
-                  </div>
+                  style={{padding:'7px 10px',background:sp.bg,borderRadius:8,border:'1.5px solid #e2e8f0',cursor:'grab',boxSizing:'border-box',width:'100%'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:sp.text}}>{sp.label}</div>
                 </div>
               ))}
               {elevesNonPlaces.map(el => (
                 <div key={el.id} draggable onDragStart={() => setDragEleve(String(el.id))}
-                  style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'white',borderRadius:10,border:'1.5px solid #e2e8f0',cursor:'grab',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-                  {el.photo
-                    ? <img src={el.photo} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}} />
-                    : <div style={{width:32,height:32,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#6366f1',flexShrink:0}}>{(el.prenom||'?')[0]}</div>
-                  }
-                  <div>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{el.prenom}</div>
-                    <div style={{fontSize:10,color:'#64748b'}}>{el.nom}</div>
-                  </div>
+                  style={{padding:'7px 10px',background:'white',borderRadius:8,border:'1.5px solid #e2e8f0',cursor:'grab',boxSizing:'border-box',width:'100%'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{el.prenom} {el.nom}</div>
                 </div>
               ))}
               {elevesNonPlaces.length===0 && elementsSpeciaux.length===0 && <div style={{fontSize:11,color:'#94a3b8',textAlign:'center',padding:16}}>Tous placés ✅</div>}
@@ -582,7 +567,7 @@ export default function Classes() {
     if (!obsEleve) return;
     try {
       await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
-      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
       const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
       setObservations(r.data);
@@ -632,28 +617,60 @@ export default function Classes() {
   };
 
   const ouvrirSanctions = async (el) => {
-    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null);
-    try { const r = await axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}); setEleveSanctions(r.data); }
-    catch(err) { setEleveSanctions([]); }
+    setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null); setEditSanction(null);
+    try {
+      const [sanctionsRes, obsRes] = await Promise.all([
+        axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}),
+        axios.get(API+'/observations/eleve/'+el.id, {headers}),
+      ]);
+      setEleveSanctions(sanctionsRes.data || []);
+      setSanctionsObservations(obsRes.data || []);
+    } catch(err) { setEleveSanctions([]); setSanctionsObservations([]); }
     setSanctionsLoading(false);
   };
 
   const confirmerSanction = async () => {
     if (!pendingCell) return;
+    if (!String(pendingCell.observation_ref || '').trim()) {
+      setSanctionToast("Référence d'observation obligatoire");
+      setTimeout(() => setSanctionToast(''), 3000);
+      return;
+    }
     try {
       await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle, infraction: pendingCell.infraction, niveau: pendingCell.niveau,
-        date_sanction: pendingCell.date_sanction || null, prof_nom: pendingCell.prof_nom || null
+        date_sanction: pendingCell.date_sanction || null, prof_nom: pendingCell.prof_nom || null,
+        observation_ref: pendingCell.observation_ref || null,
       }, {headers});
       const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data); setPendingCell(null);
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
+  const sauvegarderEditionSanction = async () => {
+    if (!editSanction) return;
+    if (!String(editSanction.observation_ref || '').trim()) {
+      setSanctionToast("Référence d'observation obligatoire");
+      setTimeout(() => setSanctionToast(''), 3000);
+      return;
+    }
+    try {
+      await axios.put(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
+        date_sanction: editSanction.date_sanction || null,
+        prof_nom: editSanction.prof_nom || null,
+        observation_ref: editSanction.observation_ref || null,
+      }, {headers});
+      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      setEleveSanctions(r.data || []);
+      setEditSanction(null);
+    } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+  };
+
   const supprimerSanction = async (sanctionId) => {
-    if (!window.confirm('Retirer cette sanction ?')) return;
     await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
+    setSanctionToast('Sanction retirée');
+    setTimeout(() => setSanctionToast(''), 2500);
   };
 
   const chargerInventaireBranche = async (brancheId) => {
@@ -917,7 +934,7 @@ export default function Classes() {
             {(eleveDetail.prenom||'?')[0]}
           </div>
         )}
-        <h2 style={s.title}>🎓 {eleveDetail.prenom} {eleveDetail.nom}</h2>
+        <h2 style={s.title}>{eleveDetail.prenom} {eleveDetail.nom}</h2>
       </div>
         <span style={{...s.chip, background:'#e0e7ff', color:'#3730a3'}}>{detailClasse.nom}</span>
       </div>
@@ -942,7 +959,7 @@ export default function Classes() {
         <div style={s.rowBetween}>
           <h3 style={s.cardTitle}>📋 Observations</h3>
           <div style={{display:'flex',gap:8}}>
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={() => imprimerObservations()}>📄 Rapport PDF</button>
+            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={() => imprimerObservations()}>Résumé</button>
             <button style={s.btnAdd} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
           </div>
         </div>
@@ -950,8 +967,8 @@ export default function Classes() {
         {showObsForm && (
           <form onSubmit={sauverObservation} style={{background:'#f8fafc',borderRadius:10,padding:16,marginTop:16,border:'1px solid #e2e8f0'}}>
             <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:8,fontSize:12,color:'#64748b'}}>
-              <span>✍️ Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
-              <span>📅 {new Date().toLocaleDateString('fr-CH')}</span>
+              <span>Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
+              <span>{new Date().toLocaleDateString('fr-CH')}</span>
             </div>
             <div style={s.field}>
               <label style={s.lbl}>Titre *</label>
@@ -966,13 +983,17 @@ export default function Classes() {
               <textarea style={{...s.inp,minHeight:60,resize:'vertical'}} required value={obsForm.mesure_prise} onChange={e => setObsForm({...obsForm,mesure_prise:e.target.value})} placeholder="Ex: Avertissement oral, convocation..." />
             </div>
             <div style={{display:'flex',gap:12,marginTop:14}}>
+              <button type="button" onClick={() => setObsForm({...obsForm,intervention_titulaire:!obsForm.intervention_titulaire})}
+                style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                Intervention du titulaire : <b>{obsForm.intervention_titulaire?'OUI':'NON'}</b>
+              </button>
               <button type="button" onClick={() => setObsForm({...obsForm,intervention_responsable:!obsForm.intervention_responsable})}
-                style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
-                🚨 Intervention responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
+                style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                Intervention d'un responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
               </button>
               <button type="button" onClick={() => setObsForm({...obsForm,demande_entretien:!obsForm.demande_entretien})}
-                style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
-                🤝 Demande entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
+                style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                Entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
               </button>
             </div>
             <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
@@ -1008,13 +1029,17 @@ export default function Classes() {
                   <textarea style={{...s.inp,minHeight:50,resize:'vertical'}} value={obsEditForm.mesure_prise||''} onChange={e => setObsEditForm({...obsEditForm,mesure_prise:e.target.value})} />
                 </div>
                 <div style={{display:'flex',gap:10,marginTop:12}}>
+                  <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_titulaire:!obsEditForm.intervention_titulaire})}
+                    style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsEditForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsEditForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                    Intervention du titulaire : <b>{obsEditForm.intervention_titulaire?'OUI':'NON'}</b>
+                  </button>
                   <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_responsable:!obsEditForm.intervention_responsable})}
-                    style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsEditForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
-                    🚨 Intervention : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsEditForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                    Intervention d'un responsable : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b>
                   </button>
                   <button type="button" onClick={() => setObsEditForm({...obsEditForm,demande_entretien:!obsEditForm.demande_entretien})}
-                    style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsEditForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
-                    🤝 Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsEditForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                    Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b>
                   </button>
                 </div>
                 <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
@@ -1025,32 +1050,33 @@ export default function Classes() {
             ) : (
               <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                  <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
-                    {peutModifier && <>
-                      <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button onClick={async () => {
-                        if (window.confirm('Supprimer cette observation ?')) {
-                          await axios.delete(API+'/observations/'+obs.id, {headers});
-                          const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
-                          setObservations(r.data);
-                        }
-                      }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
-                    </>}
+                  <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                    <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
+                    {obs.intervention_responsable && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention</span>}
+                    {obs.intervention_titulaire && <span style={{background:'#ede9fe',color:'#5b21b6',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention du titulaire</span>}
+                    {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                   </div>
+                  {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onClick={async () => {
+                      if (window.confirm('Supprimer cette observation ?')) {
+                        await axios.delete(API+'/observations/'+obs.id, {headers});
+                        const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
+                        setObservations(r.data);
+                      }
+                    }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </div>}
                 </div>
                 <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
-                {obs.mesure_prise && <div style={{fontSize:12,color:'#475569',marginTop:6,background:'#f1f5f9',padding:'4px 10px',borderRadius:6}}>📋 <b>Mesure :</b> {obs.mesure_prise}</div>}
-              <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
-                <span style={{fontSize:11,color:'#94a3b8'}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</span>
-                {obs.intervention_responsable && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🚨 Intervention</span>}
-                {obs.demande_entretien && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🤝 Entretien</span>}
-              </div>
+                {obs.mesure_prise && <div style={{fontSize:11,color:'#64748b',marginTop:6,fontStyle:'italic'}}><b>Mesure :</b> {obs.mesure_prise}</div>}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                  <span style={{fontSize:11,color:'#94a3b8'}}>Auteur : {obs.auteur_prenom} {obs.auteur_nom}</span>
+                  <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
+                </div>
               </div>
             );
           })}
@@ -1068,11 +1094,11 @@ export default function Classes() {
     {id:'Punition Chance 2',label:'Chance 2',type:'row'},
     {id:null,label:'Retenue samedi',type:'section'},
     {id:'Retenue samedi Chance 1',label:'Chance 1',type:'row'},
-    {id:'Avertissement et entretien',label:'Avertissement et entretien',type:'row'},
+    {id:'Avertissement et entretien',label:'Avertissement\nEntretien',type:'row'},
   ];
   const ECHELLES = [
     { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:NIVEAUX_STD, note:"* L'utilisation des autres langues que le français est sanctionnée par une retenue de 5 minutes par remontrance le jour-même." },
-    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:NIVEAUX_STD },
+    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture','Couvre-chef','Pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:NIVEAUX_STD },
     { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:[{id:'Mise à pied',label:'Mise à pied',type:'row'}], note:'* En cas de récidive, sur proposition des responsables et décision du chef de section.' },
   ];
 
@@ -1157,9 +1183,12 @@ export default function Classes() {
 
       {showSanctions && sanctionsEleve && (
         <div style={s.overlay}>
-          <div style={{...s.modal, width:'95vw', maxWidth:'95vw', maxHeight:'90vh', overflowY:'auto', padding:24}}>
+          <div style={{...s.modal, width:'90vw', maxWidth:1050, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>⚠️ Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <h3 style={s.modalTitle}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+                {sanctionToast && <span style={{background:'#ef4444',color:'white',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+              </div>
               <button style={s.btnClose} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
             </div>
             {sanctionsLoading ? (
@@ -1177,7 +1206,7 @@ export default function Classes() {
                 <table style={{borderCollapse:'collapse',width:'100%',fontSize:11,tableLayout:'fixed'}}>
                     <thead>
                       <tr>
-                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',width:'13%'}}></th>
+                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',width:'9%'}}></th>
                         {echelle.infractions.map(inf => (
                           <th key={inf} style={{padding:'5px 6px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',wordBreak:'break-word',lineHeight:1.3}}>{inf}</th>
                         ))}
@@ -1192,19 +1221,34 @@ export default function Classes() {
                         );
                         return (
                         <tr key={niveau.id}>
-                          <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'nowrap',fontSize:10}}>{niveau.label}</td>
+                          <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'pre-line',fontSize:10}}>{niveau.label}</td>
                           {echelle.infractions.map(infraction => {
                             const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau.id);
                             const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau.id;
+                            const niveauxSaisie = echelle.niveaux.filter(n => n.type !== 'section');
+                            const idxNiveau = niveauxSaisie.findIndex(n => n.id === niveau.id);
+                            const prevNiveau = idxNiveau > 0 ? niveauxSaisie[idxNiveau - 1] : null;
+                            const prevExiste = prevNiveau ? !!eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===prevNiveau.id) : true;
+                            const peutAjouter = idxNiveau === 0 || prevExiste;
                             return (
                               <td key={infraction} style={{padding:'4px 4px',border:'1px solid #e2e8f0',textAlign:'center',background:sanction?'#fef3c7':'white',verticalAlign:'middle'}}>
                                 {isPending ? (
                                   <div style={{display:'flex',flexDirection:'column',gap:3,textAlign:'left'}}>
                                     <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
-                                      📅 {pendingCell.date_sanction ? new Date(pendingCell.date_sanction+'T00:00:00').toLocaleDateString('fr-CH') : ''}
+                                      {pendingCell.date_sanction ? new Date(pendingCell.date_sanction+'T00:00:00').toLocaleDateString('fr-CH') : ''}
                                     </div>
+                                    <select
+                                      value={pendingCell.observation_ref || ''}
+                                      onChange={e => setPendingCell(prev => ({ ...prev, observation_ref: e.target.value }))}
+                                      style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                    >
+                                      <option value="">Réf. observation</option>
+                                      {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                        <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
+                                      ))}
+                                    </select>
                                     <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
-                                      👤 {pendingCell.prof_nom}
+                                      {pendingCell.prof_nom}
                                     </div>
                                     <div style={{display:'flex',gap:4}}>
                                       <button onClick={confirmerSanction} style={{flex:1,padding:'3px 0',background:'#10b981',color:'white',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:600}}>✓ OK</button>
@@ -1212,22 +1256,59 @@ export default function Classes() {
                                     </div>
                                   </div>
                                 ) : sanction ? (
-                                  <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-                                    <span style={{fontSize:16}}>✅</span>
-                                    <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}</span>
-                                    <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
-                                    {isAdmin() && <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',padding:0,display:'inline-flex',alignItems:'center'}} title="Retirer">
-                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                                    </button>}
-                                  </div>
+                                  editSanction && editSanction.id === sanction.id ? (
+                                    <div style={{display:'flex',flexDirection:'column',gap:3,textAlign:'left'}}>
+                                      <input
+                                        type="date"
+                                        value={editSanction.date_sanction || ''}
+                                        onChange={e => setEditSanction(prev => ({...prev, date_sanction: e.target.value}))}
+                                        style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                      />
+                                      <select
+                                        value={editSanction.observation_ref || ''}
+                                        onChange={e => setEditSanction(prev => ({...prev, observation_ref: e.target.value}))}
+                                        style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
+                                      >
+                                        <option value="">Réf. observation</option>
+                                        {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                          <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
+                                        ))}
+                                      </select>
+                                      <div style={{fontSize:10,color:'#374151',padding:'3px 6px',background:'#f1f5f9',borderRadius:4,fontWeight:600}}>
+                                        {editSanction.prof_nom || ''}
+                                      </div>
+                                      <div style={{display:'flex',gap:4}}>
+                                        <button onClick={sauvegarderEditionSanction} style={{flex:1,padding:'3px 0',background:'#10b981',color:'white',border:'none',borderRadius:4,cursor:'pointer',fontSize:11,fontWeight:600}}>✓ OK</button>
+                                        <button onClick={() => setEditSanction(null)} style={{flex:1,padding:'3px 0',background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:4,cursor:'pointer',fontSize:11}}>✕</button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:6}}>
+                                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:2}}>
+                                        <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>
+                                          {sanction.date_sanction ? new Date(sanction.date_sanction).toLocaleDateString('fr-CH') : ''}
+                                          {sanction.observation_ref ? ' · ' + sanction.observation_ref : ''}
+                                        </span>
+                                        <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
+                                      </div>
+                                      {isAdmin() && (
+                                        <div style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
+                                          <button onClick={() => setEditSanction({id:sanction.id,date_sanction:sanction.date_sanction?String(sanction.date_sanction).substring(0,10):'',observation_ref:sanction.observation_ref||'',prof_nom:sanction.prof_nom||''})} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#475569',padding:0,lineHeight:1}} title="Modifier">✏️</button>
+                                          <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0,lineHeight:1}} title="Retirer">🗑️</button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
                                 ) : (
                                   isAdmin() ? (
                                     <button onClick={() => {
-                                        const today = new Date().toISOString().split('T')[0];
-                                        const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom});
-                                      }}
-                                      style={{width:20,height:20,borderRadius:4,border:'2px solid #d1d5db',background:'white',cursor:'pointer',display:'inline-block'}} title="Ajouter" />
+                                      if (!peutAjouter) return;
+                                      const today = new Date().toISOString().split('T')[0];
+                                      const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
+                                      const refs = sanctionsObservations.filter(o => o.reference_obs);
+                                      setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0]?.reference_obs||''});
+                                    }}
+                                    style={{width:20,height:20,borderRadius:4,border:'2px solid '+(peutAjouter?'#d1d5db':'#e5e7eb'),background:peutAjouter?'white':'#f3f4f6',cursor:peutAjouter?'pointer':'not-allowed',display:'inline-block',opacity:peutAjouter?1:0.6}} />
                                   ) : (
                                     <span style={{width:20,height:20,borderRadius:4,border:'2px solid #e2e8f0',background:'#f9fafb',display:'inline-block'}} />
                                   )
@@ -1251,24 +1332,24 @@ export default function Classes() {
       )}
       {showObs && obsEleve && (
         <div style={s.overlay}>
-          <div style={{...s.modal, width:'95vw', maxWidth:1100, maxHeight:'90vh', overflowY:'auto', padding:24}}>
+          <div style={{...s.modal, width:'71vw', maxWidth:825, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>📋 Observations — {obsEleve.prenom} {obsEleve.nom}</h3>
+              <h3 style={s.modalTitle}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>
               <button style={s.btnClose} onClick={() => setShowObs(false)}>✕</button>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <span style={{fontSize:12,color:'#64748b'}}>Total: <b>{observations.length}</b> observation(s)</span>
               <div style={{display:'flex',gap:8}}>
-                <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerObsEleve}>📄 Rapport PDF</button>
-                <button style={{...s.btnAdd,background:'#10b981'}} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
+                <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerObsEleve}>Résumé</button>
+                <button style={s.btnAdd} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
               </div>
             </div>
             {showObsForm && (
               <form onSubmit={sauverObsModal} style={{background:'#f8fafc',borderRadius:10,padding:16,marginBottom:16,border:'1px solid #e2e8f0'}}>
                 <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:8,fontSize:12,color:'#64748b'}}>
-                  <span>✍️ Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
-                  <span>📅 {new Date().toLocaleDateString('fr-CH')}</span>
-                  <span>🔖 <b>{referenceObsPreview}</b></span>
+                  <span>Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
+                  <span>{new Date().toLocaleDateString('fr-CH')}</span>
+                  <span>Réf. <b>{referenceObsPreview}</b></span>
                 </div>
                 <div style={s.field}>
                   <label style={s.lbl}>Titre *</label>
@@ -1283,18 +1364,22 @@ export default function Classes() {
                   <textarea style={{...s.inp,minHeight:60,resize:'vertical'}} required value={obsForm.mesure_prise} onChange={e => setObsForm({...obsForm,mesure_prise:e.target.value})} placeholder="Ex: Avertissement oral, convocation..." />
                 </div>
                 <div style={{display:'flex',gap:12,marginTop:14}}>
+                  <button type="button" onClick={() => setObsForm({...obsForm,intervention_titulaire:!obsForm.intervention_titulaire})}
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
+                    Intervention du titulaire : <b>{obsForm.intervention_titulaire?'OUI':'NON'}</b>
+                  </button>
                   <button type="button" onClick={() => setObsForm({...obsForm,intervention_responsable:!obsForm.intervention_responsable})}
-                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
-                    🚨 Intervention responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
+                    Intervention d'un responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
                   </button>
                   <button type="button" onClick={() => setObsForm({...obsForm,demande_entretien:!obsForm.demande_entretien})}
-                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
-                    🤝 Demande entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12}}>
+                    Entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
                   </button>
                 </div>
                 <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
                   <button type="button" style={s.btnCancel} onClick={() => setShowObsForm(false)}>Annuler</button>
-                  <button type="submit" style={{...s.btnSave,background:'#10b981'}}>Sauvegarder</button>
+                  <button type="submit" style={s.btnSave}>Sauvegarder</button>
                 </div>
               </form>
             )}
@@ -1315,32 +1400,34 @@ export default function Classes() {
                     <div style={{...s.field,marginTop:10}}><label style={s.lbl}>Remarque</label><textarea style={{...s.inp,minHeight:60,resize:'vertical'}} value={obsEditForm.contenu} onChange={e => setObsEditForm({...obsEditForm,contenu:e.target.value})} required /></div>
                     <div style={{...s.field,marginTop:10}}><label style={s.lbl}>Mesure prise</label><textarea style={{...s.inp,minHeight:50,resize:'vertical'}} value={obsEditForm.mesure_prise||''} onChange={e => setObsEditForm({...obsEditForm,mesure_prise:e.target.value})} /></div>
                     <div style={{display:'flex',gap:10,marginTop:12}}>
-                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_responsable:!obsEditForm.intervention_responsable})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsEditForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>🚨 Intervention : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b></button>
-                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,demande_entretien:!obsEditForm.demande_entretien})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsEditForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>🤝 Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b></button>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_titulaire:!obsEditForm.intervention_titulaire})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsEditForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsEditForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>Intervention du titulaire : <b>{obsEditForm.intervention_titulaire?'OUI':'NON'}</b></button>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_responsable:!obsEditForm.intervention_responsable})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsEditForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>Intervention d'un responsable : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b></button>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,demande_entretien:!obsEditForm.demande_entretien})} style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsEditForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b></button>
                     </div>
                     <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
                       <button type="button" style={s.btnCancel} onClick={() => setObsEditId(null)}>Annuler</button>
-                      <button type="submit" style={{...s.btnSave,background:'#10b981'}}>Sauvegarder</button>
+                      <button type="submit" style={s.btnSave}>Sauvegarder</button>
                     </div>
                   </form>
                 ) : (
                   <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                         <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                        <span style={{fontSize:11,color:'#64748b'}}>{obs.reference_obs ? `${obs.reference_obs} - ` : ''}{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
+                        {obs.intervention_responsable && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention</span>}
+                        {obs.intervention_titulaire && <span style={{background:'#ede9fe',color:'#5b21b6',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention du titulaire</span>}
+                        {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                       </div>
                       {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                         <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                       </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
-                    {obs.mesure_prise && <div style={{fontSize:12,color:'#475569',marginTop:6,background:'#f1f5f9',padding:'4px 10px',borderRadius:6}}>📋 <b>Mesure :</b> {obs.mesure_prise}</div>}
-                    <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
-                      <span style={{fontSize:11,color:'#94a3b8'}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</span>
-                      {obs.intervention_responsable && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🚨 Intervention</span>}
-                      {obs.demande_entretien && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🤝 Entretien</span>}
+                    {obs.mesure_prise && <div style={{fontSize:11,color:'#64748b',marginTop:6,fontStyle:'italic'}}><b>Mesure :</b> {obs.mesure_prise}</div>}
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                      <span style={{fontSize:11,color:'#94a3b8'}}>Auteur : {obs.auteur_prenom} {obs.auteur_nom}</span>
+                      <span style={{fontSize:11,color:'#94a3b8'}}>{obs.reference_obs ? `${obs.reference_obs} — ` : ''}{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
                     </div>
                   </div>
                 );
@@ -1352,16 +1439,9 @@ export default function Classes() {
 
       {showEleveReadOnly && eleveReadOnly && (
         <div style={s.overlay}>
-          <div style={{...s.modal, width:'95vw', maxWidth:900, maxHeight:'90vh', overflowY:'auto', padding:32}}>
+          <div style={{...s.modal, width:'95vw', maxWidth:960, maxHeight:'90vh', overflowY:'auto', padding:32}}>
             <div style={s.modalHeader}>
-              <div style={{display:'flex',alignItems:'center',gap:14}}>
-                {eleveReadOnly.photo ? (
-                  <img src={eleveReadOnly.photo} alt="photo" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'3px solid #e2e8f0'}} />
-                ) : (
-                  <div style={{width:52,height:52,borderRadius:'50%',background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:'#6366f1',fontWeight:700}}>{(eleveReadOnly.prenom||'?')[0]}</div>
-                )}
-                <h3 style={s.modalTitle}>🎓 {eleveReadOnly.prenom} {eleveReadOnly.nom}</h3>
-              </div>
+              <h3 style={s.modalTitle}>Fiche élève</h3>
               <button style={s.btnClose} onClick={() => setShowEleveReadOnly(false)}>✕</button>
             </div>
             {(() => {
@@ -1374,7 +1454,18 @@ export default function Classes() {
               );
               const secTitle = (txt,color,bg) => <div style={{fontSize:11,fontWeight:700,color,background:bg,padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.05em',gridColumn:'1/-1'}}>{txt}</div>;
               return (
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,marginTop:20}}>
+                <div style={{display:'flex',gap:28,marginTop:20}}>
+                  {/* Colonne gauche : nom + photo */}
+                  <div style={{width:180,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',gap:12,paddingTop:8}}>
+                    <div style={{fontSize:18,fontWeight:800,color:'#1e293b',textAlign:'center',lineHeight:1.3}}>{eleveReadOnly.prenom}<br/>{eleveReadOnly.nom}</div>
+                    {eleveReadOnly.photo ? (
+                      <img src={eleveReadOnly.photo} alt="photo" style={{width:160,height:160,borderRadius:12,objectFit:'cover',border:'3px solid #e2e8f0',boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}} />
+                    ) : (
+                      <div style={{width:160,height:160,borderRadius:12,background:'#e0e7ff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:60,color:'#6366f1',fontWeight:700}}>{(eleveReadOnly.prenom||'?')[0]}</div>
+                    )}
+                  </div>
+                  {/* Colonne droite : infos */}
+                  <div style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
                   {secTitle('Informations personnelles','#1e40af','#dbeafe')}
                   <Lbl l="Nom" v={eleveReadOnly.nom} />
                   <Lbl l="Prénom" v={eleveReadOnly.prenom} />
@@ -1388,7 +1479,6 @@ export default function Classes() {
                   </div>
                   <Lbl l="Téléphone" v={eleveReadOnly.telephone} />
                   <Lbl l="Nationalité" v={eleveReadOnly.oasi_nationalite} />
-                  <Lbl l="Statut" v={eleveReadOnly.statut === 'actif' ? '✅ Actif' : '❌ Inactif'} />
                   {secTitle('Contact / responsable légal','#166534','#dcfce7')}
                   <Lbl l="Nom parent / contact" v={eleveReadOnly.nom_parent || eleveReadOnly.personne_contact} />
                   <Lbl l="Téléphone parent" v={eleveReadOnly.telephone_parent} />
@@ -1405,6 +1495,7 @@ export default function Classes() {
                     <Lbl l="PRG_ID" v={eleveReadOnly.oasi_prg_id} />
                     <Lbl l="RA_ID" v={eleveReadOnly.oasi_ra_id} />
                   </>)}
+                </div>
                 </div>
               );
             })()}
@@ -1457,7 +1548,7 @@ export default function Classes() {
             </div>
           )}
         </div>
-        <div style={{...s.tableWrap, marginTop:10, maxHeight:'calc(100vh - 270px)', overflowY:'auto'}}>
+        <div style={{...s.tableWrap, marginTop:10}}>
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
@@ -1561,7 +1652,23 @@ export default function Classes() {
             return <>
 
           {devoirSousOnglet === 'devoirs' && (<>
-          <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap',marginTop:15}}>
+          {devoirActif && (() => {
+            const sm = {};
+            suiviDevoirs.forEach(s => { sm[s.eleve_id] = s.statut; });
+            const rendus   = elevesClasse.filter(el => sm[el.id] === 'rendu').length;
+            const partiel  = elevesClasse.filter(el => sm[el.id] === 'partiel').length;
+            const excuse   = elevesClasse.filter(el => sm[el.id] === 'excuse').length;
+            const nonRendu = elevesClasse.filter(el => !sm[el.id] || sm[el.id] === 'non_rendu').length;
+            return (
+              <div style={{width:220,display:'flex',justifyContent:'center',gap:6,fontSize:11,marginTop:15,marginBottom:8}}>
+                <span style={{background:'#dcfce7',color:'#166534',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {rendus}</span>
+                <span style={{background:'#fef9c3',color:'#d97706',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {partiel}</span>
+                <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✗ {nonRendu}</span>
+                <span style={{background:'#dbeafe',color:'#1e40af',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {excuse}</span>
+              </div>
+            );
+          })()}
+          <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap',marginTop: devoirActif ? 0 : 15}}>
             <div style={{flex:'0 0 220px',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
               {devoirsLoading ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
@@ -1573,8 +1680,10 @@ export default function Classes() {
                   style={{padding:'10px 12px',cursor:'pointer',borderLeft:`3px solid ${devoirActif?.id===d.id?'#6366f1':'transparent'}`,background:devoirActif?.id===d.id?'#f5f3ff':'white',borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <div style={{fontWeight:700,fontSize:13,color:'#1e293b'}}>{d.titre}</div>
-                    {d.matiere && <div style={{fontSize:11,color:'#64748b'}}>{d.matiere}</div>}
-                    {d.date_remise && <div style={{fontSize:11,color:'#94a3b8'}}>Remise: {new Date(d.date_remise).toLocaleDateString('fr-CH')}</div>}
+                    <div style={{display:'flex',gap:8,alignItems:'center',marginTop:2}}>
+                      {d.date_remise && <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(d.date_remise).toLocaleDateString('fr-CH')}</span>}
+                      {d.matiere && <span style={{fontSize:11,color:'#64748b'}}>{d.matiere}</span>}
+                    </div>
                   </div>
                   <div style={{display:'flex',gap:4,alignItems:'center',flexShrink:0}}>
                     <button style={s.btnEdit} onClick={e => { e.stopPropagation(); setDevoirEditForm({ titre:d.titre, matiere:d.matiere||'', date_devoir:d.date_devoir?.substring(0,10)||'', date_remise:d.date_remise?.substring(0,10)||'' }); setDevoirEditId(d.id); }}>
@@ -1589,38 +1698,16 @@ export default function Classes() {
             </div>
 
             {/* Tableau suivi */}
-            <div style={{flex:1,background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',minWidth:0}}>
+            <div style={{flex:1,background:'white',borderRadius:'10px 10px 0 0',boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',minWidth:0}}>
               {!devoirActif ? (
                 <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Sélectionnez un devoir pour voir le suivi</div>
               ) : (
                 <>
-                  <div style={{padding:'10px 14px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <div>
-                      <span style={{fontWeight:700,fontSize:14,color:'#1e293b'}}>{devoirActif.titre}</span>
-                      {devoirActif.matiere && <span style={{marginLeft:8,fontSize:12,color:'#64748b'}}>— {devoirActif.matiere}</span>}
-                    </div>
-                    {(() => {
-                      const sm = {};
-                      suiviDevoirs.forEach(s => { sm[s.eleve_id] = s.statut; });
-                      const rendus   = elevesClasse.filter(el => sm[el.id] === 'rendu').length;
-                      const partiel  = elevesClasse.filter(el => sm[el.id] === 'partiel').length;
-                      const excuse   = elevesClasse.filter(el => sm[el.id] === 'excuse').length;
-                      const nonRendu = elevesClasse.filter(el => !sm[el.id] || sm[el.id] === 'non_rendu').length;
-                      return (
-                        <div style={{display:'flex',gap:6,fontSize:11}}>
-                          <span style={{background:'#dcfce7',color:'#166534',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {rendus}</span>
-                          <span style={{background:'#fef9c3',color:'#d97706',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {partiel}</span>
-                          <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✗ {nonRendu}</span>
-                          <span style={{background:'#dbeafe',color:'#1e40af',padding:'3px 8px',borderRadius:12,fontWeight:700}}>✓ {excuse}</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
                   <table style={{width:'100%',borderCollapse:'collapse'}}>
                     <thead>
                       <tr style={{background:'#6366f1'}}>
                         {['Nom','Prénom','Statut'].map((h,i,a) => (
-                          <th key={h} style={{padding:'9px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 8px':i===a.length-1?'0 8px 8px 0':0}}>{h}</th>
+                          <th key={h} style={{padding:'9px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 0':i===a.length-1?'0 8px 0 0':0}}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1685,17 +1772,10 @@ export default function Classes() {
                         ))}
                       </select>
                     </div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                      <div>
-                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date du devoir</label>
-                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
-                          value={devoirForm.date_devoir} onChange={e => setDevoirForm({...devoirForm, date_devoir: e.target.value})} />
-                      </div>
-                      <div>
-                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise</label>
-                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
-                          value={devoirForm.date_remise} onChange={e => setDevoirForm({...devoirForm, date_remise: e.target.value})} />
-                      </div>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise *</label>
+                      <input required type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                        value={devoirForm.date_remise} onChange={e => setDevoirForm({...devoirForm, date_remise: e.target.value})} />
                     </div>
                   </div>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
@@ -1731,17 +1811,10 @@ export default function Classes() {
                         ))}
                       </select>
                     </div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                      <div>
-                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date du devoir</label>
-                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
-                          value={devoirEditForm.date_devoir} onChange={e => setDevoirEditForm({...devoirEditForm, date_devoir: e.target.value})} />
-                      </div>
-                      <div>
-                        <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise</label>
-                        <input type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
-                          value={devoirEditForm.date_remise} onChange={e => setDevoirEditForm({...devoirEditForm, date_remise: e.target.value})} />
-                      </div>
+                    <div>
+                      <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise *</label>
+                      <input required type="date" style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box'}}
+                        value={devoirEditForm.date_remise} onChange={e => setDevoirEditForm({...devoirEditForm, date_remise: e.target.value})} />
                     </div>
                   </div>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
@@ -1756,7 +1829,7 @@ export default function Classes() {
 
           {/* Sous-onglet Stats */}
           {devoirSousOnglet === 'stats' && (
-            <div style={{background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',marginTop:15}}>
+            <div style={{background:'white',borderRadius:'10px 10px 0 0',boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',marginTop:15}}>
               {devoirsFiltres.length === 0 || elevesClasse.length === 0 ? (
                 <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucune donnée</div>
               ) : (
@@ -1764,7 +1837,7 @@ export default function Classes() {
                   <thead>
                     <tr style={{background:'#6366f1'}}>
                       {['Nom','Prénom','✓ Rendu','✓ Partiel','✗ Non rendu','✓ Excusé','Taux'].map((h,i,a) => (
-                        <th key={h} style={{padding:'9px 12px',textAlign:i>=2?'center':'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 8px':i===a.length-1?'0 8px 8px 0':0}}>{h}</th>
+                        <th key={h} style={{padding:'9px 12px',textAlign:i>=2?'center':'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:i===0?'8px 0 0 0':i===a.length-1?'0 8px 0 0':0}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1787,18 +1860,10 @@ export default function Classes() {
                         <tr key={el.id} style={{background:idx%2===0?'white':'#fafafa',borderBottom:'1px solid #f1f5f9'}}>
                           <td style={{padding:'10px 12px',fontWeight:700,fontSize:13,color:'#1e293b'}}>{el.nom || '—'}</td>
                           <td style={{padding:'10px 12px',fontSize:13,color:'#334155'}}>{el.prenom || '—'}</td>
-                          <td style={{padding:'10px 12px',textAlign:'center'}}>
-                            <span style={{background:'#dcfce7',color:'#166534',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{rendu}</span>
-                          </td>
-                          <td style={{padding:'10px 12px',textAlign:'center'}}>
-                            <span style={{background:'#fef9c3',color:'#d97706',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{partiel}</span>
-                          </td>
-                          <td style={{padding:'10px 12px',textAlign:'center'}}>
-                            <span style={{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{nonRendu}</span>
-                          </td>
-                          <td style={{padding:'10px 12px',textAlign:'center'}}>
-                            <span style={{background:'#dbeafe',color:'#1e40af',padding:'3px 10px',borderRadius:12,fontWeight:700,fontSize:12}}>{excuse}</span>
-                          </td>
+                          <td style={{padding:'10px 12px',textAlign:'center',fontWeight:700,fontSize:13,color:'#166534'}}>{rendu}</td>
+                          <td style={{padding:'10px 12px',textAlign:'center',fontWeight:700,fontSize:13,color:'#d97706'}}>{partiel}</td>
+                          <td style={{padding:'10px 12px',textAlign:'center',fontWeight:700,fontSize:13,color:'#991b1b'}}>{nonRendu}</td>
+                          <td style={{padding:'10px 12px',textAlign:'center',fontWeight:700,fontSize:13,color:'#1e40af'}}>{excuse}</td>
                           <td style={{padding:'10px 12px',textAlign:'center'}}>
                             {taux !== null
                               ? <span style={{fontWeight:700,fontSize:13,color:taux>=75?'#166534':taux>=50?'#d97706':'#991b1b'}}>{taux}%</span>
@@ -2011,7 +2076,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={{...s.tableWrap, marginTop:15, maxHeight:'calc(100vh - 220px)', overflowY:'auto'}}>
+      <div style={{...s.tableWrap, marginTop:15}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -2115,7 +2180,7 @@ export default function Classes() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},

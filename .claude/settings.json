@@ -81,7 +81,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 https://ecole-manager-frontend.onrender.com)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 https://ecole-manager-backend.onrender.com/api)",
       "Bash(curl -s -w \"\\\\nHTTP %{http_code} - temps: %{time_total}s\" --max-time 60 https://ecole-manager-backend.onrender.com/)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\\\.jsx?$\")",
+      "Bash(grep -l \"borderRadius.*10px.*10px.*0.*0\" \"e:\\\\OneDrive - Ecoles - Schulen Valais-Wallis\\\\ecole-manager\\\\frontend\\\\src\\\\pages\"/*.js)",
+      "Bash(node -e ':*)"
     ],
     "additionalDirectories": [
       "e:\\OneDrive - Ecoles - Schulen Valais-Wallis\\ecole-manager\\backend",

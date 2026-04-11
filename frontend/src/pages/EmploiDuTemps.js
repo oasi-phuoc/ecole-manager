@@ -1667,11 +1667,7 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
           </div>
         )}
-        {onglet === 'disponibilites' && (
-          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
-            <button type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos}>💾 Sauvegarder</button>
-          </div>
-        )}
+        {onglet === 'disponibilites' && null}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {toast.message && (
@@ -1881,8 +1877,7 @@ export default function EmploiDuTemps() {
                               if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
                               const ok = dispos[cr.id] !== false;
                               return (
-                                <td key={jour} style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default'}}
-                                  onClick={() => isAdmin() && toggleDispo(cr.id)}>
+                                <td key={jour} style={{...styles.tdDispo, cursor:'default'}}>
                                   <span style={{fontSize:24, lineHeight:1, color:ok?'#16a34a':'#dc2626'}}>●</span>
                                 </td>
                               );

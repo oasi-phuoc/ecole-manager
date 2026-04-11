@@ -204,7 +204,7 @@ export default function Branches() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -235,7 +235,7 @@ const s = {
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
-  tableWrap:{maxHeight:'calc(100vh - 200px)',overflowY:'auto',overflowX:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',background:'#f8fafc',position:'sticky',top:0,zIndex:1},

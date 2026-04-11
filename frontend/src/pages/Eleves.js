@@ -23,6 +23,7 @@ export default function Eleves() {
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
+  const [showInactif, setShowInactif] = useState(false);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -77,12 +78,13 @@ export default function Eleves() {
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
   const [editSanction, setEditSanction] = useState(null);
   const [pendingCell, setPendingCell] = useState(null);
+  const [sanctionToast, setSanctionToast] = useState('');
   const [showObs, setShowObs] = useState(false);
   const [obsEleve, setObsEleve] = useState(null);
   const [observations, setObservations] = useState([]);
   const [showObsForm, setShowObsForm] = useState(false);
   const [obsEditId, setObsEditId] = useState(null);
-  const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+  const [obsEditForm, setObsEditForm] = useState({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
   const [obsForm, setObsForm] = useState({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
 
   const navigate = useNavigate();
@@ -283,7 +285,8 @@ export default function Eleves() {
   const confirmerSanction = async () => {
     if (!pendingCell) return;
     if (!String(pendingCell.observation_ref || '').trim()) {
-      alert("Référence d'observation obligatoire pour valider la sanction.");
+      setSanctionToast("Référence d'observation obligatoire");
+      setTimeout(() => setSanctionToast(''), 3000);
       return;
     }
     try {
@@ -301,15 +304,17 @@ export default function Eleves() {
   };
 
   const supprimerSanction = async (sanctionId) => {
-    if (!window.confirm('Retirer cette sanction ?')) return;
     await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
+    setSanctionToast('Sanction retirée');
+    setTimeout(() => setSanctionToast(''), 2500);
   };
 
   const sauvegarderEditionSanction = async () => {
     if (!editSanction) return;
     if (!String(editSanction.observation_ref || '').trim()) {
-      alert("Référence d'observation obligatoire pour valider la sanction.");
+      setSanctionToast("Référence d'observation obligatoire");
+      setTimeout(() => setSanctionToast(''), 3000);
       return;
     }
     try {
@@ -338,7 +343,7 @@ export default function Eleves() {
     if (!obsEleve) return;
     try {
       await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
-      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false});
+      setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
       const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
       setObservations(r.data);
@@ -355,12 +360,8 @@ export default function Eleves() {
         <td>${obs.contenu||''}</td>
         <td>${obs.mesure_prise||'—'}</td>
         <td>${obs.auteur_prenom||''} ${obs.auteur_nom||''}</td>
-        <td style="text-align:center">
-          ${obs.intervention_responsable?'<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🚨 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}
-        </td>
-        <td style="text-align:center">
-          ${obs.demande_entretien?'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🤝 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}
-        </td>
+        <td style="text-align:center;font-size:12px">${obs.intervention_responsable?'Oui':'Non'}</td>
+        <td style="text-align:center;font-size:12px">${obs.demande_entretien?'Oui':'Non'}</td>
       </tr>
     `).join('');
 
@@ -431,15 +432,16 @@ export default function Eleves() {
     {id:'Punition Chance 2',label:'Chance 2',type:'row'},
     {id:null,label:'Retenue samedi',type:'section'},
     {id:'Retenue samedi Chance 1',label:'Chance 1',type:'row'},
-    {id:'Avertissement et entretien',label:'Avertissement et entretien',type:'row'},
+    {id:'Avertissement et entretien',label:'Avertissement\nEntretien',type:'row'},
   ];
   const ECHELLES = [
     { id:1, titre:"Echelle 1 — Directives de l'école", infractions:['Retard injustifié','Objets connectés','Devoir non fait'], niveaux:NIVEAUX_STD, note:"* L'utilisation des autres langues que le français est sanctionnée par une retenue de 5 minutes par remontrance le jour-même." },
-    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture en classe','Casquette/bonnet','Règles de pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:NIVEAUX_STD },
+    { id:2, titre:'Echelle 2 — Respect du règlement', infractions:['Nourriture','Couvre-chef','Pause','Moquerie','Prise de parole','Ascenseur','Dégradation du matériel'], niveaux:NIVEAUX_STD },
     { id:3, titre:'Echelle 3', infractions:['Violence verbale','Violence physique','Vol'], niveaux:[{id:'Mise à pied',label:'Mise à pied',type:'row'}], note:'* En cas de récidive, sur proposition des responsables et décision du chef de section.' },
   ];
 
   const elevesFiltres = eleves.filter(el => {
+    if (!showInactif && el.statut === 'inactif') return false;
     const classe = classes.find(c => String(c.id) === String(el.classe_id));
     const classeNom = classe?.nom || '';
     const niveau = classe?.niveau || '';
@@ -460,7 +462,7 @@ export default function Eleves() {
   })();
 
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
 
       {/* Zoom photo */}
       {photoZoom && (
@@ -507,6 +509,11 @@ export default function Eleves() {
             );
           })}
         </div>
+        <button
+          onClick={() => setShowInactif(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
+        </button>
       </div>
 
       {/* Modal Import */}
@@ -717,9 +724,12 @@ export default function Eleves() {
 
       {showSanctions && sanctionsEleve && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
-          <div style={{background:'white',padding:24,borderRadius:16,width:'95vw',maxWidth:'95vw',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+          <div style={{background:'white',padding:24,borderRadius:16,width:'90vw',maxWidth:1050,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>⚠️ Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+                {sanctionToast && <span style={{background:'#ef4444',color:'white',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+              </div>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
             </div>
             {sanctionsLoading ? (
@@ -737,7 +747,7 @@ export default function Eleves() {
                   <table style={{borderCollapse:'collapse',width:'100%',fontSize:11,tableLayout:'fixed'}}>
                     <thead>
                       <tr>
-                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',width:'13%'}}></th>
+                        <th style={{padding:'5px 8px',background:'#f8fafc',border:'1px solid #e2e8f0',width:'9%'}}></th>
                         {echelle.infractions.map(inf => (
                           <th key={inf} style={{padding:'5px 6px',background:'#f8fafc',border:'1px solid #e2e8f0',textAlign:'center',fontWeight:700,color:'#64748b',wordBreak:'break-word',lineHeight:1.3}}>{inf}</th>
                         ))}
@@ -752,7 +762,7 @@ export default function Eleves() {
                         );
                         return (
                           <tr key={niveau.id}>
-                            <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'nowrap',fontSize:10}}>{niveau.label}</td>
+                            <td style={{padding:'5px 8px',border:'1px solid #e2e8f0',fontWeight:600,color:'#374151',background:'#fafafa',whiteSpace:'pre-line',fontSize:10}}>{niveau.label}</td>
                             {echelle.infractions.map(infraction => {
                               const sanction = eleveSanctions.find(s => s.echelle===echelle.id && s.infraction===infraction && s.niveau===niveau.id);
                               const isPending = pendingCell && pendingCell.echelle===echelle.id && pendingCell.infraction===infraction && pendingCell.niveau===niveau.id;
@@ -855,10 +865,7 @@ export default function Eleves() {
                                   ) : (
                                     isAdmin() ? (
                                       <button onClick={() => {
-                                        if (!peutAjouter) {
-                                          alert("Vous devez d'abord saisir la sanction du niveau précédent dans cette colonne.");
-                                          return;
-                                        }
+                                        if (!peutAjouter) return;
                                         const refs = sanctionsObservations.filter(o => o.reference_obs);
                                         const today = new Date().toISOString().split('T')[0];
                                         const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
@@ -889,25 +896,25 @@ export default function Eleves() {
 
       {showObs && obsEleve && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
-          <div style={{background:'white',padding:24,borderRadius:16,width:'95vw',maxWidth:1100,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+          <div style={{background:'white',padding:24,borderRadius:16,width:'71vw',maxWidth:825,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📋 Observations — {obsEleve.prenom} {obsEleve.nom}</h3>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowObs(false)}>✕</button>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <span style={{fontSize:12,color:'#64748b'}}>Total: <b>{observations.length}</b> observation(s)</span>
               <div style={{display:'flex',gap:8}}>
-                <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => imprimerObservations()}>📄 Rapport PDF</button>
-                <button style={{padding:'8px 16px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
+                <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => imprimerObservations()}>Résumé</button>
+                <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowObsForm(!showObsForm)}>+ Ajouter</button>
               </div>
             </div>
 
             {showObsForm && (
               <form onSubmit={sauverObservation} style={{background:'#f8fafc',borderRadius:10,padding:16,marginTop:16,border:'1px solid #e2e8f0'}}>
                 <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:8,fontSize:12,color:'#64748b'}}>
-                  <span>✍️ Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
-                  <span>📅 {new Date().toLocaleDateString('fr-CH')}</span>
-                  <span>🔖 <b>{referenceObservationPreview}</b></span>
+                  <span>Auteur : <b>{currentUser?.prenom} {currentUser?.nom}</b></span>
+                  <span>{new Date().toLocaleDateString('fr-CH')}</span>
+                  <span>Réf. <b>{referenceObservationPreview}</b></span>
                 </div>
                 <div style={{display:'flex',flexDirection:'column'}}>
                   <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Titre *</label>
@@ -922,18 +929,22 @@ export default function Eleves() {
                   <textarea style={{...inp,minHeight:60,resize:'vertical'}} required value={obsForm.mesure_prise} onChange={e => setObsForm({...obsForm,mesure_prise:e.target.value})} placeholder="Ex: Avertissement oral, convocation..." />
                 </div>
                 <div style={{display:'flex',gap:12,marginTop:14}}>
+                  <button type="button" onClick={() => setObsForm({...obsForm,intervention_titulaire:!obsForm.intervention_titulaire})}
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                    Intervention du titulaire : <b>{obsForm.intervention_titulaire?'OUI':'NON'}</b>
+                  </button>
                   <button type="button" onClick={() => setObsForm({...obsForm,intervention_responsable:!obsForm.intervention_responsable})}
-                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
-                    🚨 Intervention responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                    Intervention d'un responsable : <b>{obsForm.intervention_responsable?'OUI':'NON'}</b>
                   </button>
                   <button type="button" onClick={() => setObsForm({...obsForm,demande_entretien:!obsForm.demande_entretien})}
-                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
-                    🤝 Demande entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
+                    style={{flex:1,padding:'9px 12px',borderRadius:8,border:'2px solid '+(obsForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:12,transition:'all 0.15s'}}>
+                    Entretien : <b>{obsForm.demande_entretien?'OUI':'NON'}</b>
                   </button>
                 </div>
                 <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
                   <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowObsForm(false)}>Annuler</button>
-                  <button type="submit" style={{padding:'9px 20px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                  <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
                 </div>
               </form>
             )}
@@ -964,49 +975,43 @@ export default function Eleves() {
                       <textarea style={{...inp,minHeight:50,resize:'vertical'}} value={obsEditForm.mesure_prise||''} onChange={e => setObsEditForm({...obsEditForm,mesure_prise:e.target.value})} />
                     </div>
                     <div style={{display:'flex',gap:10,marginTop:12}}>
+                      <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_titulaire:!obsEditForm.intervention_titulaire})}
+                        style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_titulaire?'#7c3aed':'#e2e8f0'),background:obsEditForm.intervention_titulaire?'#ede9fe':'#f8fafc',color:obsEditForm.intervention_titulaire?'#5b21b6':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                        Intervention du titulaire : <b>{obsEditForm.intervention_titulaire?'OUI':'NON'}</b>
+                      </button>
                       <button type="button" onClick={() => setObsEditForm({...obsEditForm,intervention_responsable:!obsEditForm.intervention_responsable})}
-                        style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#ef4444':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fee2e2':'#f8fafc',color:obsEditForm.intervention_responsable?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
-                        🚨 Intervention : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b>
+                        style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.intervention_responsable?'#f59e0b':'#e2e8f0'),background:obsEditForm.intervention_responsable?'#fef3c7':'#f8fafc',color:obsEditForm.intervention_responsable?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                        Intervention d'un responsable : <b>{obsEditForm.intervention_responsable?'OUI':'NON'}</b>
                       </button>
                       <button type="button" onClick={() => setObsEditForm({...obsEditForm,demande_entretien:!obsEditForm.demande_entretien})}
-                        style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#f59e0b':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fef3c7':'#f8fafc',color:obsEditForm.demande_entretien?'#92400e':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
-                        🤝 Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b>
+                        style={{flex:1,padding:'8px',borderRadius:8,border:'2px solid '+(obsEditForm.demande_entretien?'#ef4444':'#e2e8f0'),background:obsEditForm.demande_entretien?'#fee2e2':'#f8fafc',color:obsEditForm.demande_entretien?'#991b1b':'#64748b',cursor:'pointer',fontWeight:600,fontSize:11}}>
+                        Entretien : <b>{obsEditForm.demande_entretien?'OUI':'NON'}</b>
                       </button>
                     </div>
                     <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
                       <button type="button" style={{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setObsEditId(null)}>Annuler</button>
-                      <button type="submit" style={{padding:'9px 20px',background:'#10b981',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                      <button type="submit" style={{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
                     </div>
                   </form>
                 ) : (
                   <div key={obs.id} style={{background:'#f8fafc',borderRadius:10,padding:16,border:'1px solid #e2e8f0',borderLeft:'3px solid #6366f1'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                         <b style={{fontSize:14,color:'#1e293b'}}>{obs.titre}</b>
-                        <span style={{fontSize:11,color:'#64748b'}}>
-                          {obs.reference_obs ? `${obs.reference_obs} - ` : ''}
-                          {new Date(obs.created_at).toLocaleDateString('fr-CH')}
-                        </span>
+                        {obs.intervention_responsable && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention</span>}
+                        {obs.intervention_titulaire && <span style={{background:'#ede9fe',color:'#5b21b6',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Intervention du titulaire</span>}
+                        {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                       </div>
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        {peutModifier && <>
-                          <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false}); }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Modifier">✏️</button>
-                          <button onClick={async () => {
-                            if (window.confirm('Supprimer cette observation ?')) {
-                              await axios.delete(API+'/observations/'+obs.id, {headers});
-                              const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
-                              setObservations(r.data);
-                            }
-                          }} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.6}} title="Supprimer">🗑️</button>
-                        </>}
-                      </div>
+                      {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                      </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
-                    {obs.mesure_prise && <div style={{fontSize:12,color:'#475569',marginTop:6,background:'#f1f5f9',padding:'4px 10px',borderRadius:6}}>📋 <b>Mesure :</b> {obs.mesure_prise}</div>}
-                    <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
-                      <span style={{fontSize:11,color:'#94a3b8'}}>✍️ {obs.auteur_prenom} {obs.auteur_nom}</span>
-                      {obs.intervention_responsable && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🚨 Intervention</span>}
-                      {obs.demande_entretien && <span style={{background:'#fef3c7',color:'#92400e',padding:'2px 8px',borderRadius:99,fontSize:10,fontWeight:700}}>🤝 Entretien</span>}
+                    {obs.mesure_prise && <div style={{fontSize:11,color:'#64748b',marginTop:6,fontStyle:'italic'}}><b>Mesure :</b> {obs.mesure_prise}</div>}
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                      <span style={{fontSize:11,color:'#94a3b8'}}>Auteur : {obs.auteur_prenom} {obs.auteur_nom}</span>
+                      <span style={{fontSize:11,color:'#94a3b8'}}>{obs.reference_obs ? `${obs.reference_obs} — ` : ''}{new Date(obs.created_at).toLocaleDateString('fr-CH')}</span>
                     </div>
                   </div>
                 );
@@ -1018,7 +1023,7 @@ export default function Eleves() {
 
       {/* Tableau */}
       <div style={{marginTop:14}}>
-        <div style={{maxHeight:'calc(100vh - 220px)',overflowY:'auto',overflowX:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
+        <div style={{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead style={{position:'sticky',top:0,zIndex:2,background:'#f8fafc'}}>
             <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>

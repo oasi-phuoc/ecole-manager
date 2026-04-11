@@ -28,11 +28,11 @@ export default function ClasseInventaire() {
 
   useEffect(() => {
     chargerBranches();
-  }, [classeId]);
+  }, [classeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (brancheActive?.id) chargerInventaire(brancheActive.id);
-  }, [brancheActive?.id]);
+  }, [brancheActive?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chargerBranches = async () => {
     setLoadingBranches(true);
@@ -90,7 +90,7 @@ export default function ClasseInventaire() {
 
   const supprimerLigne = async (id) => {
     if (!brancheActive?.id) return;
-    if (!window.confirm('Supprimer cette ligne d’inventaire ?')) return;
+    if (!window.confirm("Supprimer cette ligne d'inventaire ?")) return;
     try {
       await axios.delete(API + '/inventaire-branches/' + classeId + '/branches/' + brancheActive.id + '/' + id, { headers });
       await chargerInventaire(brancheActive.id);
@@ -121,6 +121,7 @@ export default function ClasseInventaire() {
           ) : branches.length === 0 ? (
             <div style={s.empty}>Aucune branche trouvée</div>
           ) : (
+            <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
@@ -142,6 +143,7 @@ export default function ClasseInventaire() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -165,21 +167,22 @@ export default function ClasseInventaire() {
           ) : loadingInventaire ? (
             <div style={s.empty}>Chargement...</div>
           ) : (
+            <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
-                  {['Date', 'Nom du document', 'Numéro', 'Remarques'].map(h => <th key={h} style={s.th}>{h}</th>)}
+                  {['Date', 'Nom du document', 'Num\u00e9ro', 'Remarques'].map(h => <th key={h} style={{...s.th, textAlign: h === 'Num\u00e9ro' ? 'center' : 'left'}}>{h}</th>)}
                   {canEdit && <th style={s.th}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {inventaire.length === 0 ? (
-                  <tr><td colSpan={canEdit ? 5 : 4} style={s.empty}>Aucune ligne d’inventaire</td></tr>
+                  <tr><td colSpan={canEdit ? 5 : 4} style={s.empty}>Aucune ligne d'inventaire</td></tr>
                 ) : inventaire.map(l => (
                   <tr key={l.id} style={s.tr}>
                     <td style={s.td}>{l.date_document ? new Date(l.date_document).toLocaleDateString('fr-CH') : '—'}</td>
                     <td style={{ ...s.td, fontWeight: 700 }}>{l.nom_document || '—'}</td>
-                    <td style={s.td}>{l.numero_document || '—'}</td>
+                    <td style={{ ...s.td, textAlign: 'center' }}>{l.numero_document || '—'}</td>
                     <td style={s.td}>{l.remarques || '—'}</td>
                     {canEdit && (
                       <td style={s.td}>
@@ -190,6 +193,7 @@ export default function ClasseInventaire() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -206,6 +210,7 @@ const s = {
   grid: { display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(520px, 2fr)', gap: 16, alignItems: 'start' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   cardTitle: { fontSize: 14, fontWeight: 800, color: '#0f172a' },
+  tableWrap: { borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
   th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' },

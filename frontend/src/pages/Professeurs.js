@@ -289,11 +289,11 @@ export default function Professeurs({
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Email *</label>
-                      <input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="prof@ecole.ch" />
+                      <input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{profEdit?'Nouveau mot de passe':'Mot de passe *'}</label>
-                      <input style={s.inp} type="password" autoComplete="new-password" value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} placeholder="Laisser vide pour générer automatiquement" />
+                      <input style={s.inp} type="password" autoComplete="new-password" value={form.mot_de_passe} onChange={e=>setForm({...form,mot_de_passe:e.target.value})} />
                     </div>
                   </div>
 
@@ -301,11 +301,11 @@ export default function Professeurs({
                   <div style={{display:'grid',gridTemplateColumns:colsForm,gap:10,marginBottom:showRoleToggle?0:16}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NOM *</label>
-                      <input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value.toUpperCase()})} placeholder="DUPONT" />
+                      <input style={s.inp} required value={form.nom} onChange={e=>setForm({...form,nom:e.target.value.toUpperCase()})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Prénom *</label>
-                      <input style={s.inp} required value={form.prenom} onChange={e=>setForm({...form,prenom:e.target.value})} placeholder="Jean" />
+                      <input style={s.inp} required value={form.prenom} onChange={e=>setForm({...form,prenom:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Date de naissance</label>
@@ -314,7 +314,7 @@ export default function Professeurs({
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Sexe</label>
                       <select style={s.inp} value={form.sexe} onChange={e=>setForm({...form,sexe:e.target.value})}>
-                        <option value="">--</option>
+                        <option value="">Choisir</option>
                         <option value="M">Masculin</option>
                         <option value="F">Féminin</option>
                         <option value="Autre">Autre</option>
@@ -322,23 +322,23 @@ export default function Professeurs({
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Téléphone</label>
-                      <input style={s.inp} value={form.telephone} onChange={e=>setForm({...form,telephone:e.target.value})} placeholder="079 123 45 67" />
+                      <input style={s.inp} value={form.telephone} onChange={e=>setForm({...form,telephone:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>N° AVS</label>
-                      <input style={s.inp} value={form.avs} onChange={e=>setForm({...form,avs:e.target.value})} placeholder="756.XXXX.XXXX.XX" />
+                      <input style={s.inp} value={form.avs} onChange={e=>setForm({...form,avs:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gridColumn:'1/-1'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Adresse</label>
-                      <input style={s.inp} value={form.adresse} onChange={e=>setForm({...form,adresse:e.target.value})} placeholder="Rue de la Paix 10" />
+                      <input style={s.inp} value={form.adresse} onChange={e=>setForm({...form,adresse:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NPA</label>
-                      <input style={s.inp} value={form.npa} onChange={e=>setForm({...form,npa:e.target.value})} placeholder="1950" />
+                      <input style={s.inp} value={form.npa} onChange={e=>setForm({...form,npa:e.target.value})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieu</label>
-                      <input style={s.inp} value={form.lieu} onChange={e=>setForm({...form,lieu:e.target.value})} placeholder="Sion" />
+                      <input style={s.inp} value={form.lieu} onChange={e=>setForm({...form,lieu:e.target.value})} />
                     </div>
                   </div>
 
@@ -348,25 +348,25 @@ export default function Professeurs({
                       <div style={{display:'grid',gridTemplateColumns:hidePeriodesSemaine ? '1fr' : '1fr 1fr',gap:10}}>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
-                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
+                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} />
                         </div>
                         {!hidePeriodesSemaine && <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Périodes / semaine <span style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>(100% = 32)</span></label>
-                          <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} placeholder="32" />
+                          <input style={s.inp} type="number" min="0" max="40" value={form.periodes_semaine} onChange={e=>setForm({...form,periodes_semaine:e.target.value})} />
                         </div>}
                       </div>
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
                           <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
-                            <option value="">-- Choisir --</option>
+                            <option value="">Choisir</option>
                             {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
                           </select>
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
                           <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
-                            <option value="">-- Choisir --</option>
+                            <option value="">Choisir</option>
                             {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
                           </select>
                         </div>
@@ -401,40 +401,21 @@ export default function Professeurs({
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Taux d'activité (%)</label>
-                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} placeholder="100" />
+                          <input style={s.inp} type="number" min="0" max="200" value={form.taux_activite} onChange={e=>handleTauxChange(e.target.value)} />
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
                           <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
-                            <option value="">-- Choisir --</option>
+                            <option value="">Choisir</option>
                             {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
                           </select>
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
                           <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
-                            <option value="">-- Choisir --</option>
+                            <option value="">Choisir</option>
                             {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
                           </select>
-                        </div>
-                        <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                          <label style={{fontSize:11,fontWeight:600,marginBottom:2,color:'#475569'}}>Type de professeur</label>
-                          <div style={{display:'flex',gap:0,borderRadius:8,overflow:'hidden',border:'1px solid #e2e8f0'}}>
-                            {['Interne','Externe'].map(t => {
-                              const isExterne = form.type_prof && form.type_prof !== 'Interne';
-                              const actif = t==='Interne' ? !isExterne : isExterne;
-                              return <button key={t} type="button"
-                                onClick={()=>setForm({...form,type_prof:t==='Interne'?'Interne':'Stagiaire'})}
-                                style={{flex:1,padding:'6px 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:actif?(t==='Interne'?'#6366f1':'#f59e0b'):'#f8fafc',color:actif?'white':'#64748b',transition:'background 0.15s'}}>
-                                {t}
-                              </button>;
-                            })}
-                          </div>
-                          {form.type_prof && form.type_prof !== 'Interne' && (
-                            <select style={s.inp} value={form.type_prof} onChange={e=>setForm({...form,type_prof:e.target.value})}>
-                              {TYPES_EXTERN.map(t=><option key={t} value={t}>{t}</option>)}
-                            </select>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -540,7 +521,7 @@ export default function Professeurs({
 
                   {!hideRemarque && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                     <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques pour les niveaux et branches</label>
-                    <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} placeholder="Ex: Mathématiques, Physique..." />
+                    <input style={s.inp} value={form.specialite} onChange={e=>setForm({...form,specialite:e.target.value})} />
                   </div>}
 
                   {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
@@ -573,7 +554,7 @@ export default function Professeurs({
 
                   {!hidePreferencesLieu && <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                     <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Remarques lieu de travail</label>
-                    <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} placeholder="Ex: Préfère éviter BOTZA le lundi..." />
+                    <input style={s.inp} value={form.remarque_lieu_travail} onChange={e=>setForm({...form,remarque_lieu_travail:e.target.value})} />
                   </div>}
 
                   {!hidePreferencesLieu && !hidePreferences && (
@@ -749,7 +730,7 @@ export default function Professeurs({
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',height:'100vh',overflow:'hidden',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -781,7 +762,7 @@ const s = {
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
-  tableWrap:{maxHeight:'calc(100vh - 200px)',overflowY:'auto',overflowX:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
   th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#f8fafc',position:'sticky',top:0,zIndex:1},
