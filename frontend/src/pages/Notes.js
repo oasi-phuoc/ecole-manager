@@ -803,8 +803,13 @@ export default function Notes() {
                           <thead><tr style={s.theadRow}><th style={thL}>Comportement</th><th style={{ ...thC, width: 40 }}>S1</th><th style={{ ...thC, width: 40 }}>S2</th></tr></thead>
                           <tbody style={{ height: '100%' }}>
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={tdL}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{showS2popup ? dot(cr2['c' + (idx + 1)]) : <span style={{ color: '#aaa' }}>—</span>}</td></tr>))}
-                            <tr style={{ ...s.tr, height: '1px' }}><td style={tdL}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
-                            <tr style={{ ...s.tr, height: '1px' }}><td style={tdL}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
+                          </tbody>
+                        </table>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
+                          <colgroup><col /><col style={{ width: 40 }} /><col style={{ width: 40 }} /></colgroup>
+                          <tbody>
+                            <tr style={s.tr}><td style={tdL}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
+                            <tr style={s.tr}><td style={tdL}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -1556,24 +1561,29 @@ export default function Notes() {
                         </table>
                       </div>
                       {/* Colonne droite : comportement */}
-                      <div>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
                           <thead><tr style={s.theadRow}>
                             <th style={thL}>Comportement</th>
                             <th style={{ ...thC, width: 40 }}>S1</th>
                             <th style={{ ...thC, width: 40 }}>S2</th>
                           </tr></thead>
-                          <tbody>
+                          <tbody style={{ height: '100%' }}>
                             {BULLETIN_CRITERES_LABELS.map((label, idx) => {
                               const key = 'c' + (idx + 1);
                               return (
-                                <tr key={idx} style={s.tr}>
+                                <tr key={idx} style={{ ...s.tr, height: '1px' }}>
                                   <td style={s.td}>{label.join(' ')}</td>
                                   <td style={tdC}>{dot(cr1[key])}</td>
                                   <td style={tdC}>{showS2 ? dot(cr2[key]) : <span style={{ color: '#aaa' }}>—</span>}</td>
                                 </tr>
                               );
                             })}
+                          </tbody>
+                        </table>
+                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed' }}>
+                          <colgroup><col /><col style={{ width: 40 }} /><col style={{ width: 40 }} /></colgroup>
+                          <tbody>
                             <tr style={s.tr}><td style={s.td}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
                             <tr style={s.tr}><td style={s.td}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
                           </tbody>
