@@ -1,5 +1,6 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
+import { stickyPageChrome } from '../styles/pageShell';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,6 +70,7 @@ export default function Branches() {
 
   return (
     <div style={s.page}>
+      <div style={stickyPageChrome()}>
       <div style={s.header}>
         <h2 style={s.title}>Gestion des branches</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}
@@ -82,6 +84,7 @@ export default function Branches() {
             </button>
           ))}
         </div>
+      </div>
       </div>
 
       {showForm && (
@@ -105,7 +108,6 @@ export default function Branches() {
                 <div style={s.field}>
                   <label style={s.lbl}>Niveau *</label>
                   <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
-                    <option value="">-- Choisir --</option>
                     {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
                   </select>
                 </div>
@@ -162,27 +164,28 @@ export default function Branches() {
         <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>
-            <tr style={s.thead}>
-              <th style={s.th}>Branche</th>
+            <tr>
+              <th style={{...s.th, borderTopLeftRadius:12}}>Branche</th>
               <th style={s.th}>Abrév.</th>
               <th style={{...s.th, textAlign:'center'}}>Niveau</th>
               <th style={{...s.th, textAlign:'center'}}>Périodes</th>
               <th style={{...s.th, textAlign:'center'}}>Coefficient</th>
-              <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}></th>
+              <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center', borderTopRightRadius:12}}></th>
             </tr>
           </thead>
           <tbody>
             {branchesFiltrees.length===0 ? (
-              <tr><td colSpan="6" style={s.empty}>Aucune branche trouvée</td></tr>
-            ) : branchesFiltrees.map((b) => {
+              <tr><td colSpan="6" style={{...s.empty, borderBottomLeftRadius:12, borderBottomRightRadius:12}}>Aucune branche trouvée</td></tr>
+            ) : branchesFiltrees.map((b, bi) => {
+              const last = bi === branchesFiltrees.length - 1;
               return (
                 <tr key={b.id} style={s.tr}>
-                  <td style={s.td}><b style={{color:'#1e293b'}}>{b.nom}</b></td>
-                  <td style={s.td}>{b.designation_courte || '—'}</td>
-                  <td style={{...s.td, textAlign:'center'}}>{b.niveau || '—'}</td>
-                  <td style={{...s.td, textAlign:'center'}}>{b.periodes_semaine || '—'}</td>
-                  <td style={{...s.td, textAlign:'center'}}>{b.coefficient || 1}</td>
-                  <td style={{...s.td, width:86, minWidth:86, maxWidth:86, padding:'10px 10px', textAlign:'center'}}>
+                  <td style={{ ...s.td, ...(last ? { borderBottomLeftRadius: 12, borderBottom: 'none' } : {}) }}><b style={{color:'#1e293b'}}>{b.nom}</b></td>
+                  <td style={{ ...s.td, ...(last ? { borderBottom: 'none' } : {}) }}>{b.designation_courte || '—'}</td>
+                  <td style={{...s.td, textAlign:'center', ...(last ? { borderBottom: 'none' } : {})}}>{b.niveau || '—'}</td>
+                  <td style={{...s.td, textAlign:'center', ...(last ? { borderBottom: 'none' } : {})}}>{b.periodes_semaine || '—'}</td>
+                  <td style={{...s.td, textAlign:'center', ...(last ? { borderBottom: 'none' } : {})}}>{b.coefficient || 1}</td>
+                  <td style={{...s.td, width:86, minWidth:86, maxWidth:86, padding:'10px 10px', textAlign:'center', ...(last ? { borderBottomRightRadius: 12, borderBottom: 'none' } : {})}}>
                     {isAdmin() && <>
                       <button style={s.btnEdit} onClick={() => handleEdit(b)} title="Modifier">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -204,7 +207,7 @@ export default function Branches() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -235,13 +238,12 @@ const s = {
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
-  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
-  table:{width:'100%',borderCollapse:'collapse',background:'white'},
-  thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',background:'#f8fafc',position:'sticky',top:0,zIndex:1},
-  tr:{borderBottom:'1px solid #f8fafc'},
-  td:{padding:'12px 16px',fontSize:13,color:'#374151'},
-  empty:{padding:40,textAlign:'center',color:'#94a3b8'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
+  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9',overflow:'hidden'},
+  table:{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'white'},
+  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',background:'#6366f1',borderBottom:'1px solid rgba(0,0,0,0.06)'},
+  tr:{},
+  td:{padding:'12px 16px',fontSize:13,color:'#374151',background:'white',borderBottom:'1px solid #f8fafc',verticalAlign:'middle'},
+  empty:{padding:40,textAlign:'center',color:'#94a3b8',background:'white'},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2},
 };

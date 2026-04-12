@@ -63,6 +63,7 @@ const creerEleve = async (req, res) => {
 };
 
 const modifierEleve = async (req, res) => {
+  const b = req.body;
   const {
     nom, prenom, email, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent, statut,
     oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
@@ -71,23 +72,54 @@ const modifierEleve = async (req, res) => {
     oasi_remarque, oasi_controle_du, oasi_controle_au,
     oasi_prog_presences, oasi_prog_admin, oasi_as,
     oasi_prg_id, oasi_prg_occupation_id, oasi_ra_id, oasi_temps_reparti_id
-  } = req.body;
+  } = b;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id=$1', [req.params.id]);
+    const eleveResult = await client.query('SELECT * FROM eleves WHERE id=$1', [req.params.id]);
     if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
-    const userId = eleveResult.rows[0].utilisateur_id;
+    const row = eleveResult.rows[0];
+    const userId = row.utilisateur_id;
 
-    // Mettre à jour utilisateurs seulement si existe
-    if (userId) {
+    const pick = (key, fallback) => (Object.prototype.hasOwnProperty.call(b, key) ? b[key] : fallback);
+    const pickStr = (key) => {
+      const v = pick(key, row[key]);
+      return v === '' || v === undefined ? null : v;
+    };
+    const pickInt = (key) => {
+      if (!Object.prototype.hasOwnProperty.call(b, key)) return row[key];
+      const v = b[key];
+      if (v === '' || v === null || v === undefined) return null;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const c_id = pick('classe_id', row.classe_id);
+    const d_naiss = pick('date_naissance', row.date_naissance);
+    const d_debut = pick('date_debut_cours', row.date_debut_cours);
+    const cat = pick('categorie', row.categorie);
+    const tel = pick('telephone', row.telephone);
+    const adr = pick('adresse', row.adresse);
+    const n_par = pick('nom_parent', row.nom_parent);
+    const t_par = pick('telephone_parent', row.telephone_parent);
+    const st = Object.prototype.hasOwnProperty.call(b, 'statut') ? (statut || 'actif') : (row.statut || 'actif');
+
+    // Mettre à jour utilisateurs seulement si des champs profil sont fournis (évite d'écraser avec undefined)
+    if (userId && (Object.prototype.hasOwnProperty.call(b, 'nom') || Object.prototype.hasOwnProperty.call(b, 'prenom') || Object.prototype.hasOwnProperty.call(b, 'email'))) {
+      const uRow = await client.query('SELECT nom, prenom, email FROM utilisateurs WHERE id=$1', [userId]);
+      const u = uRow.rows[0] || {};
       await client.query(
         'UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3 WHERE id=$4',
-        [nom, prenom, email||null, userId]
+        [
+          Object.prototype.hasOwnProperty.call(b, 'nom') ? nom : u.nom,
+          Object.prototype.hasOwnProperty.call(b, 'prenom') ? prenom : u.prenom,
+          Object.prototype.hasOwnProperty.call(b, 'email') ? (email || null) : u.email,
+          userId
+        ]
       );
     }
 
-    // Mettre à jour eleves avec tous les champs (nom/prenom/email sont dans utilisateurs)
+    // Conserver les champs OASI si le corps de requête ne les envoie pas (ex. bascule actif/inactif)
     await client.query(`
       UPDATE eleves SET
         classe_id=$1, date_naissance=$2, date_debut_cours=$3, categorie=$4,
@@ -100,16 +132,15 @@ const modifierEleve = async (req, res) => {
         oasi_prg_id=$28, oasi_prg_occupation_id=$29, oasi_ra_id=$30, oasi_temps_reparti_id=$31
       WHERE id=$32
     `, [
-      classe_id||null, date_naissance||null, date_debut_cours||null, categorie||null,
-      telephone||null, adresse||null, nom_parent||null, telephone_parent||null, statut||'actif',
-      oasi_prog_nom||null, oasi_prog_encadrant||null,
-      oasi_n?parseInt(oasi_n):null, oasi_ref?parseInt(oasi_ref):null, oasi_pos?parseInt(oasi_pos):null,
-      oasi_nom||null, oasi_nais||null, oasi_nationalite||null,
-      oasi_presence_date||null, oasi_jour_semaine||null, oasi_presence_periode||null,
-      oasi_presence_type||null, oasi_remarque||null, oasi_controle_du||null, oasi_controle_au||null,
-      oasi_prog_presences||null, oasi_prog_admin||null, oasi_as||null,
-      oasi_prg_id?parseInt(oasi_prg_id):null, oasi_prg_occupation_id?parseInt(oasi_prg_occupation_id):null,
-      oasi_ra_id?parseInt(oasi_ra_id):null, oasi_temps_reparti_id?parseInt(oasi_temps_reparti_id):null,
+      c_id ?? null, d_naiss || null, d_debut || null, cat || null,
+      tel || null, adr || null, n_par || null, t_par || null, st,
+      pickStr('oasi_prog_nom'), pickStr('oasi_prog_encadrant'),
+      pickInt('oasi_n'), pickInt('oasi_ref'), pickInt('oasi_pos'),
+      pickStr('oasi_nom'), pickStr('oasi_nais'), pickStr('oasi_nationalite'),
+      pickStr('oasi_presence_date'), pickStr('oasi_jour_semaine'), pickStr('oasi_presence_periode'),
+      pickStr('oasi_presence_type'), pickStr('oasi_remarque'), pickStr('oasi_controle_du'), pickStr('oasi_controle_au'),
+      pickStr('oasi_prog_presences'), pickStr('oasi_prog_admin'), pickStr('oasi_as'),
+      pickInt('oasi_prg_id'), pickInt('oasi_prg_occupation_id'), pickInt('oasi_ra_id'), pickInt('oasi_temps_reparti_id'),
       req.params.id
     ]);
 
@@ -254,6 +285,12 @@ const ajouterSanction = async (req, res) => {
     );
     if (!refExiste.rows.length) return res.status(400).json({ message: "Référence d'observation invalide pour cet élève" });
 
+    const refDeja = await pool.query(
+      'SELECT id FROM sanctions_eleves WHERE eleve_id=$1 AND observation_ref=$2 LIMIT 1',
+      [req.params.id, ref]
+    );
+    if (refDeja.rows.length) return res.status(400).json({ message: 'Cette référence d\'observation est déjà utilisée pour une autre sanction' });
+
     const exists = await pool.query(
       'SELECT id FROM sanctions_eleves WHERE eleve_id=$1 AND echelle=$2 AND infraction=$3 AND niveau=$4',
       [req.params.id, echelle, infraction, niveau]
@@ -277,6 +314,12 @@ const modifierSanction = async (req, res) => {
       [req.params.id, ref]
     );
     if (!refExiste.rows.length) return res.status(400).json({ message: "Référence d'observation invalide pour cet élève" });
+
+    const refDeja = await pool.query(
+      'SELECT id FROM sanctions_eleves WHERE eleve_id=$1 AND observation_ref=$2 AND id <> $3 LIMIT 1',
+      [req.params.id, ref, parseInt(req.params.sanctionId, 10)]
+    );
+    if (refDeja.rows.length) return res.status(400).json({ message: 'Cette référence d\'observation est déjà utilisée pour une autre sanction' });
 
     const result = await pool.query(
       'UPDATE sanctions_eleves SET date_sanction=$1, prof_nom=$2, observation_ref=$3 WHERE id=$4 AND eleve_id=$5 RETURNING *',

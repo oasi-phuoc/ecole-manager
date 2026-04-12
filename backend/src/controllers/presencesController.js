@@ -31,11 +31,16 @@ const getClassesDisponibles = async (req, res) => {
 const getPresences = async (req, res) => {
   try {
     const { classe_id, date } = req.query;
+    // TO_CHAR : la colonne DATE en JS devient minuit local puis ISO UTC → décalage d’un jour
+    // dans l’aperçu si on ne renvoie qu’une chaîne civile YYYY-MM-DD.
     const result = await pool.query(`
-      SELECT pv.*, e.id as eleve_id
+      SELECT pv.id, pv.eleve_id, pv.classe_id,
+        TO_CHAR(pv.date, 'YYYY-MM-DD') AS date,
+        pv.p1, pv.p2, pv.p3, pv.p4, pv.p5, pv.p6, pv.p7, pv.p8,
+        pv.remarque, pv.valide
       FROM presences_v2 pv
       JOIN eleves e ON pv.eleve_id = e.id
-      WHERE pv.classe_id = $1 AND pv.date = $2
+      WHERE pv.classe_id = $1 AND pv.date = $2::date
     `, [classe_id, date]);
     res.json(result.rows);
   } catch (err) {
@@ -141,7 +146,10 @@ const getPresencesMois = async (req, res) => {
   try {
     const { classe_id, mois } = req.query;
     const result = await pool.query(`
-      SELECT pv.*, e.id as eleve_id
+      SELECT pv.id, pv.eleve_id, pv.classe_id,
+        TO_CHAR(pv.date, 'YYYY-MM-DD') AS date,
+        pv.p1, pv.p2, pv.p3, pv.p4, pv.p5, pv.p6, pv.p7, pv.p8,
+        pv.remarque, pv.valide
       FROM presences_v2 pv
       JOIN eleves e ON pv.eleve_id = e.id
       WHERE pv.classe_id = $1 AND TO_CHAR(pv.date, 'YYYY-MM') = $2

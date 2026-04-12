@@ -23,7 +23,7 @@ export default function Eleves() {
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
-  const [showInactif, setShowInactif] = useState(false);
+  const [showInactif, setShowInactif] = useState(true);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -204,10 +204,9 @@ export default function Eleves() {
     if (!isAdmin()) return;
     const newStatut = el.statut === 'actif' ? 'inactif' : 'actif';
     try {
-      await axios.put(API+'/eleves/'+el.id, {
-        nom: el.nom, prenom: el.prenom, email: el.email,
-        classe_id: el.classe_id||null, statut: newStatut,
-      }, {headers});
+      // Uniquement le statut : évite d’écraser nom / email / classe / champs OASI côté serveur
+      // si la ligne liste n’expose pas toutes les valeurs comme dans le formulaire complet.
+      await axios.put(API+'/eleves/'+el.id, { statut: newStatut }, { headers });
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
   };
@@ -461,8 +460,23 @@ export default function Eleves() {
     return `${initialPrenom}${initialNom}-${String(nextNum).padStart(2, '0')}`;
   })();
 
+  const observationsDisponiblesPourSanction = (sanctionIdExclure) => {
+    const utilisees = new Set(
+      (eleveSanctions || [])
+        .filter(s => sanctionIdExclure == null || Number(s.id) !== Number(sanctionIdExclure))
+        .map(s => String(s.observation_ref || '').trim())
+        .filter(Boolean)
+    );
+    return (sanctionsObservations || []).filter(o => {
+      const ref = String(o.reference_obs || '').trim();
+      return ref && !utilisees.has(ref);
+    });
+  };
+
+  const STICKY_BELOW_TOOLBAR = 132;
+
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
       {/* Zoom photo */}
       {photoZoom && (
@@ -477,7 +491,8 @@ export default function Eleves() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header + filtres — restent visibles au défilement */}
+      <div style={{position:'sticky',top:0,zIndex:40,background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'0 1px 0 #e2e8f0'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
@@ -514,6 +529,7 @@ export default function Eleves() {
           style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
           {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
         </button>
+      </div>
       </div>
 
       {/* Modal Import */}
@@ -563,9 +579,9 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#92400e','#fef3c7')}>🎓 Informations élève</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} placeholder="DUPONT" /></Champ>
-                    <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Marie" /></Champ>
-                    <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="marie@ecole.ch" /></Champ>
+                    <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} /></Champ>
+                    <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} /></Champ>
+                    <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
                     <Champ lbl="Classe">
                       <select style={inp} value={classeId} onChange={e => setClasseId(e.target.value)}>
@@ -583,13 +599,13 @@ export default function Eleves() {
                         <option value="EUCMS">EUCMS</option>
                       </select>
                     </Champ>
-                    <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="079 123 45 67" /></Champ>
-                    <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="Rue de la Paix 10, 1950 Sion" /></Champ>
+                    <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} /></Champ>
+                    <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} /></Champ>
                   </div>
                   <div style={{...secTitle('#92400e','#fef3c7'),marginTop:16}}>👨‍👩‍👦 Contact / Parent</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="NOM et prénom"><input style={inp} value={nomParent} onChange={e => setNomParent(e.target.value)} placeholder="DUPONT Jean" /></Champ>
-                    <Champ lbl="Téléphone parent"><input style={inp} value={telephoneParent} onChange={e => setTelephoneParent(e.target.value)} placeholder="079 987 65 43" /></Champ>
+                    <Champ lbl="NOM et prénom"><input style={inp} value={nomParent} onChange={e => setNomParent(e.target.value)} /></Champ>
+                    <Champ lbl="Téléphone parent"><input style={inp} value={telephoneParent} onChange={e => setTelephoneParent(e.target.value)} /></Champ>
                   </div>
                 </div>
 
@@ -597,14 +613,14 @@ export default function Eleves() {
                 <div>
                   <div style={secTitle('#3730a3','#e0e7ff')}>🗂️ Données OASI</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <Champ lbl="PROG_NOM"><input style={inp} value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} placeholder="Programme..." /></Champ>
-                    <Champ lbl="PROG_ENCADRANT"><input style={inp} value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} placeholder="Encadrant..." /></Champ>
-                    <Champ lbl="N"><input style={inp} type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} placeholder="859056" /></Champ>
-                    <Champ lbl="REF"><input style={inp} type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} placeholder="21372" /></Champ>
-                    <Champ lbl="POS"><input style={inp} type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} placeholder="1" /></Champ>
-                    <Champ lbl="NOM"><input style={inp} value={oasiNom} onChange={e => setOasiNom(e.target.value)} placeholder="AHMAD Riaz" /></Champ>
+                    <Champ lbl="PROG_NOM"><input style={inp} value={oasiProgNom} onChange={e => setOasiProgNom(e.target.value)} /></Champ>
+                    <Champ lbl="PROG_ENCADRANT"><input style={inp} value={oasiProgEncadrant} onChange={e => setOasiProgEncadrant(e.target.value)} /></Champ>
+                    <Champ lbl="N"><input style={inp} type="number" value={oasiN} onChange={e => setOasiN(e.target.value)} /></Champ>
+                    <Champ lbl="REF"><input style={inp} type="number" value={oasiRef} onChange={e => setOasiRef(e.target.value)} /></Champ>
+                    <Champ lbl="POS"><input style={inp} type="number" value={oasiPos} onChange={e => setOasiPos(e.target.value)} /></Champ>
+                    <Champ lbl="NOM"><input style={inp} value={oasiNom} onChange={e => setOasiNom(e.target.value)} /></Champ>
                     <Champ lbl="NAIS"><input style={inp} type="date" value={oasiNais} onChange={e => setOasiNais(e.target.value)} /></Champ>
-                    <Champ lbl="NATIONALITE"><input style={inp} value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} placeholder="AFGHANISTAN" /></Champ>
+                    <Champ lbl="NATIONALITE"><input style={inp} value={oasiNationalite} onChange={e => setOasiNationalite(e.target.value)} /></Champ>
 
                     <Champ lbl="PROG_PRESENCES"><input style={inp} value={oasiProgPresences} onChange={e => setOasiProgPresences(e.target.value)} /></Champ>
                     <Champ lbl="PROG_ADMIN"><input style={inp} value={oasiProgAdmin} onChange={e => setOasiProgAdmin(e.target.value)} /></Champ>
@@ -621,9 +637,9 @@ export default function Eleves() {
                   <div style={secTitle('#475569','#f1f5f9')}>📋 Données AOSI - présences</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     <Champ lbl="PRESENCE_DATE"><input style={inp} type="date" value={oasiPresenceDate} onChange={e => setOasiPresenceDate(e.target.value)} /></Champ>
-                    <Champ lbl="JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} placeholder="lundi" /></Champ>
-                    <Champ lbl="PRESENCE_PERIODE"><input style={inp} value={oasiPresencePeriode} onChange={e => setOasiPresencePeriode(e.target.value)} placeholder="Matin" /></Champ>
-                    <Champ lbl="PRESENCE_TYPE"><input style={inp} value={oasiPresenceType} onChange={e => setOasiPresenceType(e.target.value)} placeholder="01 Présent" /></Champ>
+                    <Champ lbl="JOUR_SEMAINE"><input style={inp} value={oasiJourSemaine} onChange={e => setOasiJourSemaine(e.target.value)} /></Champ>
+                    <Champ lbl="PRESENCE_PERIODE"><input style={inp} value={oasiPresencePeriode} onChange={e => setOasiPresencePeriode(e.target.value)} /></Champ>
+                    <Champ lbl="PRESENCE_TYPE"><input style={inp} value={oasiPresenceType} onChange={e => setOasiPresenceType(e.target.value)} /></Champ>
                     <Champ lbl="REMARQUE"><textarea style={{...inp,minHeight:80,resize:'vertical'}} value={oasiRemarque} onChange={e => setOasiRemarque(e.target.value)} /></Champ>
                     <Champ lbl="CONTROLE_DU"><input style={inp} type="date" value={oasiControleDu} onChange={e => setOasiControleDu(e.target.value)} /></Champ>
                     <Champ lbl="CONTROLE_AU"><input style={inp} type="date" value={oasiControleAu} onChange={e => setOasiControleAu(e.target.value)} /></Champ>
@@ -695,7 +711,7 @@ export default function Eleves() {
                     <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Télécharger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
-                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>}
                   </div>
@@ -728,7 +744,7 @@ export default function Eleves() {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <div style={{display:'flex',alignItems:'center',gap:12}}>
                 <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
-                {sanctionToast && <span style={{background:'#ef4444',color:'white',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+                {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
               </div>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
             </div>
@@ -785,8 +801,8 @@ export default function Eleves() {
                                         onChange={e => setPendingCell(prev => ({ ...prev, observation_ref: e.target.value }))}
                                         style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
                                       >
-                                        <option value="">Réf. observation</option>
-                                        {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                        <option value="">Choisir observation</option>
+                                        {observationsDisponiblesPourSanction(null).map(o => (
                                           <option key={o.id} value={o.reference_obs}>
                                             {o.reference_obs}
                                           </option>
@@ -814,8 +830,8 @@ export default function Eleves() {
                                           onChange={e => setEditSanction(prev => ({...prev, observation_ref: e.target.value}))}
                                           style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
                                         >
-                                          <option value="">Réf. observation</option>
-                                          {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                          <option value="">Choisir observation</option>
+                                          {observationsDisponiblesPourSanction(editSanction?.id).map(o => (
                                             <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
                                           ))}
                                         </select>
@@ -850,14 +866,14 @@ export default function Eleves() {
                                           <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
                                         </div>
                                         {isAdmin() && (
-                                          <div style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
+                                          <div style={{display:'flex',flexDirection:'row',gap:4,alignItems:'center'}}>
                                             <button onClick={() => setEditSanction({
                                               id: sanction.id,
                                               date_sanction: sanction.date_sanction ? String(sanction.date_sanction).substring(0,10) : '',
                                               observation_ref: sanction.observation_ref || '',
                                               prof_nom: sanction.prof_nom || ''
-                                            })} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#475569',padding:0,lineHeight:1}} title="Modifier">✏️</button>
-                                            <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0,lineHeight:1}} title="Retirer">🗑️</button>
+                                            })} style={{background:'none',border:'none',cursor:'pointer',color:'#6366f1',padding:0,lineHeight:1,display:'flex',alignItems:'center'}} title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                                            <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',padding:0,lineHeight:1,display:'flex',alignItems:'center'}} title="Retirer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                           </div>
                                         )}
                                       </div>
@@ -866,10 +882,9 @@ export default function Eleves() {
                                     isAdmin() ? (
                                       <button onClick={() => {
                                         if (!peutAjouter) return;
-                                        const refs = sanctionsObservations.filter(o => o.reference_obs);
                                         const today = new Date().toISOString().split('T')[0];
                                         const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0]?.reference_obs || ''});
+                                        setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:''});
                                       }}
                                       style={{width:20,height:20,borderRadius:4,border:'2px solid '+(peutAjouter?'#d1d5db':'#e5e7eb'),background:peutAjouter?'white':'#f3f4f6',cursor:peutAjouter?'pointer':'not-allowed',display:'inline-block',opacity:peutAjouter?1:0.6}} title={peutAjouter ? "Ajouter" : "Saisir d'abord le niveau précédent"} />
                                     ) : (
@@ -1003,8 +1018,8 @@ export default function Eleves() {
                         {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                       </div>
                       {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                       </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
@@ -1025,17 +1040,17 @@ export default function Eleves() {
       <div style={{marginTop:14}}>
         <div style={{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
-          <thead style={{position:'sticky',top:0,zIndex:2,background:'#f8fafc'}}>
-            <tr style={{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62}}>Photo</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Nom</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Prénom</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Nationalité</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Classe</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Naissance</th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96}}></th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:48,minWidth:48,maxWidth:48}}></th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86}}></th>
+          <thead>
+            <tr>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3,borderTopLeftRadius:12}}>Photo</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Nom</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Prénom</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Nationalité</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Classe</th>
+              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Naissance</th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}></th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:48,minWidth:48,maxWidth:48,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}></th>
+              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3,borderTopRightRadius:12}}></th>
             </tr>
           </thead>
           <tbody>
@@ -1122,10 +1137,10 @@ export default function Eleves() {
                 </td>
                 <td style={{padding:'10px 10px',width:86,minWidth:86,maxWidth:86,textAlign:'center'}}>
                   {isAdmin() && <>
-                    <button style={{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleEdit(el)} title="Modifier">
+                    <button style={{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleEdit(el)} title="Modifier">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleDelete(el.id)} title="Supprimer">
+                    <button style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} onClick={() => handleDelete(el.id)} title="Supprimer">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </>}

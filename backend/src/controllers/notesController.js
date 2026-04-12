@@ -313,9 +313,9 @@ const putBulletinCriteres = async (req, res) => {
 const getSuiviClasses = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT ev.classe_id, ev.matiere_id, COUNT(ev.id)::int as nb_evaluations
+      SELECT ev.classe_id, ev.matiere_id, ev.prof_id, COUNT(ev.id)::int as nb_evaluations
       FROM evaluations ev
-      GROUP BY ev.classe_id, ev.matiere_id
+      GROUP BY ev.classe_id, ev.matiere_id, ev.prof_id
     `);
     res.json(result.rows);
   } catch (err) {
@@ -355,10 +355,16 @@ const getClassesResponsables = async (req, res) => {
         u.prenom as prof_prenom,
         u.nom as prof_nom,
         (c.prof_principal_id = u.id) as est_titulaire,
-        array_agg(
-          DISTINCT COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
-          ORDER BY COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
-        ) FILTER (WHERE m.nom IS NOT NULL AND (a.type_special IS NULL OR a.type_special = '') AND m.suivi_notes != false) as matieres
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'matiere_id', m.id,
+              'label', COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
+            )
+            ORDER BY COALESCE(NULLIF(TRIM(m.designation_courte),''), m.nom)
+          ) FILTER (WHERE m.id IS NOT NULL AND (a.type_special IS NULL OR a.type_special = '') AND COALESCE(m.suivi_notes, true) IS DISTINCT FROM false),
+          '[]'::jsonb
+        ) as matieres_detail
       FROM affectations a
       JOIN utilisateurs u ON u.id = a.prof_id
       JOIN classes c ON c.id = a.classe_id

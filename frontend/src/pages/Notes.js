@@ -34,6 +34,18 @@ const abregerMatiere = (nom) => {
 };
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
+const parseMatieresDetail = (row) => {
+  const md = row?.matieres_detail;
+  if (Array.isArray(md)) return md.filter(x => x && x.matiere_id != null);
+  if (typeof md === 'string') {
+    try {
+      const p = JSON.parse(md);
+      return Array.isArray(p) ? p.filter(x => x && x.matiere_id != null) : [];
+    } catch { return []; }
+  }
+  return [];
+};
+
 const sortMatieres = (matieres) => [...matieres].sort((a, b) => {
   const pri = (n) => n === 'Français' ? 0 : n === 'Mathématiques' ? 1 : 2;
   const pa = pri(a.matiere_nom), pb = pri(b.matiere_nom);
@@ -120,6 +132,12 @@ export default function Notes() {
   const currentUser = getSessionUser() || {};
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
+  const nbEvalMatiereProf = (classeId, profId, matiereId) => {
+    const pid = profId != null && profId !== '' ? String(profId) : 'null';
+    const k = `${classeId}-${matiereId}-${pid}`;
+    if (suiviNotesClasse[k] !== undefined) return suiviNotesClasse[k];
+    return suiviNotesClasse[`${classeId}-${matiereId}`] || 0;
+  };
 
   // Réagit aux changements de l'URL (sidebar Notes)
   useEffect(() => {
@@ -146,7 +164,10 @@ export default function Notes() {
     axios.get(API + '/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
     axios.get(API + '/notes/suivi-classes', { headers }).then(r => {
       const map = {};
-      (r.data || []).forEach(x => { map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0; });
+      (r.data || []).forEach(x => {
+        const pid = x.prof_id != null && x.prof_id !== '' ? String(x.prof_id) : 'null';
+        map[`${x.classe_id}-${x.matiere_id}-${pid}`] = parseInt(x.nb_evaluations, 10) || 0;
+      });
       setSuiviNotesClasse(map);
     }).catch(() => {});
     axios.get(API + '/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
@@ -205,6 +226,22 @@ export default function Notes() {
       setRapportChargement(false);
     }
   };
+
+  useEffect(() => {
+    const classeId = searchParams.get('classeId');
+    const tab = searchParams.get('tab');
+    if (!classeId || tab !== 'generale') return;
+    const cl = classes.find(c => String(c.id) === String(classeId));
+    if (!cl) return;
+    setClasseObj(cl);
+    setClasseSelectionnee(cl.id);
+    setVueClasseAction('generale');
+    setVueContexte('detail');
+    const semFocus = sem1Bloque && !isAdmin() ? '2' : '1';
+    setGeneraleSemestre(semFocus);
+    setVue('generale');
+    chargerRapport(cl.id, semFocus);
+  }, [searchParams, classes, sem1Bloque, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chargerBulletinId = async (classeId, sem) => {
     try {
@@ -389,7 +426,9 @@ export default function Notes() {
       setVueGeneraleMode('tous');
       setRapportMatiereId('');
       setRapportEleveId('');
-      await chargerRapport(cl.id);
+      const semFocus = sem1Bloque && !isAdmin() ? '2' : '1';
+      setGeneraleSemestre(semFocus);
+      await chargerRapport(cl.id, semFocus);
       setVue('generale');
       return;
     }
@@ -478,7 +517,6 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => { setVue('evaluations'); chargerEvaluationsId(classeSelectionnee, matiereSelectionnee); }}>← Retour</button>
           <div style={{ flex: 1 }}>
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
-            <div style={s.evalInfo}>{evaluationOuverte.matiere} • {evaluationOuverte.type}{evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0 ? ` • Points max : ${parseFloat(evaluationOuverte.points_max)}` : ''} • Coef. {evaluationOuverte.coefficient} • {profNomSession}</div>
           </div>
           {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
           <div style={{ ...s.moyenneBox, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -567,13 +605,64 @@ export default function Notes() {
     const modeMatieres = rapport ? sortMatieres(rapport.matieres) : [];
     const matiereRapport = modeMatieres.find(m => m.matiere_id === parseInt(rapportMatiereId));
     const eleveRapport = rapport?.eleves.find(e => e.id === parseInt(rapportEleveId));
+    const fontVG = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
+    const imprimerVueGenerale = (htmlId) => {
+      const node = document.getElementById(htmlId);
+      if (!node) return;
+      const popup = window.open('', '_blank', 'width=1100,height=820');
+      if (!popup) return;
+      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4 landscape;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;font-size:12px;}.vg-bull-sheet{max-width:800px;margin:0 auto;width:100%;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #e2e8f0;padding:5px 8px;font-size:11px;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
+      popup.document.close();
+      popup.focus();
+      popup.print();
+    };
+    const canPrintVueGenerale =
+      !!rapport &&
+      !rapportChargement &&
+      !rapportErreur &&
+      (vueGeneraleMode === 'tous' ||
+        (vueGeneraleMode === 'branche' && !!rapportMatiereId && !!matiereRapport) ||
+        (vueGeneraleMode === 'eleve' && !!rapportEleveId && !!eleveRapport));
+    const handlePrintVueGenerale = () => {
+      if (vueGeneraleMode === 'tous' && rapport) imprimerVueGenerale('vg-tous-print');
+      else if (vueGeneraleMode === 'branche' && matiereRapport) imprimerVueGenerale('vg-branche-bull');
+      else if (vueGeneraleMode === 'eleve' && eleveRapport) imprimerVueGenerale('vg-eleve-bull');
+    };
+    const enteteBulletinVueGenerale = () => {
+      const _now = new Date();
+      const _as = _now.getMonth() >= 7 ? `${_now.getFullYear()}-${_now.getFullYear() + 1}` : `${_now.getFullYear() - 1}-${_now.getFullYear()}`;
+      return (
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <img src="/logo-etat-du-valais.png" alt="" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} />
+            <div style={{ fontSize: 10, lineHeight: 1.5, color: '#334155', fontFamily: fontVG }}>
+              <div>Département de la santé, des affaires sociales et de la culture</div>
+              <div>Service de l'action sociale</div>
+              <div>Office de l'asile</div>
+              <div>Centre de formation "Le Botza"</div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', fontFamily: fontVG }}>
+            <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{_as}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
+          </div>
+        </div>
+      );
+    };
+    const piedBulletinVueGenerale = () => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 40, fontSize: 11, color: '#64748b', fontFamily: fontVG }}>
+        <img src="/logo-pied-page.png" alt="" style={{ height: 19, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+        <span>Zone Industrielle 4, 1963 Vétroz<br />Tél. 027 606 18 60</span>
+      </div>
+    );
 
     return (
       <div style={s.page}>
         <style>{`
           @media print {
             .no-print { display: none !important; }
-            @page { size: A4 landscape; margin: 8mm; }
+            @page { size: A4 landscape; margin: 10mm; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { margin: 0; font-size: 9px; }
             th, td { font-size: 9px !important; padding: 3px 5px !important; }
@@ -583,9 +672,11 @@ export default function Notes() {
         `}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
-          <h2 style={s.titre}>Vue générale — {classeNom}</h2>
+          <h2 style={s.titre}>Notes de l'élève — {classeNom}</h2>
+          <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
         </div>
         {/* Sous-onglets Vue générale */}
+        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 8, boxShadow: '0 1px 0 #e2e8f0' }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
@@ -620,6 +711,7 @@ export default function Notes() {
             </select>
           )}
         </div>
+        </div>
 
         {/* Chargement / erreur */}
         {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>Chargement des données…</div>}
@@ -641,7 +733,7 @@ export default function Notes() {
           const colNom = (b) => (b.designation_courte || b.nom || '').trim();
           return (
           <div style={{ overflowX: 'auto', marginTop: 15 }}>
-          <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+          <div ref={printRef} id="vg-tous-print" className="vg-bull-sheet" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', maxWidth: 800, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
               <thead>
                 <tr style={s.theadRow}>
@@ -857,110 +949,133 @@ export default function Notes() {
         })()}
 
         {/* ---- VUE PAR BRANCHE ---- */}
-        {vueGeneraleMode === 'branche' && rapport && matiereRapport && (
-          <div style={{ overflowX: 'auto' }}>
-          <div ref={printRef} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-            <h3 style={{ marginBottom: 12, fontSize: 15, padding: '12px 16px 0' }}>{matiereRapport.matiere_nom} — {classeNom}</h3>
-            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: 'auto' }}>
-              <colgroup>
-                <col style={{ width: 150 }} />
-                <col style={{ width: 150 }} />
-                {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 70 }} />)}
-                <col style={{ width: 90 }} />
-              </colgroup>
-              <thead>
-                <tr style={s.theadRow}>
-                  <th style={s.th}>Nom</th>
-                  <th style={s.th}>Prénom</th>
-                  {matiereRapport.evaluations.map(ev => (
-                    <th key={ev.id} style={{ ...s.th, textAlign: 'center' }}>
-                      <div>{ev.nom}</div>
-                      <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{ev.type} • Coef.{ev.coefficient}</div>
-                    </th>
-                  ))}
-                  <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rapport.eleves.map((eleve, i) => {
-                  const moy = moyenneEleveMatiere(matiereRapport, eleve.id);
-                  return (
-                    <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                      <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
-                      <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
-                      {matiereRapport.evaluations.map(ev => {
-                        const n = ev.notes.find(n => n.eleve_id === eleve.id);
-                        const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa';
-                        return (
-                          <td key={ev.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color }}>
-                            {n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : (n && n.valeur !== null ? fmtNote(n.valeur) : '—')}
-                          </td>
-                        );
-                      })}
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
-                        {moy !== null ? fmtNote(moy) : '—'}
-                      </td>
+        {vueGeneraleMode === 'branche' && rapport && matiereRapport && (() => {
+          return (
+            <div id="vg-branche-bull" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', maxWidth: 800, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+              {enteteBulletinVueGenerale()}
+              <div style={{ marginTop: 40, marginBottom: 16 }}>
+                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Notes de l'élève</div>
+                <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: fontVG, marginBottom: 12 }}>Vétroz, le {todayFormatted}</div>
+                <div style={{ fontFamily: fontVG, paddingLeft: 14, paddingRight: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{matiereRapport.matiere_nom}</div>
+                  <div style={{ fontSize: 12, color: '#475569' }}>{classeNom} — {generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
+                </div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
+                  <colgroup>
+                    <col style={{ width: 150 }} />
+                    <col style={{ width: 150 }} />
+                    {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 70 }} />)}
+                    <col style={{ width: 90 }} />
+                  </colgroup>
+                  <thead>
+                    <tr style={s.theadRow}>
+                      <th style={s.th}>Nom</th>
+                      <th style={s.th}>Prénom</th>
+                      {matiereRapport.evaluations.map(ev => (
+                        <th key={ev.id} style={{ ...s.th, textAlign: 'center' }}>
+                          <div>{ev.nom}</div>
+                          <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{ev.type} • Coef.{ev.coefficient}</div>
+                        </th>
+                      ))}
+                      <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {rapport.eleves.map((eleve, i) => {
+                      const moy = moyenneEleveMatiere(matiereRapport, eleve.id);
+                      return (
+                        <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                          <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                          <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
+                          {matiereRapport.evaluations.map(ev => {
+                            const n = ev.notes.find(n => n.eleve_id === eleve.id);
+                            const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa';
+                            return (
+                              <td key={ev.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color }}>
+                                {n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : (n && n.valeur !== null ? fmtNote(n.valeur) : '—')}
+                              </td>
+                            );
+                          })}
+                          <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                            {moy !== null ? fmtNote(moy) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {piedBulletinVueGenerale()}
+            </div>
+          );
+        })()}
         {vueGeneraleMode === 'branche' && !rapportMatiereId && <div style={s.vide}>Sélectionnez une branche</div>}
 
         {/* ---- VUE PAR ELEVE ---- */}
-        {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (
-          <div ref={printRef}>
-            <h3 style={{ marginBottom: 16, fontSize: 15 }}>{eleveRapport.prenom} {nomSansSuffixe(eleveRapport.nom)} — {classeNom}</h3>
-            <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%' }}>
-              <colgroup>
-                <col style={{ width: 90 }} />
-                <col style={{ width: 'auto' }} />
-                <col style={{ width: 80 }} />
-                <col style={{ width: 160 }} />
-                <col style={{ width: 85 }} />
-                <col style={{ width: 60 }} />
-              </colgroup>
-              <tbody>
-                {modeMatieres.map(matiere => {
-                  const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
-                  return [
-                    <tr key={`sep-${matiere.matiere_id}`}>
-                      <td colSpan={6} style={{ padding: '12px 8px 4px', borderBottom: '2px solid #6366f1' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
-                          {moy !== null
-                            ? <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>Moyenne : {fmtNote(moy)}</span>
-                            : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
-                        </div>
-                      </td>
-                    </tr>,
-                    ...(matiere.evaluations.length === 0
-                      ? [<tr key={`empty-${matiere.matiere_id}`}><td colSpan={6} style={{ ...s.td, color: '#aaa', fontSize: 13 }}>Aucune évaluation</td></tr>]
-                      : matiere.evaluations.map((ev, j) => {
-                          const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
-                          const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
-                          const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
-                          return (
-                            <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
-                              <td style={{ ...s.td, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                              <td style={{ ...s.td, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
-                              <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
-                              <td style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
-                              <td style={{ ...s.td, textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
-                              <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
-                            </tr>
-                          );
-                        })
-                    )
-                  ];
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (() => {
+          return (
+            <div id="vg-eleve-bull" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', maxWidth: 800, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+              {enteteBulletinVueGenerale()}
+              <div style={{ marginTop: 40, marginBottom: 16 }}>
+                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Notes de l'élève</div>
+                <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: fontVG, marginBottom: 12 }}>Vétroz, le {todayFormatted}</div>
+                <div style={{ fontFamily: fontVG, paddingLeft: 14, paddingRight: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveRapport.prenom} {nomSansSuffixe(eleveRapport.nom)}</div>
+                  <div style={{ fontSize: 12, color: '#475569' }}>{classeNom} — {generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
+                </div>
+              </div>
+              <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
+                <colgroup>
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 'auto' }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 85 }} />
+                  <col style={{ width: 60 }} />
+                </colgroup>
+                <tbody>
+                  {modeMatieres.map(matiere => {
+                    const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
+                    return [
+                      <tr key={`sep-${matiere.matiere_id}`}>
+                        <td colSpan={6} style={{ padding: '12px 8px 4px', borderBottom: '2px solid #6366f1' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
+                            {moy !== null
+                              ? <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>Moyenne : {fmtNote(moy)}</span>
+                              : <span style={{ color: '#aaa', fontSize: 13 }}>Aucune note</span>}
+                          </div>
+                        </td>
+                      </tr>,
+                      ...(matiere.evaluations.length === 0
+                        ? [<tr key={`empty-${matiere.matiere_id}`}><td colSpan={6} style={{ ...s.td, color: '#aaa', fontSize: 13 }}>Aucune évaluation</td></tr>]
+                        : matiere.evaluations.map((ev, j) => {
+                            const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
+                            const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
+                            const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
+                            const profAff = [ev.prof_prenom, nomSansSuffixe(ev.prof_nom)].filter(Boolean).join(' ').trim() || '—';
+                            return (
+                              <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
+                                <td style={{ ...s.td, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                                <td style={{ ...s.td, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
+                                <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
+                                <td style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profAff}</td>
+                                <td style={{ ...s.td, textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
+                                <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
+                              </tr>
+                            );
+                          })
+                      )
+                    ];
+                  })}
+                </tbody>
+              </table>
+              {piedBulletinVueGenerale()}
+            </div>
+          );
+        })()}
         {vueGeneraleMode === 'eleve' && !rapportEleveId && <div style={s.vide}>Sélectionnez un élève</div>}
       </div>
     );
@@ -1246,7 +1361,10 @@ export default function Notes() {
         {bulletinOnglet === 'criteres' && (
           <>
             <div className="no-print" style={{ marginBottom: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 0 }}>Titulaire : {titulaireNom}</div>
+              <div style={{ fontSize: 14, color: '#1e293b', marginBottom: 0 }}>
+                <span style={{ fontWeight: 600 }}>Titulaire :</span>{' '}
+                <span style={{ fontWeight: 400 }}>{titulaireNom}</span>
+              </div>
             </div>
 
             <div style={{ ...s.tableContainer, marginBottom: 24 }} className="no-print">
@@ -1705,9 +1823,13 @@ export default function Notes() {
         <table style={s.tbl}>
           <thead>
             <tr style={s.theadRow}>
-              {['Actions', 'Désignation', 'Professeur', 'Date', 'Type', 'Pts max', 'Coef.'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
+              <th style={{ ...s.th, width: 1, textAlign: 'center' }} aria-label="Actions" />
+              <th style={s.th}>Désignation</th>
+              <th style={s.th}>Professeur</th>
+              <th style={s.th}>Date</th>
+              <th style={s.th}>Type</th>
+              <th style={s.th}>Pts max</th>
+              <th style={s.th}>Coef.</th>
               <th style={{ ...s.th, textAlign: 'center' }}>Statut</th>
               <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
             </tr>
@@ -1717,10 +1839,12 @@ export default function Notes() {
               <tr><td colSpan="9" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                <td style={s.td}>
-                  <button style={s.btnOuvrir} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>Saisir</button>
-                  {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button style={s.btnDelete} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
-                  {isAdmin() && <button style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
+                <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
+                  <button type="button" style={s.btnIconOeil} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button type="button" style={s.btnEdit} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
+                  {isAdmin() && <button type="button" style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
@@ -1778,7 +1902,7 @@ export default function Notes() {
         <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
           <thead>
             <tr style={s.theadRow}>
-              <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Actions</th>
+              <th style={{ ...s.th, width: 1, textAlign: 'center' }} aria-label="Ouvrir" />
               <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Matière</th>
               <th style={{ ...s.th, width: '100%', textAlign: 'center' }}>Évaluations</th>
             </tr>
@@ -1790,8 +1914,10 @@ export default function Notes() {
               const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                  <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1 }}>
-                    <button style={s.btnEdit} onClick={() => ouvrirMatiere(m)}>Ouvrir</button>
+                  <td style={{ ...s.td, whiteSpace: 'nowrap', width: 1, textAlign: 'center' }}>
+                    <button type="button" style={s.btnIconOeil} title="Ouvrir la matière" onClick={() => ouvrirMatiere(m)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
                   </td>
                   <td style={{ ...s.td, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', width: 1 }}>{m.nom}</td>
                   <td style={{ ...s.td, textAlign: 'center', width: '100%' }}>
@@ -1833,12 +1959,15 @@ export default function Notes() {
         <div style={s.header}>
           <h2 style={s.titre}>Notes</h2>
           {isAdmin() && (
-            <button onClick={async () => {
+            <button type="button" onClick={async () => {
               const next = !sem1Bloque;
               await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
               setSem1Bloque(next);
-            }} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${sem1Bloque ? '#ef4444' : '#6366f1'}`, background: sem1Bloque ? '#fee2e2' : '#ede9fe', color: sem1Bloque ? '#b91c1c' : '#4c1d95', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-              {sem1Bloque ? '🔒 1er sem. bloqué' : '🔓 Bloquer 1er sem.'}
+            }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (sem1Bloque ? '#6366f1' : '#e2e8f0'), background: sem1Bloque ? '#eef2ff' : 'white', color: sem1Bloque ? '#4338ca' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
+              <div style={{ width: 36, height: 20, borderRadius: 10, background: sem1Bloque ? '#6366f1' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
+                <div style={{ position: 'absolute', top: 2, left: sem1Bloque ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }} />
+              </div>
+              {sem1Bloque ? '1er semestre bloqué' : 'Bloquer 1er semestre'}
             </button>
           )}
         </div>
@@ -1866,25 +1995,27 @@ export default function Notes() {
               <tr style={s.theadRow}>
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
-                <th style={{ ...s.th, whiteSpace: 'nowrap' }}>Notes</th>
-                <th style={{ ...s.th, width: '100%' }}>Responsables</th>
+                <th style={{ ...s.th, width: '100%' }}>Responsables et évaluations</th>
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
               {classesFiltrees.length === 0 ? (
-                <tr><td colSpan={5} style={s.vide}>Aucune classe disponible.</td></tr>
+                <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
               ) : classesFiltrees.map((cl, i) => {
-                const niveauClasse = String(cl?.niveau || '').toUpperCase();
-                const branchesNiveau = branches.filter(b => String(b.niveau || '').toUpperCase() === niveauClasse && b.suivi_notes !== false);
-                const badgesNotes = branchesNiveau.map(b => ({
-                  id: b.id,
-                  label: (b.designation_courte || b.nom || '').toString().trim(),
-                  nb: suiviNotesClasse[`${cl.id}-${b.id}`] || 0
-                }));
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
                 const titulaires = respClasse.filter(r => r.est_titulaire);
                 const autresProfs = respClasse.filter(r => !r.est_titulaire);
+                const pastillesBranche = (r) => (
+                  <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '6px 10px' }}>
+                    {parseMatieresDetail(r).map(item => (
+                      <span key={item.matiere_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#6366f1' }}>{item.label}</span>
+                        <span style={{ background: '#e0e7ff', color: '#4338ca', borderRadius: 99, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>{nbEvalMatiereProf(cl.id, r.prof_id, item.matiere_id)}</span>
+                      </span>
+                    ))}
+                  </div>
+                );
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
@@ -1894,35 +2025,27 @@ export default function Notes() {
                       </button>
                     </td>
                     <td style={{ ...s.td, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{cl.nom}</td>
-                    <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 5 }}>
-                        {badgesNotes.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : badgesNotes.map(b => (
-                          <span key={b.id} style={{ background: b.nb >= 3 ? '#dcfce7' : '#fee2e2', color: b.nb >= 3 ? '#166534' : '#991b1b', padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            {b.label} {b.nb}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
                     <td style={{ ...s.td, width: '100%' }}>
                       {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {titulaires.map(r => (
-                            <span key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
-                              <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, marginRight: 5 }}>Titulaire</span>
-                              <b>{r.prof_prenom} {r.prof_nom}</b>
-                              {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
-                            </span>
+                            <div key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
+                              <div>
+                                <span style={{ fontWeight: 600 }}>Titulaire :</span>{' '}
+                                <span style={{ fontWeight: 400 }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</span>
+                              </div>
+                              {parseMatieresDetail(r).length ? pastillesBranche(r) : null}
+                            </div>
                           ))}
                           {autresProfs.length > 0 && (
-                            <span style={{ fontSize: 12, color: '#475569' }}>
-                              {autresProfs.map((r, idx) => (
-                                <span key={r.prof_id}>
-                                  {idx > 0 && <span style={{ color: '#cbd5e1', margin: '0 6px' }}>|</span>}
-                                  <b>{r.prof_prenom} {r.prof_nom}</b>
-                                  {r.matieres?.length ? <span style={{ color: '#6366f1' }}> : {r.matieres.join(', ')}</span> : null}
-                                </span>
+                            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 14, rowGap: 6 }}>
+                              {autresProfs.map(r => (
+                                <div key={r.prof_id} style={{ fontSize: 12, color: '#475569', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                  <b style={{ whiteSpace: 'nowrap' }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</b>
+                                  {parseMatieresDetail(r).length ? pastillesBranche(r) : null}
+                                </div>
                               ))}
-                            </span>
+                            </div>
                           )}
                         </div>
                       )}
@@ -1954,7 +2077,7 @@ export default function Notes() {
 }
 
 const s = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:140,minWidth:140,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
@@ -1974,19 +2097,20 @@ const s = {
   btnSauver: { padding: '8px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   btnImprimer: { padding: '7px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
-  tableContainer: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
-  tblWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },
-  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
   tr: { borderBottom: 'none' },
   td: { padding: '5px 14px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },
   typeBadge: { background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
+  btnIconOeil: { padding: 6, background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: 6, verticalAlign: 'middle' },
   btnOuvrir: { padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, marginRight: 6 },
-  btnDelete: { padding: '4px 8px', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#64748b', fontWeight: 600, marginLeft: 4 },
-  btnEdit: { padding: '4px 10px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
+  btnDelete: { padding: '4px 8px', background: 'none', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#ef4444', fontWeight: 600, marginLeft: 4 },
+  btnEdit: { padding: '4px 10px', background: '#eef2ff', color: '#6366f1', border: '1px solid #c7d2fe', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
   btnDetail: { padding: '5px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },

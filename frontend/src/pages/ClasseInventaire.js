@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -202,7 +203,7 @@ export default function ClasseInventaire() {
 }
 
 const s = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 45, flexWrap: 'wrap' },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   title: { margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a' },
@@ -210,10 +211,10 @@ const s = {
   grid: { display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(520px, 2fr)', gap: 16, alignItems: 'start' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   cardTitle: { fontSize: 14, fontWeight: 800, color: '#0f172a' },
-  tableWrap: { borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' },
+  tableWrap: { borderRadius: 10, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  thead: { background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
-  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' },
+  thead: { background: '#6366f1' },
+  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: '0 1px 0 rgba(0,0,0,0.08)' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   trActive: { borderBottom: '1px solid #f1f5f9', background: '#eef2ff' },
   td: { padding: '10px 12px', fontSize: 13, color: '#334155' },
@@ -222,5 +223,5 @@ const s = {
   form: { display: 'grid', gridTemplateColumns: '140px 1.4fr 0.8fr 1fr auto', gap: 8, marginBottom: 12 },
   inp: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' },
   btnAdd: { padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' },
-  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.75 },
+  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.9, color: '#ef4444' },
 };

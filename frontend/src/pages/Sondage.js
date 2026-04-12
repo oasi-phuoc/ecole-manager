@@ -1,11 +1,14 @@
 /* eslint-disable */
 import React from 'react';
+import { stickyPageChrome } from '../styles/pageShell';
 
 export default function Sondage() {
   return (
     <div style={s.page}>
+      <div style={stickyPageChrome()}>
       <div style={s.header}>
         <h2 style={s.titre}>Sondage</h2>
+      </div>
       </div>
       <div style={s.placeholder}>
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c7d2fe" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}>
@@ -19,7 +22,7 @@ export default function Sondage() {
 }
 
 const s = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, flexWrap: 'wrap' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0 },
   placeholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 320, background: 'white', borderRadius: 16, border: '2px dashed #e0e7ff', color: '#94a3b8' },

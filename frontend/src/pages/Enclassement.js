@@ -660,7 +660,7 @@ export default function Enclassement() {
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f8fafc' }}>
+                <tr style={s.thead}>
                   <th style={s.th}>Élève</th>
                   <th style={{ ...s.th, textAlign: 'center', width: 70 }}>Fr.</th>
                   <th style={{ ...s.th, textAlign: 'center', width: 70 }}>Math</th>
@@ -706,7 +706,7 @@ export default function Enclassement() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = {
-  page: { minHeight: '100vh', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
+  page: { minHeight: '100%', boxSizing: 'border-box', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
   header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, flexWrap: 'wrap' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#475569' },
@@ -716,10 +716,10 @@ const s = {
   label: { display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4, marginTop: 14 },
   input: { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', marginBottom: 0, outline: 'none', fontFamily: 'inherit' },
   select: { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', background: 'white', fontFamily: 'inherit' },
-  tableWrap: { background: 'white', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' },
+  tableWrap: { background: 'white', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: '1px solid #f1f5f9' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  thead: { background: '#f8fafc' },
-  th: { padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#475569', textAlign: 'left', borderBottom: '1px solid #e2e8f0' },
+  thead: { background: '#6366f1' },
+  th: { padding: '10px 14px', fontSize: 11, fontWeight: 700, color: 'white', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: '0 1px 0 rgba(0,0,0,0.08)' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   td: { padding: '10px 14px', fontSize: 13, verticalAlign: 'middle' },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 },

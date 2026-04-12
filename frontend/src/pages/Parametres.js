@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import NpaAutocomplete from '../components/NpaAutocomplete';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -68,6 +70,7 @@ export default function Parametres() {
   const [msgAccesProfs, setMsgAccesProfs] = useState('');
   const [moduleOuvert, setModuleOuvert] = useState(null);
   const [sousOngletEcole, setSousOngletEcole] = useState('adresse');
+  const [employesResponsablesListe, setEmployesResponsablesListe] = useState([]);
   const [horairesEcole, setHorairesEcole] = useState({});
   const [lieuHoraireOnglet, setLieuHoraireOnglet] = useState('defaut');
   const [sousOngletProfil, setSousOngletProfil] = useState('connexion');
@@ -144,6 +147,13 @@ export default function Parametres() {
   useEffect(() => { chargerMfaStatus(); chargerDonnees(); }, []);
   useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
   useEffect(() => { if (onglet === 'ecole' && isAdmin) chargerEcole(); }, [onglet]);
+  useEffect(() => {
+    if (!isAdmin || onglet !== 'ecole' || sousOngletEcole !== 'responsables') return;
+    axios.get(API + '/employes-administratifs', { headers }).then(r => {
+      const list = (r.data || []).filter(u => String(u.role_acces) === 'responsable' && u.actif !== false);
+      setEmployesResponsablesListe(list.sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')));
+    }).catch(() => setEmployesResponsablesListe([]));
+  }, [isAdmin, onglet, sousOngletEcole]);
   useEffect(() => {
     if (isAdmin && !mailTestTo && profil?.email) setMailTestTo(profil.email);
   }, [isAdmin, profil?.email, mailTestTo]);
@@ -485,20 +495,22 @@ export default function Parametres() {
   return (
     <div style={styles.page}>
       <div style={styles.main}>
+        <div style={{ ...stickyPageChrome(), marginTop: -32, paddingTop: 32, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
         <div style={styles.topBar}>
           <h1 style={styles.titre}>Paramètres</h1>
           <div style={styles.topBarRight}>
             {onglet === 'profil' && (<>
-              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#d1fae5',color:'#065f46'}}>✅ Profil mis à jour !</span>}
-              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#fee2e2',color:'#991b1b'}}>❌ Erreur</span>}
+              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>✅ Profil mis à jour !</span>}
+              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>❌ Erreur</span>}
               <button type="submit" form="form-profil" style={styles.btnSauverHeader}>Sauvegarder</button>
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
-              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#d1fae5',color:'#065f46'}}>✅ Paramètres mis à jour !</span>}
-              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#fee2e2',color:'#991b1b'}}>❌ Erreur</span>}
+              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>✅ Paramètres mis à jour !</span>}
+              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>❌ Erreur</span>}
               <button type="submit" form="form-ecole" style={styles.btnSauverHeader}>Sauvegarder</button>
             </>)}
           </div>
+        </div>
         </div>
         <div style={styles.content}>
 
@@ -600,7 +612,12 @@ export default function Parametres() {
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>NPA</label>
-                        <input style={styles.input} type="text" value={profil.npa||''} onChange={e => setProfil({ ...profil, npa: e.target.value })} placeholder="1950" />
+                        <NpaAutocomplete
+                          npa={profil.npa}
+                          lieu={profil.lieu}
+                          inputStyle={styles.input}
+                          onChange={({ npa, lieu }) => setProfil((p) => ({ ...p, npa, lieu }))}
+                        />
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Lieu</label>
@@ -930,7 +947,13 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_langues_jeunes === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <input style={styles.input} type="text" value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })} />
+                    <select style={styles.input} value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })}>
+                      <option value="">— Choisir —</option>
+                      {employesResponsablesListe.map(emp => {
+                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
+                        return <option key={emp.id} value={label}>{label}</option>;
+                      })}
+                    </select>
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -942,7 +965,13 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <input style={styles.input} type="text" value={ecole.responsable_niveau_csc || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_csc: e.target.value })} />
+                    <select style={styles.input} value={ecole.responsable_niveau_csc || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_csc: e.target.value })}>
+                      <option value="">— Choisir —</option>
+                      {employesResponsablesListe.map(emp => {
+                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
+                        return <option key={'csc-'+emp.id} value={label}>{label}</option>;
+                      })}
+                    </select>
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -954,7 +983,13 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <input style={styles.input} type="text" value={ecole.responsable_niveau_cfr || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_cfr: e.target.value })} />
+                    <select style={styles.input} value={ecole.responsable_niveau_cfr || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_cfr: e.target.value })}>
+                      <option value="">— Choisir —</option>
+                      {employesResponsablesListe.map(emp => {
+                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
+                        return <option key={'cfr-'+emp.id} value={label}>{label}</option>;
+                      })}
+                    </select>
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -966,7 +1001,13 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <input style={styles.input} type="text" value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })} />
+                    <select style={styles.input} value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })}>
+                      <option value="">— Choisir —</option>
+                      {employesResponsablesListe.map(emp => {
+                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
+                        return <option key={'epl-'+emp.id} value={label}>{label}</option>;
+                      })}
+                    </select>
                   </div>
                 </div>
                 </div>}
@@ -1008,8 +1049,8 @@ export default function Parametres() {
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: dragOverNiveau === idx ? '#e0e7ff' : '#f8fafc', borderRadius: 7, border: '1px solid ' + (dragOverNiveau === idx ? '#6366f1' : '#e2e8f0'), marginBottom: 5, cursor: 'grab' }}>
                         <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{n.nom}</span>
-                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
-                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
                     {niveauxDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun niveau</div>}
@@ -1046,8 +1087,8 @@ export default function Parametres() {
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: dragOverLieu === idx ? '#e0e7ff' : '#f8fafc', borderRadius: 7, border: '1px solid ' + (dragOverLieu === idx ? '#6366f1' : '#e2e8f0'), marginBottom: 5, cursor: 'grab' }}>
                         <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{l.nom}</span>
-                        <button onClick={() => { setDonneesLieuEdit(l); setDonneesLieuForm({ nom: l.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
-                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                        <button onClick={() => { setDonneesLieuEdit(l); setDonneesLieuForm({ nom: l.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
                     {lieuxTravailDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun lieu</div>}
@@ -1086,8 +1127,8 @@ export default function Parametres() {
                           {sallesLieu.map(s => (
                             <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 4 }}>
                               <span style={{ flex: 1, fontSize: 13, color: '#334155' }}>{s.nom}</span>
-                              <button onClick={() => { setDonneesSalleEdit(s); setDonneesSalleForm({ nom: s.nom, lieu_travail_id: String(s.lieu_travail_id) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✏️</button>
-                              <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/salles/' + s.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🗑️</button>
+                              <button onClick={() => { setDonneesSalleEdit(s); setDonneesSalleForm({ nom: s.nom, lieu_travail_id: String(s.lieu_travail_id) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
+                              <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/salles/' + s.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                             </div>
                           ))}
                         </div>
@@ -1345,9 +1386,7 @@ export default function Parametres() {
                 </ul>
 
                 {resetRentreeMsg && (
-                  <div style={{padding:'12px 16px',borderRadius:8,marginBottom:14,fontWeight:600,fontSize:14,
-                    background:resetRentreeMsg.startsWith('✅')?'#d1fae5':'#fee2e2',
-                    color:resetRentreeMsg.startsWith('✅')?'#065f46':'#991b1b'}}>
+                  <div style={{padding:'12px 16px',borderRadius:8,marginBottom:14,fontWeight:600,fontSize:14,background:'#ede9fe',color:'#4c1d95'}}>
                     {resetRentreeMsg}
                   </div>
                 )}
@@ -1403,8 +1442,8 @@ export default function Parametres() {
 
 
 const styles = {
-  page: { minHeight: '100vh', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  main: { padding: '32px 36px', minHeight: '100vh' },
+  page: { minHeight: '100%', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  main: { padding: '32px 36px', minHeight: '100%', boxSizing: 'border-box' },
   topBar: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, flexWrap: 'wrap' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', flex: 1, margin: 0 },
   topBarRight: { display: 'flex', alignItems: 'center', gap: 10 },

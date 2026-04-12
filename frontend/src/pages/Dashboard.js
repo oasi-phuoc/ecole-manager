@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { T, colors } from '../styles/theme';
+import { stickyPageChrome } from '../styles/pageShell';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -136,6 +137,7 @@ export default function Dashboard() {
   return (
     <div style={styles.page}>
       <div style={styles.main}>
+        <div style={{ ...stickyPageChrome('#ede9fe'), marginTop: -32, paddingTop: 32, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
         <div style={styles.topBar}>
           <div>
             <h1 style={styles.greeting}>{salut}, {user?.prenom} 👋</h1>
@@ -160,6 +162,7 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+        </div>
 
         <div style={styles.sectionTitle}>Informations utiles</div>
         <div style={styles.infoRow}>
@@ -245,7 +248,7 @@ export default function Dashboard() {
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8 }}>
             {toast.message && (
-              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : { background: '#d1fae5', color: '#065f46' }) }}>{toast.message}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{toast.message}</span>
             )}
             <button onClick={sauvegarderMemo} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Sauvegarder
@@ -281,7 +284,7 @@ export default function Dashboard() {
 }
 
 const styles = {
-  page: { minHeight: '100vh', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  page: { minHeight: '100%', background: '#ede9fe', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   main: { padding: '32px 36px' },
   topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   greeting: { fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0 },

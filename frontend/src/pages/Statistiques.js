@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -31,9 +32,11 @@ export default function Statistiques() {
 
   return (
     <div style={styles.page}>
+      <div style={stickyPageChrome()}>
       <div style={styles.header}>
         <h2 style={styles.titre}>📊 Statistiques</h2>
         <button style={styles.btnRefresh} onClick={chargerStats}>🔄 Actualiser</button>
+      </div>
       </div>
 
       {/* Chiffres clés */}
@@ -168,7 +171,7 @@ export default function Statistiques() {
 }
 
 const styles = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box' },
   loading: { padding: '40px', textAlign: 'center', fontSize: '18px' },
   header: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer' },

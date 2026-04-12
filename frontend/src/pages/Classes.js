@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -674,6 +675,19 @@ export default function Classes() {
     setTimeout(() => setSanctionToast(''), 2500);
   };
 
+  const observationsDisponiblesPourSanction = (sanctionIdExclure) => {
+    const utilisees = new Set(
+      (eleveSanctions || [])
+        .filter(s => sanctionIdExclure == null || Number(s.id) !== Number(sanctionIdExclure))
+        .map(s => String(s.observation_ref || '').trim())
+        .filter(Boolean)
+    );
+    return (sanctionsObservations || []).filter(o => {
+      const ref = String(o.reference_obs || '').trim();
+      return ref && !utilisees.has(ref);
+    });
+  };
+
   const chargerInventaireBranche = async (brancheId) => {
     if (!detailClasse?.id || !brancheId) return;
     setInventaireLoading(true);
@@ -1058,7 +1072,7 @@ export default function Classes() {
                     {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                   </div>
                   {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier">
+                    <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}} title="Modifier">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     <button onClick={async () => {
@@ -1067,7 +1081,7 @@ export default function Classes() {
                         const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
                         setObservations(r.data);
                       }
-                    }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                    }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </div>}
@@ -1155,7 +1169,7 @@ export default function Classes() {
                     <button onClick={() => telechargerDocumentEleve(doc)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Télécharger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
-                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>}
                   </div>
@@ -1188,7 +1202,7 @@ export default function Classes() {
             <div style={s.modalHeader}>
               <div style={{display:'flex',alignItems:'center',gap:12}}>
                 <h3 style={s.modalTitle}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
-                {sanctionToast && <span style={{background:'#ef4444',color:'white',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+                {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
               </div>
               <button style={s.btnClose} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
             </div>
@@ -1243,8 +1257,8 @@ export default function Classes() {
                                       onChange={e => setPendingCell(prev => ({ ...prev, observation_ref: e.target.value }))}
                                       style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
                                     >
-                                      <option value="">Réf. observation</option>
-                                      {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                      <option value="">Choisir observation</option>
+                                      {observationsDisponiblesPourSanction(null).map(o => (
                                         <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
                                       ))}
                                     </select>
@@ -1270,8 +1284,8 @@ export default function Classes() {
                                         onChange={e => setEditSanction(prev => ({...prev, observation_ref: e.target.value}))}
                                         style={{fontSize:10,padding:'4px 6px',border:'1px solid #cbd5e1',borderRadius:4,background:'white',color:'#374151',fontWeight:600}}
                                       >
-                                        <option value="">Réf. observation</option>
-                                        {sanctionsObservations.filter(o => o.reference_obs).map(o => (
+                                        <option value="">Choisir observation</option>
+                                        {observationsDisponiblesPourSanction(editSanction?.id).map(o => (
                                           <option key={o.id} value={o.reference_obs}>{o.reference_obs}</option>
                                         ))}
                                       </select>
@@ -1293,9 +1307,9 @@ export default function Classes() {
                                         <span style={{fontSize:9,color:'#92400e',lineHeight:1.2}}>{sanction.prof_nom||''}</span>
                                       </div>
                                       {isAdmin() && (
-                                        <div style={{display:'flex',flexDirection:'column',gap:2,alignItems:'center'}}>
-                                          <button onClick={() => setEditSanction({id:sanction.id,date_sanction:sanction.date_sanction?String(sanction.date_sanction).substring(0,10):'',observation_ref:sanction.observation_ref||'',prof_nom:sanction.prof_nom||''})} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#475569',padding:0,lineHeight:1}} title="Modifier">✏️</button>
-                                          <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:10,color:'#ef4444',padding:0,lineHeight:1}} title="Retirer">🗑️</button>
+                                        <div style={{display:'flex',flexDirection:'row',gap:4,alignItems:'center'}}>
+                                          <button onClick={() => setEditSanction({id:sanction.id,date_sanction:sanction.date_sanction?String(sanction.date_sanction).substring(0,10):'',observation_ref:sanction.observation_ref||'',prof_nom:sanction.prof_nom||''})} style={{background:'none',border:'none',cursor:'pointer',color:'#6366f1',padding:0,lineHeight:1,display:'flex',alignItems:'center'}} title="Modifier"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                                          <button onClick={() => supprimerSanction(sanction.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',padding:0,lineHeight:1,display:'flex',alignItems:'center'}} title="Retirer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                                         </div>
                                       )}
                                     </div>
@@ -1306,8 +1320,7 @@ export default function Classes() {
                                       if (!peutAjouter) return;
                                       const today = new Date().toISOString().split('T')[0];
                                       const profNom = currentUser ? ((currentUser.prenom||'')+' '+(currentUser.nom||'')).trim() : '';
-                                      const refs = sanctionsObservations.filter(o => o.reference_obs);
-                                      setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:refs[0]?.reference_obs||''});
+                                      setPendingCell({echelle:echelle.id,infraction,niveau:niveau.id,date_sanction:today,prof_nom:profNom,observation_ref:''});
                                     }}
                                     style={{width:20,height:20,borderRadius:4,border:'2px solid '+(peutAjouter?'#d1d5db':'#e5e7eb'),background:peutAjouter?'white':'#f3f4f6',cursor:peutAjouter?'pointer':'not-allowed',display:'inline-block',opacity:peutAjouter?1:0.6}} />
                                   ) : (
@@ -1420,8 +1433,8 @@ export default function Classes() {
                         {obs.demande_entretien && <span style={{background:'#fee2e2',color:'#991b1b',padding:'2px 6px',borderRadius:99,fontSize:10,fontWeight:700}}>Entretien</span>}
                       </div>
                       {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.6,display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                        <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                       </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
@@ -1509,7 +1522,7 @@ export default function Classes() {
         <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
         {classeVueTab === 'plan' && (
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            {planToast && <div style={{padding:'8px 14px',borderRadius:8,background:'#dcfce7',color:'#166534',fontWeight:700,fontSize:13}}>Plan sauvegardé !</div>}
+            {planToast && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Plan sauvegardé !</div>}
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</button>
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer</button>
             <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>
@@ -1630,7 +1643,7 @@ export default function Classes() {
                 <button type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre===null?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(null)}>Tous</button>
                 {branchesInventaire.map(b => (
                   <button key={b.id} type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre?.id===b.id?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(b)}>
-                    {b.code || b.nom}
+                    {(b.designation_courte || b.code || b.nom || '').trim()}
                   </button>
                 ))}
               </div>
@@ -1644,7 +1657,7 @@ export default function Classes() {
 
           {(() => {
             const devoirsFiltres = devoirs
-              .filter(d => !devoirBrancheFiltre || d.matiere === devoirBrancheFiltre.code || d.matiere === devoirBrancheFiltre.nom)
+              .filter(d => !devoirBrancheFiltre || d.matiere === devoirBrancheFiltre.code || d.matiere === devoirBrancheFiltre.nom || d.matiere === (devoirBrancheFiltre.designation_courte || '').trim())
               .filter(d => !rechercheDevoirs || (d.titre||'').toLowerCase().includes(rechercheDevoirs.toLowerCase()) || (d.matiere||'').toLowerCase().includes(rechercheDevoirs.toLowerCase()));
             return <>
 
@@ -1886,7 +1899,7 @@ export default function Classes() {
               <div style={s.toggleGroup}>
                 {branchesInventaire.map(b => (
                   <button key={b.id} style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}} onClick={() => setBrancheInventaireActive(b)}>
-                    {b.code || b.nom}
+                    {(b.designation_courte || b.code || b.nom || '').trim()}
                   </button>
                 ))}
               </div>
@@ -2014,6 +2027,7 @@ export default function Classes() {
   // Vue principale - liste classes
   return (
     <div style={s.page}>
+      <div style={stickyPageChrome()}>
       <div style={s.header}>
         <h2 style={s.title}>Gestion des classes</h2>
         {isAdmin() && (
@@ -2034,6 +2048,7 @@ export default function Classes() {
           style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
           {showInactif ? 'Masquer inactives' : 'Afficher inactives'}
         </button>
+      </div>
       </div>
 
       {showForm && (
@@ -2132,11 +2147,11 @@ export default function Classes() {
                     <button style={{...s.iconBtn,background:'#fce7f3',color:'#be185d'}} onClick={() => ouvrirDetail(c, 'devoirs')} title="Suivi des devoirs">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v1.5H8V13zm0 3h6v1.5H8V16z"/></svg>
                     </button>
-                    <button style={{...s.iconBtn,background:'#e0e7ff',color:'#4338ca'}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 12a4 4 0 100-8 4 4 0 000 8zm-8 8a8 8 0 1116 0H4z"/></svg>
-                    </button>
                     <button style={{...s.iconBtn,background:'#f0fdf4',color:'#15803d'}} onClick={() => ouvrirDetail(c, 'plan')} title="Plan de classe">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z"/></svg>
+                    </button>
+                    <button style={{...s.iconBtn,background:'#e0e7ff',color:'#4338ca'}} onClick={() => ouvrirDetail(c, 'trombinoscope')} title="Trombinoscope">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 12a4 4 0 100-8 4 4 0 000 8zm-8 8a8 8 0 1116 0H4z"/></svg>
                     </button>
                     <button style={{...s.iconBtn,background:'#fef3c7',color:'#b45309'}} onClick={() => navigate('/comptabilite', { state: { classeFacturationId: String(c.id) } })} title="Factures de la classe">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v1.5H8V13zm0 3h6v1.5H8V16z"/></svg>
@@ -2175,7 +2190,7 @@ export default function Classes() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -2215,10 +2230,10 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tableWrap:{overflow:'hidden',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:1},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:2,boxShadow:'0 1px 0 rgba(0,0,0,0.08)'},
   tr:{borderBottom:'1px solid #f8fafc'},
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
@@ -2240,6 +2255,6 @@ const s = {
   badgeInactif:{background:'#f1f5f9',color:'#475569',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   btnDetail:{padding:'5px 10px',background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,marginRight:4,display:'inline-flex',alignItems:'center',gap:4},
   iconBtn:{padding:6,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:4,opacity:0.65,display:'inline-flex',alignItems:'center',padding:2},
-  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.65,display:'inline-flex',alignItems:'center',padding:2},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:4,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2},
 };

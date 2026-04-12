@@ -32,12 +32,6 @@ const TCF_ONGLETS = [
   { key: 'stats',       label: 'Statistiques', adminOnly: false },
 ];
 
-const COMPTA_ONGLETS = [
-  { key: 'factures',  label: 'Factures',      adminOnly: true },
-  { key: 'paiements', label: 'Paiements',     adminOnly: false },
-  { key: 'prix',      label: 'Liste de prix', adminOnly: true },
-];
-
 const EDT_ONGLETS = [
   { key: 'pools',          label: 'Pools',          adminOnly: true },
   { key: 'disponibilites', label: 'Disponibilités', adminOnly: true },
@@ -167,7 +161,7 @@ export default function Layout() {
   const unpinnedModules = modules.filter(m => !pinnedPaths.includes(m.path));
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       {/* Sidebar fixe */}
       <div style={s.sidebar}>
         <div style={s.logo}>
@@ -184,7 +178,13 @@ export default function Layout() {
               <React.Fragment key={m.path}>
                 <button
                   style={{ ...s.navItem, background: isActive ? '#ede9fe' : isHov ? '#f5f3ff' : 'transparent' }}
-                  onClick={() => navigate(m.path)}
+                  onClick={() => {
+                    if (m.path === '/comptabilite') {
+                      navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                    } else {
+                      navigate(m.path);
+                    }
+                  }}
                   onMouseEnter={() => setHoveredPath(m.path)}
                   onMouseLeave={() => setHoveredPath(null)}>
                   {IconComp && <IconComp size={16} active={isActive} />}
@@ -238,21 +238,6 @@ export default function Layout() {
                         <button key={o.key}
                           style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
                           onClick={e => { e.stopPropagation(); navigate(`/tcf?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/comptabilite' && isActive && (
-                  <div style={s.subNav}>
-                    {COMPTA_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'factures';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/comptabilite?tab=${o.key}`); }}>
                           {o.label}
                         </button>
                       );
@@ -333,7 +318,14 @@ export default function Layout() {
                       <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
                         onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
-                        onClick={() => { navigate(m.path); setShowMoreMenu(false); }}>
+                        onClick={() => {
+                          if (m.path === '/comptabilite') {
+                            navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                          } else {
+                            navigate(m.path);
+                          }
+                          setShowMoreMenu(false);
+                        }}>
                         {IconComp && <IconComp size={15} active={isActive} />}
                         <span style={{ ...s.navLabel, flex: 1, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 500 }}>{m.label}</span>
                         <span onClick={e => { togglePin(m.path, e); }} title="Épingler" style={s.pinBtn}>
@@ -370,9 +362,19 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Contenu principal */}
-      <div style={{ marginLeft: W, flex: 1, minHeight: '100vh', background: '#f8fafc' }}>
-        <Outlet />
+      {/* Contenu principal : seul défilement de l’app — sticky des pages par rapport à cette zone */}
+      <div style={{ marginLeft: W, flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <Outlet />
+        </div>
       </div>
     </div>
   );

@@ -396,7 +396,7 @@ export default function SortieScolaire() {
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => imprimer(sortieSelectionnee)} style={{ padding: '4px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>🖨️ Imprimer</button>
-                      <button onClick={() => ouvrirEdit(sortieSelectionnee)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 }}>✏️</button>
+                      <button onClick={() => ouvrirEdit(sortieSelectionnee)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#6366f1' }}>✏️</button>
                       <button onClick={() => setSuiviClasseSelect(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8', lineHeight: 1 }}>✕</button>
                     </div>
                   </div>
@@ -680,7 +680,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
 }
 
 const st = {
-  page: { minHeight: '100vh', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
+  page: { minHeight: '100%', boxSizing: 'border-box', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
   header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24 },
   btnBack: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 500, fontSize: 13, cursor: 'pointer' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, flex: 1 },
@@ -723,6 +723,6 @@ const sc = {
   actions: { display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' },
   td: { padding: '8px 10px', borderRight: '1px solid #f1f5f9', color: '#1e293b' },
   btnPrint: { padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 },
-  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.7 },
+  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#6366f1' },
+  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#ef4444' },
 };

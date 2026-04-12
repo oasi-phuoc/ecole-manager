@@ -62,6 +62,18 @@ const postCalendrierProf = async (req, res) => {
   } catch(err) { res.status(500).json({message:err.message}); }
 };
 
+const putCalendrierProf = async (req, res) => {
+  try {
+    const { date, titre, type, description } = req.body;
+    const r = await pool.query(
+      'UPDATE calendrier_prof SET date=$1, titre=$2, type=$3, description=$4 WHERE id=$5 AND prof_id=$6 RETURNING *',
+      [date, titre, type || 'Autre', description || '', req.params.id, req.user.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Élément non trouvé' });
+    res.json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
 const deleteCalendrierProf = async (req, res) => {
   try {
     await pool.query('DELETE FROM calendrier_prof WHERE id=$1 AND prof_id=$2', [req.params.id, req.user.id]);
@@ -69,4 +81,4 @@ const deleteCalendrierProf = async (req, res) => {
   } catch(err) { res.status(500).json({message:err.message}); }
 };
 
-module.exports = { getEvenements, creerEvenement, modifierEvenement, supprimerEvenement, getCalendrierProf, postCalendrierProf, deleteCalendrierProf };
+module.exports = { getEvenements, creerEvenement, modifierEvenement, supprimerEvenement, getCalendrierProf, postCalendrierProf, putCalendrierProf, deleteCalendrierProf };

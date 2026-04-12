@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -13,6 +14,37 @@ const PERIODES = [1,2,3,4,5,6,7,8];
 const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const COL_NOM_WIDTH = 170;
 const COL_PRENOM_WIDTH = 150;
+/** Décalage vertical du 2e rang d’en-tête (saisie présences) pour le sticky */
+const PRESENCES_STICKY_ROW2 = 46;
+
+/** Jour civil pour les présences (évite le décalage : ISO UTC « 14T22…Z » = 15 en CH). */
+function cleDatePresence(raw) {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    if (t.includes('T') || t.includes(' ')) {
+      const d = new Date(t);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${mo}-${day}`;
+      }
+    }
+    const m = t.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : t.slice(0, 10);
+  }
+  if (raw instanceof Date) {
+    const y = raw.getFullYear();
+    const mo = String(raw.getMonth() + 1).padStart(2, '0');
+    const d = String(raw.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
+  }
+  const s = String(raw);
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : s.slice(0, 10);
+}
 
 function initPresences(eleves) {
   const p = {};
@@ -253,7 +285,7 @@ export default function Presences() {
           if (!periode) continue;
 
           const pr = presences.find(p =>
-            String(p.eleve_id) === String(eleve.id) && p.date?.substring(0,10) === dateStr
+            String(p.eleve_id) === String(eleve.id) && cleDatePresence(p.date) === dateStr
           );
 
           // Première période active : P1-P4 = Matin, P5-P8 = Après-midi
@@ -529,14 +561,15 @@ export default function Presences() {
   };
 
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
+      <div style={stickyPageChrome()}>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
-            {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#dcfce7',color:'#166534',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
+            {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
             <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
               <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
                 <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
@@ -547,16 +580,11 @@ export default function Presences() {
               Sauvegarder
             </button>
           </>)}
-          {isAdmin() && (<>
-            <label style={{padding:'9px 16px',borderRadius:9,border:'none',cursor:importLoading?'not-allowed':'pointer',fontWeight:700,fontSize:13,background:'#e0e7ff',color:'#3730a3',opacity:importLoading?0.7:1,display:'inline-flex',alignItems:'center',gap:6}}>
-              {importLoading ? 'Import...' : 'Importer LORA'}
-              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} disabled={importLoading}
-                onChange={e => { if(e.target.files[0]) { importerPresencesOASI(e.target.files[0]); e.target.value=''; } }} />
-            </label>
+          {isAdmin() && (
             <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
               {exportLoading ? 'Export...' : 'Exporter LORA'}
             </button>
-          </>)}
+          )}
         </div>
       </div>
 
@@ -622,9 +650,10 @@ export default function Presences() {
           </>
         )}
       </div>
+      </div>
 
       {onglet === 'saisie' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'visible'}}>
 
           {/* Alerte weekend */}
           {isWeekend() && (
@@ -660,7 +689,7 @@ export default function Presences() {
           {eleves.length === 0 ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucun élève actif dans cette classe</div>
           ) : (
-            <div style={{overflowX:'auto'}}>
+            <div style={{overflowX:'auto',maxHeight:'min(72vh, calc(100vh - 260px))',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                 <colgroup>
                   <col style={{width:COL_NOM_WIDTH,minWidth:COL_NOM_WIDTH,maxWidth:COL_NOM_WIDTH}} />
@@ -671,20 +700,24 @@ export default function Presences() {
                 </colgroup>
                 <thead>
                   <tr style={{background:'#f8fafc'}}>
-                    <th style={{...s.th,borderRadius:'8px 0 0 8px'}} rowSpan={2}>NOM</th>
-                    <th style={s.th} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,fontSize:13,textAlign:'center'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
-                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af'}} colSpan={4}>Matin</th>
-                    <th style={{...s.th,background:'#fef3c7',color:'#92400e'}} colSpan={4}>Après-midi</th>
-                    <th style={{...s.th,borderRadius:'0 8px 8px 0'}} rowSpan={2}>Remarques</th>
+                    <th style={{...s.th,borderRadius:'8px 0 0 8px',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>NOM</th>
+                    <th style={{...s.th,position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>Prénom</th>
+                    <th style={{...s.th,fontSize:13,textAlign:'center',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',position:'sticky',top:0,zIndex:5,boxShadow:'0 1px 0 #e2e8f0'}} colSpan={4}>Matin</th>
+                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',position:'sticky',top:0,zIndex:5,boxShadow:'0 1px 0 #e2e8f0'}} colSpan={4}>Après-midi</th>
+                    <th style={{...s.th,borderRadius:'0 8px 8px 0',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>Remarques</th>
                   </tr>
                   <tr style={{background:'#f8fafc'}}>
                     {PERIODES.map(i => (
                       <th key={i} style={{
                         ...s.th,
+                        position: 'sticky',
+                        top: PRESENCES_STICKY_ROW2,
+                        zIndex: 4,
                         background: isBloque(i) ? '#f1f5f9' : i<=4 ? '#eff6ff' : '#fffbeb',
                         color: isBloque(i) ? '#cbd5e1' : i<=4 ? '#3b82f6' : '#f59e0b',
-                        fontSize:11
+                        fontSize:11,
+                        boxShadow: '0 1px 0 #e2e8f0',
                       }}>P{i<=4 ? i : i-4}</th>
                     ))}
                   </tr>
@@ -746,7 +779,7 @@ export default function Presences() {
       )}
 
       {onglet === 'apercu' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'visible'}}>
           <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
             <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
               Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
@@ -771,7 +804,7 @@ export default function Presences() {
 
             const getStatut = (eleve_id, jour) => {
               const dateStr = annee+'-'+String(moisNum).padStart(2,'0')+'-'+String(jour).padStart(2,'0');
-              const pr = (apercuMois.presences||[]).find(p => String(p.eleve_id)===String(eleve_id) && p.date?.substring(0,10)===dateStr);
+              const pr = (apercuMois.presences||[]).find(p => String(p.eleve_id)===String(eleve_id) && cleDatePresence(p.date) === dateStr);
               if (!pr) return '';
               for (let i=1; i<=8; i++) { if (pr['p'+i]) return pr['p'+i]; }
               return '';
@@ -792,7 +825,7 @@ export default function Presences() {
             };
 
             return (
-              <div style={{overflowX:'auto'}}>
+              <div style={{overflowX:'auto',maxHeight:'min(78vh, calc(100vh - 220px))',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
                 <table style={{borderCollapse:'collapse',fontSize:11,minWidth:'100%'}}>
                   <colgroup>
                     <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
@@ -801,16 +834,22 @@ export default function Presences() {
                   </colgroup>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,background:'#f8fafc',zIndex:3,whiteSpace:'nowrap'}}>NOM</th>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:COL_NOM_WIDTH,background:'#f8fafc',zIndex:3,whiteSpace:'nowrap'}}>Prénom</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'2px 0 0 #e2e8f0, 0 1px 0 #e2e8f0'}}>NOM</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:COL_NOM_WIDTH,top:0,background:'#f8fafc',zIndex:4,whiteSpace:'nowrap',boxShadow:'2px 0 0 #e2e8f0, 0 1px 0 #e2e8f0'}}>Prénom</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
                         const jourIdx = new Date(annee+'-'+String(moisNum).padStart(2,'0')+'-'+String(j).padStart(2,'0')+'T12:00:00').getDay();
+                        const bg = wkd ? '#e2e8f0' : vac ? '#fef3c7' : '#f8fafc';
                         return (
                           <th key={j} style={{padding:'4px 2px',textAlign:'center',borderBottom:'2px solid #e2e8f0',minWidth:26,
-                            background:wkd?'#e2e8f0':vac?'#fef3c7':'#f8fafc',
-                            color:wkd?'#94a3b8':vac?'#92400e':'#475569'}}>
+                            background: bg,
+                            color:wkd?'#94a3b8':vac?'#92400e':'#475569',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 2,
+                            boxShadow: '0 1px 0 #e2e8f0',
+                          }}>
                             <div style={{fontWeight:700,fontSize:11}}>{j}</div>
                             <div style={{fontSize:9,opacity:0.7}}>{NOM_JOURS[jourIdx]}</div>
                           </th>
@@ -821,8 +860,8 @@ export default function Presences() {
                   <tbody>
                     {apercuMois.eleves.map((e, ri) => (
                       <tr key={e.id} style={{background:ri%2===0?'white':'#fafafa'}}>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap'}}>{e.nom}</td>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap'}}>{e.prenom}</td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:3,whiteSpace:'nowrap',boxShadow:'2px 0 0 #f1f5f9'}}>{e.nom}</td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap',boxShadow:'2px 0 0 #f1f5f9'}}>{e.prenom}</td>
                         {jours.map(j => {
                           const wkd = isWkd(j);
                           const vac = isVac(j);
@@ -855,7 +894,7 @@ export default function Presences() {
 
       {onglet === 'stats' && (
         <div>
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
+          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <colgroup>
               <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
@@ -863,9 +902,20 @@ export default function Presences() {
               {Array.from({ length: 8 }).map((_, i) => <col key={`stats-col-${i}`} style={{ width: 96, minWidth: 96, maxWidth: 96 }} />)}
             </colgroup>
             <thead>
-              <tr style={{background:'#f8fafc'}}>
-                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Taux présence %','Taux présence BN %'].map(h => (
-                  <th key={h} style={{...s.th,textAlign:h==='NOM'||h==='Prénom'?'left':'center'}}>{h}</th>
+              <tr style={{background:'#6366f1'}}>
+                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Taux présence %','Taux présence BN %'].map((h, hi) => (
+                  <th key={h} style={{
+                    ...s.th,
+                    textAlign: h==='NOM'||h==='Prénom'?'left':'center',
+                    color: 'white',
+                    background: '#6366f1',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
+                    borderTopLeftRadius: hi === 0 ? 12 : 0,
+                    borderTopRightRadius: hi === 9 ? 12 : 0,
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.08)',
+                  }}>{h}</th>
                 ))}
               </tr>
             </thead>

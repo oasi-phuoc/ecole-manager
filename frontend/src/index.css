@@ -4,6 +4,12 @@
   padding: 0;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', AppleGothic, 'URW Gothic L', Futura, 'Trebuchet MS', sans-serif;
   -webkit-font-smoothing: antialiased;

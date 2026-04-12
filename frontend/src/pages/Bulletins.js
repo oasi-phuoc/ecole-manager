@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -336,6 +337,7 @@ export default function Bulletins() {
   if (!classeSelectionnee) {
     return (
       <div style={s.page}>
+        <div style={stickyPageChrome()}>
         <div style={s.header}>
           <h2 style={s.titre}>Bulletins de notes</h2>
         </div>
@@ -346,6 +348,7 @@ export default function Bulletins() {
               {n === 'tous' ? 'Toutes' : n}
             </button>
           ))}
+        </div>
         </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
           <table style={{ ...s.tbl, tableLayout: 'auto' }}>
@@ -389,6 +392,7 @@ export default function Bulletins() {
 
   return (
     <div style={s.page}>
+      <div style={stickyPageChrome()}>
       <div style={s.header}>
         <button style={s.btnRetour} onClick={() => { setClasseSelectionnee(''); setClasseObj(null); }}>← Retour</button>
         <h2 style={s.titre}>{onglet === 'comportements' ? 'Comportements' : 'Bulletins de notes'} — {classeNom}</h2>
@@ -443,7 +447,7 @@ export default function Bulletins() {
 
       {/* Toolbar */}
       {onglet === 'comportements' && (
-        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ marginTop: 15, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Titulaire : {titulaireNom}</div>
           <button type="button"
             style={{ padding: '8px 16px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
@@ -452,6 +456,7 @@ export default function Bulletins() {
           </button>
         </div>
       )}
+      </div>
 
       {/* === COMPORTEMENTS TAB === */}
       {onglet === 'comportements' && (
@@ -669,7 +674,7 @@ export default function Bulletins() {
 }
 
 const s = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' },
   tabsBar: { display: 'flex', alignItems: 'flex-end', gap: 0, borderBottom: '2px solid #6366f1', paddingBottom: 0 },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, width: 160, minWidth: 160, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -1, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },

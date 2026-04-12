@@ -2,6 +2,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -39,6 +40,7 @@ export default function Calendrier() {
   const [calendrierProf, setCalendrierProf] = useState([]);
   const [profEventForm, setProfEventForm] = useState({ date: '', titre: '', type: 'Devoir', description: '' });
   const [showProfForm, setShowProfForm] = useState(false);
+  const [profEventEditId, setProfEventEditId] = useState(null);
   const navigate = useNavigate();
   const headers = {};
 
@@ -68,12 +70,32 @@ export default function Calendrier() {
     chargerCalendrierProf();
   };
 
-  const ajouterProfEvent = async (e) => {
-    e.preventDefault();
-    if (!profEventForm.date || !profEventForm.titre) return;
-    await axios.post(API + '/calendrier/prof', profEventForm, { headers });
+  const resetProfEventForm = () => {
+    setProfEventEditId(null);
     setProfEventForm({ date: '', titre: '', type: 'Devoir', description: '' });
     setShowProfForm(false);
+  };
+
+  const ouvrirEditionProfEvent = (ev) => {
+    setProfEventEditId(ev.id);
+    setProfEventForm({
+      date: ev.date ? String(ev.date).substring(0, 10) : '',
+      titre: ev.titre || '',
+      type: ev.type || 'Devoir',
+      description: ev.description || '',
+    });
+    setShowProfForm(true);
+  };
+
+  const sauverProfEvent = async (e) => {
+    e.preventDefault();
+    if (!profEventForm.date || !profEventForm.titre) return;
+    if (profEventEditId) {
+      await axios.put(API + '/calendrier/prof/' + profEventEditId, profEventForm, { headers });
+    } else {
+      await axios.post(API + '/calendrier/prof', profEventForm, { headers });
+    }
+    resetProfEventForm();
     chargerCalendrierProf();
   };
 
@@ -189,7 +211,7 @@ export default function Calendrier() {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:FONT}}>
+    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
       {/* Popup jour */}
       {jourPopup && (
@@ -372,9 +394,11 @@ export default function Calendrier() {
         </div>
       )}
 
+      <div style={stickyPageChrome()}>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
+      </div>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gridTemplateRows:'auto auto',gap:20,isolation:'isolate'}}>
@@ -429,7 +453,7 @@ export default function Calendrier() {
                   <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.nom_vacance||v.titre}</div>
                   <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(v.date_debut)}{v.date_fin&&v.date_fin!==v.date_debut?' → '+formatDate(v.date_fin):''}</div>
                 </div>
-                {isAdmin() && <button style={s.btnIcon} onClick={() => editVacance(v)}>✏️</button>}
+                {isAdmin() && <button style={s.btnIconEdit} onClick={() => editVacance(v)}>✏️</button>}
               </div>
             ))}
           </div>
@@ -454,8 +478,8 @@ export default function Calendrier() {
                     <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(s2.date_debut)}{s2.heure_debut?' '+s2.heure_debut.substring(0,5):''}</div>
                   </div>
                   {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                    <button style={s.btnIcon} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
-                    <button style={s.btnIcon} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
+                    <button style={s.btnIconEdit} onClick={() => { setSeanceEdit(s2); setFormSeance({titre:s2.titre,date_debut:s2.date_debut?.substring(0,10)||'',heure_debut:s2.heure_debut?.substring(0,5)||'',heure_fin:s2.heure_fin?.substring(0,5)||''}); setShowFormSeance(true); }}>✏️</button>
+                    <button style={s.btnIconDel} onClick={() => supprimerEvenement(s2.id)}>🗑️</button>
                   </div>}
                 </div>
               ))}
@@ -478,8 +502,8 @@ export default function Calendrier() {
                     <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(r.date_debut)}{r.heure_debut?' '+r.heure_debut.substring(0,5):''}</div>
                   </div>
                   {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                    <button style={s.btnIcon} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
-                    <button style={s.btnIcon} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
+                    <button style={s.btnIconEdit} onClick={() => { setRetenueEdit(r); setFormRetenue({titre:r.titre,prof1_id:'',prof2_id:'',date_debut:r.date_debut?.substring(0,10)||'',heure_debut:r.heure_debut?.substring(0,5)||'10:00',heure_fin:r.heure_fin?.substring(0,5)||'11:30'}); setShowFormRetenue(true); }}>✏️</button>
+                    <button style={s.btnIconDel} onClick={() => supprimerEvenement(r.id)}>🗑️</button>
                   </div>}
                 </div>
               ))}
@@ -502,8 +526,8 @@ export default function Calendrier() {
                     <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(p.date_debut)}{p.date_fin&&p.date_fin!==p.date_debut?' → '+formatDate(p.date_fin):''}</div>
                   </div>
                   {isAdmin() && <div style={{display:'flex',gap:2,flexShrink:0}}>
-                    <button style={s.btnIcon} onClick={() => { setParticulierEdit(p); setFormParticulier({titre:p.titre,date_debut:p.date_debut?.substring(0,10)||'',date_fin:p.date_fin?.substring(0,10)||''}); setShowFormParticulier(true); }}>✏️</button>
-                    <button style={s.btnIcon} onClick={() => supprimerEvenement(p.id)}>🗑️</button>
+                    <button style={s.btnIconEdit} onClick={() => { setParticulierEdit(p); setFormParticulier({titre:p.titre,date_debut:p.date_debut?.substring(0,10)||'',date_fin:p.date_fin?.substring(0,10)||''}); setShowFormParticulier(true); }}>✏️</button>
+                    <button style={s.btnIconDel} onClick={() => supprimerEvenement(p.id)}>🗑️</button>
                   </div>}
                 </div>
               ))}
@@ -525,7 +549,7 @@ export default function Calendrier() {
                   <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.nom_vacance||ev.titre}</div>
                   <div style={{fontSize:10,color:'#94a3b8'}}>{formatDate(ev.date_debut)}{ev.date_fin&&ev.date_fin!==ev.date_debut?' → '+formatDate(ev.date_fin):''}</div>
                 </div>
-                {isAdmin() && <button style={s.btnIcon} onClick={() => editEval(ev)}>✏️</button>}
+                {isAdmin() && <button style={s.btnIconEdit} onClick={() => editEval(ev)}>✏️</button>}
               </div>
             ))}
           </div>
@@ -537,13 +561,13 @@ export default function Calendrier() {
       <div style={{ marginTop: 32, background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>📋 Mon agenda personnel</h3>
-          <button onClick={() => setShowProfForm(!showProfForm)}
+          <button type="button" onClick={() => { resetProfEventForm(); setShowProfForm(true); }}
             style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
             + Ajouter
           </button>
         </div>
         {showProfForm && (
-          <form onSubmit={ajouterProfEvent} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f8fafc', borderRadius: 8, padding: 12, marginBottom: 14 }}>
+          <form onSubmit={sauverProfEvent} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f8fafc', borderRadius: 8, padding: 12, marginBottom: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Date *</label>
               <input type="date" required value={profEventForm.date} onChange={e => setProfEventForm({...profEventForm, date: e.target.value})}
@@ -571,10 +595,10 @@ export default function Calendrier() {
                 style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => setShowProfForm(false)}
+              <button type="button" onClick={resetProfEventForm}
                 style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
               <button type="submit"
-                style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Ajouter</button>
+                style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{profEventEditId ? 'Enregistrer' : 'Ajouter'}</button>
             </div>
           </form>
         )}
@@ -588,7 +612,7 @@ export default function Calendrier() {
                 <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Titre</th>
                 <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Type</th>
                 <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Description</th>
-                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'center', borderRadius: '0 8px 0 0' }}>Action</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'center', width: 1, borderRadius: '0 8px 0 0' }} aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -602,11 +626,17 @@ export default function Calendrier() {
                     </span>
                   </td>
                   <td style={{ padding: '8px 12px', color: '#64748b' }}>{ev.description || '—'}</td>
-                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                    <button onClick={() => supprimerProfEvent(ev.id)}
-                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                      Supprimer
-                    </button>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                      <button type="button" onClick={() => ouvrirEditionProfEvent(ev)} title="Modifier"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.75, display: 'inline-flex', alignItems: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button type="button" onClick={() => supprimerProfEvent(ev.id)} title="Supprimer"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.75, display: 'inline-flex', alignItems: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -626,7 +656,8 @@ const s = {
   navBtn:{width:32,height:32,border:'1px solid #e2e8f0',borderRadius:8,background:'white',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'},
   btnCancel:{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'8px 18px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.7,padding:'2px'},
+  btnIconEdit:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.85,color:'#6366f1',padding:'2px'},
+  btnIconDel:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.85,color:'#ef4444',padding:'2px'},
   btnX:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'},
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20},
 };

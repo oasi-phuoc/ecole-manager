@@ -1,8 +1,9 @@
 import { isAdmin, getUser } from '../utils/permissions';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import axios from 'axios';
+import { formatAvsInput, isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
+import NpaAutocomplete from '../components/NpaAutocomplete';
 import { useNavigate } from 'react-router-dom';
-import { colors } from '../styles/theme';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
@@ -49,6 +50,16 @@ export default function Professeurs({
   const [showInactif, setShowInactif] = useState(false);
   const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'' });
   const [roleAccesErreur, setRoleAccesErreur] = useState(false);
+  const [formToast, setFormToast] = useState({ message: '', type: 'success' });
+  const formToastTimeoutRef = useRef(null);
+  const showFormToast = (message, type = 'success') => {
+    if (formToastTimeoutRef.current) clearTimeout(formToastTimeoutRef.current);
+    setFormToast({ message, type });
+    formToastTimeoutRef.current = setTimeout(() => {
+      setFormToast({ message: '', type: 'success' });
+      formToastTimeoutRef.current = null;
+    }, 2200);
+  };
   const [branchesDisponibles, setBranchesDisponibles] = useState([]);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
@@ -183,12 +194,24 @@ export default function Professeurs({
     e.preventDefault();
     if (showRoleToggle && !form.role_acces) {
       setRoleAccesErreur(true);
+      showFormToast('Le rôle est obligatoire.', 'error');
       return;
     }
     setRoleAccesErreur(false);
+    if (form.avs && !isAvsValide(form.avs)) {
+      showFormToast('N° AVS invalide. Format attendu : 756.XXXX.XXX.XX (chiffres uniquement aux positions X).', 'error');
+      return;
+    }
+    const npaDigits = String(form.npa || '').replace(/\D/g, '').slice(0, 4);
+    if (form.npa && npaDigits.length !== 4) {
+      showFormToast('Le NPA doit comporter exactement 4 chiffres (format suisse).', 'error');
+      return;
+    }
     try {
       const payload = {
         ...form,
+        telephone: telephoneDigitsOnly(form.telephone),
+        npa: npaDigits || null,
         branches_specialites: normaliserBranchesSpecialites(form.branches_specialites),
       };
       if (hidePeriodesSemaine) payload.periodes_semaine = null;
@@ -203,12 +226,34 @@ export default function Professeurs({
       if (profEdit) await axios.put(apiUrl + '/' + profEdit.id, payload, {headers});
       else await axios.post(apiUrl, payload, {headers});
       setShowForm(false); setProfEdit(null); resetForm(); chargerProfs();
-    } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+    } catch(err) { showFormToast('Erreur : ' + (err.response?.data?.message || err.message), 'error'); }
   };
 
-  const resetForm = () => { setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''}); setRoleAccesErreur(false); };
+  const resetForm = () => {
+    if (formToastTimeoutRef.current) {
+      clearTimeout(formToastTimeoutRef.current);
+      formToastTimeoutRef.current = null;
+    }
+    setFormToast({ message: '', type: 'success' });
+    setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''});
+    setRoleAccesErreur(false);
+  };
+
+  const fermerFormulaire = () => {
+    if (formToastTimeoutRef.current) {
+      clearTimeout(formToastTimeoutRef.current);
+      formToastTimeoutRef.current = null;
+    }
+    setFormToast({ message: '', type: 'success' });
+    setShowForm(false);
+  };
 
   const handleEdit = (p) => {
+    if (formToastTimeoutRef.current) {
+      clearTimeout(formToastTimeoutRef.current);
+      formToastTimeoutRef.current = null;
+    }
+    setFormToast({ message: '', type: 'success' });
     setProfEdit(p);
     setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
     setShowForm(true);
@@ -256,27 +301,69 @@ export default function Professeurs({
     });
   }, [branchesDisponibles, showForm, hidePreferences]);
 
+  const stickyToolbarRef = useRef(null);
+  const [stickyToolbarH, setStickyToolbarH] = useState(120);
+
+  useLayoutEffect(() => {
+    const el = stickyToolbarRef.current;
+    if (!el) return;
+    const measure = () => setStickyToolbarH(el.offsetHeight);
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [titre]);
+
+  const thSticky = (extra = {}) => ({ ...s.th, top: stickyToolbarH, ...extra });
+
   return (
     <div style={s.page}>
-      <div style={s.header}>
-        <h2 style={s.title}>{titre}</h2>
-        {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>}
-      </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-        <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
-        <button
-          onClick={() => setShowInactif(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
-          {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
-        </button>
+      <div
+        ref={stickyToolbarRef}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          background: '#f8fafc',
+          paddingBottom: 10,
+          marginBottom: 6,
+          boxShadow: '0 1px 0 rgba(148, 163, 184, 0.35)',
+        }}
+      >
+        <div style={{ ...s.header, marginBottom: 12 }}>
+          <h2 style={s.title}>{titre}</h2>
+          {isAdmin() && (
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
+              <button type="button" style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
+          <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
+          <button
+            type="button"
+            onClick={() => setShowInactif(v => !v)}
+            style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showInactif ? '#6366f1' : '#e2e8f0'), background: showInactif ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showInactif ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
+          </button>
+        </div>
       </div>
 
       {showForm && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>{profEdit?'Modifier':'Ajouter'} un {nomEntite}</h3>
-              <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
+            <div style={{ ...s.modalHeader, gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                <h3 style={s.modalTitle}>{profEdit?'Modifier':'Ajouter'} un {nomEntite}</h3>
+                {formToast.message && (
+                  <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{formToast.message}</span>
+                )}
+              </div>
+              <button type="button" style={s.btnClose} onClick={fermerFormulaire}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'stretch'}}>
@@ -318,7 +405,7 @@ export default function Professeurs({
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Téléphone</label>
-                      <input style={s.inp} value={form.telephone} onChange={e=>setForm({...form,telephone:e.target.value})} />
+                      <input style={s.inp} inputMode="numeric" value={form.telephone} onChange={e=>setForm({...form,telephone:telephoneDigitsOnly(e.target.value)})} />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>N° AVS</label>
@@ -330,7 +417,16 @@ export default function Professeurs({
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>NPA</label>
-                      <input style={s.inp} value={form.npa} onChange={e=>setForm({...form,npa:e.target.value})} />
+                      <NpaAutocomplete
+                        npa={form.npa}
+                        lieu={form.lieu}
+                        inputStyle={s.inp}
+                        onChange={({ npa, lieu }) => setForm((prev) => ({ ...prev, npa, lieu }))}
+                        onBlur={(e) => {
+                          const d = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          if (d.length === 4 && !NPA_PATTERN.test(d)) showFormToast('NPA invalide : 4 chiffres requis.', 'error');
+                        }}
+                      />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Lieu</label>
@@ -424,7 +520,6 @@ export default function Professeurs({
                         </button>
                       ))}
                     </div>
-                    {roleAccesErreur && <p style={{fontSize:12,color:'#ef4444',margin:'0 0 6px',fontWeight:600}}>Le rôle est obligatoire.</p>}
                     <p style={{fontSize:12,color:'#94a3b8',margin:0}}>
                       {form.role_acces==='employe' && 'Accès standard selon la configuration des accès employés.'}
                       {form.role_acces==='responsable' && 'Accès étendu selon la configuration des accès responsables.'}
@@ -586,7 +681,7 @@ export default function Professeurs({
                   </div>
                   <div style={{flex:1}}/>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
-                    <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
+                    <button type="button" style={s.btnCancel} onClick={fermerFormulaire}>Annuler</button>
                     <button type="submit" style={s.btnSave}>{profEdit?'Modifier':'Créer'}</button>
                   </div>
                 </div>
@@ -642,7 +737,7 @@ export default function Professeurs({
                   </div>
                   <div style={{display:'flex',gap:6}}>
                     <button onClick={() => telechargerDocument(doc)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Télécharger">⬇️</button>
-                    {isAdmin() && <button onClick={() => supprimerDocument(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.7}} title="Supprimer">🗑️</button>}
+                    {isAdmin() && <button onClick={() => supprimerDocument(doc.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,opacity:0.85,color:'#ef4444'}} title="Supprimer">🗑️</button>}
                   </div>
                 </div>
               ))}
@@ -651,19 +746,18 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{marginTop:14}}>
-        <div style={s.tableWrap}>
+      <div style={{ ...s.tableWrap, marginTop: 4 }}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              <th style={{...s.th, width:170, minWidth:170, whiteSpace:'nowrap'}}>Nom</th>
-              <th style={{...s.th, width:150, minWidth:150, whiteSpace:'nowrap'}}>Prénom</th>
-              <th style={s.th}>Email</th>
-              <th style={{...s.th, textAlign:'center'}}>Téléphone</th>
-              <th style={{...s.th, textAlign:'center'}}>Naissance</th>
-              <th style={{...s.th, width:76, minWidth:76, maxWidth:76, textAlign:'center'}}></th>
-              <th style={{...s.th, width:48, minWidth:48, maxWidth:48, textAlign:'center'}}></th>
-              {isAdmin() && <th style={{...s.th, width:86, minWidth:86, maxWidth:86, textAlign:'center'}}></th>}
+              <th style={thSticky({ width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12 })}>Nom</th>
+              <th style={thSticky({ width: 150, minWidth: 150, whiteSpace: 'nowrap' })}>Prénom</th>
+              <th style={thSticky()}>Email</th>
+              <th style={thSticky({ textAlign: 'center' })}>Téléphone</th>
+              <th style={thSticky({ textAlign: 'center' })}>Naissance</th>
+              <th style={thSticky({ width: 76, minWidth: 76, maxWidth: 76, textAlign: 'center' })} />
+              <th style={thSticky({ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' })} />
+              {isAdmin() && <th style={thSticky({ width: 86, minWidth: 86, maxWidth: 86, textAlign: 'center', borderTopRightRadius: 12 })} />}
             </tr>
           </thead>
           <tbody>
@@ -723,14 +817,13 @@ export default function Professeurs({
             ))}
           </tbody>
         </table>
-        </div>
       </div>
     </div>
   );
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -764,8 +857,8 @@ const s = {
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
   tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
-  thead:{background:'#f8fafc',borderBottom:'1px solid #e2e8f0'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#f8fafc',position:'sticky',top:0,zIndex:1},
+  thead:{background:'#6366f1'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'0 1px 0 rgba(0,0,0,0.12)'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
@@ -773,6 +866,6 @@ const s = {
   badgePrimary:{background:'#e0e7ff',color:'#3730a3',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   badgeInactive:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
-  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.7,display:'inline-flex',alignItems:'center',padding:2},
+  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2},
+  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2},
 };

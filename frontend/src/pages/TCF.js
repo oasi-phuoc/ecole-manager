@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3218,6 +3219,7 @@ export default function TCF() {
 
   return (
     <div style={styles.page}>
+      <div style={stickyPageChrome()}>
       <div style={styles.header}>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3318,6 +3320,7 @@ export default function TCF() {
             </button>
           ))}
         </div>
+      </div>
       </div>
 
       <div style={styles.tabContent}>
@@ -3643,7 +3646,8 @@ const styles = {
   page: {
     padding: '28px 32px',
     background: '#f8fafc',
-    minHeight: '100vh',
+    minHeight: '100%',
+    boxSizing: 'border-box',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
@@ -3713,15 +3717,15 @@ const styles = {
     fontWeight: 800,
   },
 
-  tableWrap: { overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  tableWrap: { border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
   tablePool: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1180 },
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
   thead: { background: '#f8fafc' },
-  thLeft: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left' },
-  thClasseFixe: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  thProfPool: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' },
-  thCenter: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center' },
+  thLeft: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
+  thClasseFixe: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
+  thProfPool: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
+  thCenter: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
   tdLeft: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b' },
   tdClasseFixe: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdProfPool: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 12px', fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },

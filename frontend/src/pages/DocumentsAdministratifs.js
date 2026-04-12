@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -175,7 +176,8 @@ export default function DocumentsAdministratifs() {
   const auteurSession = `${currentUser?.nom || ''} ${currentUser?.prenom || ''}`.trim() || '—';
 
   return (
-    <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
+    <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
+      <div style={stickyPageChrome()}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents</h2>
       </div>
@@ -203,6 +205,7 @@ export default function DocumentsAdministratifs() {
           ))}
         </div>
       )}
+      </div>
 
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '0 12px 12px 12px', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -218,7 +221,7 @@ export default function DocumentsAdministratifs() {
         </div>
 
         {msg && (
-          <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: msg.startsWith('❌') ? '#fee2e2' : '#dcfce7', color: msg.startsWith('❌') ? '#991b1b' : '#166534', fontSize: 13, fontWeight: 600 }}>
+          <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontSize: 13, fontWeight: 600 }}>
             {msg}
           </div>
         )}
@@ -342,8 +345,8 @@ export default function DocumentsAdministratifs() {
                     <button onClick={() => telecharger(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }} title="Télécharger">⬇️</button>
                     {isAdmin && (
                       <>
-                        <button onClick={() => ouvrirEdition(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }} title="Modifier">✏️</button>
-                        <button onClick={() => handleDelete(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }} title="Supprimer">🗑️</button>
+                        <button onClick={() => ouvrirEdition(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6366f1' }} title="Modifier">✏️</button>
+                        <button onClick={() => handleDelete(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#ef4444' }} title="Supprimer">🗑️</button>
                       </>
                     )}
                   </div>

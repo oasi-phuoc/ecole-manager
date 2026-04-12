@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
+import { isAdmin } from '../utils/permissions';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
@@ -32,6 +34,14 @@ const MATERIEL_FACTURATION = [
   { key: 'plume_pilot',   label: 'Plume pilot + 3 cartouches', prix: 14.80, qteDefaut: 1 },
 ];
 
+/** Onglets principaux (affichés dans la page, comme l’entrée Notes sans sous-menu latéral) */
+const COMPTA_TABS_ADMIN = [
+  { key: 'classes', label: 'Classes' },
+  { key: 'factures', label: 'Factures' },
+  { key: 'paiements', label: 'Paiements' },
+  { key: 'prix', label: 'Liste de prix' },
+];
+
 const ICONES_MATERIELS_LIST = [
   { key: 'classeur_grand',  label: 'Grand classeur (7 cm)' },
   { key: 'classeur_petit',  label: 'Petit classeur (4 cm)' },
@@ -57,8 +67,19 @@ export default function Comptabilite() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const onglet = searchParams.get('tab') || 'factures';
-  const setOnglet = (tab) => setSearchParams({ tab });
+  const defaultComptaTab = isAdmin() ? 'classes' : 'paiements';
+  const onglet = searchParams.get('tab') || defaultComptaTab;
+  const classeFacturationId = searchParams.get('classeId') || '';
+  const setOnglet = (tab) => {
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev);
+      p.set('tab', tab);
+      if (tab !== 'factures') p.delete('classeId');
+      return p;
+    });
+  };
+  const openFacturesClasse = (id) => setSearchParams({ tab: 'factures', classeId: String(id) });
+  const retourListeClasses = () => setSearchParams({ tab: 'classes' });
   const [rechercheFactures, setRechercheFactures] = useState('');
   const [recherchePrix, setRecherchePrix] = useState('');
 
@@ -96,7 +117,6 @@ export default function Comptabilite() {
 
   // Liste de prix sub-tab
   const [prixOnglet, setPrixOnglet] = useState('ecolage');
-  const [classeFacturationId, setClasseFacturationId] = useState('');
   const [materielDistribue, setMaterielDistribue] = useState({});
   const [facturesValidees, setFacturesValidees] = useState({});
   const [toutesValidations, setToutesValidations] = useState({});
@@ -113,10 +133,17 @@ export default function Comptabilite() {
 
   useEffect(() => {
     if (location.state?.classeFacturationId) {
-      setSearchParams({ tab: 'factures' });
-      setClasseFacturationId(String(location.state.classeFacturationId));
+      setSearchParams({ tab: 'factures', classeId: String(location.state.classeFacturationId) });
+      navigate('/comptabilite', { replace: true, state: {} });
     }
   }, []);
+
+  const tabParam = searchParams.get('tab');
+  useEffect(() => {
+    if (!isAdmin() && (tabParam === 'classes' || tabParam === 'factures' || tabParam === 'prix')) {
+      setSearchParams({ tab: 'paiements' }, { replace: true });
+    }
+  }, [tabParam, setSearchParams]);
 
   const chargerToutesValidations = async (elevesListe, annee) => {
     if (!elevesListe || elevesListe.length === 0) return;
@@ -548,80 +575,121 @@ export default function Comptabilite() {
     popup.onload = () => { popup.focus(); popup.print(); };
   };
 
+  const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
+  const classeFactureNom = classeFactureObj?.nom || '—';
+
   return (
     <div style={styles.page}>
+      <div style={stickyPageChrome()}>
       <div style={styles.header}>
-        <h2 style={styles.titre}>Comptabilité</h2>
+        {onglet === 'factures' && classeFacturationId ? (
+          <>
+            <button type="button" style={styles.btnRetourListe} onClick={retourListeClasses}>← Retour</button>
+            <h2 style={styles.titre}>Factures — {classeFactureNom}</h2>
+          </>
+        ) : (
+          <h2 style={styles.titre}>Comptabilité</h2>
+        )}
       </div>
 
+      {isAdmin() && (
+        <div style={styles.tabsRowCompta} role="tablist" aria-label="Sections comptabilité">
+          {COMPTA_TABS_ADMIN.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={onglet === t.key}
+              style={{ ...styles.tabCompta, ...(onglet === t.key ? styles.tabComptaActif : {}) }}
+              onClick={() => setOnglet(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      </div>
 
-      {/* ===== FACTURES ===== */}
-      {onglet === 'factures' && (
+      {/* ===== CLASSES (liste → factures par classe) ===== */}
+      {onglet === 'classes' && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
-            <input style={styles.tabSearch} placeholder="Rechercher une classe ou un élève..." value={rechercheFactures} onChange={e => { setRechercheFactures(e.target.value); setClasseFacturationId(''); }} />
+            <input style={styles.tabSearch} placeholder="Rechercher une classe..." value={rechercheFactures} onChange={e => setRechercheFactures(e.target.value)} />
             <div style={styles.toggleGroup}>
               {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                 <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }}
-                  onClick={() => { setFacturesNiveau(niv); setClasseFacturationId(''); setRechercheFactures(''); }}>
+                  onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); }}>
                   {niv}
                 </button>
               ))}
             </div>
           </div>
           <div style={styles.tabContent}>
-            {!classeFacturationId ? (
-              (() => {
-                const classesNiveau = classes
-                  .filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau))
-                  .filter(c => !rechercheFactures || (c.nom || '').toLowerCase().includes(rechercheFactures.toLowerCase()));
-                return (
-                  <div style={styles.tableWrap}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...styles.thMateriel, width: 44, textAlign: 'center' }}></th>
-                        <th style={styles.thMateriel}>Classe</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Élèves</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#bbf7d0' }}>✓ Validées</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#fecaca' }}>En attente</th>
-                        <th style={styles.thMateriel}>Progression</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {classesNiveau.map((c, idx) => {
-                        const elevesC = eleves.filter(e => String(e.classe_id) === String(c.id));
-                        const total = elevesC.length;
-                        const valides = elevesC.filter(e => toutesValidations[e.id]).length;
-                        const pct = total > 0 ? Math.round(valides / total * 100) : 0;
-                        return (
-                          <tr key={c.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                            <td style={{ ...styles.tdMateriel, textAlign: 'center', padding: '8px 6px' }}>
-                              <button style={{ background: '#e0e7ff', border: '1px solid #c7d2fe', borderRadius: 7, cursor: 'pointer', padding: '5px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setClasseFacturationId(String(c.id))} title="Voir le détail">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3730a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                              </button>
-                            </td>
-                            <td style={{ ...styles.tdMateriel, fontWeight: 600 }}>{c.nom}</td>
-                            <td style={{ ...styles.tdMateriel, textAlign: 'center', color: '#64748b' }}>{total}</td>
-                            <td style={{ ...styles.tdMateriel, textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{valides}</td>
-                            <td style={{ ...styles.tdMateriel, textAlign: 'center', fontWeight: 700, color: total - valides > 0 ? '#dc2626' : '#16a34a' }}>{total - valides}</td>
-                            <td style={{ ...styles.tdMateriel, minWidth: 120 }}>
-                              <div style={{ background: '#e2e8f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
-                                <div style={{ background: pct === 100 ? '#16a34a' : '#6366f1', height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width .3s' }} />
-                              </div>
-                              <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{pct}%</div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {classesNiveau.length === 0 && (
-                        <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
-                      )}
-                    </tbody>
-                  </table></div>
-                );
-              })()
-            ) : (
-              <>
+            {(() => {
+              const classesNiveau = classes
+                .filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau))
+                .filter(c => !rechercheFactures || (c.nom || '').toLowerCase().includes(rechercheFactures.toLowerCase()));
+              return (
+                <div style={styles.tableWrap}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ ...styles.thMateriel, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
+                      <th style={{ ...styles.thMateriel, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
+                      <th style={{ ...styles.thMateriel, textAlign: 'center' }}>Élèves</th>
+                      <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#bbf7d0' }}>✓ Validées</th>
+                      <th style={{ ...styles.thMateriel, textAlign: 'center', color: '#fecaca' }}>En attente</th>
+                      <th style={styles.thMateriel}>Progression</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classesNiveau.map((c, idx) => {
+                      const elevesC = eleves.filter(e => String(e.classe_id) === String(c.id));
+                      const total = elevesC.length;
+                      const valides = elevesC.filter(e => toutesValidations[e.id]).length;
+                      const pct = total > 0 ? Math.round(valides / total * 100) : 0;
+                      return (
+                        <tr key={c.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
+                            <button type="button" style={{ ...styles.btnDetailClasse, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }} onClick={() => openFacturesClasse(c.id)} title="Voir les factures de la classe">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                            </button>
+                          </td>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{c.nom}</td>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, textAlign: 'center', color: '#64748b' }}>{total}</td>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{valides}</td>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, textAlign: 'center', fontWeight: 700, color: total - valides > 0 ? '#dc2626' : '#16a34a' }}>{total - valides}</td>
+                          <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, minWidth: 120 }}>
+                            <div style={{ background: '#e2e8f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                              <div style={{ background: pct === 100 ? '#16a34a' : '#6366f1', height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width .3s' }} />
+                            </div>
+                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{pct}%</div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {classesNiveau.length === 0 && (
+                      <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
+                    )}
+                  </tbody>
+                </table></div>
+              );
+            })()}
+          </div>
+        </>
+      )}
+
+      {/* ===== FACTURES (détail d'une classe) ===== */}
+      {onglet === 'factures' && (
+        <>
+          {!classeFacturationId ? (
+            <div style={styles.tabContent}>
+              <div style={{ ...styles.vide, padding: '32px 20px' }}>
+                <p style={{ margin: '0 0 16px', color: '#64748b' }}>Sélectionnez une classe dans l’onglet <b>Classes</b> pour afficher et gérer les factures.</p>
+                <button type="button" style={styles.btnAjouter} onClick={() => setOnglet('classes')}>Voir la liste des classes</button>
+              </div>
+            </div>
+          ) : (
+            <div style={styles.tabContent}>
                 <div style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ ...styles.tableMateriel, minWidth: 900, tableLayout: 'auto' }}>
@@ -679,9 +747,8 @@ export default function Comptabilite() {
                   </table>
                 </div>
                 </div>
-              </>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
@@ -926,7 +993,7 @@ export default function Comptabilite() {
                 {classes.map(c => (
                   <button key={c.id}
                     style={{ ...styles.classeBtn, ...(String(c.id) === String(classeFacturationId) ? styles.classeBtnActive : {}) }}
-                    onClick={() => setClasseFacturationId(String(c.id))}>
+                    onClick={() => openFacturesClasse(c.id)}>
                     {c.nom}
                   </button>
                 ))}
@@ -1441,8 +1508,9 @@ export default function Comptabilite() {
 }
 
 const styles = {
-  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 15, marginBottom: 24 },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
+  btnRetourListe: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569', fontWeight: 600 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
   btnAjouter: { padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
@@ -1455,6 +1523,9 @@ const styles = {
   toggleBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabsRow: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 },
+  tabsRowCompta: { display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 12, flexWrap: 'wrap' },
+  tabCompta: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: 1, minWidth: 108, textAlign: 'center', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  tabComptaActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tab: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', width: 140, minWidth: 140, textAlign: 'center' },
   tabActif: { background: '#6366f1', color: 'white', marginBottom: -1, zIndex: 2 },
   tabContent: { background: 'white', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden', marginTop: 8 },
@@ -1464,14 +1535,14 @@ const styles = {
   select: { padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#6366f1' },
-  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1', boxShadow: '0 1px 0 rgba(0,0,0,0.08)' },
   tr: { borderBottom: '1px solid #f8fafc' },
   td: { padding: '12px 16px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
   typeBadge: { background: '#eef2ff', color: '#3730a3', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
   statutBadge: { padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.7, display: 'inline-flex', alignItems: 'center', padding: 2 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.7, display: 'inline-flex', alignItems: 'center', padding: 2 },
+  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.85, color: '#6366f1', display: 'inline-flex', alignItems: 'center', padding: 2 },
+  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.85, color: '#ef4444', display: 'inline-flex', alignItems: 'center', padding: 2 },
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' },
   modal: { background: 'white', padding: 28, borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' },
   modalTitre: { fontSize: 18, fontWeight: 700, marginBottom: 18 },
@@ -1482,10 +1553,13 @@ const styles = {
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 },
   btnAnnuler: { padding: '9px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' },
   btnSauver: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  tableWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tableWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   tableMateriel: { width: '100%', borderCollapse: 'collapse', background: 'white', tableLayout: 'fixed' },
-  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
+  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, boxShadow: '0 1px 0 rgba(0,0,0,0.08)' },
   tdMateriel: { padding: '12px 16px', fontSize: 13, color: '#374151', borderBottom: '1px solid #f8fafc' },
+  /** Alignement liste classes (onglet Classes) sur la page Notes : padding cellules + bouton œil */
+  tdClasseListe: { padding: '5px 14px' },
+  btnDetailClasse: { padding: '5px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
   facturationLayout: { display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, padding: 14 },
   classesList: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, background: '#f8fafc' },
   classesListTitre: { fontWeight: 700, fontSize: 12, color: '#475569', marginBottom: 8 },

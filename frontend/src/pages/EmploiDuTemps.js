@@ -3,6 +3,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -1651,12 +1652,13 @@ export default function EmploiDuTemps() {
 
   return (
     <div style={styles.page}>
+      <div style={stickyPageChrome()}>
       <div style={styles.header}>
         <h2 style={styles.titre}>Emploi du temps</h2>
         {isAdmin() && onglet === 'pools' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {toast.message && (
-              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,...(toast.type==='error'?{background:'#fee2e2',color:'#991b1b'}:{background:'#d1fae5',color:'#065f46'})}}>{toast.message}</span>
+              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{toast.message}</span>
             )}
             <button style={styles.btnVert} onClick={() => { const {poolHoraires, pauses} = getHoraireForLieu(''); setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:poolHoraires}); setPausesParPeriodeForm(pauses); }}>+ Ajouter</button>
           </div>
@@ -1671,10 +1673,7 @@ export default function EmploiDuTemps() {
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {toast.message && (
-              <span style={{
-                fontSize:13, fontWeight:600, padding:'6px 14px', borderRadius:8,
-                ...(toast.type==='error' ? {background:'#fee2e2',color:'#991b1b'} : {background:'#ede9fe',color:'#4f46e5'})
-              }}>{toast.message}</span>
+              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{toast.message}</span>
             )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
@@ -1687,7 +1686,7 @@ export default function EmploiDuTemps() {
       </div>
 
       {onglet === 'plannings' && (
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
           {sousOngletPlanning === 'classes' && (
             <select style={styles.selOnglet} value={classePlanningId || ''} onChange={e => {
               const classeId = e.target.value;
@@ -1741,6 +1740,7 @@ export default function EmploiDuTemps() {
           </div>
         </div>
       )}
+      </div>
 
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
@@ -2092,7 +2092,7 @@ export default function EmploiDuTemps() {
                     </div>
                   </div>
                   {isAdmin() && <div>
-                    <button style={styles.btnIcon} onClick={() => {
+                    <button style={styles.btnIconEdit} onClick={() => {
                       const {poolHoraires, pauses} = getHoraireForLieu(pool.site||'');
                       setPoolEdit(pool); setShowPoolForm(true);
                       setPoolForm({nom:pool.nom,site:pool.site||'',couleur:pool.couleur,
@@ -2102,7 +2102,7 @@ export default function EmploiDuTemps() {
                         horaires:poolHoraires});
                       setPausesParPeriodeForm(pauses);
                     }}>✏️</button>
-                    <button style={styles.btnIcon} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
+                    <button style={styles.btnIconDel} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
                   </div>}
                 </div>
                 <div style={{marginTop:10}}>
@@ -3364,7 +3364,7 @@ export default function EmploiDuTemps() {
 }
 
 const styles = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100vh',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:24,width:'100%'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
@@ -3434,7 +3434,8 @@ const styles = {
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
-  btnIcon:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6},
+  btnIconEdit:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6,color:'#6366f1'},
+  btnIconDel:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6,color:'#ef4444'},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
   selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center',width:220,minWidth:220},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
