@@ -54,6 +54,10 @@ function initPresences(eleves) {
 }
 
 export default function Presences() {
+  const MOIS_LABELS = [
+    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+  ];
   const [classes, setClasses] = useState([]);
   const [eleves, setEleves] = useState([]);
   const [presences, setPresences] = useState({});
@@ -74,6 +78,15 @@ export default function Presences() {
   const [statsPeriode, setStatsPeriode] = useState('1sem');
   const location = useLocation();
   const headers = {};
+  const anneeCourante = new Date().getFullYear();
+  const optionsMois = [];
+  for (let y = anneeCourante - 2; y <= anneeCourante + 2; y++) {
+    for (let m = 1; m <= 12; m++) {
+      const value = `${y}-${String(m).padStart(2, '0')}`;
+      const label = `${MOIS_LABELS[m - 1]} ${y}`;
+      optionsMois.push({ value, label });
+    }
+  }
 
   useEffect(() => {
     chargerClasses();
@@ -507,16 +520,19 @@ export default function Presences() {
         {onglet === 'apercu' && (
           <>
             <button onClick={allerMoisPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-            <input
-              style={s.inp}
-              type="month"
+            <select
+              style={{...s.inp, minWidth:170, textTransform:'capitalize', cursor:'pointer'}}
               value={date.substring(0, 7)}
               onChange={e => {
                 const v = e.target.value;
                 if (!v) return;
                 setDate(v + '-01');
               }}
-            />
+            >
+              {optionsMois.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
             <button onClick={allerMoisSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
           </>
         )}
