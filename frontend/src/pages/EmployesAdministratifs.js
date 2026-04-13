@@ -14,6 +14,9 @@ export default function EmployesAdministratifs() {
       excludeSessionUser={true}
       searchPlaceholder="Rechercher un employé..."
       showRoleToggle={true}
+      listTopPadding={30}
+      titleToFiltersGap={30}
+      filtersToTableGap={30}
     />
   );
 }

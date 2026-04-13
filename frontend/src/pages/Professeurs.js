@@ -41,6 +41,9 @@ export default function Professeurs({
   excludeSessionUser = false,
   searchPlaceholder = 'Rechercher un professeur...',
   showRoleToggle = false,
+  listTopPadding = 30,
+  titleToFiltersGap = 30,
+  filtersToTableGap = 30,
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -324,7 +327,7 @@ export default function Professeurs({
 
   const entetePageListe = (
     <>
-      <div style={{ ...s.header, marginBottom: 12 }}>
+      <div style={{ ...s.header, marginBottom: titleToFiltersGap }}>
         <h2 style={s.title}>{titre}</h2>
         {isAdmin() && (
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
@@ -337,7 +340,7 @@ export default function Professeurs({
   );
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, paddingTop: listTopPadding }}>
       <div style={{ background: PAGE_BG, paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
         {entetePageListe}
       </div>
@@ -735,7 +738,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: 0, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+      <div style={{ ...s.tableWrap, marginTop: filtersToTableGap, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         <table style={s.table}>
           <thead style={s.theadIsolate}>
             <tr style={s.thead}>

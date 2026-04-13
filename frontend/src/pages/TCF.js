@@ -3644,13 +3644,13 @@ export default function TCF() {
 
 const styles = {
   page: {
-    padding: '28px 32px',
+    padding: '30px 32px',
     background: '#f8fafc',
     minHeight: '100%',
     boxSizing: 'border-box',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   pillGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },

@@ -482,7 +482,7 @@ export default function Eleves() {
   });
 
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
+    <div style={{padding:'30px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
       {/* Zoom photo */}
       {photoZoom && (
@@ -499,7 +499,7 @@ export default function Eleves() {
 
       {/* Header + filtres */}
       <div style={{position:'relative',background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'none'}}>
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:30,flexWrap:'wrap'}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
@@ -510,7 +510,7 @@ export default function Eleves() {
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Importer LORA</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:30}}>
         <input
           style={{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'}}
           placeholder="Rechercher un élève, une classe..."
@@ -1043,7 +1043,7 @@ export default function Eleves() {
       )}
 
       {/* Tableau */}
-      <div style={{marginTop:14}}>
+      <div style={{marginTop:30}}>
         <div style={{borderRadius:12,overflow:'hidden',background:'white'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>

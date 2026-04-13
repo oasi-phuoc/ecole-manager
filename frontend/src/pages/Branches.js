@@ -74,7 +74,7 @@ export default function Branches() {
         <h2 style={s.title}>Gestion des branches</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:30}}>
         <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         <div style={s.toggleGroup}>
           {niveaux.map(n => (
@@ -159,7 +159,7 @@ export default function Branches() {
         </div>
       )}
 
-      <div style={{marginTop:14}}>
+      <div style={{marginTop:30}}>
         <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>
@@ -206,8 +206,8 @@ export default function Branches() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
+  page:{padding:'30px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:30,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},

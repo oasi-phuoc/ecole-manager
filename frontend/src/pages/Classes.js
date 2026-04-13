@@ -2042,7 +2042,7 @@ export default function Classes() {
           </div>
         )}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:30,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         <div style={s.toggleGroup}>
           {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
@@ -2092,7 +2092,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={{...s.tableWrap, marginTop:15}}>
+      <div style={{...s.tableWrap, marginTop:30}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -2196,8 +2196,8 @@ export default function Classes() {
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
+  page:{padding:'30px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:30,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},

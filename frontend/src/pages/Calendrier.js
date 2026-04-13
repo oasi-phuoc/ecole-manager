@@ -207,7 +207,7 @@ export default function Calendrier() {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-CH') : '—';
 
   return (
-    <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
+    <div style={{padding:'30px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
       {/* Popup jour */}
       {jourPopup && (
@@ -392,7 +392,7 @@ export default function Calendrier() {
 
       <div style={stickyPageChrome()}>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:30}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
       </div>
       </div>
