@@ -13,8 +13,8 @@ const PAGE_PAD_TOP = 28;
 const PAGE_BG = '#f8fafc';
 /** Même valeur que le marginTop du bloc tableau : décale le masque et les th sous le bandeau chrome. */
 const TABLE_BELOW_CHROME_GAP = 4;
-/** Bande opaque sous le chrome, au-dessus de la ligne violette : masque le texte du tbody et les bords blancs (coins arrondis). */
-const TABLE_HEADER_MASK_HEIGHT = 15;
+/** Hauteur du masque rectangulaire entre recherche et entête violet. */
+const TABLE_HEADER_MASK_HEIGHT = 20;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -327,7 +327,7 @@ export default function Professeurs({
   /** z-index au-dessus du masque thead (1) pour que la barre violette reste toujours devant. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP + TABLE_HEADER_MASK_HEIGHT,
+    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP + TABLE_HEADER_MASK_HEIGHT - 4,
     zIndex: 3,
     boxShadow: 'none',
     ...extra,
@@ -336,7 +336,7 @@ export default function Professeurs({
   /** Conserve le gap de 4px, mais décale le masque de -4px pour le couvrir sans bouger l'entête. */
   const theadMaskTop = PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP - 4;
   /** Masque rectangulaire assez haut pour passer légèrement sous l'entête et cacher le bord blanc du tableau. */
-  const theadMaskHeight = 20;
+  const theadMaskHeight = TABLE_HEADER_MASK_HEIGHT;
 
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
@@ -788,7 +788,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'visible', background: 'white' }}>
+      <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         <div aria-hidden style={{ ...s.tableHeaderMask, top: theadMaskTop, height: theadMaskHeight, minHeight: theadMaskHeight }} />
         <table style={s.table}>
           <thead style={s.theadIsolate}>
