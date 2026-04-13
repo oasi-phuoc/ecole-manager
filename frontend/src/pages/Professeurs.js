@@ -8,7 +8,7 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-/** Même valeur que `s.page` — le sticky doit utiliser ce décalage pour ne pas « remonter » sous le padding au défilement. */
+/** Même valeur que `s.page` — marge haute de la page (le sticky principal utilise `top: 0` pour masquer tout le défilement jusqu’au bord du conteneur). */
 const PAGE_PAD_TOP = 28;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
@@ -322,7 +322,7 @@ export default function Professeurs({
   /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH,
+    top: stickyTopH,
     zIndex: 38,
     boxShadow: 'none',
     ...extra,
@@ -360,7 +360,7 @@ export default function Professeurs({
         ref={stickyTopRef}
         style={{
           position: 'sticky',
-          top: PAGE_PAD_TOP,
+          top: 0,
           zIndex: 40,
           background: '#f8fafc',
           paddingBottom: 12,
