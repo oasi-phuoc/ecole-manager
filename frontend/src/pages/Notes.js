@@ -2009,10 +2009,10 @@ export default function Notes() {
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
               <tr style={s.theadRow}>
-                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center', borderTopLeftRadius: 12 }}></th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
                 <th style={{ ...s.th, width: '100%' }}>Responsables et évaluations</th>
-                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center', borderTopRightRadius: 12 }}></th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -2054,7 +2054,7 @@ export default function Notes() {
                             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 14, rowGap: 6 }}>
                               {autresProfs.map(r => (
                                 <div key={r.prof_id} style={{ fontSize: 12, color: '#475569', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 }}>
-                                  <span style={{ whiteSpace: 'nowrap', fontWeight: 400 }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</span>
+                                  <b style={{ whiteSpace: 'nowrap' }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</b>
                                   {parseMatieresDetailDedup(r).length ? pastillesBranche(r) : null}
                                 </div>
                               ))}
@@ -2090,7 +2090,7 @@ export default function Notes() {
 }
 
 const s = {
-  page: { padding: '30px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   tabsBar: {display:'flex',alignItems:'flex-end',gap:0,borderBottom:'2px solid #6366f1',paddingBottom:0},
   tabBtn: {padding:'9px 14px',borderRadius:'10px 10px 0 0',border:'none',background:'#ede9fe',cursor:'pointer',fontWeight:700,fontSize:14,color:'#5b21b6',outline:'none',lineHeight:'1',position:'relative',zIndex:1,width:140,minWidth:140,textAlign:'center'},
   tabBtnActif: {background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.28)'},
@@ -2098,7 +2098,7 @@ const s = {
   subTabsBar: {display:'flex',gap:0,marginTop:0},
   subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:140,minWidth:140,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
@@ -2110,8 +2110,8 @@ const s = {
   btnSauver: { padding: '8px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   btnImprimer: { padding: '7px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
-  tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden', background: 'white' },
-  tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden', background: 'white' },
+  tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },

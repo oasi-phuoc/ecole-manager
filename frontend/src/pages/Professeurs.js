@@ -1,5 +1,5 @@
 import { isAdmin, getUser } from '../utils/permissions';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import axios from 'axios';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
@@ -8,7 +8,8 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-const PAGE_BG = '#f8fafc';
+/** Même valeur que `s.page` — le sticky doit utiliser ce décalage pour ne pas « remonter » sous le padding au défilement. */
+const PAGE_PAD_TOP = 28;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -41,9 +42,6 @@ export default function Professeurs({
   excludeSessionUser = false,
   searchPlaceholder = 'Rechercher un professeur...',
   showRoleToggle = false,
-  listTopPadding = 30,
-  titleToFiltersGap = 30,
-  filtersToTableGap = 30,
 } = {}) {
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -304,11 +302,28 @@ export default function Professeurs({
     });
   }, [branchesDisponibles, showForm, hidePreferences]);
 
+  const stickyTopRef = useRef(null);
+  const [stickyTopH, setStickyTopH] = useState(120);
+
+  useLayoutEffect(() => {
+    const el = stickyTopRef.current;
+    if (!el) return;
+    const measure = () => setStickyTopH(el.offsetHeight);
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [titre, showInactif]);
+
+  /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    position: 'static',
-    top: 'auto',
-    zIndex: 'auto',
+    top: PAGE_PAD_TOP + stickyTopH,
+    zIndex: 38,
     boxShadow: 'none',
     ...extra,
   });
@@ -327,7 +342,7 @@ export default function Professeurs({
 
   const entetePageListe = (
     <>
-      <div style={{ ...s.header, marginBottom: titleToFiltersGap }}>
+      <div style={{ ...s.header, marginBottom: 12 }}>
         <h2 style={s.title}>{titre}</h2>
         {isAdmin() && (
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
@@ -340,8 +355,19 @@ export default function Professeurs({
   );
 
   return (
-    <div style={{ ...s.page, paddingTop: listTopPadding }}>
-      <div style={{ background: PAGE_BG, paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
+    <div style={s.page}>
+      <div
+        ref={stickyTopRef}
+        style={{
+          position: 'sticky',
+          top: PAGE_PAD_TOP,
+          zIndex: 40,
+          background: '#f8fafc',
+          paddingBottom: 12,
+          marginBottom: 0,
+          boxShadow: 'none',
+        }}
+      >
         {entetePageListe}
       </div>
 
@@ -738,9 +764,9 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: filtersToTableGap, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+      <div style={{ ...s.tableWrap, marginTop: 4, overflow: 'visible', background: 'white' }}>
         <table style={s.table}>
-          <thead style={s.theadIsolate}>
+          <thead>
             <tr style={s.thead}>
               <th style={thSticky({ width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12 })}>Nom</th>
               <th style={thSticky({ width: 150, minWidth: 150, whiteSpace: 'nowrap' })}>Prénom</th>
@@ -815,7 +841,7 @@ export default function Professeurs({
 }
 
 const s = {
-  page:{padding:'0 32px 28px',background:PAGE_BG,minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:`${PAGE_PAD_TOP}px 32px`,background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -850,8 +876,7 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  theadIsolate:{position:'relative'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:42,boxShadow:'none'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},

@@ -613,7 +613,7 @@ export default function Comptabilite() {
       {/* ===== CLASSES (liste → factures par classe) ===== */}
       {onglet === 'classes' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher une classe..." value={rechercheFactures} onChange={e => setRechercheFactures(e.target.value)} />
             <div style={styles.toggleGroup}>
               {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
@@ -755,7 +755,7 @@ export default function Comptabilite() {
       {/* ===== PAIEMENTS ===== */}
       {onglet === 'paiements' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher nom, prénom, classe, montant..." value={recherchePaiements} onChange={e => setRecherchePaiements(e.target.value)} />
             <div style={styles.toggleGroup}>
               {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
@@ -842,7 +842,7 @@ export default function Comptabilite() {
       {/* ===== LISTE DE PRIX ===== */}
       {onglet === 'prix' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher un article..." value={recherchePrix} onChange={e => setRecherchePrix(e.target.value)} />
             <div style={styles.toggleGroup}>
               {[{ key: 'ecolage', label: 'Écolage' }, { key: 'scolaire', label: 'Matériel scolaire' }, { key: 'fournitures', label: 'Autres fournitures' }].map(t => (
@@ -1508,8 +1508,8 @@ export default function Comptabilite() {
 }
 
 const styles = {
-  page: { padding: '30px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30, flexWrap: 'wrap' },
+  page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
   btnRetourListe: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569', fontWeight: 600 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
