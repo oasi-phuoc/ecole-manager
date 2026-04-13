@@ -11,6 +11,8 @@ const MAX_PERIODES = 32;
 /** Hauteur de la marge haute : bande sticky opaque (`stickyPadTop`) + bandeau titre collent à `top: 0` et `top: PAGE_PAD_TOP`. */
 const PAGE_PAD_TOP = 28;
 const PAGE_BG = '#f8fafc';
+/** Même valeur que le marginTop du bloc tableau : doit être ajoutée au `top` des th sticky pour garder l’espace recherche → entête au scroll. */
+const TABLE_BELOW_CHROME_GAP = 4;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -323,7 +325,7 @@ export default function Professeurs({
   /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH,
+    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP,
     zIndex: 38,
     boxShadow: 'none',
     ...extra,
@@ -779,7 +781,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: 4, overflow: 'visible', background: 'white' }}>
+      <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'visible', background: 'white' }}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
