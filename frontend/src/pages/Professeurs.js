@@ -1,5 +1,5 @@
 import { isAdmin, getUser } from '../utils/permissions';
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
@@ -8,13 +8,7 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-/** Hauteur de la marge haute : bande sticky opaque (`stickyPadTop`) + bandeau titre collent à `top: 0` et `top: PAGE_PAD_TOP`. */
-const PAGE_PAD_TOP = 28;
 const PAGE_BG = '#f8fafc';
-/** Même valeur que le marginTop du bloc tableau : décale le masque et les th sous le bandeau chrome. */
-const TABLE_BELOW_CHROME_GAP = 4;
-/** Hauteur du masque rectangulaire entre recherche et entête violet. */
-const TABLE_HEADER_MASK_HEIGHT = 20;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -307,36 +301,14 @@ export default function Professeurs({
     });
   }, [branchesDisponibles, showForm, hidePreferences]);
 
-  const stickyTopRef = useRef(null);
-  const [stickyTopH, setStickyTopH] = useState(120);
-
-  useLayoutEffect(() => {
-    const el = stickyTopRef.current;
-    if (!el) return;
-    const measure = () => setStickyTopH(el.offsetHeight);
-    measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    if (ro) ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => {
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [titre, showInactif]);
-
-  /** z-index au-dessus du masque thead (1) pour que la barre violette reste toujours devant. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP + TABLE_HEADER_MASK_HEIGHT - 4,
-    zIndex: 3,
+    position: 'static',
+    top: 'auto',
+    zIndex: 'auto',
     boxShadow: 'none',
     ...extra,
   });
-
-  /** Conserve le gap de 4px, mais décale le masque de -4px pour le couvrir sans bouger l'entête. */
-  const theadMaskTop = PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP - 4;
-  /** Masque rectangulaire assez haut pour passer légèrement sous l'entête et cacher le bord blanc du tableau. */
-  const theadMaskHeight = TABLE_HEADER_MASK_HEIGHT;
 
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
@@ -366,32 +338,7 @@ export default function Professeurs({
 
   return (
     <div style={s.page}>
-      {/* Bande opaque collée en haut du scroll : garde visuellement les 28 px et cache le tableau sous cette zone */}
-      <div
-        aria-hidden
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 39,
-          height: PAGE_PAD_TOP,
-          minHeight: PAGE_PAD_TOP,
-          background: PAGE_BG,
-          marginBottom: 0,
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        ref={stickyTopRef}
-        style={{
-          position: 'sticky',
-          top: PAGE_PAD_TOP,
-          zIndex: 40,
-          background: PAGE_BG,
-          paddingBottom: 12,
-          marginBottom: 0,
-          boxShadow: 'none',
-        }}
-      >
+      <div style={{ background: PAGE_BG, paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
         {entetePageListe}
       </div>
 
@@ -788,8 +735,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-        <div aria-hidden style={{ ...s.tableHeaderMask, top: theadMaskTop, height: theadMaskHeight, minHeight: theadMaskHeight }} />
+      <div style={{ ...s.tableWrap, marginTop: 0, overflow: 'hidden', background: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         <table style={s.table}>
           <thead style={s.theadIsolate}>
             <tr style={s.thead}>
@@ -902,8 +848,6 @@ const s = {
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
   theadIsolate:{position:'relative'},
-  /** Bande sticky entre recherche et en-tête violet : couvre toute la largeur sans dépasser devant les th. */
-  tableHeaderMask:{position:'sticky',zIndex:41,height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,background:PAGE_BG,pointerEvents:'none',borderRadius:0},
   th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:42,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},

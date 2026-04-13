@@ -7,9 +7,9 @@ export const PAGE_BG_DEFAULT = '#f8fafc';
  */
 export function stickyPageChrome(background = PAGE_BG_DEFAULT) {
   return {
-    position: 'sticky',
-    top: 0,
-    zIndex: 36,
+    position: 'relative',
+    top: 'auto',
+    zIndex: 'auto',
     background,
     paddingBottom: 12,
     marginBottom: 8,
