@@ -69,7 +69,7 @@ export default function Branches() {
 
   return (
     <div style={s.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={{...s.header, marginBottom:12}}>
         <h2 style={s.title}>Gestion des branches</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}

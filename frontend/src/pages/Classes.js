@@ -2033,7 +2033,7 @@ export default function Classes() {
   // Vue principale - liste classes
   return (
     <div style={s.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={s.header}>
         <h2 style={s.title}>Gestion des classes</h2>
         {isAdmin() && (

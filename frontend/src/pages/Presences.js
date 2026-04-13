@@ -15,7 +15,6 @@ const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Sa
 const COL_NOM_WIDTH = 170;
 const COL_PRENOM_WIDTH = 150;
 /** Décalage vertical du 2e rang d’en-tête (saisie présences) pour le sticky */
-const PRESENCES_STICKY_ROW2 = 46;
 
 /** Jour civil pour les présences (évite le décalage : ISO UTC « 14T22…Z » = 15 en CH). */
 function cleDatePresence(raw) {
@@ -455,7 +454,7 @@ export default function Presences() {
   return (
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
@@ -578,20 +577,17 @@ export default function Presences() {
                 </colgroup>
                 <thead>
                   <tr style={{background:'#f8fafc'}}>
-                    <th style={{...s.th,borderRadius:'8px 0 0 8px',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>NOM</th>
-                    <th style={{...s.th,position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,fontSize:13,textAlign:'center',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
-                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',position:'sticky',top:0,zIndex:5,boxShadow:'none'}} colSpan={4}>Matin</th>
-                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',position:'sticky',top:0,zIndex:5,boxShadow:'none'}} colSpan={4}>Après-midi</th>
-                    <th style={{...s.th,borderRadius:'0 8px 8px 0',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Remarques</th>
+                    <th style={{...s.th,borderRadius:'8px 0 0 8px',background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>NOM</th>
+                    <th style={{...s.th,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Prénom</th>
+                    <th style={{...s.th,fontSize:13,textAlign:'center',background:'#f8fafc',boxShadow:'none'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',boxShadow:'none'}} colSpan={4}>Matin</th>
+                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',boxShadow:'none'}} colSpan={4}>Après-midi</th>
+                    <th style={{...s.th,borderRadius:'0 8px 8px 0',background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Remarques</th>
                   </tr>
                   <tr style={{background:'#f8fafc'}}>
                     {PERIODES.map(i => (
                       <th key={i} style={{
                         ...s.th,
-                        position: 'sticky',
-                        top: PRESENCES_STICKY_ROW2,
-                        zIndex: 4,
                         background: isBloque(i) ? '#f1f5f9' : i<=4 ? '#eff6ff' : '#fffbeb',
                         color: isBloque(i) ? '#cbd5e1' : i<=4 ? '#3b82f6' : '#f59e0b',
                         fontSize:11,

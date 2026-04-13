@@ -692,8 +692,8 @@ export default function Notes() {
           <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
         </div>
         {/* Sous-onglets Vue générale */}
-        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 8, boxShadow: 'none' }}>
-        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
               <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
@@ -713,7 +713,7 @@ export default function Notes() {
         </div>
 
         {/* Branche/élève dropdown */}
-        <div className="no-print" style={{marginTop:15,marginBottom:15,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+        <div className="no-print" style={{marginTop:4,marginBottom:4,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
           {vueGeneraleMode === 'branche' && (
             <select style={{...s.tabSelect, width:'auto', minWidth:280}} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
               <option value="">Choisir une branche</option>
@@ -748,7 +748,7 @@ export default function Notes() {
           const moyGen  = (eleveId) => { const vals = branchesClasse.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const colNom = (b) => (b.designation_courte || b.nom || '').trim();
           return (
-          <div style={{ overflowX: 'auto', marginTop: 15 }}>
+          <div style={{ overflowX: 'auto', marginTop: 4 }}>
           <div ref={printRef} id="vg-tous-print" className="vg-bull-sheet" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', maxWidth: 800, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
               <thead>
@@ -1899,7 +1899,7 @@ export default function Notes() {
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
               const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
@@ -1914,7 +1914,7 @@ export default function Notes() {
           </div>
           {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
-        <div style={{ ...s.tblWrap, marginTop: 15 }}>
+        <div style={{ ...s.tblWrap, marginTop: 4 }}>
         <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
           <thead>
             <tr style={s.theadRow}>
@@ -1988,7 +1988,7 @@ export default function Notes() {
           )}
         </div>
         {/* Barre de recherche + toggles niveaux */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <input type="text" placeholder="Rechercher une classe..." value={rechercheClasses}
             onChange={e => setRechercheClasses(e.target.value)}
             style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, width: 220, outline: 'none' }} />
