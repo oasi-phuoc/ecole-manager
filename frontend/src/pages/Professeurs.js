@@ -333,9 +333,10 @@ export default function Professeurs({
     ...extra,
   });
 
-  /** Le masque doit aussi couvrir le gap de 4px entre la zone sticky et le tableau. */
-  const theadMaskTop = PAGE_PAD_TOP + stickyTopH;
-  const theadMaskHeight = TABLE_HEADER_MASK_HEIGHT + TABLE_BELOW_CHROME_GAP;
+  /** Conserve le gap de 4px, mais décale le masque de -4px pour le couvrir sans bouger l'entête. */
+  const theadMaskTop = PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP - 4;
+  /** Masque rectangulaire assez haut pour passer légèrement sous l'entête et cacher le bord blanc du tableau. */
+  const theadMaskHeight = 20;
 
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
@@ -902,7 +903,7 @@ const s = {
   thead:{background:'#6366f1'},
   theadIsolate:{position:'relative'},
   /** Bande sticky entre recherche et en-tête violet : couvre toute la largeur sans dépasser devant les th. */
-  tableHeaderMask:{position:'sticky',zIndex:41,height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,background:PAGE_BG,pointerEvents:'none',borderTopLeftRadius:12,borderTopRightRadius:12},
+  tableHeaderMask:{position:'sticky',zIndex:41,height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,background:PAGE_BG,pointerEvents:'none',borderRadius:0},
   th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:42,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
