@@ -786,11 +786,9 @@ export default function Professeurs({
       )}
 
       <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'visible', background: 'white' }}>
+        <div aria-hidden style={{ ...s.tableHeaderMask, top: theadMaskTop }} />
         <table style={s.table}>
           <thead style={s.theadIsolate}>
-            <tr aria-hidden style={s.theadMaskRow}>
-              <td colSpan={isAdmin() ? 8 : 7} style={{ ...s.theadMaskCell, top: theadMaskTop }} />
-            </tr>
             <tr style={s.thead}>
               <th style={thSticky({ width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12 })}>Nom</th>
               <th style={thSticky({ width: 150, minWidth: 150, whiteSpace: 'nowrap' })}>Prénom</th>
@@ -900,11 +898,10 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  theadIsolate:{position:'relative',isolation:'isolate'},
-  theadMaskRow:{height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,lineHeight:0,fontSize:0,background:PAGE_BG},
-  /** Derrière les th (z-index 3) : ombre tirée vers le haut / côtés pour ne pas recouvrir la barre violette (éviter 0 0 0 Npx qui s’étend sous les th). */
-  theadMaskCell:{position:'sticky',zIndex:1,padding:0,border:'none',height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,lineHeight:0,fontSize:0,background:PAGE_BG,verticalAlign:'top',boxShadow:`0 -14px 0 14px ${PAGE_BG}, 16px -12px 0 12px ${PAGE_BG}, -16px -12px 0 12px ${PAGE_BG}`},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'none'},
+  theadIsolate:{position:'relative'},
+  /** Bande sticky entre recherche et en-tête violet : couvre toute la largeur sans dépasser devant les th. */
+  tableHeaderMask:{position:'sticky',zIndex:41,height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,background:PAGE_BG,pointerEvents:'none',borderTopLeftRadius:12,borderTopRightRadius:12},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:42,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},
