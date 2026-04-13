@@ -8,8 +8,9 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-/** Même valeur que `s.page` — marge haute de la page (le sticky principal utilise `top: 0` pour masquer tout le défilement jusqu’au bord du conteneur). */
+/** Hauteur de la marge haute : bande sticky opaque (`stickyPadTop`) + bandeau titre collent à `top: 0` et `top: PAGE_PAD_TOP`. */
 const PAGE_PAD_TOP = 28;
+const PAGE_BG = '#f8fafc';
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -322,7 +323,7 @@ export default function Professeurs({
   /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: stickyTopH,
+    top: PAGE_PAD_TOP + stickyTopH,
     zIndex: 38,
     boxShadow: 'none',
     ...extra,
@@ -356,13 +357,27 @@ export default function Professeurs({
 
   return (
     <div style={s.page}>
+      {/* Bande opaque collée en haut du scroll : garde visuellement les 28 px et cache le tableau sous cette zone */}
+      <div
+        aria-hidden
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 39,
+          height: PAGE_PAD_TOP,
+          minHeight: PAGE_PAD_TOP,
+          background: PAGE_BG,
+          marginBottom: 0,
+          pointerEvents: 'none',
+        }}
+      />
       <div
         ref={stickyTopRef}
         style={{
           position: 'sticky',
-          top: 0,
+          top: PAGE_PAD_TOP,
           zIndex: 40,
-          background: '#f8fafc',
+          background: PAGE_BG,
           paddingBottom: 12,
           marginBottom: 0,
           boxShadow: 'none',
@@ -841,7 +856,7 @@ export default function Professeurs({
 }
 
 const s = {
-  page:{padding:`${PAGE_PAD_TOP}px 32px`,background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:'0 32px 28px',background:PAGE_BG,minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
