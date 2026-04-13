@@ -504,10 +504,10 @@ export default function Eleves() {
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
           {isAdmin() && <label style={{padding:'8px 16px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
-            {loraUpdateLoading ? 'Mise à jour...' : '🔄 Mise à jour LORA'}
+            {loraUpdateLoading ? 'Mise à jour...' : 'Mise à jour LORA'}
             <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
           </label>}
-          {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>📥 Importer LORA</button>}
+          {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>Importer LORA</button>}
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0}}>
