@@ -719,7 +719,7 @@ const s = {
   tableWrap: { background: 'white', borderRadius: 14, overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#6366f1' },
-  th: { padding: '10px 14px', fontSize: 11, fontWeight: 700, color: 'white', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: 'none', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: 'none' },
+  th: { padding: '10px 14px', fontSize: 11, fontWeight: 700, color: 'white', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: 'none', background: '#6366f1', position: 'static', top: 'auto', zIndex: 'auto', boxShadow: 'none' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   td: { padding: '10px 14px', fontSize: 13, verticalAlign: 'middle' },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 },

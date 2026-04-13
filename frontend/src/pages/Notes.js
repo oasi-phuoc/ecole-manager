@@ -2009,10 +2009,10 @@ export default function Notes() {
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
               <tr style={s.theadRow}>
-                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center', borderTopLeftRadius: 12 }}></th>
                 <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Classe</th>
                 <th style={{ ...s.th, width: '100%' }}>Responsables et évaluations</th>
-                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
+                <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap', textAlign: 'center', borderTopRightRadius: 12 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -2098,7 +2098,7 @@ const s = {
   subTabsBar: {display:'flex',gap:0,marginTop:0},
   subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:140,minWidth:140,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },

@@ -33,7 +33,7 @@ export default function Statistiques() {
 
   return (
     <div style={styles.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.titre}>📊 Statistiques</h2>
         <button style={styles.btnRefresh} onClick={chargerStats}>🔄 Actualiser</button>

@@ -3219,7 +3219,7 @@ export default function TCF() {
 
   return (
     <div style={styles.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3722,10 +3722,10 @@ const styles = {
   tablePool: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1180 },
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },
   thead: { background: '#f8fafc' },
-  thLeft: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
-  thClasseFixe: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
-  thProfPool: { borderBottom: 'none', borderRight: 'none', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
-  thCenter: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
+  thLeft: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
+  thClasseFixe: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
+  thProfPool: { borderBottom: 'none', borderRight: 'none', padding: '8px 12px', fontSize: 12, color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
+  thCenter: { borderBottom: 'none', borderRight: 'none', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'center', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
   tdLeft: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b' },
   tdClasseFixe: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', width: 88, minWidth: 88, maxWidth: 88, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   tdProfPool: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 12px', fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },

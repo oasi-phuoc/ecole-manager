@@ -5,7 +5,7 @@ import { stickyPageChrome } from '../styles/pageShell';
 export default function VisiteClasses() {
   return (
     <div style={s.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={s.header}>
         <h2 style={s.titre}>Visite de classes</h2>
       </div>

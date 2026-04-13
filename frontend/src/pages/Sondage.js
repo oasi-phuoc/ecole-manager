@@ -5,7 +5,7 @@ import { stickyPageChrome } from '../styles/pageShell';
 export default function Sondage() {
   return (
     <div style={s.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={s.header}>
         <h2 style={s.titre}>Sondage</h2>
       </div>

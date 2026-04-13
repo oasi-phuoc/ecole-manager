@@ -1517,7 +1517,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={s.header}>
+      <div style={{...s.header, marginBottom:12}}>
         <button style={s.btnBack} onClick={() => { setDetailClasse(null); setSearchParams({}); }}>← Retour classes</button>
         <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
         {classeVueTab === 'plan' && (

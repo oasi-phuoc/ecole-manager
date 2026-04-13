@@ -401,6 +401,18 @@ export default function Presences() {
     setDate(d.toISOString().split('T')[0]);
   };
 
+  const allerMoisPrecedent = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setMonth(d.getMonth() - 1);
+    setDate(d.toISOString().split('T')[0]);
+  };
+
+  const allerMoisSuivant = () => {
+    const d = new Date(date + 'T12:00:00');
+    d.setMonth(d.getMonth() + 1);
+    setDate(d.toISOString().split('T')[0]);
+  };
+
   const isVacance = () => {
     return evenementsCalendrier.some(ev => {
       const deb = ev.date_debut?.substring(0, 10);
@@ -461,13 +473,13 @@ export default function Presences() {
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
             {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
-            <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
+            <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',height:36,boxSizing:'border-box',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
               <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
                 <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
               </div>
               {valide ? 'Présences validées' : 'Valider les présences'}
             </button>
-            <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'8px 18px',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
+            <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'0 18px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
               Sauvegarder
             </button>
           </>)}
@@ -490,6 +502,22 @@ export default function Presences() {
             <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
             <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
             <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
+          </>
+        )}
+        {onglet === 'apercu' && (
+          <>
+            <button onClick={allerMoisPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
+            <input
+              style={s.inp}
+              type="month"
+              value={date.substring(0, 7)}
+              onChange={e => {
+                const v = e.target.value;
+                if (!v) return;
+                setDate(v + '-01');
+              }}
+            />
+            <button onClick={allerMoisSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
           </>
         )}
         {onglet === 'stats' && (

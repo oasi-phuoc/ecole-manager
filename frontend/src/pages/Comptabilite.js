@@ -580,7 +580,7 @@ export default function Comptabilite() {
 
   return (
     <div style={styles.page}>
-      <div style={stickyPageChrome()}>
+      <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={styles.header}>
         {onglet === 'factures' && classeFacturationId ? (
           <>
@@ -1535,7 +1535,7 @@ const styles = {
   select: { padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#6366f1' },
-  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1', boxShadow: 'none' },
+  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#6366f1', boxShadow: 'none' },
   tr: { borderBottom: '1px solid #f8fafc' },
   td: { padding: '12px 16px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
@@ -1555,7 +1555,7 @@ const styles = {
   btnSauver: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tableWrap: { borderRadius: 12, overflow: 'hidden', background: 'white' },
   tableMateriel: { width: '100%', borderCollapse: 'collapse', background: 'white', tableLayout: 'fixed' },
-  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, boxShadow: 'none' },
+  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', boxShadow: 'none' },
   tdMateriel: { padding: '12px 16px', fontSize: 13, color: '#374151', borderBottom: '1px solid #f8fafc' },
   /** Alignement liste classes (onglet Classes) sur la page Notes : padding cellules + bouton œil */
   tdClasseListe: { padding: '5px 14px' },
