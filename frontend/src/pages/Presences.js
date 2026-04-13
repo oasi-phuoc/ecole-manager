@@ -457,7 +457,7 @@ export default function Presences() {
 
       <div style={stickyPageChrome()}>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
@@ -481,7 +481,7 @@ export default function Presences() {
       </div>
 
       {/* Classe select + date en ligne */}
-      <div style={{marginTop:0,marginBottom:16,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+      <div style={{marginTop:0,marginBottom:4,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}

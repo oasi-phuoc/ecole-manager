@@ -70,11 +70,11 @@ export default function Branches() {
   return (
     <div style={s.page}>
       <div style={stickyPageChrome()}>
-      <div style={s.header}>
+      <div style={{...s.header, marginBottom:12}}>
         <h2 style={s.title}>Gestion des branches</h2>
         {isAdmin() && <button style={s.btnAdd} onClick={() => { setShowForm(true); setBrancheEdit(null); setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true}); setErreur(''); }}>+ Ajouter</button>}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0}}>
         <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         <div style={s.toggleGroup}>
           {niveaux.map(n => (
@@ -159,7 +159,7 @@ export default function Branches() {
         </div>
       )}
 
-      <div style={{marginTop:14}}>
+      <div style={{marginTop:4}}>
         <div style={s.tableWrap}>
         <table style={s.table}>
           <thead>

@@ -939,7 +939,7 @@ export default function Classes() {
   if (eleveDetail && detailClasse) return (
     <div style={s.page}>
       <ModalZoom />
-      <div style={s.header}>
+      <div style={{...s.header, marginBottom:12}}>
         <button style={s.btnBack} onClick={() => setEleveDetail(null)}>← Retour classe</button>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
         {eleveDetail.photo ? (
@@ -2042,7 +2042,7 @@ export default function Classes() {
           </div>
         )}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
         <div style={s.toggleGroup}>
           {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
@@ -2092,7 +2092,7 @@ export default function Classes() {
         </div>
       )}
 
-      <div style={{...s.tableWrap, marginTop:15}}>
+      <div style={{...s.tableWrap, marginTop:4}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
