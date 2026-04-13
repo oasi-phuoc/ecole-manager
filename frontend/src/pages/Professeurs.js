@@ -333,7 +333,9 @@ export default function Professeurs({
     ...extra,
   });
 
-  const theadMaskTop = PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP;
+  /** Le masque doit aussi couvrir le gap de 4px entre la zone sticky et le tableau. */
+  const theadMaskTop = PAGE_PAD_TOP + stickyTopH;
+  const theadMaskHeight = TABLE_HEADER_MASK_HEIGHT + TABLE_BELOW_CHROME_GAP;
 
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
@@ -786,7 +788,7 @@ export default function Professeurs({
       )}
 
       <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'visible', background: 'white' }}>
-        <div aria-hidden style={{ ...s.tableHeaderMask, top: theadMaskTop }} />
+        <div aria-hidden style={{ ...s.tableHeaderMask, top: theadMaskTop, height: theadMaskHeight, minHeight: theadMaskHeight }} />
         <table style={s.table}>
           <thead style={s.theadIsolate}>
             <tr style={s.thead}>
