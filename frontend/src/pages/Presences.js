@@ -1,8 +1,8 @@
-import { peutModifierPresences, isAdmin, getUser } from '../utils/permissions';
+import { isAdmin, getUser } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -56,14 +56,12 @@ function initPresences(eleves) {
 
 export default function Presences() {
   const [classes, setClasses] = useState([]);
-  const [classeInfo, setClasseInfo] = useState(null);
   const [eleves, setEleves] = useState([]);
   const [presences, setPresences] = useState({});
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const onglet = searchParams.get('tab') || 'saisie';
-  const setOnglet = (tab) => setSearchParams({ tab });
   const [statistiques, setStatistiques] = useState([]);
   const [valide, setValide] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -72,17 +70,21 @@ export default function Presences() {
   const [apercuMois, setApercuMois] = useState({});
   const [loadingApercu, setLoadingApercu] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importResultat, setImportResultat] = useState(null);
   const [statsDateDebut, setStatsDateDebut] = useState('');
   const [statsDateFin, setStatsDateFin] = useState('');
   const [statsPeriode, setStatsPeriode] = useState('1sem');
-  const navigate = useNavigate();
   const location = useLocation();
   const headers = {};
 
-  useEffect(() => { chargerClasses(); chargerCalendrier(); }, []);
-  useEffect(() => { if (onglet === 'apercu') chargerApercuMois(); }, [onglet]);
+  useEffect(() => {
+    chargerClasses();
+    chargerCalendrier();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
+  }, []);
+  useEffect(() => {
+    if (onglet === 'apercu') chargerApercuMois();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onglet uniquement
+  }, [onglet]);
   useEffect(() => {
     const classeDepuisDashboard = location.state?.classe_id;
     if (classeDepuisDashboard && classes.length > 0) {
@@ -92,12 +94,9 @@ export default function Presences() {
   }, [location.state, classes]);
   useEffect(() => {
     if (classeSelectionnee) {
-      const cl = classes.find(c => String(c.id) === String(classeSelectionnee));
-      setClasseInfo(cl || null);
       chargerEleves();
       chargerClasseHoraires(classeSelectionnee);
     } else {
-      setClasseInfo(null);
       setEleves([]);
       setPresences({});
       setStatistiques([]);
@@ -105,16 +104,19 @@ export default function Presences() {
       setApercuMois({});
       setValide(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recharger élèves / horaires quand classe ou date change
   }, [classeSelectionnee, date]);
 
   useEffect(() => {
     if (classeSelectionnee) chargerStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stats selon période
   }, [classeSelectionnee, statsDateDebut, statsDateFin]);
 
   useEffect(() => {
     if (!classeSelectionnee) return;
     if (onglet === 'apercu') chargerApercuMois();
     if (onglet === 'stats') chargerStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onglet / classe
   }, [classeSelectionnee, onglet]);
 
   const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -125,115 +127,6 @@ export default function Presences() {
     const d = new Date(raw);
     if (isNaN(d)) return raw;
     return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
-  };
-
-  const importerPresencesOASI = async (file) => {
-    if (!classeSelectionnee) { alert('Sélectionnez une classe d\'abord'); return; }
-    setImportLoading(true);
-    setImportResultat(null);
-    try {
-      const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-      const header = rows[0];
-      const idxRef = header.indexOf('REF');
-      const idxDate = header.indexOf('PRESENCE_DATE');
-      const idxPeriode = header.indexOf('PRESENCE_PERIODE');
-      const idxType = header.indexOf('PRESENCE_TYPE');
-
-      if (idxRef < 0 || idxDate < 0 || idxType < 0) {
-        alert('Format de fichier incorrect — colonnes REF, PRESENCE_DATE ou PRESENCE_TYPE manquantes');
-        setImportLoading(false);
-        return;
-      }
-
-      // Charger les élèves OASI de la classe pour matcher par REF
-      const elevesRes = await axios.get(API + '/eleves/oasi?classe_id=' + classeSelectionnee, { headers });
-      const elevesOASI = elevesRes.data;
-      const refToId = {};
-      elevesOASI.forEach(e => { if (e.oasi_ref) refToId[String(e.oasi_ref)] = e.id; });
-
-      const parDate = {};
-      let nbLignes = 0, nbIgnorees = 0;
-
-      for (let r = 1; r < rows.length; r++) {
-        const row = rows[r];
-        if (!row || row[idxRef] === undefined || row[idxRef] === null || row[idxRef] === '') continue;
-
-        const ref = String(row[idxRef]).trim();
-        const eleveId = refToId[ref];
-        if (!eleveId) { nbIgnorees++; continue; }
-
-        const dateRaw = row[idxDate];
-        if (!dateRaw) continue;
-
-        // Convertir DD.MM.YYYY → YYYY-MM-DD (ou numérique Excel)
-        let dateISO;
-        if (typeof dateRaw === 'string' && dateRaw.includes('.')) {
-          const parts = dateRaw.split('.');
-          dateISO = parts[2] + '-' + parts[1].padStart(2,'0') + '-' + parts[0].padStart(2,'0');
-        } else if (typeof dateRaw === 'number') {
-          const d = XLSX.SSF.parse_date_code(dateRaw);
-          dateISO = d.y + '-' + String(d.m).padStart(2,'0') + '-' + String(d.d).padStart(2,'0');
-        } else { nbIgnorees++; continue; }
-
-        const periodeRaw = idxPeriode >= 0 ? row[idxPeriode] : null;
-        const type = String(row[idxType] || '').trim();
-
-        // Déterminer demi-journée : colonne PRESENCE_PERIODE ou horaire classe
-        let isMatin = true;
-        if (periodeRaw && String(periodeRaw).trim()) {
-          isMatin = String(periodeRaw).toLowerCase().includes('matin');
-        } else {
-          const jourIdx = new Date(dateISO + 'T12:00:00').getDay();
-          const nomJour = JOURS_FR[jourIdx];
-          const h = classeHoraires.find(h => h.jour === nomJour);
-          isMatin = !h || h.periode === 'Matin';
-        }
-
-        const ps = isMatin ? 1 : 5; // periodeStart
-
-        let p = {};
-        if (type.startsWith('01')) {
-          for (let i = ps; i < ps + 4; i++) p['p'+i] = 'P';
-        } else if (type.startsWith('02')) {
-          p['p'+ps] = 'R';
-          for (let i = ps+1; i < ps+4; i++) p['p'+i] = 'P';
-        } else if (type.startsWith('03')) {
-          for (let i = ps; i < ps+4; i++) p['p'+i] = 'A';
-        } else if (type.startsWith('04')) {
-          for (let i = ps; i < ps+4; i++) p['p'+i] = 'E';
-        } else if (type.startsWith('05')) {
-          for (let i = ps; i < ps+4; i++) p['p'+i] = 'C';
-        } else { nbIgnorees++; continue; }
-
-        if (!parDate[dateISO]) parDate[dateISO] = {};
-        if (!parDate[dateISO][eleveId]) {
-          parDate[dateISO][eleveId] = { p1:'',p2:'',p3:'',p4:'',p5:'',p6:'',p7:'',p8:'',remarque:'',valide:true };
-        }
-        Object.assign(parDate[dateISO][eleveId], p);
-        nbLignes++;
-      }
-
-      // Sauvegarder chaque date
-      const dates = Object.keys(parDate);
-      for (const dateISO of dates) {
-        const data = Object.entries(parDate[dateISO]).map(([eleve_id, vals]) => ({
-          eleve_id: Number(eleve_id), ...vals, valide: true
-        }));
-        await axios.post(API + '/presences', { presences: data, date: dateISO, classe_id: classeSelectionnee }, { headers });
-      }
-
-      setImportResultat({ ok: true, nbLignes, nbDates: dates.length, nbIgnorees });
-      chargerStats();
-      if (onglet === 'apercu') chargerApercuMois();
-    } catch(err) {
-      console.error(err);
-      setImportResultat({ ok: false, erreur: err.response?.data?.message || err.message });
-    }
-    setImportLoading(false);
   };
 
   const exporterLORA = async () => {
@@ -380,7 +273,7 @@ export default function Presences() {
   const chargerClasseHoraires = async (classe_id) => {
     try {
       const res = await axios.get(API + '/planning/classe-horaires', { headers });
-      setClasseHoraires(res.data.filter(h => h.classe_id == classe_id));
+      setClasseHoraires(res.data.filter(h => String(h.classe_id) === String(classe_id)));
     } catch (err) { console.error(err); }
   };
 
@@ -454,7 +347,6 @@ export default function Presences() {
         const next = { ...prev };
         eleves.forEach(e => {
           const row = { ...next[e.id] };
-          const horaire = classeInfo?.horaire || 'complet';
           PERIODES.forEach(i => {
             if (!isBloque(i) && !row['p' + i]) row['p' + i] = 'P';
           });
@@ -588,20 +480,6 @@ export default function Presences() {
         </div>
       </div>
 
-      {/* Résultat import */}
-      {importResultat && (
-        <div style={{marginBottom:10,padding:'10px 16px',borderRadius:9,fontSize:13,fontWeight:600,
-          background:importResultat.ok?'#ecfdf5':'#fef2f2',
-          color:importResultat.ok?'#059669':'#dc2626',
-          border:'1px solid '+(importResultat.ok?'#a7f3d0':'#fecaca'),
-          display:'flex',alignItems:'center',gap:10}}>
-          {importResultat.ok
-            ? `Import réussi — ${importResultat.nbLignes} lignes importées sur ${importResultat.nbDates} jour(s)${importResultat.nbIgnorees>0?' · '+importResultat.nbIgnorees+' ligne(s) ignorées':''}`
-            : `Erreur import : ${importResultat.erreur}`}
-          <button onClick={() => setImportResultat(null)} style={{marginLeft:'auto',background:'none',border:'none',cursor:'pointer',fontSize:16,color:'inherit',opacity:0.6}}>✕</button>
-        </div>
-      )}
-
       {/* Classe select + date en ligne */}
       <div style={{marginTop:8,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
@@ -653,7 +531,7 @@ export default function Presences() {
       </div>
 
       {onglet === 'saisie' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'visible'}}>
+        <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
 
           {/* Alerte weekend */}
           {isWeekend() && (
@@ -700,12 +578,12 @@ export default function Presences() {
                 </colgroup>
                 <thead>
                   <tr style={{background:'#f8fafc'}}>
-                    <th style={{...s.th,borderRadius:'8px 0 0 8px',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>NOM</th>
-                    <th style={{...s.th,position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,fontSize:13,textAlign:'center',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
-                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',position:'sticky',top:0,zIndex:5,boxShadow:'0 1px 0 #e2e8f0'}} colSpan={4}>Matin</th>
-                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',position:'sticky',top:0,zIndex:5,boxShadow:'0 1px 0 #e2e8f0'}} colSpan={4}>Après-midi</th>
-                    <th style={{...s.th,borderRadius:'0 8px 8px 0',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'0 1px 0 #e2e8f0'}} rowSpan={2}>Remarques</th>
+                    <th style={{...s.th,borderRadius:'8px 0 0 8px',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>NOM</th>
+                    <th style={{...s.th,position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Prénom</th>
+                    <th style={{...s.th,fontSize:13,textAlign:'center',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',position:'sticky',top:0,zIndex:5,boxShadow:'none'}} colSpan={4}>Matin</th>
+                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',position:'sticky',top:0,zIndex:5,boxShadow:'none'}} colSpan={4}>Après-midi</th>
+                    <th style={{...s.th,borderRadius:'0 8px 8px 0',position:'sticky',top:0,zIndex:6,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Remarques</th>
                   </tr>
                   <tr style={{background:'#f8fafc'}}>
                     {PERIODES.map(i => (
@@ -717,7 +595,7 @@ export default function Presences() {
                         background: isBloque(i) ? '#f1f5f9' : i<=4 ? '#eff6ff' : '#fffbeb',
                         color: isBloque(i) ? '#cbd5e1' : i<=4 ? '#3b82f6' : '#f59e0b',
                         fontSize:11,
-                        boxShadow: '0 1px 0 #e2e8f0',
+                        boxShadow: 'none',
                       }}>P{i<=4 ? i : i-4}</th>
                     ))}
                   </tr>
@@ -779,7 +657,7 @@ export default function Presences() {
       )}
 
       {onglet === 'apercu' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9',overflow:'visible'}}>
+        <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
           <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
             <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
               Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
@@ -834,21 +712,21 @@ export default function Presences() {
                   </colgroup>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'2px 0 0 #e2e8f0, 0 1px 0 #e2e8f0'}}>NOM</th>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'2px solid #e2e8f0',position:'sticky',left:COL_NOM_WIDTH,top:0,background:'#f8fafc',zIndex:4,whiteSpace:'nowrap',boxShadow:'2px 0 0 #e2e8f0, 0 1px 0 #e2e8f0'}}>Prénom</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'none'}}>NOM</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:COL_NOM_WIDTH,top:0,background:'#f8fafc',zIndex:4,whiteSpace:'nowrap',boxShadow:'none'}}>Prénom</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
                         const jourIdx = new Date(annee+'-'+String(moisNum).padStart(2,'0')+'-'+String(j).padStart(2,'0')+'T12:00:00').getDay();
                         const bg = wkd ? '#e2e8f0' : vac ? '#fef3c7' : '#f8fafc';
                         return (
-                          <th key={j} style={{padding:'4px 2px',textAlign:'center',borderBottom:'2px solid #e2e8f0',minWidth:26,
+                          <th key={j} style={{padding:'4px 2px',textAlign:'center',borderBottom:'none',minWidth:26,
                             background: bg,
                             color:wkd?'#94a3b8':vac?'#92400e':'#475569',
                             position: 'sticky',
                             top: 0,
                             zIndex: 2,
-                            boxShadow: '0 1px 0 #e2e8f0',
+                            boxShadow: 'none',
                           }}>
                             <div style={{fontWeight:700,fontSize:11}}>{j}</div>
                             <div style={{fontSize:9,opacity:0.7}}>{NOM_JOURS[jourIdx]}</div>
@@ -860,8 +738,8 @@ export default function Presences() {
                   <tbody>
                     {apercuMois.eleves.map((e, ri) => (
                       <tr key={e.id} style={{background:ri%2===0?'white':'#fafafa'}}>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:3,whiteSpace:'nowrap',boxShadow:'2px 0 0 #f1f5f9'}}>{e.nom}</td>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap',boxShadow:'2px 0 0 #f1f5f9'}}>{e.prenom}</td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:3,whiteSpace:'nowrap',boxShadow:'none'}}>{e.nom}</td>
+                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap',boxShadow:'none'}}>{e.prenom}</td>
                         {jours.map(j => {
                           const wkd = isWkd(j);
                           const vac = isVac(j);
@@ -894,7 +772,7 @@ export default function Presences() {
 
       {onglet === 'stats' && (
         <div>
-          <div style={{background:'white',borderRadius:14,boxShadow:'0 1px 4px rgba(0,0,0,0.07)',border:'1px solid #f1f5f9'}}>
+          <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <colgroup>
               <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
@@ -914,7 +792,7 @@ export default function Presences() {
                     zIndex: 2,
                     borderTopLeftRadius: hi === 0 ? 12 : 0,
                     borderTopRightRadius: hi === 9 ? 12 : 0,
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.08)',
+                    boxShadow: 'none',
                   }}>{h}</th>
                 ))}
               </tr>
@@ -961,6 +839,6 @@ const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
-  th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'1px solid #e2e8f0',whiteSpace:'nowrap'},
+  th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'none',whiteSpace:'nowrap'},
   td:{padding:'8px',fontSize:13,color:'#374151'},
 };

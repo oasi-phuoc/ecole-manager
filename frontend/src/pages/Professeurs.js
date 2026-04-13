@@ -1,15 +1,15 @@
 import { isAdmin, getUser } from '../utils/permissions';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import axios from 'axios';
-import { formatAvsInput, isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
+import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
-import { useNavigate } from 'react-router-dom';
-
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
+/** Même valeur que `s.page` — le sticky doit utiliser ce décalage pour ne pas « remonter » sous le padding au défilement. */
+const PAGE_PAD_TOP = 28;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -69,7 +69,6 @@ export default function Professeurs({
   const [profDocs, setProfDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [uploadForm, setUploadForm] = useState({ type: 'CV' });
-  const navigate = useNavigate();
   const apiUrl = API + apiBase;
 
   const ouvrirDocuments = async (prof) => {
@@ -172,12 +171,14 @@ export default function Professeurs({
     chargerProfs();
     axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
     axios.get(API + '/donnees/lieux-travail').then(r => setLieuxTravailDB(r.data || [])).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
   useEffect(() => {
     if (!showForm) return;
     if (hidePreferences) return;
     const niveaux = (form.niveau_prefere || '').split(',').filter(Boolean);
     chargerBranchesNiveaux(niveaux);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- déclenché par préférences formulaire
   }, [form.niveau_prefere, showForm, hidePreferences]);
 
   const chargerProfs = async () => {
@@ -301,13 +302,13 @@ export default function Professeurs({
     });
   }, [branchesDisponibles, showForm, hidePreferences]);
 
-  const stickyToolbarRef = useRef(null);
-  const [stickyToolbarH, setStickyToolbarH] = useState(120);
+  const stickyTopRef = useRef(null);
+  const [stickyTopH, setStickyTopH] = useState(120);
 
   useLayoutEffect(() => {
-    const el = stickyToolbarRef.current;
+    const el = stickyTopRef.current;
     if (!el) return;
-    const measure = () => setStickyToolbarH(el.offsetHeight);
+    const measure = () => setStickyTopH(el.offsetHeight);
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     if (ro) ro.observe(el);
@@ -316,41 +317,58 @@ export default function Professeurs({
       if (ro) ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [titre]);
+  }, [titre, showInactif]);
 
-  const thSticky = (extra = {}) => ({ ...s.th, top: stickyToolbarH, ...extra });
+  /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
+  const thSticky = (extra = {}) => ({
+    ...s.th,
+    top: PAGE_PAD_TOP + stickyTopH,
+    zIndex: 38,
+    boxShadow: 'none',
+    ...extra,
+  });
+
+  const barreFiltresListe = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
+      <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
+      <button
+        type="button"
+        onClick={() => setShowInactif(v => !v)}
+        style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showInactif ? '#6366f1' : '#e2e8f0'), background: showInactif ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showInactif ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+        {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
+      </button>
+    </div>
+  );
+
+  const entetePageListe = (
+    <>
+      <div style={{ ...s.header, marginBottom: 12 }}>
+        <h2 style={s.title}>{titre}</h2>
+        {isAdmin() && (
+          <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
+            <button type="button" style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>
+          </div>
+        )}
+      </div>
+      {barreFiltresListe}
+    </>
+  );
 
   return (
     <div style={s.page}>
       <div
-        ref={stickyToolbarRef}
+        ref={stickyTopRef}
         style={{
           position: 'sticky',
-          top: 0,
-          zIndex: 30,
+          top: PAGE_PAD_TOP,
+          zIndex: 40,
           background: '#f8fafc',
-          paddingBottom: 10,
-          marginBottom: 6,
-          boxShadow: '0 1px 0 rgba(148, 163, 184, 0.35)',
+          paddingBottom: 12,
+          marginBottom: 0,
+          boxShadow: 'none',
         }}
       >
-        <div style={{ ...s.header, marginBottom: 12 }}>
-          <h2 style={s.title}>{titre}</h2>
-          {isAdmin() && (
-            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
-              <button type="button" style={s.btnAdd} onClick={() => { setShowForm(true); setProfEdit(null); resetForm(); }}>+ Ajouter</button>
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
-          <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
-          <button
-            type="button"
-            onClick={() => setShowInactif(v => !v)}
-            style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showInactif ? '#6366f1' : '#e2e8f0'), background: showInactif ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showInactif ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-            {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
-          </button>
-        </div>
+        {entetePageListe}
       </div>
 
       {showForm && (
@@ -746,7 +764,7 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: 4 }}>
+      <div style={{ ...s.tableWrap, marginTop: 4, overflow: 'visible', background: 'white' }}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -823,7 +841,7 @@ export default function Professeurs({
 }
 
 const s = {
-  page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
+  page:{padding:`${PAGE_PAD_TOP}px 32px`,background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
@@ -855,10 +873,10 @@ const s = {
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.15s, color 0.15s' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabContent: { background: 'white', border: 'none', borderRadius: '0 0 12px 12px', padding: 14 },
-  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'0 1px 0 rgba(0,0,0,0.12)'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},

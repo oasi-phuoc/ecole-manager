@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -8,10 +7,12 @@ const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onre
 export default function Statistiques() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const headers = {};
 
-  useEffect(() => { chargerStats(); }, []);
+  useEffect(() => {
+    chargerStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
+  }, []);
 
   const chargerStats = async () => {
     try {

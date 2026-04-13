@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { T, colors } from '../styles/theme';
 import { stickyPageChrome } from '../styles/pageShell';
-import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
+import { getSessionUser, fetchSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
-
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ classes: 0, eleves: 0 });
-  const [accesProfs, setAccesProfs] = useState({});
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const [agendaPerso, setAgendaPerso] = useState([]);
   const [observationDetail, setObservationDetail] = useState(null);
@@ -42,13 +38,6 @@ export default function Dashboard() {
     }
   };
 
-  const chargerAccesProfs = async () => {
-    try {
-      const res = await axios.get(API + '/parametres/acces-profs');
-      setAccesProfs(res.data || {});
-    } catch {}
-  };
-
   useEffect(() => {
     const chargerUtilisateurEtStats = async () => {
       const enMemoire = getSessionUser();
@@ -58,10 +47,10 @@ export default function Dashboard() {
         setUser(u || null);
       } catch {}
       chargerStats();
-      chargerAccesProfs();
       chargerMemo();
     };
     chargerUtilisateurEtStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- montage : profil + stats + mémo une fois
   }, []);
 
   const chargerStats = async () => {
@@ -85,45 +74,7 @@ export default function Dashboard() {
     } catch (err) { console.error(err); }
   };
 
-  const deconnexion = async () => {
-    try { await axios.post(API + '/auth/logout'); } catch {}
-    clearSessionUser();
-    navigate('/login', { replace: true });
-  };
-
   const isAdmin = user?.role === 'admin';
-
-  const roleKey = user?.role === 'prof' ? 'professeurs'
-                : user?.role === 'employe_admin' ? 'employes_admin'
-                : user?.role === 'responsable' ? 'responsables'
-                : null;
-
-  const modules = [
-    { label: 'Employés',         path: '/employes-administratifs', color: '#0ea5e9', bg: '#e0f2fe', adminOnly: true },
-    { label: 'Professeurs',      path: '/professeurs',             color: '#6366f1', bg: '#e0e7ff', adminOnly: false, accentKey: 'professeurs' },
-    { label: 'Élèves',           path: '/eleves',                  color: '#f59e0b', bg: '#fef3c7', adminOnly: false, accentKey: 'eleves' },
-    { label: 'Branches',         path: '/branches',                color: '#8b5cf6', bg: '#ede9fe', adminOnly: false, accentKey: 'branches' },
-    { label: 'Classes',          path: '/classes',                 color: '#10b981', bg: '#d1fae5', adminOnly: false, accentKey: 'classes' },
-    { label: 'Plannings',        path: '/emploi-du-temps',         color: '#ef4444', bg: '#fee2e2', adminOnly: false, accentKey: 'emploi_du_temps' },
-    { label: 'Présences',        path: '/presences',               color: '#06b6d4', bg: '#cffafe', adminOnly: false, accentKey: 'presences' },
-    { label: 'Notes',            path: '/notes',                   color: '#ec4899', bg: '#fce7f3', adminOnly: false, accentKey: 'notes' },
-
-    { label: 'TCF',              path: '/tcf',                     color: '#0ea5e9', bg: '#e0f2fe', adminOnly: false, accentKey: 'tcf' },
-    { label: 'Calendrier',       path: '/calendrier',              color: '#14b8a6', bg: '#ccfbf1', adminOnly: false, accentKey: 'calendrier' },
-    { label: 'Comptabilité',     path: '/comptabilite',            color: '#84cc16', bg: '#ecfccb', adminOnly: false, accentKey: 'comptabilite' },
-    { label: 'Documents',        path: '/documents-administratifs',color: '#7c3aed', bg: '#ede9fe', adminOnly: false, accentKey: 'documents' },
-    { label: 'Statistiques',     path: '/statistiques',            color: '#f97316', bg: '#ffedd5', adminOnly: false, accentKey: 'statistiques' },
-    { label: 'Enclassement',     path: '/enclassement',            color: '#0891b2', bg: '#e0f7fa', adminOnly: false, accentKey: 'enclassement' },
-    { label: 'Sorties scolaires',path: '/sorties-scolaires',       color: '#16a34a', bg: '#dcfce7', adminOnly: false, accentKey: 'sorties_scolaires' },
-    { label: 'Paramètres',       path: '/parametres',              color: '#64748b', bg: '#f1f5f9', adminOnly: false },
-  ].filter(m => {
-    if (isAdmin) return true;
-    if (m.adminOnly) return false;
-    if (!m.accentKey) return true;
-    const roleAcces = roleKey ? (accesProfs[roleKey] || {}) : {};
-    const val = roleAcces[m.accentKey];
-    return val !== undefined ? val : (ACCES_DEFAUT_PROF[m.accentKey] !== false);
-  });
 
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';

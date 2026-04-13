@@ -2,7 +2,6 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import { stickyPageChrome } from '../styles/pageShell';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -15,12 +14,12 @@ export default function Branches() {
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [niveauxDB, setNiveauxDB] = useState([]);
-  const navigate = useNavigate();
   const headers = {};
 
   useEffect(() => {
     chargerBranches();
     axios.get(API + '/donnees/niveaux', { headers }).then(r => setNiveauxDB(r.data || [])).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
   const chargerBranches = async () => {
@@ -238,7 +237,7 @@ const s = {
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 16px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
-  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9',overflow:'hidden'},
+  tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'white'},
   th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',background:'#6366f1',borderBottom:'1px solid rgba(0,0,0,0.06)'},
   tr:{},

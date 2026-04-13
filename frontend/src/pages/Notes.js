@@ -46,6 +46,22 @@ const parseMatieresDetail = (row) => {
   return [];
 };
 
+/** Une entrée par matière (évite les doublons si le prof a plusieurs créneaux pour la même branche). */
+const parseMatieresDetailDedup = (row) => {
+  const raw = parseMatieresDetail(row);
+  const byId = new Map();
+  for (const x of raw) {
+    if (x == null || x.matiere_id == null) continue;
+    const id = String(x.matiere_id);
+    if (byId.has(id)) continue;
+    const label = String(x.label || '').trim();
+    byId.set(id, { matiere_id: x.matiere_id, label: label || id });
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' })
+  );
+};
+
 const sortMatieres = (matieres) => [...matieres].sort((a, b) => {
   const pri = (n) => n === 'Français' ? 0 : n === 'Mathématiques' ? 1 : 2;
   const pa = pri(a.matiere_nom), pb = pri(b.matiere_nom);
@@ -676,7 +692,7 @@ export default function Notes() {
           <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
         </div>
         {/* Sous-onglets Vue générale */}
-        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 8, boxShadow: '0 1px 0 #e2e8f0' }}>
+        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 8, boxShadow: 'none' }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
@@ -1317,7 +1333,7 @@ export default function Notes() {
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
-              const disabled = (sem.id === '2' && !sem1Bloque) || (sem.id === '1' && sem1Bloque && !isAdmin());
+              const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
               return (
                 <button key={sem.id} disabled={disabled} onClick={async () => { if (criteresModifies && criteresValides) await sauvegarderTousCriteres(); setBulletinSemestre(sem.id); chargerBulletinId(classeSelectionnee, sem.id); }}
                   style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinSemestre === sem.id ? '#6366f1' : 'transparent', color: bulletinSemestre === sem.id ? 'white' : '#6d28d9', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: bulletinSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: disabled ? 0.4 : 1 }}>
@@ -1886,7 +1902,7 @@ export default function Notes() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
-              const disabled = (sem.id === '2' && !sem1Bloque) || (sem.id === '1' && sem1Bloque && !isAdmin());
+              const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
               return (
                 <button key={sem.id} disabled={disabled}
                   onClick={async () => { setEvalSemestre(sem.id); await chargerEvaluationsId(classeSelectionnee, null, sem.id); }}
@@ -2006,16 +2022,13 @@ export default function Notes() {
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
                 const titulaires = respClasse.filter(r => r.est_titulaire);
                 const autresProfs = respClasse.filter(r => !r.est_titulaire);
-                const pastillesBranche = (r) => (
-                  <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '6px 10px' }}>
-                    {parseMatieresDetail(r).map(item => (
-                      <span key={item.matiere_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ color: '#6366f1' }}>{item.label}</span>
-                        <span style={{ background: '#e0e7ff', color: '#4338ca', borderRadius: 99, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>{nbEvalMatiereProf(cl.id, r.prof_id, item.matiere_id)}</span>
-                      </span>
-                    ))}
-                  </div>
-                );
+                const pastillesBranche = (r) =>
+                  parseMatieresDetailDedup(r).map(item => (
+                    <span key={item.matiere_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#6366f1', fontWeight: 600 }}>{item.label}</span>
+                      <span style={{ background: '#e0e7ff', color: '#4338ca', borderRadius: 99, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>{nbEvalMatiereProf(cl.id, r.prof_id, item.matiere_id)}</span>
+                    </span>
+                  ));
                 return (
                   <tr key={cl.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
@@ -2029,20 +2042,20 @@ export default function Notes() {
                       {respClasse.length === 0 ? <span style={{ color: '#94a3b8' }}>—</span> : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {titulaires.map(r => (
-                            <div key={r.prof_id} style={{ fontSize: 12, color: '#1e293b' }}>
-                              <div>
+                            <div key={r.prof_id} style={{ fontSize: 12, color: '#1e293b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 }}>
+                              <span style={{ whiteSpace: 'nowrap' }}>
                                 <span style={{ fontWeight: 600 }}>Titulaire :</span>{' '}
                                 <span style={{ fontWeight: 400 }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</span>
-                              </div>
-                              {parseMatieresDetail(r).length ? pastillesBranche(r) : null}
+                              </span>
+                              {parseMatieresDetailDedup(r).length ? pastillesBranche(r) : null}
                             </div>
                           ))}
                           {autresProfs.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 14, rowGap: 6 }}>
                               {autresProfs.map(r => (
-                                <div key={r.prof_id} style={{ fontSize: 12, color: '#475569', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <div key={r.prof_id} style={{ fontSize: 12, color: '#475569', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 }}>
                                   <b style={{ whiteSpace: 'nowrap' }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</b>
-                                  {parseMatieresDetail(r).length ? pastillesBranche(r) : null}
+                                  {parseMatieresDetailDedup(r).length ? pastillesBranche(r) : null}
                                 </div>
                               ))}
                             </div>
@@ -2102,7 +2115,7 @@ const s = {
   btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },
-  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: '0 1px 0 #e2e8f0' },
+  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
   tr: { borderBottom: 'none' },
   td: { padding: '5px 14px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },

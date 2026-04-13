@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 import { stickyPageChrome } from '../styles/pageShell';
@@ -52,7 +51,6 @@ export default function Bulletins() {
   const [chargement, setChargement] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
-  const navigate = useNavigate();
   const headers = {};
   const currentUser = getSessionUser() || {};
 
@@ -61,7 +59,11 @@ export default function Bulletins() {
     setTimeout(() => setToast({ message: '', type: 'success' }), 2200);
   };
 
-  useEffect(() => { chargerClasses(); chargerParametresEcole(); }, []);
+  useEffect(() => {
+    chargerClasses();
+    chargerParametresEcole();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
+  }, []);
 
   const chargerClasses = async () => {
     try {

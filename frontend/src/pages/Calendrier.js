@@ -1,19 +1,12 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-const VACANCES_LISTE = [
-  "Vacances d'automne","La Toussaint","Immaculée Conception",
-  "Vacances de Noël","Vacances d'hiver","St-Joseph",
-  "Vacances de Pâques","Fête du travail","Ascension","Pentecôte","Fête-Dieu"
-];
-const COULEURS_VACANCES = '#f59e0b';
 
 export default function Calendrier() {
   const [evenements, setEvenements] = useState([]);
@@ -41,10 +34,13 @@ export default function Calendrier() {
   const [profEventForm, setProfEventForm] = useState({ date: '', titre: '', type: 'Devoir', description: '' });
   const [showProfForm, setShowProfForm] = useState(false);
   const [profEventEditId, setProfEventEditId] = useState(null);
-  const navigate = useNavigate();
   const headers = {};
 
-  useEffect(() => { chargerTout(); chargerCalendrierProf(); }, []);
+  useEffect(() => {
+    chargerTout();
+    chargerCalendrierProf();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
+  }, []);
 
   const chargerTout = async () => {
     try {

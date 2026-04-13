@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
@@ -7,7 +6,6 @@ import { stickyPageChrome } from '../styles/pageShell';
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function DocumentsAdministratifs() {
-  const navigate = useNavigate();
   const headers = {};
   const currentUser = getSessionUser() || {};
   const isAdmin = currentUser?.role === 'admin';
@@ -33,6 +31,7 @@ export default function DocumentsAdministratifs() {
   useEffect(() => {
     chargerDocuments();
     axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
   const chargerDocuments = async () => {

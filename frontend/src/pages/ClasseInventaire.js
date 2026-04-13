@@ -107,12 +107,14 @@ export default function ClasseInventaire() {
 
   return (
     <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.btnBack} onClick={() => navigate('/classes')}>← Retour</button>
-        <h2 style={s.title}>📦 {titreClasse}</h2>
-      </div>
+      <div style={stickyPageChrome()}>
+        <div style={s.header}>
+          <button style={s.btnBack} onClick={() => navigate('/classes')}>← Retour</button>
+          <h2 style={s.title}>📦 {titreClasse}</h2>
+        </div>
 
-      {msg && <div style={s.msg}>{msg}</div>}
+        {msg && <div style={s.msg}>{msg}</div>}
+      </div>
 
       <div style={s.grid}>
         <div style={s.card}>
@@ -134,7 +136,7 @@ export default function ClasseInventaire() {
                 {branches.map(b => (
                   <tr key={b.id} style={brancheActive?.id === b.id ? s.trActive : s.tr}>
                     <td style={s.td}>
-                      <div style={{ fontWeight: 700 }}>{b.nom}</div>
+                      <div style={{ fontWeight: 700 }}>{(b.designation_courte || b.code || b.nom || '—').trim()}</div>
                       <div style={{ fontSize: 11, color: '#94a3b8' }}>{b.niveau || '—'}</div>
                     </td>
                     <td style={s.td}>
@@ -150,7 +152,7 @@ export default function ClasseInventaire() {
 
         <div style={s.card}>
           <div style={{ ...s.cardTitle, marginBottom: 12 }}>
-            {brancheActive ? 'Inventaire de la branche: ' + brancheActive.nom : 'Inventaire de la branche'}
+            {brancheActive ? 'Inventaire de la branche: ' + ((brancheActive.designation_courte || brancheActive.code || brancheActive.nom || '').trim()) : 'Inventaire de la branche'}
           </div>
 
           {canEdit && brancheActive && (
@@ -211,10 +213,10 @@ const s = {
   grid: { display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(520px, 2fr)', gap: 16, alignItems: 'start' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   cardTitle: { fontSize: 14, fontWeight: 800, color: '#0f172a' },
-  tableWrap: { borderRadius: 10, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  tableWrap: { borderRadius: 10, overflow: 'hidden', background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#6366f1' },
-  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: '0 1px 0 rgba(0,0,0,0.08)' },
+  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: 'none' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   trActive: { borderBottom: '1px solid #f1f5f9', background: '#eef2ff' },
   td: { padding: '10px 12px', fontSize: 13, color: '#334155' },

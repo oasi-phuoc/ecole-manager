@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { isAdmin } from '../utils/permissions';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
@@ -473,7 +473,30 @@ export default function Eleves() {
     });
   };
 
-  const STICKY_BELOW_TOOLBAR = 132;
+  const elevesToolbarRef = useRef(null);
+  const [elevesToolbarH, setElevesToolbarH] = useState(140);
+
+  useLayoutEffect(() => {
+    const el = elevesToolbarRef.current;
+    if (!el) return;
+    const measure = () => setElevesToolbarH(el.offsetHeight);
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  const thSticky = (extra = {}) => ({
+    position: 'sticky',
+    top: elevesToolbarH,
+    zIndex: 35,
+    boxShadow: 'none',
+    ...extra,
+  });
 
   return (
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
@@ -492,7 +515,7 @@ export default function Eleves() {
       )}
 
       {/* Header + filtres — restent visibles au défilement */}
-      <div style={{position:'sticky',top:0,zIndex:40,background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'0 1px 0 #e2e8f0'}}>
+      <div ref={elevesToolbarRef} style={{position:'sticky',top:0,zIndex:40,background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'none'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
@@ -1038,19 +1061,19 @@ export default function Eleves() {
 
       {/* Tableau */}
       <div style={{marginTop:14}}>
-        <div style={{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
+        <div style={{borderRadius:12,overflow:'hidden',background:'white'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3,borderTopLeftRadius:12}}>Photo</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Nom</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Prénom</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Nationalité</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Classe</th>
-              <th style={{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}>Naissance</th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}></th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:48,minWidth:48,maxWidth:48,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3}}></th>
-              <th style={{padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86,background:'#6366f1',position:'sticky',top:STICKY_BELOW_TOOLBAR,zIndex:3,borderTopRightRadius:12}}></th>
+              <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62,background:'#6366f1',borderTopLeftRadius:12})}>Photo</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nom</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Prénom</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nationalité</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Classe</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Naissance</th>
+              <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96,background:'#6366f1'})}></th>
+              <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:48,minWidth:48,maxWidth:48,background:'#6366f1'})}></th>
+              <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:86,minWidth:86,maxWidth:86,background:'#6366f1',borderTopRightRadius:12})}></th>
             </tr>
           </thead>
           <tbody>

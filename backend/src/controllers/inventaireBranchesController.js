@@ -11,11 +11,14 @@ const getBranchesClasse = async (req, res) => {
 
     let branches = [];
     if (classe.niveau) {
-      const r = await pool.query('SELECT id, nom, code, niveau FROM matieres WHERE LOWER(niveau)=LOWER($1) ORDER BY nom', [classe.niveau]);
+      const r = await pool.query(
+        'SELECT id, nom, code, niveau, designation_courte FROM matieres WHERE LOWER(niveau)=LOWER($1) ORDER BY nom',
+        [classe.niveau]
+      );
       branches = r.rows;
     }
     if (branches.length === 0) {
-      const r = await pool.query('SELECT id, nom, code, niveau FROM matieres ORDER BY nom');
+      const r = await pool.query('SELECT id, nom, code, niveau, designation_courte FROM matieres ORDER BY nom');
       branches = r.rows;
     }
 

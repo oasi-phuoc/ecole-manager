@@ -1898,7 +1898,13 @@ export default function Classes() {
               <input style={s.tabSearch} placeholder="Rechercher un document..." value={rechercheInventaire} onChange={e => setRechercheInventaire(e.target.value)} />
               <div style={s.toggleGroup}>
                 {branchesInventaire.map(b => (
-                  <button key={b.id} style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}} onClick={() => setBrancheInventaireActive(b)}>
+                  <button
+                    key={b.id}
+                    type="button"
+                    title={b.nom ? String(b.nom).trim() : undefined}
+                    style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}}
+                    onClick={() => setBrancheInventaireActive(b)}
+                  >
                     {(b.designation_courte || b.code || b.nom || '').trim()}
                   </button>
                 ))}
@@ -2230,10 +2236,10 @@ const s = {
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24,paddingTop:20,borderTop:'1px solid #f1f5f9'},
   btnCancel:{padding:'9px 18px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
   btnSave:{padding:'9px 20px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
-  tableWrap:{borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'},
+  tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:2,boxShadow:'0 1px 0 rgba(0,0,0,0.08)'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:2,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},

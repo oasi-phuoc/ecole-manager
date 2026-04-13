@@ -13,6 +13,6 @@ export function stickyPageChrome(background = PAGE_BG_DEFAULT) {
     background,
     paddingBottom: 12,
     marginBottom: 8,
-    boxShadow: '0 1px 0 #e2e8f0',
+    boxShadow: 'none',
   };
 }
