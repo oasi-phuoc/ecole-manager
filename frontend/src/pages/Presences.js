@@ -481,7 +481,7 @@ export default function Presences() {
       </div>
 
       {/* Classe select + date en ligne */}
-      <div style={{marginTop:8,marginBottom:15,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+      <div style={{marginTop:0,marginBottom:16,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
         <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}

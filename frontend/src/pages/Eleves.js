@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { isAdmin } from '../utils/permissions';
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
@@ -473,27 +473,10 @@ export default function Eleves() {
     });
   };
 
-  const elevesToolbarRef = useRef(null);
-  const [elevesToolbarH, setElevesToolbarH] = useState(140);
-
-  useLayoutEffect(() => {
-    const el = elevesToolbarRef.current;
-    if (!el) return;
-    const measure = () => setElevesToolbarH(el.offsetHeight);
-    measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    if (ro) ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => {
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, []);
-
   const thSticky = (extra = {}) => ({
-    position: 'sticky',
-    top: elevesToolbarH,
-    zIndex: 35,
+    position: 'static',
+    top: 'auto',
+    zIndex: 'auto',
     boxShadow: 'none',
     ...extra,
   });
@@ -515,7 +498,7 @@ export default function Eleves() {
       )}
 
       {/* Header + filtres — restent visibles au défilement */}
-      <div ref={elevesToolbarRef} style={{position:'sticky',top:0,zIndex:40,background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'none'}}>
+      <div style={{position:'relative',background:'#f8fafc',paddingBottom:12,marginBottom:12,boxShadow:'none'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
