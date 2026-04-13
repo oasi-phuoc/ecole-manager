@@ -11,8 +11,10 @@ const MAX_PERIODES = 32;
 /** Hauteur de la marge haute : bande sticky opaque (`stickyPadTop`) + bandeau titre collent à `top: 0` et `top: PAGE_PAD_TOP`. */
 const PAGE_PAD_TOP = 28;
 const PAGE_BG = '#f8fafc';
-/** Même valeur que le marginTop du bloc tableau : doit être ajoutée au `top` des th sticky pour garder l’espace recherche → entête au scroll. */
+/** Même valeur que le marginTop du bloc tableau : décale le masque et les th sous le bandeau chrome. */
 const TABLE_BELOW_CHROME_GAP = 4;
+/** Bande opaque sous le chrome, au-dessus de la ligne violette : masque le texte du tbody et les bords blancs (coins arrondis). */
+const TABLE_HEADER_MASK_HEIGHT = 15;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -322,14 +324,16 @@ export default function Professeurs({
     };
   }, [titre, showInactif]);
 
-  /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
+  /** z-index au-dessus du masque thead (1) pour que la barre violette reste toujours devant. */
   const thSticky = (extra = {}) => ({
     ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP,
-    zIndex: 38,
+    top: PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP + TABLE_HEADER_MASK_HEIGHT,
+    zIndex: 3,
     boxShadow: 'none',
     ...extra,
   });
+
+  const theadMaskTop = PAGE_PAD_TOP + stickyTopH + TABLE_BELOW_CHROME_GAP;
 
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
@@ -783,7 +787,10 @@ export default function Professeurs({
 
       <div style={{ ...s.tableWrap, marginTop: TABLE_BELOW_CHROME_GAP, overflow: 'visible', background: 'white' }}>
         <table style={s.table}>
-          <thead>
+          <thead style={s.theadIsolate}>
+            <tr aria-hidden style={s.theadMaskRow}>
+              <td colSpan={isAdmin() ? 8 : 7} style={{ ...s.theadMaskCell, top: theadMaskTop }} />
+            </tr>
             <tr style={s.thead}>
               <th style={thSticky({ width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12 })}>Nom</th>
               <th style={thSticky({ width: 150, minWidth: 150, whiteSpace: 'nowrap' })}>Prénom</th>
@@ -893,6 +900,10 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
+  theadIsolate:{position:'relative',isolation:'isolate'},
+  theadMaskRow:{height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,lineHeight:0,fontSize:0,background:PAGE_BG},
+  /** Derrière les th (z-index 3) : ombre tirée vers le haut / côtés pour ne pas recouvrir la barre violette (éviter 0 0 0 Npx qui s’étend sous les th). */
+  theadMaskCell:{position:'sticky',zIndex:1,padding:0,border:'none',height:TABLE_HEADER_MASK_HEIGHT,minHeight:TABLE_HEADER_MASK_HEIGHT,lineHeight:0,fontSize:0,background:PAGE_BG,verticalAlign:'top',boxShadow:`0 -14px 0 14px ${PAGE_BG}, 16px -12px 0 12px ${PAGE_BG}, -16px -12px 0 12px ${PAGE_BG}`},
   th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'none'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
