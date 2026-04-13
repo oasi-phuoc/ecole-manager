@@ -7,12 +7,13 @@ const getBranchesClasse = async (req, res) => {
 
     const classeRes = await pool.query('SELECT id, niveau, nom FROM classes WHERE id=$1', [classeId]);
     if (!classeRes.rows.length) return res.status(404).json({ message: 'Classe non trouvee' });
-    const classe = classeRes.rows[0];
+    const classe = { ...classeRes.rows[0], niveau: classeRes.rows[0].niveau != null ? String(classeRes.rows[0].niveau).trim() : '' };
 
     let branches = [];
     if (classe.niveau) {
       const r = await pool.query(
-        'SELECT id, nom, code, niveau, designation_courte FROM matieres WHERE LOWER(niveau)=LOWER($1) ORDER BY nom',
+        `SELECT id, nom, code, niveau, designation_courte FROM matieres
+         WHERE LOWER(TRIM(COALESCE(niveau, ''))) = LOWER($1) ORDER BY nom`,
         [classe.niveau]
       );
       branches = r.rows;

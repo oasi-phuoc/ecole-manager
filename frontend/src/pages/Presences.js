@@ -506,7 +506,7 @@ export default function Presences() {
 
       {/* Classe select + date en ligne */}
       <div style={{marginTop:0,marginBottom:4,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-        <select style={s.tabSelect} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+        <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
           <option value="">Sélectionner une classe</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
@@ -574,135 +574,142 @@ export default function Presences() {
       </div>
 
       {onglet === 'saisie' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
-
-          {/* Alerte weekend */}
-          {isWeekend() && (
-            <div style={{padding:'12px 20px',background:'#fef2f2',borderBottom:'1px solid #fecaca',color:'#dc2626',fontWeight:700,fontSize:13}}>
-              🚫 Samedi et dimanche — aucune saisie possible
-            </div>
-          )}
-          {!isWeekend() && isVacance() && (
-            <div style={{padding:'12px 20px',background:'#fef3c7',borderBottom:'1px solid #fde68a',color:'#92400e',fontWeight:700,fontSize:13}}>
-              🏖️ {getNomVacance()} — pas de saisie de présences pendant les vacances
-            </div>
-          )}
-          {!isWeekend() && !isVacance() && !getHoraireJour() && (
-            <div style={{padding:'12px 20px',background:'#fff7ed',borderBottom:'1px solid #fed7aa',color:'#c2410c',fontWeight:700,fontSize:13}}>
-              ⚠️ Aucun horaire défini pour cette classe le {getNomJour()} — configurez l'affectation des classes dans l'emploi du temps
-            </div>
-          )}
-          {!isWeekend() && getHoraireJour() && (
-            <div style={{padding:'8px 20px',background:'#f0fdf4',borderBottom:'1px solid #bbf7d0',color:'#15803d',fontWeight:600,fontSize:12}}>
-              {getNomJour()} — {getHoraireJour() === 'Matin' ? 'Matin (P1–P4)' : 'Après-midi (P1–P4)'}
-            </div>
-          )}
-
-          {/* Légende */}
-          <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 20px',borderBottom:'1px solid #f1f5f9'}}>
-            {[['P','#10b981','Présent'],['A','#ef4444','Absent'],['R','#f59e0b','Retard'],['E','#3b82f6','Excusé'],['C','#8b5cf6','Congé']].map(([k,c,l]) => (
-              <span key={k} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,color:c,fontWeight:700}}>
-                <span style={{width:18,height:18,borderRadius:4,background:c,color:'white',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800}}>{k}</span>{l}
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', flexWrap: 'wrap' }}>
+            {[['P', '#10b981', 'Présent'], ['A', '#ef4444', 'Absent'], ['R', '#f59e0b', 'Retard'], ['E', '#3b82f6', 'Excusé'], ['C', '#8b5cf6', 'Congé']].map(([k, c, l]) => (
+              <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: c, fontWeight: 700 }}>
+                <span style={{ width: 18, height: 18, borderRadius: 4, background: c, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{k}</span>{l}
               </span>
             ))}
           </div>
 
-          {eleves.length === 0 ? (
-            <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucun élève actif dans cette classe</div>
-          ) : (
-            <div style={{overflowX:'auto',maxHeight:'min(72vh, calc(100vh - 260px))',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+          <div style={{ background: 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+            <div style={{ overflowX: 'auto', maxHeight: 'min(72vh, calc(100vh - 260px))', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <colgroup>
-                  <col style={{width:COL_NOM_WIDTH,minWidth:COL_NOM_WIDTH,maxWidth:COL_NOM_WIDTH}} />
-                  <col style={{width:COL_PRENOM_WIDTH,minWidth:COL_PRENOM_WIDTH,maxWidth:COL_PRENOM_WIDTH}} />
-                  <col style={{width:74,minWidth:74,maxWidth:74}} />
-                  {PERIODES.map(i => <col key={`col-p-${i}`} style={{width:64,minWidth:64,maxWidth:64}} />)}
-                  <col style={{width:'auto'}} />
+                  <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
+                  <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH, maxWidth: COL_PRENOM_WIDTH }} />
+                  <col style={{ width: 74, minWidth: 74, maxWidth: 74 }} />
+                  {PERIODES.map(i => <col key={`col-p-${i}`} style={{ width: 64, minWidth: 64, maxWidth: 64 }} />)}
+                  <col style={{ width: 'auto' }} />
                 </colgroup>
                 <thead>
-                  <tr style={{background:'#f8fafc'}}>
-                    <th style={{...s.th,borderRadius:'8px 0 0 8px',background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>NOM</th>
-                    <th style={{...s.th,background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Prénom</th>
-                    <th style={{...s.th,fontSize:13,textAlign:'center',background:'#f8fafc',boxShadow:'none'}} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
-                    <th style={{...s.th,background:'#dbeafe',color:'#1e40af',boxShadow:'none'}} colSpan={4}>Matin</th>
-                    <th style={{...s.th,background:'#fef3c7',color:'#92400e',boxShadow:'none'}} colSpan={4}>Après-midi</th>
-                    <th style={{...s.th,borderRadius:'0 8px 8px 0',background:'#f8fafc',boxShadow:'none'}} rowSpan={2}>Remarques</th>
+                  <tr style={{ background: '#f8fafc' }}>
+                    <th style={{ ...s.th, borderRadius: '12px 0 0 0', background: '#f8fafc', boxShadow: 'none' }} rowSpan={2}>NOM</th>
+                    <th style={{ ...s.th, background: '#f8fafc', boxShadow: 'none' }} rowSpan={2}>Prénom</th>
+                    <th style={{ ...s.th, fontSize: 13, textAlign: 'center', background: '#f8fafc', boxShadow: 'none' }} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
+                    <th style={{ ...s.th, background: '#dbeafe', color: '#1e40af', boxShadow: 'none' }} colSpan={4}>Matin</th>
+                    <th style={{ ...s.th, background: '#fef3c7', color: '#92400e', boxShadow: 'none' }} colSpan={4}>Après-midi</th>
+                    <th style={{ ...s.th, borderRadius: '0 12px 0 0', background: '#f8fafc', boxShadow: 'none' }} rowSpan={2}>Remarques</th>
                   </tr>
-                  <tr style={{background:'#f8fafc'}}>
+                  <tr style={{ background: '#f8fafc' }}>
                     {PERIODES.map(i => (
                       <th key={i} style={{
                         ...s.th,
-                        background: isBloque(i) ? '#f1f5f9' : i<=4 ? '#eff6ff' : '#fffbeb',
-                        color: isBloque(i) ? '#cbd5e1' : i<=4 ? '#3b82f6' : '#f59e0b',
-                        fontSize:11,
+                        background: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#f1f5f9' : isBloque(i) ? '#f1f5f9' : i <= 4 ? '#eff6ff' : '#fffbeb',
+                        color: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#cbd5e1' : isBloque(i) ? '#cbd5e1' : i <= 4 ? '#3b82f6' : '#f59e0b',
+                        fontSize: 11,
                         boxShadow: 'none',
-                      }}>P{i<=4 ? i : i-4}</th>
+                      }}>P{i <= 4 ? i : i - 4}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {eleves.map((e, idx) => (
-                    <tr key={e.id} style={{borderBottom:'1px solid #f1f5f9',background:idx%2===0?'white':'#fafafa'}}>
-                      <td style={{...s.td,fontWeight:800,color:'#0f172a'}}>{e.nom}</td>
-                      <td style={{...s.td,color:'#374151'}}>{e.prenom}</td>
-                      <td style={{...s.td,padding:'6px 4px',textAlign:'center',background:isWeekend()?'#f1f5f9':'transparent'}}>
-                        {isWeekend() ? (
-                          <div style={{width:44,height:28,borderRadius:6,background:'#e2e8f0',margin:'0 auto'}}></div>
-                        ) : (
-                          <select
-                            value=""
-                            onChange={ev => { if(ev.target.value) setToutEleve(e.id, ev.target.value); ev.target.value=''; }}
-                            style={{width:50,padding:'4px 2px',borderRadius:6,border:'1px solid #cbd5e1',background:'white',color:'#64748b',fontWeight:800,fontSize:12,textAlign:'center',textAlignLast:'center',cursor:'pointer',outline:'none',display:'block',margin:'0 auto'}}
-                          >
-                            <option value="">—</option>
-                            {OPTS.filter(o=>o!=='').map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        )}
-                      </td>
-                      {PERIODES.map(i => {
-                        const bloque = isBloque(i);
-                        const val = presences[e.id]?.['p'+i] || '';
-                        return (
-                          <td key={i} style={{...s.td,padding:'6px 4px',textAlign:'center',background:bloque?'#f1f5f9':'white'}}>
-                            {bloque ? (
-                              <div style={{width:40,height:28,borderRadius:6,background:'#e2e8f0',margin:'0 auto'}}></div>
-                            ) : (
-                              <select
-                                value={val}
-                                onChange={ev => setCell(e.id, i, ev.target.value)}
-                                style={{width:44,padding:'4px 2px',borderRadius:6,border:'1px solid '+(val?OPTS_COLOR[val]+'66':'#e2e8f0'),background:val?OPTS_COLOR[val]+'18':'white',color:val?OPTS_COLOR[val]:'#94a3b8',fontWeight:700,fontSize:12,textAlign:'center',textAlignLast:'center',cursor:'pointer',outline:'none',display:'block',margin:'0 auto'}}
-                              >
-                                {OPTS.map(o => <option key={o} value={o}>{OPTS_LABEL[o]}</option>)}
-                              </select>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td style={{...s.td,padding:'6px 8px'}}>
-                        <input
-                          style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,width:'100%',minWidth:140,outline:'none'}}
-                          type="text"
-                          placeholder="Remarque..."
-                          value={presences[e.id]?.remarque || ''}
-                          onChange={ev => setRemarque(e.id, ev.target.value)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const cs = 12;
+                    const cellMsg = (bg, color, msg) => (
+                      <tr key="msg">
+                        <td colSpan={cs} style={{ padding: '28px 20px', textAlign: 'center', background: bg, color, fontWeight: 700, fontSize: 14 }}>{msg}</td>
+                      </tr>
+                    );
+                    if (!classeSelectionnee) {
+                      return cellMsg('#f8fafc', '#64748b', 'Sélectionner une classe');
+                    }
+                    if (isWeekend()) {
+                      return cellMsg('#fef2f2', '#dc2626', '🚫 Samedi et dimanche — aucune saisie possible');
+                    }
+                    if (isVacance()) {
+                      return cellMsg('#fef3c7', '#92400e', `🏖️ ${getNomVacance()} — pas de saisie de présences pendant les vacances`);
+                    }
+                    if (!getHoraireJour()) {
+                      return cellMsg('#fff7ed', '#c2410c', `⚠️ Aucun horaire défini pour cette classe le ${getNomJour()} — configurez l'affectation des classes dans l'emploi du temps`);
+                    }
+                    const libelleJourHoraire = `${getNomJour()} — ${getHoraireJour() === 'Matin' ? 'Matin (P1–P4)' : 'Après-midi (P5–P8)'}`;
+                    if (eleves.length === 0) {
+                      return (
+                        <>
+                          <tr>
+                            <td colSpan={cs} style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600, fontSize: 13 }}>{libelleJourHoraire}</td>
+                          </tr>
+                          {cellMsg('#fafafa', '#94a3b8', 'Aucun élève actif dans cette classe')}
+                        </>
+                      );
+                    }
+                    return (
+                      <>
+                        <tr>
+                          <td colSpan={cs} style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600, fontSize: 13 }}>{libelleJourHoraire}</td>
+                        </tr>
+                        {eleves.map((e, idx) => (
+                          <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                            <td style={{ ...s.td, fontWeight: 800, color: '#0f172a' }}>{e.nom}</td>
+                            <td style={{ ...s.td, color: '#374151' }}>{e.prenom}</td>
+                            <td style={{ ...s.td, padding: '6px 4px', textAlign: 'center', background: isWeekend() ? '#f1f5f9' : 'transparent' }}>
+                              {isWeekend() ? (
+                                <div style={{ width: 44, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
+                              ) : (
+                                <select
+                                  value=""
+                                  onChange={ev => { if (ev.target.value) setToutEleve(e.id, ev.target.value); ev.target.value = ''; }}
+                                  style={{ width: 50, padding: '4px 2px', borderRadius: 6, border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: 800, fontSize: 12, textAlign: 'center', textAlignLast: 'center', cursor: 'pointer', outline: 'none', display: 'block', margin: '0 auto' }}
+                                >
+                                  <option value="">—</option>
+                                  {OPTS.filter(o => o !== '').map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              )}
+                            </td>
+                            {PERIODES.map(i => {
+                              const bloque = isBloque(i);
+                              const val = presences[e.id]?.['p' + i] || '';
+                              return (
+                                <td key={i} style={{ ...s.td, padding: '6px 4px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
+                                  {bloque ? (
+                                    <div style={{ width: 40, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
+                                  ) : (
+                                    <select
+                                      value={val}
+                                      onChange={ev => setCell(e.id, i, ev.target.value)}
+                                      style={{ width: 44, padding: '4px 2px', borderRadius: 6, border: '1px solid ' + (val ? OPTS_COLOR[val] + '66' : '#e2e8f0'), background: val ? OPTS_COLOR[val] + '18' : 'white', color: val ? OPTS_COLOR[val] : '#94a3b8', fontWeight: 700, fontSize: 12, textAlign: 'center', textAlignLast: 'center', cursor: 'pointer', outline: 'none', display: 'block', margin: '0 auto' }}
+                                    >
+                                      {OPTS.map(o => <option key={o} value={o}>{OPTS_LABEL[o]}</option>)}
+                                    </select>
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td style={{ ...s.td, padding: '6px 8px' }}>
+                              <input
+                                style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: '100%', minWidth: 140, outline: 'none' }}
+                                type="text"
+                                placeholder="Remarque..."
+                                value={presences[e.id]?.remarque || ''}
+                                onChange={ev => setRemarque(e.id, ev.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        </>
       )}
 
       {onglet === 'apercu' && (
-        <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
-          <div style={{padding:'14px 20px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
-            <span style={{fontWeight:800,fontSize:14,color:'#0f172a'}}>
-              Aperçu — {new Date(date.substring(0,7)+'-01T12:00:00').toLocaleDateString('fr-CH',{month:'long',year:'numeric'})}
-            </span>
-          </div>
+        <div style={{background:'white',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           {loadingApercu ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Chargement...</div>
           ) : !apercuMois.eleves ? (
@@ -752,13 +759,14 @@ export default function Presences() {
                   </colgroup>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'none'}}>NOM</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'none',borderRadius:'12px 0 0 0'}}>NOM</th>
                       <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:COL_NOM_WIDTH,top:0,background:'#f8fafc',zIndex:4,whiteSpace:'nowrap',boxShadow:'none'}}>Prénom</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
                         const jourIdx = new Date(annee+'-'+String(moisNum).padStart(2,'0')+'-'+String(j).padStart(2,'0')+'T12:00:00').getDay();
                         const bg = wkd ? '#e2e8f0' : vac ? '#fef3c7' : '#f8fafc';
+                        const lastJ = j === nbJours;
                         return (
                           <th key={j} style={{padding:'4px 2px',textAlign:'center',borderBottom:'none',minWidth:26,
                             background: bg,
@@ -767,6 +775,7 @@ export default function Presences() {
                             top: 0,
                             zIndex: 2,
                             boxShadow: 'none',
+                            ...(lastJ ? { borderRadius: '0 12px 0 0' } : {}),
                           }}>
                             <div style={{fontWeight:700,fontSize:11}}>{j}</div>
                             <div style={{fontSize:9,opacity:0.7}}>{NOM_JOURS[jourIdx]}</div>
@@ -877,6 +886,8 @@ export default function Presences() {
 
 const s = {
   inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
+  /** Liste classe : fond blanc, sans style violet (saisie + aperçu). */
+  selClasse:{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'white',color:'#1e293b',fontWeight:600,fontSize:14,outline:'none',cursor:'pointer',minWidth:200},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'none',whiteSpace:'nowrap'},

@@ -2112,7 +2112,7 @@ export default function Classes() {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
-                <td style={{...s.td, width:1, whiteSpace:'nowrap', textAlign:'center'}}>
+                <td style={{...s.td, width:52, minWidth:52, maxWidth:52, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}>
                   <button style={{...s.iconBtn,background:'#e0e7ff',color:'#3730a3'}} onClick={() => ouvrirDetail(c)} title="Voir le détail">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                   </button>
@@ -2197,7 +2197,7 @@ export default function Classes() {
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
