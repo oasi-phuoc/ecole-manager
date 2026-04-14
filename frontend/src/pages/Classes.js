@@ -160,6 +160,18 @@ export default function Classes() {
     setSuiviDevoirs([]);
     setRechercheElevesClasse('');
     setDerniereActuClasse(null);
+    const branchesFallbackNiveau = () => {
+      const niveauClasse = String(c?.niveau || '').trim().toUpperCase();
+      return (branches || [])
+        .filter(b => String(b?.niveau || '').trim().toUpperCase() === niveauClasse)
+        .map(b => ({
+          id: b.id,
+          nom: b.nom,
+          code: b.code || '',
+          designation_courte: b.designation_courte || '',
+          niveau: b.niveau,
+        }));
+    };
     try {
       const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
@@ -168,20 +180,16 @@ export default function Classes() {
       const branchesRes = await axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers});
       let brs = branchesRes.data?.branches || [];
       if (brs.length === 0) {
-        const niveauClasse = String(c?.niveau || '').trim().toUpperCase();
-        brs = (branches || [])
-          .filter(b => String(b?.niveau || '').trim().toUpperCase() === niveauClasse)
-          .map(b => ({
-            id: b.id,
-            nom: b.nom,
-            code: b.code || '',
-            designation_courte: b.designation_courte || '',
-            niveau: b.niveau,
-          }));
+        brs = branchesFallbackNiveau();
       }
       setBranchesInventaire(brs);
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
-    } catch(err) { console.error('Erreur chargement branches inventaire:', err); }
+    } catch(err) {
+      console.error('Erreur chargement branches inventaire:', err);
+      const brs = branchesFallbackNiveau();
+      setBranchesInventaire(brs);
+      if (brs.length > 0) setBrancheInventaireActive(brs[0]);
+    }
     try {
       const r = await axios.get(API+'/classes/'+c.id+'/activites-recentes', {headers});
       setDerniereActuClasse(r.data || null);
