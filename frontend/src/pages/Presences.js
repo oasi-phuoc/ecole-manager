@@ -575,7 +575,7 @@ export default function Presences() {
 
       {onglet === 'saisie' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, padding: '4px 0', flexWrap: 'wrap' }}>
             {[['P', '#10b981', 'Présent'], ['A', '#ef4444', 'Absent'], ['R', '#f59e0b', 'Retard'], ['E', '#3b82f6', 'Excusé'], ['C', '#8b5cf6', 'Congé']].map(([k, c, l]) => (
               <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: c, fontWeight: 700 }}>
                 <span style={{ width: 18, height: 18, borderRadius: 4, background: c, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{k}</span>{l}

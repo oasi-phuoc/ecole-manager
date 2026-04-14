@@ -166,7 +166,19 @@ export default function Classes() {
     } catch(err) { console.error('Erreur chargement élèves:', err); }
     try {
       const branchesRes = await axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers});
-      const brs = branchesRes.data?.branches || [];
+      let brs = branchesRes.data?.branches || [];
+      if (brs.length === 0) {
+        const niveauClasse = String(c?.niveau || '').trim().toUpperCase();
+        brs = (branches || [])
+          .filter(b => String(b?.niveau || '').trim().toUpperCase() === niveauClasse)
+          .map(b => ({
+            id: b.id,
+            nom: b.nom,
+            code: b.code || '',
+            designation_courte: b.designation_courte || '',
+            niveau: b.niveau,
+          }));
+      }
       setBranchesInventaire(brs);
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
     } catch(err) { console.error('Erreur chargement branches inventaire:', err); }
@@ -2045,16 +2057,17 @@ export default function Classes() {
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-        <button
-          onClick={() => setShowNiveauxFiltres(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showNiveauxFiltres?'#6366f1':'#e2e8f0'),background:showNiveauxFiltres?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showNiveauxFiltres?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-        >
-          Trier
-        </button>
-        {showNiveauxFiltres && (
+        {!showNiveauxFiltres ? (
+          <button
+            onClick={() => setShowNiveauxFiltres(true)}
+            style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+          >
+            Trier
+          </button>
+        ) : (
           <div style={s.toggleGroup}>
             {[{id:'tous',label:'Trier'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
-              <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
+              <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => { setFiltreNiveau(f.id); if (f.id === 'tous') setShowNiveauxFiltres(false); }}>{f.label}</button>
             ))}
           </div>
         )}
@@ -2105,7 +2118,7 @@ export default function Classes() {
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              <th style={{...s.th, width:84, minWidth:84, maxWidth:84, textAlign:'center'}}></th>
+              <th style={{...s.th, width:56, minWidth:56, maxWidth:56, textAlign:'center'}}></th>
               <th style={{...s.th, width:1, minWidth:80, whiteSpace:'nowrap'}}>Classe</th>
               <th style={{...s.th, width:1, minWidth:100, whiteSpace:'nowrap'}}>Titulaire</th>
               <th style={s.th}>Notes</th>
@@ -2121,7 +2134,7 @@ export default function Classes() {
               const badgesNotes = getSuiviNotesBadges(c);
               return (
               <tr key={c.id} style={s.tr}>
-                <td style={{...s.td, width:52, minWidth:52, maxWidth:52, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}>
+                <td style={{...s.td, width:56, minWidth:56, maxWidth:56, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}>
                   <button style={{...s.iconBtn,background:'#e0e7ff',color:'#3730a3'}} onClick={() => ouvrirDetail(c)} title="Voir le détail">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                   </button>

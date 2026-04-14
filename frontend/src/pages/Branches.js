@@ -77,16 +77,17 @@ export default function Branches() {
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0}}>
         <input style={s.tabSearch} placeholder="Rechercher..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-        <button
-          onClick={() => setShowNiveauxFiltres(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showNiveauxFiltres?'#6366f1':'#e2e8f0'),background:showNiveauxFiltres?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showNiveauxFiltres?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-        >
-          Trier
-        </button>
-        {showNiveauxFiltres && (
+        {!showNiveauxFiltres ? (
+          <button
+            onClick={() => setShowNiveauxFiltres(true)}
+            style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+          >
+            Trier
+          </button>
+        ) : (
           <div style={s.toggleGroup}>
             {niveaux.map(n => (
-              <button key={n} style={{...s.toggleBtn,...(filtreNiveau===n?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(n)}>
+              <button key={n} style={{...s.toggleBtn,...(filtreNiveau===n?s.toggleBtnActif:{})}} onClick={() => { setFiltreNiveau(n); if (n === 'tous') setShowNiveauxFiltres(false); }}>
                 {n==='tous'?'Trier':n}
               </button>
             ))}

@@ -518,13 +518,14 @@ export default function Eleves() {
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
         />
-        <button
-          onClick={() => setShowNiveauxFiltres(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showNiveauxFiltres?'#6366f1':'#e2e8f0'),background:showNiveauxFiltres?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showNiveauxFiltres?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-        >
-          Trier
-        </button>
-        {showNiveauxFiltres && (
+        {!showNiveauxFiltres ? (
+          <button
+            onClick={() => setShowNiveauxFiltres(true)}
+            style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+          >
+            Trier
+          </button>
+        ) : (
           <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
             {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
               const actif = niveauOnglet === k;
@@ -532,7 +533,7 @@ export default function Eleves() {
               return (
                 <button key={k}
                   style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-                  onClick={() => { setNiveauOnglet(k); setRecherche(''); }}>
+                  onClick={() => { setNiveauOnglet(k); setRecherche(''); if (k === 'tous') setShowNiveauxFiltres(false); }}>
                   {label}
                 </button>
               );

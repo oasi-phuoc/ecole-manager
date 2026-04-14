@@ -129,6 +129,7 @@ export default function Notes() {
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
+  const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
   const [branches, setBranches] = useState([]);
   const [classesResponsables, setClassesResponsables] = useState([]);
@@ -1984,20 +1985,29 @@ export default function Notes() {
           )}
         </div>
         {/* Barre de recherche + toggles niveaux */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <input type="text" placeholder="Rechercher une classe..." value={rechercheClasses}
             onChange={e => setRechercheClasses(e.target.value)}
             style={{ padding: '9px 14px', border: '1px solid #c7d2fe', borderRadius: 8, fontSize: 14, width: 280, outline: 'none', background: 'white', color: '#1e293b', fontFamily: 'inherit' }} />
-          <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
-            {niveauxPills.map(n => (
-              <button key={n} onClick={() => setEvalNiveauFiltre(n)}
-                style={evalNiveauFiltre === n
-                  ? { padding: '6px 14px', borderRadius: 99, border: 'none', background: '#6366f1', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }
-                  : { padding: '6px 14px', borderRadius: 99, border: 'none', background: 'transparent', color: '#4c1d95', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                {n === 'tous' ? 'Toutes' : n}
-              </button>
-            ))}
-          </div>
+          {!showNiveauxFiltres ? (
+            <button
+              onClick={() => setShowNiveauxFiltres(true)}
+              style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+            >
+              Trier
+            </button>
+          ) : (
+            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              {niveauxPills.map(n => (
+                <button key={n} onClick={() => { setEvalNiveauFiltre(n); if (n === 'tous') setShowNiveauxFiltres(false); }}
+                  style={evalNiveauFiltre === n
+                    ? { padding: '6px 14px', borderRadius: 99, border: 'none', background: '#6366f1', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }
+                    : { padding: '6px 14px', borderRadius: 99, border: 'none', background: 'transparent', color: '#4c1d95', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                  {n === 'tous' ? 'Trier' : n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tableau des classes */}
