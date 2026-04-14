@@ -170,6 +170,7 @@ export default function Classes() {
           code: b.code || '',
           designation_courte: b.designation_courte || '',
           niveau: b.niveau,
+          type_branche: b.type_branche || '',
         }));
     };
     try {
@@ -182,11 +183,12 @@ export default function Classes() {
       if (brs.length === 0) {
         brs = branchesFallbackNiveau();
       }
-      setBranchesInventaire(brs);
-      if (brs.length > 0) setBrancheInventaireActive(brs[0]);
+      const brsTries = trierBranchesParType(brs);
+      setBranchesInventaire(brsTries);
+      if (brsTries.length > 0) setBrancheInventaireActive(brsTries[0]);
     } catch(err) {
       console.error('Erreur chargement branches inventaire:', err);
-      const brs = branchesFallbackNiveau();
+      const brs = trierBranchesParType(branchesFallbackNiveau());
       setBranchesInventaire(brs);
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
     }
@@ -264,6 +266,28 @@ export default function Classes() {
     sans_numero: false,
     remarques: '',
   });
+  const trierBranchesParType = (liste) => {
+    const prioriteCode = (code) => {
+      const c = String(code || '').trim().toUpperCase();
+      if (c === 'FR') return 0;
+      if (c === 'MATH' || c === 'MA') return 1;
+      return 2;
+    };
+    return [...(liste || [])].sort((a, b) => {
+      const typeA = String(a?.type_branche || '').trim().toLowerCase();
+      const typeB = String(b?.type_branche || '').trim().toLowerCase();
+      const rangA = typeA === 'principale' ? 0 : 1;
+      const rangB = typeB === 'principale' ? 0 : 1;
+      if (rangA !== rangB) return rangA - rangB;
+      const codeA = String(a?.designation_courte || a?.code || '').trim();
+      const codeB = String(b?.designation_courte || b?.code || '').trim();
+      const p = prioriteCode(codeA) - prioriteCode(codeB);
+      if (p !== 0) return p;
+      const libA = String(a?.designation_courte || a?.code || a?.nom || '').trim();
+      const libB = String(b?.designation_courte || b?.code || b?.nom || '').trim();
+      return libA.localeCompare(libB, 'fr', { sensitivity: 'base' });
+    });
+  };
   const [dragInventaireId, setDragInventaireId] = useState(null);
   const [dragOverInventaireId, setDragOverInventaireId] = useState(null);
   const ELEMENTS_SPECIAUX_PLAN = [
@@ -1585,13 +1609,14 @@ export default function Classes() {
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
+                <th style={{...s.th,width:56,minWidth:56,maxWidth:56,textAlign:'center'}}></th>
                 <th style={{...s.th,width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>Photo</th>
                 <th style={s.th}>Nom</th>
                 <th style={s.th}>Prénom</th>
                 <th style={s.th}>Nationalité</th>
                 <th style={s.th}>Naissance</th>
+                <th style={{...s.th, textAlign:'center'}}>Catégorie</th>
                 <th style={{...s.th,width:110,minWidth:110,maxWidth:110,textAlign:'center'}}></th>
-                <th style={{...s.th,width:42,minWidth:42,maxWidth:42,textAlign:'center'}}></th>
               </tr>
             </thead>
             <tbody>
@@ -1599,6 +1624,11 @@ export default function Classes() {
                 <tr><td colSpan="7" style={s.empty}>Aucun élève trouvé</td></tr>
               ) : elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase())).map(el => (
                 <tr key={el.id} style={s.tr}>
+                  <td style={{...s.td,width:56,minWidth:56,maxWidth:56,padding:'8px 4px',textAlign:'center'}}>
+                    <button title="Détail élève" onClick={() => { setEleveReadOnly(el); setShowEleveReadOnly(true); }} style={{padding:6,background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
+                      <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    </button>
+                  </td>
                   <td style={{...s.td,width:62,minWidth:62,maxWidth:62,textAlign:'center',padding:'8px 6px'}}>
                     <div style={{position:'relative',width:38,height:38,margin:'0 auto'}}>
                       {el.photo ? (
@@ -1632,6 +1662,7 @@ export default function Classes() {
                   <td style={s.td}>{el.prenom || '—'}</td>
                   <td style={s.td}>{el.oasi_nationalite || '—'}</td>
                   <td style={s.td}>{el.date_naissance ? new Date(el.date_naissance).toLocaleDateString('fr-CH') : el.oasi_nais ? new Date(el.oasi_nais).toLocaleDateString('fr-CH') : '—'}</td>
+                  <td style={{...s.td, textAlign:'center'}}>{el.categorie || '—'}</td>
                   <td style={{...s.td,width:110,minWidth:110,maxWidth:110,padding:'8px 6px',textAlign:'center'}}>
                     <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center'}}>
                       <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1645,11 +1676,6 @@ export default function Classes() {
                       </button>
                     </div>
                   </td>
-                  <td style={{...s.td,width:42,minWidth:42,maxWidth:42,padding:'8px 4px',textAlign:'center'}}>
-                    <button title="Détail élève" onClick={() => { setEleveReadOnly(el); setShowEleveReadOnly(true); }} style={{padding:6,background:'#f0fdf4',color:'#15803d',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
-                      <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1661,6 +1687,13 @@ export default function Classes() {
           {/* Search + filtre branches + sous-onglets */}
           <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,flexWrap:'wrap'}}>
             <input style={s.tabSearch} placeholder="Rechercher un devoir..." value={rechercheDevoirs} onChange={e => setRechercheDevoirs(e.target.value)} />
+            <button
+              type="button"
+              style={s.filterTriggerBtn}
+              onClick={() => setDevoirSousOnglet(prev => (prev === 'devoirs' ? 'stats' : 'devoirs'))}
+            >
+              {devoirSousOnglet === 'devoirs' ? 'Afficher les stats' : 'Afficher les devoirs'}
+            </button>
             {branchesInventaire.length > 0 && (
               !showDevoirBranchesFiltres ? (
                 <button
@@ -1679,7 +1712,7 @@ export default function Classes() {
                   >
                     Trier
                   </button>
-                  {branchesInventaire.map(b => (
+                  {trierBranchesParType(branchesInventaire).map(b => (
                     <button key={b.id} type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre?.id===b.id?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(b)}>
                       {(b.designation_courte || b.code || b.nom || '').trim()}
                     </button>
@@ -1687,13 +1720,6 @@ export default function Classes() {
                 </div>
               )
             )}
-            <button
-              type="button"
-              style={s.filterTriggerBtn}
-              onClick={() => setDevoirSousOnglet(prev => (prev === 'devoirs' ? 'stats' : 'devoirs'))}
-            >
-              {devoirSousOnglet === 'devoirs' ? 'Afficher les stats' : 'Afficher les devoirs'}
-            </button>
           </div>
 
           {(() => {
@@ -1937,24 +1963,8 @@ export default function Classes() {
           ) : (
             <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,marginBottom:8,flexWrap:'wrap'}}>
               <input style={s.tabSearch} placeholder="Rechercher un document..." value={rechercheInventaire} onChange={e => setRechercheInventaire(e.target.value)} />
-              {!showInventaireBranchesFiltres ? (
-                <button
-                  type="button"
-                  style={s.filterTriggerBtn}
-                  onClick={() => setShowInventaireBranchesFiltres(true)}
-                >
-                  Trier
-                </button>
-              ) : (
-                <div style={s.toggleGroup}>
-                  <button
-                    type="button"
-                    style={{...s.toggleBtn,color:'#6d28d9'}}
-                    onClick={() => setShowInventaireBranchesFiltres(false)}
-                  >
-                    Trier
-                  </button>
-                  {branchesInventaire.map(b => (
+              <div style={s.toggleGroup}>
+                {trierBranchesParType(branchesInventaire).map(b => (
                     <button
                       key={b.id}
                       type="button"
@@ -1965,8 +1975,7 @@ export default function Classes() {
                       {(b.designation_courte || b.code || b.nom || '').trim()}
                     </button>
                   ))}
-                </div>
-              )}
+              </div>
             </div>
           )}
           {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
@@ -1995,8 +2004,19 @@ export default function Classes() {
                   </colgroup>
                   <thead>
                     <tr style={s.thead}>
-                      <th style={s.th}></th>
-                      {['Date','Nom du document','Numéro','Remarques','VISA','Actions'].map(h => <th key={h} style={{...s.th, textAlign: h==='Actions' ? 'right' : 'left'}}>{h}</th>)}
+                      <th style={{...s.th, borderTopLeftRadius:12}}></th>
+                      {['Date','Nom du document','Numéro','Remarques','VISA','Actions'].map((h, idx, arr) => (
+                        <th
+                          key={h}
+                          style={{
+                            ...s.th,
+                            textAlign: h==='Actions' ? 'right' : 'left',
+                            ...(idx === arr.length - 1 ? { borderTopRightRadius:12 } : {})
+                          }}
+                        >
+                          {h === 'Actions' ? '' : h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -2102,6 +2122,11 @@ export default function Classes() {
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
+        <button
+          onClick={() => setShowInactif(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          {showInactif ? 'Masquer inactives' : 'Afficher inactives'}
+        </button>
         {!showNiveauxFiltres ? (
           <button
             onClick={() => setShowNiveauxFiltres(true)}
@@ -2116,11 +2141,6 @@ export default function Classes() {
             ))}
           </div>
         )}
-        <button
-          onClick={() => setShowInactif(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
-          {showInactif ? 'Masquer inactives' : 'Afficher inactives'}
-        </button>
       </div>
       </div>
 

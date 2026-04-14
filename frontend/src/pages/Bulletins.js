@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
-import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -339,7 +338,6 @@ export default function Bulletins() {
   if (!classeSelectionnee) {
     return (
       <div style={s.page}>
-        <div style={stickyPageChrome()}>
         <div style={s.header}>
           <h2 style={s.titre}>Bulletins de notes</h2>
         </div>
@@ -350,7 +348,6 @@ export default function Bulletins() {
               {n === 'tous' ? 'Toutes' : n}
             </button>
           ))}
-        </div>
         </div>
         <div style={{ ...s.tblWrap, marginTop: 15 }}>
           <table style={{ ...s.tbl, tableLayout: 'auto' }}>
@@ -394,7 +391,6 @@ export default function Bulletins() {
 
   return (
     <div style={s.page}>
-      <div style={stickyPageChrome()}>
       <div style={s.header}>
         <button style={s.btnRetour} onClick={() => { setClasseSelectionnee(''); setClasseObj(null); }}>← Retour</button>
         <h2 style={s.titre}>{onglet === 'comportements' ? 'Comportements' : 'Bulletins de notes'} — {classeNom}</h2>
@@ -458,7 +454,6 @@ export default function Bulletins() {
           </button>
         </div>
       )}
-      </div>
 
       {/* === COMPORTEMENTS TAB === */}
       {onglet === 'comportements' && (

@@ -9,7 +9,6 @@ const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onre
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
 const COL_OEIL_DETAIL = 52;
-const COL_ACTIONS_EVAL = 136;
 
 const calculerNote = (points, pointsMax) => {
   if (points === '' || points === null || points === undefined || pointsMax <= 0) return null;
@@ -632,7 +631,10 @@ export default function Notes() {
       if (!node) return;
       const popup = window.open('', '_blank', 'width=1100,height=820');
       if (!popup) return;
-      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4 landscape;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;min-height:calc(210mm - 20mm);max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%;}th,td{border:none!important;padding:5px 8px;font-size:11px;}.vg-bull-pied{margin-top:auto;padding-top:16px;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
+      const isPortrait = htmlId === 'vg-branche-bull' || htmlId === 'vg-eleve-bull';
+      const pageSize = isPortrait ? 'A4 portrait' : 'A4 landscape';
+      const pageHeight = isPortrait ? '297mm' : '210mm';
+      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:${pageSize};margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:calc(${pageHeight} - 20mm)!important;height:calc(${pageHeight} - 20mm)!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%;}th,td{border:none!important;padding:3px 8px!important;font-size:11px;line-height:1.2!important;}.vg-bull-pied{margin-top:auto!important;padding-top:16px!important;}.vg-branch-gap td{padding:0!important;height:8px!important;border:none!important;}#vg-eleve-bull col.vg-date-col{width:90px!important;}#vg-eleve-bull col.vg-nom-col{width:auto!important;}#vg-eleve-bull col.vg-prof-col{width:165px!important;}#vg-eleve-bull col.vg-coef-col{width:80px!important;}#vg-eleve-bull col.vg-note-col{width:62px!important;}#vg-eleve-bull .vg-prof-col,#vg-eleve-bull .vg-coef-col,#vg-eleve-bull .vg-note-col{text-align:right!important;}#vg-eleve-bull .vg-branch-title-cell{padding-left:0!important;border-bottom:1px solid #000!important;}#vg-eleve-bull .vg-date-col{padding-left:0!important;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
       popup.document.close();
       popup.focus();
       popup.print();
@@ -697,7 +699,7 @@ export default function Notes() {
           <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
         </div>
         {/* Sous-onglets Vue générale */}
-        <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 35, background: '#f8fafc', paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
+        <div className="no-print" style={{ background: '#f8fafc', paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
@@ -765,51 +767,82 @@ export default function Notes() {
             const mat = rapport.matieres.find(m => m.matiere_id === brId);
             return mat ? moyenneEleveMatiere(mat, eleveId) : null;
           };
-          const moyPrin = (eleveId) => { const vals = brPrin.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
-          const moySec  = (eleveId) => { const vals = brSec.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const moyGen  = (eleveId) => { const vals = branchesClasse.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const colNom = (b) => (b.designation_courte || b.nom || '').trim();
+          const thTCF = {
+            ...s.th,
+            position: 'static',
+            top: 'auto',
+            zIndex: 'auto',
+            background: '#6366f1',
+            color: 'white',
+            textAlign: 'center',
+            borderTop: '1px solid #4338ca',
+            borderBottom: '1px solid #4338ca',
+            borderLeft: '1px solid #4338ca',
+            borderRight: '1px solid #818cf8',
+          };
+          const tdTCF = { ...s.td, border: '1px solid #e2e8f0', background: 'white' };
+          const tdMoyCol = { ...tdTCF, textAlign: 'center' };
+          const tdBas = { ...tdTCF, textAlign: 'center', fontWeight: 700, background: '#f8fafc', color: '#1e293b' };
           return (
-          <div style={{ overflowX: 'auto', marginTop: 0 }}>
-          <div ref={printRef} id="vg-tous-print" className="vg-bull-sheet" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', width: '100%', boxSizing: 'border-box' }}>
-            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
+          <div ref={printRef} id="vg-tous-print" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', width: '100%', boxSizing: 'border-box' }}>
+            {enteteBulletinVueGenerale()}
+            <div style={{ marginTop: 40, marginBottom: 16 }}>
+              <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Moyennes de la classe</div>
+              <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: fontVG, marginBottom: 12 }}>Vétroz, le {todayFormatted}</div>
+              <div style={{ fontFamily: fontVG }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{classeNom}</div>
+                <div style={{ fontSize: 12, color: '#475569' }}>{generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto', marginTop: 0, borderRadius: 12 }}>
+            <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col />
+                <col />
+                {brPrin.map(b => <col key={`col-prin-${b.id}`} style={{ width: 78 }} />)}
+                {brSec.map(b => <col key={`col-sec-${b.id}`} style={{ width: 78 }} />)}
+                <col style={{ width: 112 }} />
+              </colgroup>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={{ ...s.th, whiteSpace: 'nowrap', width: 1, borderTopLeftRadius: 12 }}>Nom</th>
-                  <th style={{ ...s.th, whiteSpace: 'nowrap', width: 1 }}>Prénom</th>
-                  {brPrin.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
-                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>princip.</th>
-                  {brSec.map(b => <th key={b.id} style={{ ...s.th, textAlign: 'center' }}>{colNom(b)}</th>)}
-                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe' }}>Moy.<br/>second.</th>
-                  <th style={{ ...s.th, textAlign: 'center', background: '#c7d2fe', borderTopRightRadius: 12 }}>Moy.<br/>générale</th>
+                  <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left' }}>Nom</th>
+                  <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left' }}>Prénom</th>
+                  {brPrin.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
+                  {brSec.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
+                  <th style={thTCF}>Moyenne</th>
                 </tr>
               </thead>
               <tbody>
                 {rapport.eleves.map((eleve, i) => {
-                  const mp = moyPrin(eleve.id); const ms = moySec(eleve.id); const mg = moyGen(eleve.id);
+                  const mg = moyGen(eleve.id);
                   return (
                     <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                      <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
-                      <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
-                      {brPrin.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: mp !== null ? (mp >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mp !== null ? fmtNote(mp) : '—'}</td>
-                      {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#ccc' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, background: '#eef2ff', color: ms !== null ? (ms >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{ms !== null ? fmtNote(ms) : '—'}</td>
-                      <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, background: '#eef2ff', color: mg !== null ? (mg >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
+                      <td style={{ ...tdTCF, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                      <td style={{ ...tdTCF, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
+                      {brPrin.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...tdTCF, textAlign: 'center', color: moy !== null ? (moy >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                      {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...tdTCF, textAlign: 'center', color: moy !== null ? (moy >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                      <td style={{ ...tdMoyCol, fontSize: 14, color: mg !== null ? (mg >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
                     </tr>
                   );
                 })}
-                <tr style={{ ...s.tr, background: '#e0e7ff', fontWeight: 700 }}>
-                  <td style={{ ...s.td, fontWeight: 700 }} colSpan={2}>Moyenne classe</td>
-                  {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                  <td style={s.td}></td>
-                  {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={{ ...s.td, textAlign: 'center' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                  <td style={s.td}></td>
-                  <td style={s.td}></td>
+                <tr style={{ ...s.tr, fontWeight: 700 }}>
+                  <td style={{ ...tdBas, textAlign: 'left' }} colSpan={2}>Moyennes de classe</td>
+                  {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={tdBas}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                  {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={tdBas}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
+                  <td style={tdBas}>
+                    {(() => {
+                      const vals = rapport.eleves.map(e => moyGen(e.id)).filter(v => v !== null);
+                      const moy = vals.length ? Math.round(vals.reduce((a, v) => a + v, 0) / vals.length * 10) / 10 : null;
+                      return moy !== null ? fmtNote(moy) : '—';
+                    })()}
+                  </td>
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            {piedBulletinVueGenerale()}
           </div>
           );
         })()}
@@ -1002,10 +1035,10 @@ export default function Notes() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
                   <colgroup>
-                    <col style={{ width: 150 }} />
-                    <col style={{ width: 150 }} />
-                    {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 70 }} />)}
-                    <col style={{ width: 90 }} />
+                    <col />
+                    <col />
+                    {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 72 }} />)}
+                    <col style={{ width: 72 }} />
                   </colgroup>
                   <thead>
                     <tr style={s.theadRow}>
@@ -1059,26 +1092,26 @@ export default function Notes() {
               <div style={{ marginTop: 40, marginBottom: 16 }}>
                 <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Notes de l'élève</div>
                 <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: fontVG, marginBottom: 12 }}>Vétroz, le {todayFormatted}</div>
-                <div style={{ fontFamily: fontVG, paddingLeft: 14, paddingRight: 14 }}>
+                <div style={{ fontFamily: fontVG }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{eleveRapport.prenom} {nomSansSuffixe(eleveRapport.nom)}</div>
                   <div style={{ fontSize: 12, color: '#475569' }}>{classeNom} — {generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
                 </div>
               </div>
               <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
                 <colgroup>
-                  <col style={{ width: 90 }} />
-                  <col style={{ width: 'auto' }} />
-                  <col style={{ width: 80 }} />
-                  <col style={{ width: 160 }} />
-                  <col style={{ width: 85 }} />
-                  <col style={{ width: 60 }} />
+                  <col className="vg-date-col" style={{ width: 90 }} />
+                  <col className="vg-nom-col" />
+                  <col className="vg-prof-col" style={{ width: 160 }} />
+                  <col className="vg-coef-col" style={{ width: 85 }} />
+                  <col className="vg-note-col" style={{ width: 60 }} />
                 </colgroup>
                 <tbody>
-                  {modeMatieres.map(matiere => {
+                  {modeMatieres.map((matiere, matiereIdx) => {
                     const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
                     return [
+                      ...(matiereIdx > 0 ? [<tr key={`gap-${matiere.matiere_id}`} className="vg-branch-gap"><td colSpan={6}></td></tr>] : []),
                       <tr key={`sep-${matiere.matiere_id}`}>
-                        <td colSpan={6} style={{ padding: '12px 8px 4px', borderBottom: '1px solid #000' }}>
+                        <td className="vg-branch-title-cell" colSpan={5} style={{ padding: `${matiereIdx === 0 ? 8 : 16}px 0 4px`, borderBottom: '1px solid #000' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <b style={{ fontSize: 14, color: '#1e293b' }}>{matiere.matiere_nom}</b>
                             {moy !== null
@@ -1088,20 +1121,19 @@ export default function Notes() {
                         </td>
                       </tr>,
                       ...(matiere.evaluations.length === 0
-                        ? [<tr key={`empty-${matiere.matiere_id}`}><td colSpan={6} style={{ ...s.td, color: '#aaa', fontSize: 13 }}>Aucune évaluation</td></tr>]
+                        ? [<tr key={`empty-${matiere.matiere_id}`}><td colSpan={5} style={{ ...s.td, color: '#aaa', fontSize: 13 }}>Aucune évaluation</td></tr>]
                         : matiere.evaluations.map((ev, j) => {
                             const n = ev.notes.find(n => n.eleve_id === eleveRapport.id);
                             const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
                             const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
                             const profAff = [ev.prof_prenom, nomSansSuffixe(ev.prof_nom)].filter(Boolean).join(' ').trim() || '—';
                             return (
-                              <tr key={ev.id} style={{ ...s.tr, background: j % 2 === 0 ? 'white' : '#fafbfc' }}>
-                                <td style={{ ...s.td, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                                <td style={{ ...s.td, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
-                                <td style={{ ...s.td, color: '#64748b' }}><span style={s.typeBadge}>{ev.type}</span></td>
-                                <td style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profAff}</td>
-                                <td style={{ ...s.td, textAlign: 'center', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
-                                <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
+                              <tr key={ev.id} style={{ ...s.tr, background: 'white' }}>
+                                <td className="vg-date-col" style={{ ...s.td, paddingLeft: 0, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                                <td style={{ ...s.td, fontWeight: 400, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
+                                <td className="vg-prof-col" style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profAff}</td>
+                                <td className="vg-coef-col" style={{ ...s.td, textAlign: 'right', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
+                                <td className="vg-note-col" style={{ ...s.td, textAlign: 'right', fontWeight: 400, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
                               </tr>
                             );
                           })
@@ -1851,7 +1883,7 @@ export default function Notes() {
         <div style={s.tblWrap}>
         <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
-            <col style={{ width: COL_ACTIONS_EVAL }} />
+            <col style={{ width: COL_OEIL_DETAIL }} />
             <col />
             <col style={{ width: 170 }} />
             <col style={{ width: 96 }} />
@@ -1860,40 +1892,40 @@ export default function Notes() {
             <col style={{ width: 64 }} />
             <col style={{ width: 92 }} />
             <col style={{ width: 96 }} />
+            <col style={{ width: 58 }} />
           </colgroup>
           <thead>
             <tr style={s.theadRow}>
-              <th style={{ ...s.th, width: COL_ACTIONS_EVAL, minWidth: COL_ACTIONS_EVAL, maxWidth: COL_ACTIONS_EVAL, textAlign: 'center', borderTopLeftRadius: 12, boxSizing: 'border-box' }} aria-label="Actions" />
+              <th style={{ ...s.th, width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, textAlign: 'center', borderTopLeftRadius: 12, boxSizing: 'border-box' }} aria-label="Ouvrir" />
               <th style={s.th}>Désignation</th>
               <th style={s.th}>Professeur</th>
-              <th style={s.th}>Date</th>
-              <th style={s.th}>Type</th>
-              <th style={s.th}>Pts max</th>
-              <th style={s.th}>Coef.</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Date</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Type</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Pts max</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Coef.</th>
               <th style={{ ...s.th, textAlign: 'center' }}>Statut</th>
-              <th style={{ ...s.th, textAlign: 'center', borderTopRightRadius: 12 }}>Moyenne</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Moyenne</th>
+              <th style={{ ...s.th, width: 58, minWidth: 58, maxWidth: 58, textAlign: 'center', borderTopRightRadius: 12 }} aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
             {evaluations.length === 0 ? (
-              <tr><td colSpan="9" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
+              <tr><td colSpan="10" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                <td style={{ ...s.td, whiteSpace: 'nowrap', width: COL_ACTIONS_EVAL, minWidth: COL_ACTIONS_EVAL, maxWidth: COL_ACTIONS_EVAL, boxSizing: 'border-box', textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <td style={{ ...s.td, whiteSpace: 'nowrap', width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, boxSizing: 'border-box', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                     <button type="button" style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                     </button>
-                    {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button type="button" style={{ ...s.btnEdit, marginRight: 0 }} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
-                    {isAdmin() && <button type="button" style={{ ...s.btnDelete, marginLeft: 0 }} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
                   </div>
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
-                <td style={s.td}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                <td style={s.td}><span style={s.typeBadge}>{ev.type}</span></td>
-                <td style={s.td}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
-                <td style={s.td}>{ev.coefficient}</td>
+                <td style={{ ...s.td, textAlign: 'center' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                <td style={{ ...s.td, textAlign: 'center' }}><span style={s.typeBadge}>{ev.type}</span></td>
+                <td style={{ ...s.td, textAlign: 'center' }}>{ev.points_max && parseFloat(ev.points_max) > 0 ? ev.points_max : '—'}</td>
+                <td style={{ ...s.td, textAlign: 'center' }}>{ev.coefficient}</td>
                 <td style={{ ...s.td, textAlign: 'center' }}>
                   {(() => {
                     const total = parseInt(ev.nb_eleves_classe) || 0;
@@ -1907,6 +1939,30 @@ export default function Notes() {
                 </td>
                 <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 15, color: ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? (parseFloat(ev.moyenne_classe) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
                   {ev.moyenne_classe != null && !isNaN(parseFloat(ev.moyenne_classe)) ? fmtNote(parseFloat(ev.moyenne_classe)) : '—'}
+                </td>
+                <td style={{ ...s.td, width:58, minWidth:58, maxWidth:58, padding:'8px 4px', textAlign:'center' }}>
+                  <div style={{ display:'inline-flex', gap:4, alignItems:'center', justifyContent:'center' }}>
+                    {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && (
+                      <button
+                        type="button"
+                        style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}}
+                        title="Modifier l'évaluation"
+                        onClick={() => ouvrirEditionEvaluation(ev)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                    )}
+                    {isAdmin() && (
+                      <button
+                        type="button"
+                        style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}}
+                        title="Supprimer l'évaluation"
+                        onClick={() => handleSupprimerEvaluation(ev.id)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1941,19 +1997,33 @@ export default function Notes() {
           {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
         <div style={{ ...s.tblWrap, marginTop: 4 }}>
-        <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
+        <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
+          <colgroup>
+            <col style={{ width: COL_OEIL_DETAIL }} />
+            <col style={{ width: 180 }} />
+            <col style={{ width: 'calc((100% - 232px) / 2)' }} />
+            <col style={{ width: 'calc((100% - 232px) / 2)' }} />
+          </colgroup>
           <thead>
             <tr style={s.theadRow}>
               <th style={{ ...s.th, width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, textAlign: 'center', borderTopLeftRadius: 12, boxSizing: 'border-box' }} aria-label="Ouvrir" />
-              <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Matière</th>
-              <th style={{ ...s.th, width: '100%', textAlign: 'center', borderTopRightRadius: 12 }}>Évaluations</th>
+              <th style={{ ...s.th, whiteSpace: 'nowrap' }}>Matière</th>
+              <th style={{ ...s.th, textAlign: 'center' }}>Moyennes de classe</th>
+              <th style={{ ...s.th, textAlign: 'center', borderTopRightRadius: 12 }}>Évaluations</th>
             </tr>
           </thead>
           <tbody>
             {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
-              <tr><td colSpan="3" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
+              <tr><td colSpan="4" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
             ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
-              const nbEvals = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre).length;
+              const evalsMatiere = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre);
+              const nbEvals = evalsMatiere.length;
+              const moyennesMatiere = evalsMatiere
+                .map(ev => parseFloat(ev.moyenne_classe))
+                .filter(v => !isNaN(v));
+              const moyenneBranche = moyennesMatiere.length
+                ? Math.round((moyennesMatiere.reduce((a, b) => a + b, 0) / moyennesMatiere.length) * 10) / 10
+                : null;
               return (
                 <tr key={m.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
                   <td style={{ ...s.td, whiteSpace: 'nowrap', width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, textAlign: 'center', boxSizing: 'border-box' }}>
@@ -1961,11 +2031,12 @@ export default function Notes() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                     </button>
                   </td>
-                  <td style={{ ...s.td, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', width: 1 }}>{m.nom}</td>
-                  <td style={{ ...s.td, textAlign: 'center', width: '100%' }}>
-                    <span style={{ ...s.badge, background: nbEvals > 0 ? '#e0e7ff' : '#f1f5f9', color: nbEvals > 0 ? '#4338ca' : '#94a3b8' }}>
-                      {nbEvals} éval{nbEvals !== 1 ? 's' : ''}
-                    </span>
+                  <td style={{ ...s.td, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{m.nom}</td>
+                  <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, color: moyenneBranche == null ? '#94a3b8' : (moyenneBranche >= 4 ? '#2e7d32' : '#ef4444') }}>
+                    {moyenneBranche == null ? '—' : fmtNote(moyenneBranche)}
+                  </td>
+                  <td style={{ ...s.td, textAlign: 'center', color: nbEvals > 0 ? '#1e293b' : '#94a3b8', fontWeight: 600 }}>
+                    {nbEvals}
                   </td>
                 </tr>
               );
@@ -2100,17 +2171,15 @@ export default function Notes() {
                     </td>
                     <td style={{ ...s.td, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button style={{ ...s.btnDetail, background: '#ede9fe', color: '#5b21b6', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        <button style={{ padding: 6, background: '#ede9fe', color: '#5b21b6', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           onClick={() => { setSearchParams({tab:'comportements', classeId: cl.id}); setVueContexte('bulletin'); setVueClasseAction('comportements'); ouvrirVueDepuisSelectionClasse('comportements', cl.id); }}
                           title="Comportements">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                          Comp.
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         </button>
-                        <button style={{ ...s.btnDetail, background: '#dbeafe', color: '#1e40af', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        <button style={{ padding: 6, background: '#dbeafe', color: '#1e40af', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           onClick={() => { setSearchParams({tab:'bulletin', classeId: cl.id}); setVueContexte('bulletin'); setVueClasseAction('bulletin'); ouvrirVueDepuisSelectionClasse('bulletin', cl.id); }}
                           title="Bulletin de notes">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                          Bulletin
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         </button>
                       </div>
                     </td>
@@ -2136,7 +2205,7 @@ const s = {
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
   btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  titre: { fontSize: 20, fontWeight: 700, flex: 1, color: '#0f172a' },
+  titre: { fontSize: 22, fontWeight: 800, flex: 1, color: '#0f172a', margin: 0, lineHeight: 1, minHeight: 36, display: 'flex', alignItems: 'center' },
   evalInfo: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   select: { padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white', color: '#374151' },
   moyenneBox: { background: 'white', padding: '10px 18px', borderRadius: 10, textAlign: 'center', border: '1px solid #e2e8f0' },
@@ -2150,7 +2219,7 @@ const s = {
   btnAjouter: { padding: '7px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },
-  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', boxShadow: 'none' },
+  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
   tr: { borderBottom: 'none' },
   td: { padding: '11px 14px', fontSize: 13, color: '#374151', verticalAlign: 'middle' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },
@@ -2164,7 +2233,7 @@ const s = {
   btnGhostPillActif: { borderColor: '#6366f1', background: '#e0e7ff', color: '#4338ca' },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },
-  commentInput: { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: 160 },
+  commentInput: { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: '100%', boxSizing: 'border-box' },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   formChamp: { display: 'flex', flexDirection: 'column' },
   label: { fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#64748b' },

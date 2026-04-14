@@ -54,11 +54,13 @@ const getElevesClasse = async (req, res) => {
     // Gère les élèves avec ET sans utilisateur_id
     const result = await pool.query(`
       SELECT e.id,
-        u.nom, u.prenom
+        COALESCE(u.nom, e.nom) AS nom,
+        COALESCE(u.prenom, e.prenom) AS prenom
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
-      WHERE e.classe_id = $1 AND (e.statut = 'actif' OR e.statut = 'Actif')
-      ORDER BY u.nom, u.prenom
+      WHERE e.classe_id = $1
+        AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
+      ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `, [classe_id]);
     res.json(result.rows);
   } catch (err) {
@@ -104,7 +106,8 @@ const getStatistiques = async (req, res) => {
     const result = await pool.query(`
       SELECT
         e.id as eleve_id,
-        u.nom, u.prenom,
+        COALESCE(u.nom, e.nom) AS nom,
+        COALESCE(u.prenom, e.prenom) AS prenom,
         COUNT(DISTINCT pv.date) as jours,
         SUM(
           (CASE WHEN pv.p1='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p2='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p3='P' THEN 1 ELSE 0 END)+(CASE WHEN pv.p4='P' THEN 1 ELSE 0 END)+
@@ -133,8 +136,9 @@ const getStatistiques = async (req, res) => {
        AND ($2::date IS NULL OR pv.date >= $2::date)
        AND ($3::date IS NULL OR pv.date <= $3::date)
       WHERE e.classe_id = $1
+        AND LOWER(COALESCE(e.statut, 'actif')) = 'actif'
       GROUP BY e.id, u.nom, u.prenom
-      ORDER BY u.nom, u.prenom
+      ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `, [classe_id, date_debut || null, date_fin || null]);
     res.json(result.rows);
   } catch (err) {

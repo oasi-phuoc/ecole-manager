@@ -518,6 +518,11 @@ export default function Eleves() {
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
         />
+        <button
+          onClick={() => setShowInactif(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+          {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
+        </button>
         {!showNiveauxFiltres ? (
           <button
             onClick={() => setShowNiveauxFiltres(true)}
@@ -540,11 +545,6 @@ export default function Eleves() {
             })}
           </div>
         )}
-        <button
-          onClick={() => setShowInactif(v => !v)}
-          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
-          {showInactif ? 'Masquer inactifs' : 'Afficher inactifs'}
-        </button>
       </div>
       </div>
 

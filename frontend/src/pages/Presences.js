@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -14,6 +13,7 @@ const PERIODES = [1,2,3,4,5,6,7,8];
 const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const COL_NOM_WIDTH = 170;
 const COL_PRENOM_WIDTH = 150;
+const STATS_TD = { padding:'11px 14px', fontSize:13, color:'#374151' };
 /** Décalage vertical du 2e rang d’en-tête (saisie présences) pour le sticky */
 
 /** Jour civil pour les présences (évite le décalage : ISO UTC « 14T22…Z » = 15 en CH). */
@@ -479,25 +479,18 @@ export default function Presences() {
   return (
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
-      <div style={{...stickyPageChrome(), paddingBottom:12, marginBottom:0, boxShadow:'none'}}>
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Contrôle des présences</h2>
-        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',minHeight:36}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
             {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
-            <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',height:36,boxSizing:'border-box',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
-              <div style={{width:36,height:20,borderRadius:10,background:valide?'#10b981':'#e2e8f0',position:'relative',transition:'all 0.2s'}}>
-                <div style={{position:'absolute',top:2,left:valide?18:2,width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.2s'}}></div>
-              </div>
-              {valide ? 'Présences validées' : 'Valider les présences'}
-            </button>
             <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'0 18px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
               Sauvegarder
             </button>
           </>)}
           {isAdmin() && (
-            <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'9px 20px',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
+            <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'0 20px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
               {exportLoading ? 'Export...' : 'Exporter LORA'}
             </button>
           )}
@@ -505,39 +498,79 @@ export default function Presences() {
       </div>
 
       {/* Classe select + date en ligne */}
-      <div style={{marginTop:0,marginBottom:8,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-        <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-          <option value="">Sélectionner une classe</option>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-        </select>
-        {onglet === 'saisie' && (
-          <>
-            <button onClick={allerJourPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-            <input style={s.inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
-            <button onClick={allerJourSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-          </>
-        )}
-        {onglet === 'apercu' && (
-          <>
-            <button onClick={allerMoisPrecedent} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>‹</button>
-            <select
-              style={{...s.inp, minWidth:170, textTransform:'capitalize', cursor:'pointer'}}
-              value={date.substring(0, 7)}
-              onChange={e => {
-                const v = e.target.value;
-                if (!v) return;
-                setDate(v + '-01');
-              }}
-            >
-              {optionsMois.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
+      <div style={{marginTop:0,marginBottom:12,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:10}}>
+        {onglet === 'saisie' ? (
+          <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'nowrap',width:240}}>
+              <button onClick={allerJourPrecedent} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,flex:'0 0 20px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
+              </button>
+              <input style={{...s.inp,flex:'1 1 auto',minWidth:0}} type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <button onClick={allerJourSuivant} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,flex:'0 0 20px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
+              </button>
+            </div>
+            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+              <option value="">Sélectionner une classe</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
             </select>
-            <button onClick={allerMoisSuivant} style={{padding:'7px 11px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:14,color:'#475569',fontWeight:700}}>›</button>
-          </>
-        )}
-        {onglet === 'stats' && (
-          <>
+            {classeSelectionnee && (
+              <button
+                onClick={handleToggleValide}
+                disabled={isWeekend()||isVacance()}
+                style={{
+                  padding:'0 16px',
+                  height:36,
+                  boxSizing:'border-box',
+                  borderRadius:99,
+                  border:'2px solid '+((isWeekend()||isVacance()) ? '#e2e8f0' : (valide ? '#6366f1' : '#e2e8f0')),
+                  background:(isWeekend()||isVacance()) ? '#f8fafc' : (valide ? '#eef2ff' : 'white'),
+                  color:(isWeekend()||isVacance()) ? '#cbd5e1' : (valide ? '#4338ca' : '#94a3b8'),
+                  cursor:(isWeekend()||isVacance()) ? 'not-allowed' : 'pointer',
+                  fontWeight:700,
+                  fontSize:13,
+                  whiteSpace:'nowrap',
+                  transition:'all 0.2s'
+                }}
+              >
+                {valide ? 'Présences validées' : 'Valider les présences'}
+              </button>
+            )}
+          </div>
+        ) : onglet === 'apercu' ? (
+          <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'nowrap'}}>
+              <button onClick={allerMoisPrecedent} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
+              </button>
+              <select
+                style={{...s.inp, minWidth:170, textTransform:'capitalize', cursor:'pointer'}}
+                value={date.substring(0, 7)}
+                onChange={e => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  setDate(v + '-01');
+                }}
+              >
+                {optionsMois.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <button onClick={allerMoisSuivant} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
+              </button>
+            </div>
+            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+              <option value="">Sélectionner une classe</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+          </div>
+        ) : onglet === 'stats' ? (
+          <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+              <option value="">Sélectionner une classe</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
             <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
               {[
                 { id: '1sem', label: '1er semestre' },
@@ -568,14 +601,20 @@ export default function Presences() {
               <span style={{fontSize:13,color:'#334155',fontWeight:700}}>et</span>
               <input type="date" value={statsDateFin} onChange={e => setStatsDateFin(e.target.value)} style={s.inp} />
             </>}
-          </>
+          </div>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
+              <option value="">Sélectionner une classe</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+          </div>
         )}
-      </div>
       </div>
 
       {onglet === 'saisie' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 0, marginBottom: 8, padding: 0, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 0, marginBottom: 12, padding: 0, flexWrap: 'wrap' }}>
             {[['P', '#10b981', 'Présent'], ['A', '#ef4444', 'Absent'], ['R', '#f59e0b', 'Retard'], ['E', '#3b82f6', 'Excusé'], ['C', '#8b5cf6', 'Congé']].map(([k, c, l]) => (
               <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: c, fontWeight: 700 }}>
                 <span style={{ width: 18, height: 18, borderRadius: 4, background: c, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{k}</span>{l}
@@ -619,7 +658,7 @@ export default function Presences() {
                     const cs = 12;
                     const cellMsg = (bg, color, msg) => (
                       <tr key="msg">
-                        <td colSpan={cs} style={{ padding: '28px 20px', textAlign: 'center', background: bg, color, fontWeight: 700, fontSize: 14 }}>{msg}</td>
+                        <td colSpan={cs} style={{ padding: '28px 20px', textAlign: 'center', background: bg, color, fontWeight: 400, fontSize: 14 }}>{msg}</td>
                       </tr>
                     );
                     if (!classeSelectionnee) {
@@ -632,7 +671,7 @@ export default function Presences() {
                       return cellMsg('#fef3c7', '#92400e', `🏖️ ${getNomVacance()} — pas de saisie de présences pendant les vacances`);
                     }
                     if (!getHoraireJour()) {
-                      return cellMsg('#fff7ed', '#c2410c', `⚠️ Aucun horaire défini pour cette classe le ${getNomJour()} — configurez l'affectation des classes dans l'emploi du temps`);
+                      return cellMsg('white', '#94a3b8', `Aucun horaire défini pour cette classe le ${getNomJour()} — configurez l'affectation des classes dans l'emploi du temps`);
                     }
                     if (eleves.length === 0) {
                       return cellMsg('#fafafa', '#94a3b8', 'Aucun élève actif dans cette classe');
@@ -643,7 +682,7 @@ export default function Presences() {
                           <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                             <td style={{ ...s.td, fontWeight: 800, color: '#0f172a' }}>{e.nom}</td>
                             <td style={{ ...s.td, color: '#374151' }}>{e.prenom}</td>
-                            <td style={{ ...s.td, padding: '6px 4px', textAlign: 'center', background: isWeekend() ? '#f1f5f9' : 'transparent' }}>
+                            <td style={{ ...s.td, padding: '11px 4px', textAlign: 'center', background: isWeekend() ? '#f1f5f9' : 'transparent' }}>
                               {isWeekend() ? (
                                 <div style={{ width: 44, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
                               ) : (
@@ -661,7 +700,7 @@ export default function Presences() {
                               const bloque = isBloque(i);
                               const val = presences[e.id]?.['p' + i] || '';
                               return (
-                                <td key={i} style={{ ...s.td, padding: '6px 4px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
+                                <td key={i} style={{ ...s.td, padding: '11px 4px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
                                   {bloque ? (
                                     <div style={{ width: 40, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
                                   ) : (
@@ -676,7 +715,7 @@ export default function Presences() {
                                 </td>
                               );
                             })}
-                            <td style={{ ...s.td, padding: '6px 8px' }}>
+                            <td style={{ ...s.td, padding: '11px 8px' }}>
                               <input
                                 style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: '100%', minWidth: 140, outline: 'none' }}
                                 type="text"
@@ -748,8 +787,8 @@ export default function Presences() {
                   </colgroup>
                   <thead>
                     <tr style={{background:'#f8fafc'}}>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:0,top:0,background:'#f8fafc',zIndex:5,whiteSpace:'nowrap',boxShadow:'none',borderRadius:'12px 0 0 0'}}>NOM</th>
-                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',position:'sticky',left:COL_NOM_WIDTH,top:0,background:'#f8fafc',zIndex:4,whiteSpace:'nowrap',boxShadow:'none'}}>Prénom</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',background:'#f8fafc',whiteSpace:'nowrap',boxShadow:'none',borderTopLeftRadius:12}}>NOM</th>
+                      <th style={{padding:'10px 14px',textAlign:'left',fontSize:12,fontWeight:800,color:'#475569',borderBottom:'none',background:'#f8fafc',whiteSpace:'nowrap',boxShadow:'none'}}>Prénom</th>
                       {jours.map(j => {
                         const wkd = isWkd(j);
                         const vac = isVac(j);
@@ -760,11 +799,8 @@ export default function Presences() {
                           <th key={j} style={{padding:'4px 2px',textAlign:'center',borderBottom:'none',minWidth:26,
                             background: bg,
                             color:wkd?'#94a3b8':vac?'#92400e':'#475569',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 2,
                             boxShadow: 'none',
-                            ...(lastJ ? { borderRadius: '0 12px 0 0' } : {}),
+                            ...(lastJ ? { borderTopRightRadius: 12 } : {}),
                           }}>
                             <div style={{fontWeight:700,fontSize:11}}>{j}</div>
                             <div style={{fontSize:9,opacity:0.7}}>{NOM_JOURS[jourIdx]}</div>
@@ -774,16 +810,22 @@ export default function Presences() {
                     </tr>
                   </thead>
                   <tbody>
-                    {apercuMois.eleves.map((e, ri) => (
+                    {(apercuMois.eleves || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={2 + jours.length} style={{padding:40,textAlign:'center',color:'#94a3b8',background:'white'}}>
+                          Aucune donnée
+                        </td>
+                      </tr>
+                    ) : apercuMois.eleves.map((e, ri) => (
                       <tr key={e.id} style={{background:ri%2===0?'white':'#fafafa'}}>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:0,background:ri%2===0?'white':'#fafafa',zIndex:3,whiteSpace:'nowrap',boxShadow:'none'}}>{e.nom}</td>
-                        <td style={{padding:'8px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',position:'sticky',left:COL_NOM_WIDTH,background:ri%2===0?'white':'#fafafa',zIndex:2,whiteSpace:'nowrap',boxShadow:'none'}}>{e.prenom}</td>
+                        <td style={{padding:'11px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',background:ri%2===0?'white':'#fafafa',whiteSpace:'nowrap',boxShadow:'none'}}>{e.nom}</td>
+                        <td style={{padding:'11px 14px',fontWeight:700,fontSize:13,color:'#0f172a',borderBottom:'1px solid #f1f5f9',background:ri%2===0?'white':'#fafafa',whiteSpace:'nowrap',boxShadow:'none'}}>{e.prenom}</td>
                         {jours.map(j => {
                           const wkd = isWkd(j);
                           const vac = isVac(j);
                           const statut = (!wkd && !vac) ? getStatut(e.id, j) : '';
                           return (
-                            <td key={j} style={{padding:'8px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
+                            <td key={j} style={{padding:'11px 2px',textAlign:'center',borderBottom:'1px solid #f1f5f9',
                               background:wkd?'#e2e8f0':vac?'#fef9c3':'transparent'}}>
                               {!wkd && !vac && (
                                 <span style={{
@@ -819,15 +861,12 @@ export default function Presences() {
             </colgroup>
             <thead>
               <tr style={{background:'#6366f1'}}>
-                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Taux présence %','Taux présence BN %'].map((h, hi) => (
+                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Présence réelle','Présence BN'].map((h, hi) => (
                   <th key={h} style={{
                     ...s.th,
                     textAlign: h==='NOM'||h==='Prénom'?'left':'center',
                     color: 'white',
                     background: '#6366f1',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2,
                     borderTopLeftRadius: hi === 0 ? 12 : 0,
                     borderTopRightRadius: hi === 9 ? 12 : 0,
                     boxShadow: 'none',
@@ -851,16 +890,16 @@ export default function Presences() {
                 const tauxBN = totalPeriodes > 0 ? Math.round((presentPlusRetards / totalPeriodes) * 1000) / 10 : null;
                 return (
                   <tr key={i} style={{borderBottom:'1px solid #f1f5f9',background:i%2===0?'white':'#fafafa'}}>
-                    <td style={{...s.td,fontWeight:800}}>{st.nom}</td>
-                    <td style={s.td}>{st.prenom}</td>
-                    <td style={{...s.td,textAlign:'center'}}>{totalPeriodes}</td>
-                    <td style={{...s.td,textAlign:'center',color:'#10b981',fontWeight:700}}>{st.presents||0}</td>
-                    <td style={{...s.td,textAlign:'center',color:'#ef4444',fontWeight:700}}>{st.absents||0}</td>
-                    <td style={{...s.td,textAlign:'center',color:'#f59e0b',fontWeight:700}}>{st.retards||0}</td>
-                    <td style={{...s.td,textAlign:'center',color:'#3b82f6',fontWeight:700}}>{st.excuses||0}</td>
-                    <td style={{...s.td,textAlign:'center',color:'#8b5cf6',fontWeight:700}}>{st.conges||0}</td>
-                    <td style={{...s.td,textAlign:'center',fontWeight:700,color:tauxPresence!=null&&tauxPresence>=80?'#10b981':tauxPresence!=null?'#f59e0b':'#94a3b8'}}>{tauxPresence != null ? tauxPresence + '%' : '—'}</td>
-                    <td style={{...s.td,textAlign:'center',fontWeight:700,color:tauxBN!=null&&tauxBN>=80?'#10b981':tauxBN!=null?'#f59e0b':'#94a3b8'}}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
+                    <td style={{...STATS_TD,fontWeight:800}}>{st.nom}</td>
+                    <td style={STATS_TD}>{st.prenom}</td>
+                    <td style={{...STATS_TD,textAlign:'center'}}>{totalPeriodes}</td>
+                    <td style={{...STATS_TD,textAlign:'center',color:'#10b981',fontWeight:700}}>{st.presents||0}</td>
+                    <td style={{...STATS_TD,textAlign:'center',color:'#ef4444',fontWeight:700}}>{st.absents||0}</td>
+                    <td style={{...STATS_TD,textAlign:'center',color:'#f59e0b',fontWeight:700}}>{st.retards||0}</td>
+                    <td style={{...STATS_TD,textAlign:'center',color:'#3b82f6',fontWeight:700}}>{st.excuses||0}</td>
+                    <td style={{...STATS_TD,textAlign:'center',color:'#8b5cf6',fontWeight:700}}>{st.conges||0}</td>
+                    <td style={{...STATS_TD,textAlign:'center',fontWeight:700,color:tauxPresence!=null&&tauxPresence>=80?'#10b981':tauxPresence!=null?'#f59e0b':'#94a3b8'}}>{tauxPresence != null ? tauxPresence + '%' : '—'}</td>
+                    <td style={{...STATS_TD,textAlign:'center',fontWeight:700,color:tauxBN!=null&&tauxBN>=80?'#10b981':tauxBN!=null?'#f59e0b':'#94a3b8'}}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
                   </tr>
                 );
               })}
@@ -874,11 +913,11 @@ export default function Presences() {
 }
 
 const s = {
-  inp:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,outline:'none',background:'white'},
-  /** Liste classe : fond blanc, sans style violet (saisie + aperçu). */
-  selClasse:{padding:'9px 14px',borderRadius:8,border:'1px solid #e2e8f0',background:'white',color:'#1e293b',fontWeight:600,fontSize:14,outline:'none',cursor:'pointer',minWidth:200},
+  inp:{padding:'8px 12px',border:'1px solid #c7d2fe',borderRadius:8,fontSize:13,outline:'none',background:'white'},
+  /** Liste classe : même gabarit visuel que les barres de recherche. */
+  selClasse:{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',color:'#1e293b',fontWeight:400,fontSize:14,outline:'none',cursor:'pointer',width:240,fontFamily:'inherit'},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'none',whiteSpace:'nowrap'},
-  td:{padding:'8px',fontSize:13,color:'#374151'},
+  td:{padding:'11px 14px',fontSize:13,color:'#374151'},
 };
