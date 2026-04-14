@@ -9,6 +9,7 @@ const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onre
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
 const COL_OEIL_DETAIL = 52;
+const COL_ACTIONS_EVAL = 136;
 
 const calculerNote = (points, pointsMax) => {
   if (points === '' || points === null || points === undefined || pointsMax <= 0) return null;
@@ -112,6 +113,7 @@ export default function Notes() {
   const [rapportChargement, setRapportChargement] = useState(false);
   const [rapportErreur, setRapportErreur] = useState('');
   const [vueGeneraleMode, setVueGeneraleMode] = useState('tous');
+  const [showVueGeneraleModes, setShowVueGeneraleModes] = useState(false);
   const [vueClasseAction, setVueClasseAction] = useState('evaluations');
   const [vueContexte, setVueContexte] = useState('detail');
   const [rapportMatiereId, setRapportMatiereId] = useState('');
@@ -705,18 +707,35 @@ export default function Notes() {
               </button>
             ))}
           </div>
-          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
-            {[['tous','Tous'],['eleve','Par élève'],['branche','Par branche']].map(([val,label]) => (
-              <button key={val} onClick={() => setVueGeneraleMode(val)}
-                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: vueGeneraleMode === val ? '#6366f1' : 'transparent', color: vueGeneraleMode === val ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: vueGeneraleMode === val ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                {label}
+          {!showVueGeneraleModes ? (
+            <button
+              type="button"
+              onClick={() => setShowVueGeneraleModes(true)}
+              style={s.btnGhostPill}
+            >
+              Trier
+            </button>
+          ) : (
+            <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              <button
+                type="button"
+                onClick={() => { setVueGeneraleMode('tous'); setShowVueGeneraleModes(false); }}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: vueGeneraleMode === 'tous' ? '#6366f1' : 'transparent', color: vueGeneraleMode === 'tous' ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: vueGeneraleMode === 'tous' ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+              >
+                Trier
               </button>
-            ))}
-          </div>
+              {[['eleve','Par élève'],['branche','Par branche']].map(([val,label]) => (
+                <button key={val} onClick={() => setVueGeneraleMode(val)}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: vueGeneraleMode === val ? '#6366f1' : 'transparent', color: vueGeneraleMode === val ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: vueGeneraleMode === val ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Branche/élève dropdown */}
-        <div className="no-print" style={{marginTop:4,marginBottom:4,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+        <div className="no-print" style={{marginTop:0,marginBottom:12,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
           {vueGeneraleMode === 'branche' && (
             <select style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#1e293b', fontWeight: 600, fontSize: 14, outline: 'none', cursor: 'pointer', minWidth: 280 }} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
               <option value="">Choisir une branche</option>
@@ -751,7 +770,7 @@ export default function Notes() {
           const moyGen  = (eleveId) => { const vals = branchesClasse.map(b => getMoy(b.id, eleveId)).filter(v => v !== null); return vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; };
           const colNom = (b) => (b.designation_courte || b.nom || '').trim();
           return (
-          <div style={{ overflowX: 'auto', marginTop: 4 }}>
+          <div style={{ overflowX: 'auto', marginTop: 0 }}>
           <div ref={printRef} id="vg-tous-print" className="vg-bull-sheet" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', width: '100%', boxSizing: 'border-box' }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
               <thead>
@@ -1311,14 +1330,6 @@ export default function Notes() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
               <button
-                onClick={validerCriteres}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 36, boxSizing: 'border-box', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
-                <div style={{ width: 36, height: 20, borderRadius: 10, background: criteresValides ? '#10b981' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
-                  <div style={{ position: 'absolute', top: 2, left: criteresValides ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
-                </div>
-                {criteresValides ? 'Critères validés' : 'Valider les critères'}
-              </button>
-              <button
                 onClick={sauvegarderTousCriteres}
                 style={{ padding: '0 18px', height: 36, boxSizing: 'border-box', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#6366f1', color: 'white', transition: 'all 0.2s' }}>
                 Sauvegarder
@@ -1356,13 +1367,18 @@ export default function Notes() {
             </div>
           )}
           {bulletinOnglet === 'criteres' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button type="button" onClick={toutVert}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 36, boxSizing: 'border-box', borderRadius: 99, border: '2px solid ' + (toutEstVert ? '#10b981' : '#e2e8f0'), background: toutEstVert ? '#ecfdf5' : 'white', color: toutEstVert ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
-              <div style={{ width: 36, height: 20, borderRadius: 10, background: toutEstVert ? '#10b981' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
-                <div style={{ position: 'absolute', top: 2, left: toutEstVert ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
-              </div>
+              style={{ ...s.btnGhostPill, ...(toutEstVert ? s.btnGhostPillActif : {}) }}>
               Tout mettre au vert
             </button>
+            <button
+              type="button"
+              onClick={validerCriteres}
+              style={{ ...s.btnGhostPill, ...(criteresValides ? s.btnGhostPillActif : {}) }}>
+              {criteresValides ? 'Critères validés' : 'Valider les critères'}
+            </button>
+            </div>
           )}
         </div>
 
@@ -1415,7 +1431,7 @@ export default function Notes() {
                           const key = 'c' + n;
                           const val = cr[key] || '';
                           return (
-                            <td key={key} style={{ ...s.td, padding: 4, textAlign: 'center', verticalAlign: 'middle', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1].join(' ')}
+                            <td key={key} style={{ ...s.td, padding: '8px 6px', textAlign: 'center', verticalAlign: 'middle', cursor: 'pointer' }} title={BULLETIN_CRITERES_LABELS[n - 1].join(' ')}
                               onClick={() => { mettreAJourCritereLocal(b.eleve.id, { [key]: cycleCouleur(val) }); }}>
                               {val ? <span style={{ width: 14, height: 14, borderRadius: '50%', display: 'inline-block', background: val === 'vert' ? '#22c55e' : val === 'orange' ? '#f97316' : '#ef4444' }} /> : '—'}
                             </td>
@@ -1423,7 +1439,7 @@ export default function Notes() {
                         })}
                         <td style={{ ...s.td, textAlign: 'center', verticalAlign: 'middle', fontWeight: 700, ...tauxBg }}>{tauxBN != null ? tauxBN + '%' : '—'}</td>
                         <td style={{ ...s.td, textAlign: 'center', verticalAlign: 'middle', fontWeight: 700, ...retardsBg }}>{retards > 0 ? retards : (st?.retards != null ? st.retards : '—')}</td>
-                        <td style={{ ...s.td, textAlign: 'center', padding: 4 }}>
+                        <td style={{ ...s.td, textAlign: 'center', padding: '8px 6px' }}>
                           <button type="button"
                             onClick={() => {
                               const existing = cr.remarques || '';
@@ -1833,10 +1849,21 @@ export default function Notes() {
         )}
 
         <div style={s.tblWrap}>
-        <table style={s.tbl}>
+        <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
+          <colgroup>
+            <col style={{ width: COL_ACTIONS_EVAL }} />
+            <col />
+            <col style={{ width: 170 }} />
+            <col style={{ width: 96 }} />
+            <col style={{ width: 92 }} />
+            <col style={{ width: 78 }} />
+            <col style={{ width: 64 }} />
+            <col style={{ width: 92 }} />
+            <col style={{ width: 96 }} />
+          </colgroup>
           <thead>
             <tr style={s.theadRow}>
-              <th style={{ ...s.th, width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, textAlign: 'center', borderTopLeftRadius: 12, boxSizing: 'border-box' }} aria-label="Actions" />
+              <th style={{ ...s.th, width: COL_ACTIONS_EVAL, minWidth: COL_ACTIONS_EVAL, maxWidth: COL_ACTIONS_EVAL, textAlign: 'center', borderTopLeftRadius: 12, boxSizing: 'border-box' }} aria-label="Actions" />
               <th style={s.th}>Désignation</th>
               <th style={s.th}>Professeur</th>
               <th style={s.th}>Date</th>
@@ -1852,12 +1879,14 @@ export default function Notes() {
               <tr><td colSpan="9" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                <td style={{ ...s.td, whiteSpace: 'nowrap', width: COL_OEIL_DETAIL, minWidth: COL_OEIL_DETAIL, maxWidth: COL_OEIL_DETAIL, boxSizing: 'border-box', textAlign: 'center' }}>
-                  <button type="button" style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
-                  </button>
-                  {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button type="button" style={s.btnEdit} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
-                  {isAdmin() && <button type="button" style={s.btnDelete} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
+                <td style={{ ...s.td, whiteSpace: 'nowrap', width: COL_ACTIONS_EVAL, minWidth: COL_ACTIONS_EVAL, maxWidth: COL_ACTIONS_EVAL, boxSizing: 'border-box', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button type="button" style={{ ...s.btnDetail, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }} title="Saisir les notes" onClick={() => ouvrirEvaluation(ev)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    </button>
+                    {peutModifierNotes() && !(sem1Bloque && String(ev.semestre) === '1' && !isAdmin()) && <button type="button" style={{ ...s.btnEdit, marginRight: 0 }} title="Modifier l'évaluation" onClick={() => ouvrirEditionEvaluation(ev)}>Éditer</button>}
+                    {isAdmin() && <button type="button" style={{ ...s.btnDelete, marginLeft: 0 }} onClick={() => handleSupprimerEvaluation(ev.id)}>Suppr.</button>}
+                  </div>
                 </td>
                 <td style={{ ...s.td, fontWeight: 700, color: '#6366f1', cursor: 'pointer' }} onClick={() => ouvrirEvaluation(ev)}>{ev.nom}</td>
                 <td style={s.td}>{((ev.prof_prenom || '') + ' ' + (ev.prof_nom || '')).trim() || '—'}</td>
@@ -2131,6 +2160,8 @@ const s = {
   btnDelete: { padding: '4px 8px', background: 'none', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#ef4444', fontWeight: 600, marginLeft: 4 },
   btnEdit: { padding: '4px 10px', background: '#eef2ff', color: '#6366f1', border: '1px solid #c7d2fe', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, marginRight: 6 },
   btnDetail: { padding: '5px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
+  btnGhostPill: { padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  btnGhostPillActif: { borderColor: '#6366f1', background: '#e0e7ff', color: '#4338ca' },
   badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 },
   noteInput: { width: 72, padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 15, fontWeight: 700, textAlign: 'center' },
   commentInput: { padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, width: 160 },

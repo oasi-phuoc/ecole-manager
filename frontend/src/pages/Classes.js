@@ -1665,7 +1665,7 @@ export default function Classes() {
               !showDevoirBranchesFiltres ? (
                 <button
                   type="button"
-                  style={{...s.toggleBtn,color:'#94a3b8'}}
+                  style={s.filterTriggerBtn}
                   onClick={() => setShowDevoirBranchesFiltres(true)}
                 >
                   Trier
@@ -1689,7 +1689,7 @@ export default function Classes() {
             )}
             <button
               type="button"
-              style={{...s.toggleBtn, color: devoirSousOnglet === 'stats' ? '#6d28d9' : '#94a3b8'}}
+              style={s.filterTriggerBtn}
               onClick={() => setDevoirSousOnglet(prev => (prev === 'devoirs' ? 'stats' : 'devoirs'))}
             >
               {devoirSousOnglet === 'devoirs' ? 'Afficher les stats' : 'Afficher les devoirs'}
@@ -1940,7 +1940,7 @@ export default function Classes() {
               {!showInventaireBranchesFiltres ? (
                 <button
                   type="button"
-                  style={{...s.toggleBtn,color:'#94a3b8'}}
+                  style={s.filterTriggerBtn}
                   onClick={() => setShowInventaireBranchesFiltres(true)}
                 >
                   Trier
@@ -2270,6 +2270,7 @@ const s = {
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
   toggleGroup:{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2},
   toggleBtn:{padding:'7px 16px',borderRadius:17,border:'none',background:'transparent',cursor:'pointer',fontWeight:600,color:'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'},
+  filterTriggerBtn:{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'},
   toggleBtnActif:{background:'#6366f1',color:'white',fontWeight:700},
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:110,minWidth:110,textAlign:'center',border:'none',cursor:'pointer',outline:'none',lineHeight:1},

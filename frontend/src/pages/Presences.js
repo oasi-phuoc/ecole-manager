@@ -479,11 +479,11 @@ export default function Presences() {
   return (
     <div style={{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:FONT}}>
 
-      <div style={{...stickyPageChrome(), marginBottom:0}}>
+      <div style={{...stickyPageChrome(), paddingBottom:12, marginBottom:0, boxShadow:'none'}}>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
-        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',margin:0}}>Contrôle des présences</h2>
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'}}>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Contrôle des présences</h2>
+        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
             {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
             <button onClick={handleToggleValide} disabled={isWeekend()||isVacance()} style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',height:36,boxSizing:'border-box',borderRadius:99,border:'2px solid '+((valide)?'#10b981':'#e2e8f0'),background:(isWeekend()||isVacance())?'#f1f5f9':valide?'#ecfdf5':'white',color:(isWeekend()||isVacance())?'#cbd5e1':valide?'#059669':'#64748b',cursor:(isWeekend()||isVacance())?'not-allowed':'pointer',fontWeight:700,fontSize:13,transition:'all 0.2s'}}>
