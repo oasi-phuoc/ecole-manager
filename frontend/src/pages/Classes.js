@@ -18,6 +18,7 @@ export default function Classes() {
   const [recherche, setRecherche] = useState('');
   const [showInactif, setShowInactif] = useState(false);
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
+  const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
@@ -2044,11 +2045,19 @@ export default function Classes() {
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
         <input style={s.tabSearch} placeholder="Rechercher une classe..." value={recherche} onChange={e => setRecherche(e.target.value)} />
-        <div style={s.toggleGroup}>
-          {[{id:'tous',label:'Tous'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
-            <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowNiveauxFiltres(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showNiveauxFiltres?'#6366f1':'#e2e8f0'),background:showNiveauxFiltres?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showNiveauxFiltres?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+        >
+          Trier
+        </button>
+        {showNiveauxFiltres && (
+          <div style={s.toggleGroup}>
+            {[{id:'tous',label:'Trier'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
+              <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => setFiltreNiveau(f.id)}>{f.label}</button>
+            ))}
+          </div>
+        )}
         <button
           onClick={() => setShowInactif(v => !v)}
           style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>

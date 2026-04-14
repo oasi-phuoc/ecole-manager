@@ -23,6 +23,7 @@ export default function Eleves() {
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
+  const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [showInactif, setShowInactif] = useState(true);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [showImport, setShowImport] = useState(false);
@@ -517,19 +518,27 @@ export default function Eleves() {
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
         />
-        <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
-          {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
-            const actif = niveauOnglet === k;
-            const label = k === 'tous' ? 'Tous' : k === 'sans' ? 'Sans classe' : k;
-            return (
-              <button key={k}
-                style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-                onClick={() => { setNiveauOnglet(k); setRecherche(''); }}>
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          onClick={() => setShowNiveauxFiltres(v => !v)}
+          style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showNiveauxFiltres?'#6366f1':'#e2e8f0'),background:showNiveauxFiltres?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showNiveauxFiltres?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+        >
+          Trier
+        </button>
+        {showNiveauxFiltres && (
+          <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+            {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
+              const actif = niveauOnglet === k;
+              const label = k === 'tous' ? 'Trier' : k === 'sans' ? 'Sans classe' : k;
+              return (
+                <button key={k}
+                  style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                  onClick={() => { setNiveauOnglet(k); setRecherche(''); }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <button
           onClick={() => setShowInactif(v => !v)}
           style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid '+(showInactif?'#6366f1':'#e2e8f0'),background:showInactif?'#e0e7ff':'white',cursor:'pointer',fontWeight:600,color:showInactif?'#4338ca':'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>

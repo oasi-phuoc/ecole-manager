@@ -1,5 +1,5 @@
 import { isAdmin, getUser } from '../utils/permissions';
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
@@ -8,8 +8,6 @@ const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
-/** Même valeur que `s.page` — le sticky doit utiliser ce décalage pour ne pas « remonter » sous le padding au défilement. */
-const PAGE_PAD_TOP = 28;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 
 const normaliserBranchesSpecialites = (valeur) => {
@@ -302,32 +300,6 @@ export default function Professeurs({
     });
   }, [branchesDisponibles, showForm, hidePreferences]);
 
-  const stickyTopRef = useRef(null);
-  const [stickyTopH, setStickyTopH] = useState(120);
-
-  useLayoutEffect(() => {
-    const el = stickyTopRef.current;
-    if (!el) return;
-    const measure = () => setStickyTopH(el.offsetHeight);
-    measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    if (ro) ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => {
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [titre, showInactif]);
-
-  /** z-index sous le bandeau (40) pour que les lignes passent toujours dessous titre + filtres + en-têtes. */
-  const thSticky = (extra = {}) => ({
-    ...s.th,
-    top: PAGE_PAD_TOP + stickyTopH,
-    zIndex: 38,
-    boxShadow: 'none',
-    ...extra,
-  });
-
   const barreFiltresListe = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0, flexWrap: 'wrap' }}>
       <input style={s.tabSearch} placeholder={searchPlaceholder} value={recherche} onChange={e => setRecherche(e.target.value)} />
@@ -356,18 +328,7 @@ export default function Professeurs({
 
   return (
     <div style={s.page}>
-      <div
-        ref={stickyTopRef}
-        style={{
-          position: 'sticky',
-          top: PAGE_PAD_TOP,
-          zIndex: 40,
-          background: '#f8fafc',
-          paddingBottom: 12,
-          marginBottom: 0,
-          boxShadow: 'none',
-        }}
-      >
+      <div style={{ paddingBottom: 12, marginBottom: 0 }}>
         {entetePageListe}
       </div>
 
@@ -768,14 +729,14 @@ export default function Professeurs({
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
-              <th style={thSticky({ width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12 })}>Nom</th>
-              <th style={thSticky({ width: 150, minWidth: 150, whiteSpace: 'nowrap' })}>Prénom</th>
-              <th style={thSticky()}>Email</th>
-              <th style={thSticky({ textAlign: 'center' })}>Téléphone</th>
-              <th style={thSticky({ textAlign: 'center' })}>Naissance</th>
-              <th style={thSticky({ width: 76, minWidth: 76, maxWidth: 76, textAlign: 'center' })} />
-              <th style={thSticky({ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' })} />
-              {isAdmin() && <th style={thSticky({ width: 86, minWidth: 86, maxWidth: 86, textAlign: 'center', borderTopRightRadius: 12 })} />}
+              <th style={{...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap', borderTopLeftRadius: 12}}>Nom</th>
+              <th style={{...s.th, width: 150, minWidth: 150, whiteSpace: 'nowrap'}}>Prénom</th>
+              <th style={s.th}>Email</th>
+              <th style={{...s.th, textAlign: 'center'}}>Téléphone</th>
+              <th style={{...s.th, textAlign: 'center'}}>Naissance</th>
+              <th style={{...s.th, width: 76, minWidth: 76, maxWidth: 76, textAlign: 'center'}} />
+              <th style={{...s.th, width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center'}} />
+              {isAdmin() && <th style={{...s.th, width: 86, minWidth: 86, maxWidth: 86, textAlign: 'center', borderTopRightRadius: 12}} />}
             </tr>
           </thead>
           <tbody>
@@ -876,7 +837,7 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',zIndex:15,boxShadow:'none'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},

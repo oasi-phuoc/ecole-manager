@@ -634,22 +634,11 @@ export default function Presences() {
                     if (!getHoraireJour()) {
                       return cellMsg('#fff7ed', '#c2410c', `⚠️ Aucun horaire défini pour cette classe le ${getNomJour()} — configurez l'affectation des classes dans l'emploi du temps`);
                     }
-                    const libelleJourHoraire = `${getNomJour()} — ${getHoraireJour() === 'Matin' ? 'Matin (P1–P4)' : 'Après-midi (P5–P8)'}`;
                     if (eleves.length === 0) {
-                      return (
-                        <>
-                          <tr>
-                            <td colSpan={cs} style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600, fontSize: 13 }}>{libelleJourHoraire}</td>
-                          </tr>
-                          {cellMsg('#fafafa', '#94a3b8', 'Aucun élève actif dans cette classe')}
-                        </>
-                      );
+                      return cellMsg('#fafafa', '#94a3b8', 'Aucun élève actif dans cette classe');
                     }
                     return (
                       <>
-                        <tr>
-                          <td colSpan={cs} style={{ padding: '10px 20px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#15803d', fontWeight: 600, fontSize: 13 }}>{libelleJourHoraire}</td>
-                        </tr>
                         {eleves.map((e, idx) => (
                           <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                             <td style={{ ...s.td, fontWeight: 800, color: '#0f172a' }}>{e.nom}</td>
