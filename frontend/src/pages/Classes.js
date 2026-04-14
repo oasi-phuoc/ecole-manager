@@ -239,6 +239,7 @@ export default function Classes() {
   const [showDevoirForm, setShowDevoirForm] = useState(false);
   const [devoirSousOnglet, setDevoirSousOnglet] = useState('devoirs');
   const [devoirBrancheFiltre, setDevoirBrancheFiltre] = useState(null);
+  const [showDevoirBranchesFiltres, setShowDevoirBranchesFiltres] = useState(false);
   const [statsAllSuivis, setStatsAllSuivis] = useState({});
   const [devoirEditId, setDevoirEditId] = useState(null);
   const [devoirEditForm, setDevoirEditForm] = useState({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
@@ -246,6 +247,7 @@ export default function Classes() {
   const [devoirsLoading, setDevoirsLoading] = useState(false);
   const [branchesInventaire, setBranchesInventaire] = useState([]);
   const [brancheInventaireActive, setBrancheInventaireActive] = useState(null);
+  const [showInventaireBranchesFiltres, setShowInventaireBranchesFiltres] = useState(false);
   const [inventaireRows, setInventaireRows] = useState([]);
   const [inventaireLoading, setInventaireLoading] = useState(false);
   const [inventaireMsg, setInventaireMsg] = useState('');
@@ -1660,20 +1662,38 @@ export default function Classes() {
           <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,flexWrap:'wrap'}}>
             <input style={s.tabSearch} placeholder="Rechercher un devoir..." value={rechercheDevoirs} onChange={e => setRechercheDevoirs(e.target.value)} />
             {branchesInventaire.length > 0 && (
-              <div style={s.toggleGroup}>
-                <button type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre===null?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(null)}>Tous</button>
-                {branchesInventaire.map(b => (
-                  <button key={b.id} type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre?.id===b.id?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(b)}>
-                    {(b.designation_courte || b.code || b.nom || '').trim()}
+              !showDevoirBranchesFiltres ? (
+                <button
+                  type="button"
+                  style={{...s.toggleBtn,color:'#94a3b8'}}
+                  onClick={() => setShowDevoirBranchesFiltres(true)}
+                >
+                  Trier
+                </button>
+              ) : (
+                <div style={s.toggleGroup}>
+                  <button
+                    type="button"
+                    style={{...s.toggleBtn,...(devoirBrancheFiltre===null?s.toggleBtnActif:{})}}
+                    onClick={() => { setDevoirBrancheFiltre(null); setShowDevoirBranchesFiltres(false); }}
+                  >
+                    Trier
                   </button>
-                ))}
-              </div>
+                  {branchesInventaire.map(b => (
+                    <button key={b.id} type="button" style={{...s.toggleBtn,...(devoirBrancheFiltre?.id===b.id?s.toggleBtnActif:{})}} onClick={() => setDevoirBrancheFiltre(b)}>
+                      {(b.designation_courte || b.code || b.nom || '').trim()}
+                    </button>
+                  ))}
+                </div>
+              )
             )}
-            <div style={s.toggleGroup}>
-              {[['devoirs','Devoirs'],['stats','Stats']].map(([id,label]) => (
-                <button key={id} type="button" style={{...s.toggleBtn,...(devoirSousOnglet===id?s.toggleBtnActif:{})}} onClick={() => setDevoirSousOnglet(id)}>{label}</button>
-              ))}
-            </div>
+            <button
+              type="button"
+              style={{...s.toggleBtn, color: devoirSousOnglet === 'stats' ? '#6d28d9' : '#94a3b8'}}
+              onClick={() => setDevoirSousOnglet(prev => (prev === 'devoirs' ? 'stats' : 'devoirs'))}
+            >
+              {devoirSousOnglet === 'devoirs' ? 'Afficher les stats' : 'Afficher les devoirs'}
+            </button>
           </div>
 
           {(() => {
@@ -1917,19 +1937,36 @@ export default function Classes() {
           ) : (
             <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,marginBottom:8,flexWrap:'wrap'}}>
               <input style={s.tabSearch} placeholder="Rechercher un document..." value={rechercheInventaire} onChange={e => setRechercheInventaire(e.target.value)} />
-              <div style={s.toggleGroup}>
-                {branchesInventaire.map(b => (
+              {!showInventaireBranchesFiltres ? (
+                <button
+                  type="button"
+                  style={{...s.toggleBtn,color:'#94a3b8'}}
+                  onClick={() => setShowInventaireBranchesFiltres(true)}
+                >
+                  Trier
+                </button>
+              ) : (
+                <div style={s.toggleGroup}>
                   <button
-                    key={b.id}
                     type="button"
-                    title={b.nom ? String(b.nom).trim() : undefined}
-                    style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}}
-                    onClick={() => setBrancheInventaireActive(b)}
+                    style={{...s.toggleBtn,color:'#6d28d9'}}
+                    onClick={() => setShowInventaireBranchesFiltres(false)}
                   >
-                    {(b.designation_courte || b.code || b.nom || '').trim()}
+                    Trier
                   </button>
-                ))}
-              </div>
+                  {branchesInventaire.map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      title={b.nom ? String(b.nom).trim() : undefined}
+                      style={{...s.toggleBtn,...(String(brancheInventaireActive?.id)===String(b.id)?s.toggleBtnActif:{})}}
+                      onClick={() => setBrancheInventaireActive(b)}
+                    >
+                      {(b.designation_courte || b.code || b.nom || '').trim()}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {inventaireMsg && <div style={s.invMsg}>{inventaireMsg}</div>}
