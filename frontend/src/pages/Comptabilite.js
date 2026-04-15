@@ -888,18 +888,14 @@ export default function Comptabilite() {
         <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
           <thead>
             <tr style={styles.theadRow}>
-              {[
-                { label: 'Élève', min: false },
-                { label: 'Classe', min: true },
-                { label: 'Montant', min: true },
-                { label: 'Statut', min: false },
-                { label: 'Émis', min: true },
-                { label: 'Date', min: true },
-                { label: 'Validé', min: true },
-                { label: 'Actions', min: true },
-              ].map(h => (
-                <th key={h.label} style={{ ...styles.th, ...(h.min ? { width: '1%', whiteSpace: 'nowrap' } : {}) }}>{h.label}</th>
-              ))}
+              <th style={styles.th}>Élève</th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Classe</th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Montant</th>
+              <th style={styles.th}>Statut</th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Émis</th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Date</th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}></th>
+              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -933,18 +929,23 @@ export default function Comptabilite() {
                   </td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap', color: '#64748b' }}>{p.emis_at ? new Date(p.emis_at).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
-                  <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    <button onClick={() => toggleValidePaiement(p)}
-                      style={{ padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: valide ? '#16a34a' : '#e2e8f0', color: valide ? 'white' : '#64748b', transition: 'all .15s', whiteSpace: 'nowrap' }}>
-                      {valide ? '✓ Validé' : 'À valider'}
-                    </button>
-                  </td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                     <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)} title="Modifier">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)} title="Supprimer">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </td>
+                  <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    <button
+                      onClick={() => toggleValidePaiement(p)}
+                      title={valide ? 'Paiement validé' : 'Paiement non validé'}
+                      style={{ padding: 4, borderRadius: 8, border: 'none', cursor: 'pointer', background: valide ? '#dcfce7' : '#f1f5f9', color: valide ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width={16} height={16} viewBox="0 0 24 24">
+                        <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                        <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                      </svg>
                     </button>
                   </td>
                 </tr>

@@ -50,6 +50,9 @@ export default function SortieScolaire() {
   const [editId, setEditId] = useState(null);
   const [showAddTit, setShowAddTit] = useState(false);
   const [suiviClasseSelect, setSuiviClasseSelect] = useState(null);
+  const [rechercheSorties, setRechercheSorties] = useState('');
+  const [showTriTypes, setShowTriTypes] = useState(false);
+  const [triType, setTriType] = useState('Tous');
 
   const charger = async () => {
     try {
@@ -65,6 +68,12 @@ export default function SortieScolaire() {
   };
 
   useEffect(() => { charger(); }, []);
+  useEffect(() => {
+    // Toujours revenir sur la vue d'accueil (ajout/listing), jamais sur le suivi.
+    setOnglet('automne');
+    setSousOngletSuivi('automne');
+    setSuiviClasseSelect(null);
+  }, []);
 
   // Toggle classe sélectionnée
   const toggleClasse = (cl) => {
@@ -250,7 +259,27 @@ export default function SortieScolaire() {
     openPrintPopup(finalHtml, { title: 'Sortie scolaire', width: 820, height: 900 });
   };
 
-  const sortiesOnglet = sorties.filter(s => s.type === onglet);
+  const sortiesOnglet = sorties
+    .filter(s => s.type === onglet)
+    .filter(s => {
+      if (triType === 'Tous') return true;
+      return (s.type || '').toLowerCase() === triType.toLowerCase();
+    })
+    .filter((s) => {
+      const q = rechercheSorties.trim().toLowerCase();
+      if (!q) return true;
+      const zone = [
+        s.classes_noms || '',
+        s.titulaires || '',
+        s.autres_accompagnants || '',
+        s.destination || '',
+        s.activites || '',
+        s.commentaires || '',
+        s.lieu_depart || '',
+        s.lieu_retour || '',
+      ].join(' ').toLowerCase();
+      return zone.includes(q);
+    });
   // Classes sorted by nom
   const classesSorted = [...classes].sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
 
@@ -261,6 +290,30 @@ export default function SortieScolaire() {
         <h1 style={st.titre}>Gestion des sorties scolaires</h1>
         {onglet !== 'suivi' && (
           <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter</button>
+        )}
+      </div>
+      <div style={st.searchRow}>
+        <input
+          style={st.searchInput}
+          value={rechercheSorties}
+          onChange={(e) => setRechercheSorties(e.target.value)}
+          placeholder="Rechercher professeur, classe, destination..."
+        />
+        {!showTriTypes ? (
+          <button type="button" style={st.btnTri} onClick={() => setShowTriTypes(true)}>Trier</button>
+        ) : (
+          <div style={st.toggleGroup}>
+            {['Tous', 'Juin', 'Autres'].map((t) => (
+              <button
+                key={t}
+                type="button"
+                style={{ ...st.toggleBtn, ...(triType === t ? st.toggleBtnActif : {}) }}
+                onClick={() => { setTriType(t); setShowTriTypes(false); }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -683,6 +736,12 @@ const st = {
   btnBack: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 500, fontSize: 13, cursor: 'pointer' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, flex: 1 },
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
+  searchRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
+  searchInput: { width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' },
+  btnTri: { padding: '7px 16px', borderRadius: 17, border: '1px solid #d8b4fe', background: 'white', color: '#7e22ce', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' },
+  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' },
+  toggleBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabsRow: { display: 'flex', gap: 0 },
   onglet: { padding: '9px 14px', background: '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#5b21b6', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', width: 140, minWidth: 140, textAlign: 'center' },
   ongletActif: { background: '#6366f1', color: 'white', zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
