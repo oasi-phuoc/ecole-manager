@@ -55,6 +55,15 @@ const PARAMS_ONGLETS = [
   { key: 'danger', label: 'Réinitialisation',         adminOnly: true },
 ];
 
+const DOCS_ONGLETS = [
+  { key: 'accueil',        label: 'Accueil',        adminOnly: false },
+  { key: 'administratifs', label: 'Administratifs', adminOnly: false },
+  { key: 'pedagogiques',   label: 'Pédagogiques',   adminOnly: false },
+  { key: 'seances',        label: 'Séances',        adminOnly: false },
+  { key: 'formulaires',    label: 'Formulaires',    adminOnly: false },
+  { key: 'divers',         label: 'Divers',         adminOnly: false },
+];
+
 const ALL_MODULES = [
   { label: 'Employés',          path: '/employes-administratifs', adminOnly: true },
   { label: 'Professeurs',       path: '/professeurs',             accentKey: 'professeurs' },
@@ -181,6 +190,8 @@ export default function Layout() {
                   onClick={() => {
                     if (m.path === '/comptabilite') {
                       navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                    } else if (m.path === '/documents-administratifs') {
+                      navigate('/documents-administratifs?tab=accueil');
                     } else {
                       navigate(m.path);
                     }
@@ -291,6 +302,21 @@ export default function Layout() {
                     })}
                   </div>
                 )}
+                {m.path === '/documents-administratifs' && isActive && (
+                  <div style={s.subNav}>
+                    {DOCS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'accueil';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/documents-administratifs?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </React.Fragment>
             );
           })}
@@ -321,6 +347,8 @@ export default function Layout() {
                         onClick={() => {
                           if (m.path === '/comptabilite') {
                             navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                          } else if (m.path === '/documents-administratifs') {
+                            navigate('/documents-administratifs?tab=accueil');
                           } else {
                             navigate(m.path);
                           }

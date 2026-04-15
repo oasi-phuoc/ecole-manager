@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 
@@ -11,6 +12,21 @@ export default function DocumentsAdministratifs() {
   const isAdmin = currentUser?.role === 'admin';
 
   const CATEGORIES = ['Administratifs', 'Pédagogiques', 'Séances', 'Formulaires', 'Divers'];
+  const CATEGORY_BADGE_STYLES = {
+    Administratifs: { bg: '#e0e7ff', color: '#3730a3' },
+    'Pédagogiques': { bg: '#ede9fe', color: '#6d28d9' },
+    'Séances': { bg: '#dcfce7', color: '#166534' },
+    Formulaires: { bg: '#fef3c7', color: '#92400e' },
+    Divers: { bg: '#fee2e2', color: '#991b1b' },
+  };
+  const TAB_TO_CATEGORY = {
+    administratifs: 'Administratifs',
+    pedagogiques: 'Pédagogiques',
+    seances: 'Séances',
+    formulaires: 'Formulaires',
+    divers: 'Divers',
+  };
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [documents, setDocuments] = useState([]);
   const [niveauxDB, setNiveauxDB] = useState([]);
@@ -22,6 +38,7 @@ export default function DocumentsAdministratifs() {
   const [sousCategorie, setSousCategorie] = useState('');
   const [categorieOnglet, setCategorieOnglet] = useState('Administratifs');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
+  const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [rechercheDocs, setRechercheDocs] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -48,10 +65,22 @@ export default function DocumentsAdministratifs() {
     setLoading(false);
   };
 
+  const activeTab = searchParams.get('tab') || 'accueil';
+  const isAccueil = activeTab === 'accueil';
+
+  useEffect(() => {
+    const nextCategory = TAB_TO_CATEGORY[activeTab];
+    if (nextCategory) setCategorieOnglet(nextCategory);
+  }, [activeTab]);
+
   const documentsTries = useMemo(() => {
     return [...documents]
-      .filter(d => (d.categorie || 'Administratifs') === categorieOnglet)
       .filter(d => {
+        if (isAccueil) return true;
+        return (d.categorie || 'Administratifs') === categorieOnglet;
+      })
+      .filter(d => {
+        if (isAccueil) return true;
         if (categorieOnglet !== 'Pédagogiques' || niveauOnglet === 'tous') return true;
         return (d.sous_categorie || '') === niveauOnglet;
       })
@@ -63,7 +92,7 @@ export default function DocumentsAdministratifs() {
       .sort((a, b) =>
         (a.designation || '').localeCompare(b.designation || '', 'fr', { sensitivity: 'base' })
       );
-  }, [documents, categorieOnglet, niveauOnglet, rechercheDocs]);
+  }, [documents, categorieOnglet, niveauOnglet, rechercheDocs, isAccueil]);
 
   const lireFichier = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -74,8 +103,9 @@ export default function DocumentsAdministratifs() {
 
   const resetForm = () => {
     setDesignation('');
-    setCategorie(categorieOnglet);
-    setSousCategorie(categorieOnglet === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
+    const catActuelle = TAB_TO_CATEGORY[activeTab] || categorieOnglet;
+    setCategorie(catActuelle);
+    setSousCategorie(catActuelle === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
     setSelectedFile(null);
     setEditing(null);
     setDragOver(false);
@@ -83,8 +113,9 @@ export default function DocumentsAdministratifs() {
 
   const ouvrirAjout = () => {
     resetForm();
-    setCategorie(categorieOnglet);
-    setSousCategorie(categorieOnglet === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
+    const catActuelle = TAB_TO_CATEGORY[activeTab] || categorieOnglet;
+    setCategorie(catActuelle);
+    setSousCategorie(catActuelle === 'Pédagogiques' && niveauOnglet !== 'tous' ? niveauOnglet : '');
     setShowForm(true);
     setMsg('');
   };
@@ -196,56 +227,62 @@ export default function DocumentsAdministratifs() {
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>Documents</h2>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <input
-          value={rechercheDocs}
-          onChange={(e) => setRechercheDocs(e.target.value)}
-          placeholder="Rechercher un document..."
-          style={{ width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <input
+            value={rechercheDocs}
+            onChange={(e) => setRechercheDocs(e.target.value)}
+            placeholder={activeTab === 'pedagogiques' ? 'Rechercher un document pédagogique...' : isAccueil ? 'Rechercher un document (tous les sous-menus)...' : 'Rechercher un document...'}
+            style={{ width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' }}
+          />
+          {activeTab === 'pedagogiques' && (
+            !showNiveauxFiltres ? (
+              <button
+                type="button"
+                onClick={() => setShowNiveauxFiltres(true)}
+                style={{ padding: '7px 16px', borderRadius: 17, border: '1px solid #d8b4fe', background: 'white', color: '#7e22ce', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' }}
+              >
+                Trier
+              </button>
+            ) : (
+              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+                {[{ id: 'tous', label: 'Tous' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    style={{ padding: '7px 14px', borderRadius: 17, border: 'none', background: niveauOnglet === n.id ? '#6366f1' : 'transparent', cursor: 'pointer', fontWeight: niveauOnglet === n.id ? 700 : 600, color: niveauOnglet === n.id ? 'white' : '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    onClick={() => { setNiveauOnglet(n.id); setShowNiveauxFiltres(false); }}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </div>
       </div>
 
-      {/* Onglets catégories */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
-        {CATEGORIES.map(cat => (
-          <button key={cat}
-            style={{ padding: '9px 0', background: categorieOnglet === cat ? '#6366f1' : '#ede9fe', border: 'none', borderRadius: '10px 10px 0 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: categorieOnglet === cat ? 'white' : '#5b21b6', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: categorieOnglet === cat ? -1 : 0, zIndex: categorieOnglet === cat ? 2 : 1, width: 140, minWidth: 140, textAlign: 'center' }}
-            onClick={() => { setCategorieOnglet(cat); setShowForm(false); resetForm(); setMsg(''); }}>
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Sous-onglets niveaux pour Pédagogiques */}
-      {categorieOnglet === 'Pédagogiques' && niveauxDB.length > 0 && (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #c4b5fd', marginBottom: 0, background: '#f5f3ff', paddingTop: 8, paddingLeft: 8, paddingRight: 8 }}>
-          {[{ id: 'tous', label: 'Tous' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
-            <button key={n.id}
-              style={{ padding: '7px 14px', background: niveauOnglet === n.id ? '#7c3aed' : '#ede9fe', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: niveauOnglet === n.id ? 'white' : '#6d28d9', marginRight: 0, outline: 'none', lineHeight: '1', marginBottom: niveauOnglet === n.id ? -1 : 0 }}
-              onClick={() => { setNiveauOnglet(n.id); setShowForm(false); }}>
-              {n.label}
-            </button>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 derniers documents modifiés/ajoutés</div>
+          {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
+            <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
           ))}
         </div>
-      )}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 documents les plus utilisés</div>
+          {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
+            <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '0 12px 12px 12px', padding: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 derniers documents modifiés/ajoutés</div>
-            {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
-              <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
-            ))}
-          </div>
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 documents les plus utilisés</div>
-            {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
-              <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
-            ))}
-          </div>
-        </div>
+      {(!isAccueil || rechercheDocs.trim()) && (
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '12px', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 14, color: '#475569' }}>Documents classés par ordre alphabétique</div>
+          <div style={{ fontSize: 14, color: '#475569' }}>
+            {isAccueil ? 'Résultats de recherche (tous les sous-menus)' : 'Documents classés par ordre alphabétique'}
+          </div>
           {isAdmin && (
             <button
               onClick={ouvrirAjout}
@@ -369,7 +406,18 @@ export default function DocumentsAdministratifs() {
               <div key={doc.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', background: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{doc.designation}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{doc.designation}</div>
+                      {(() => {
+                        const cat = doc.categorie || 'Administratifs';
+                        const style = CATEGORY_BADGE_STYLES[cat] || { bg: '#e2e8f0', color: '#334155' };
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 999, background: style.bg, color: style.color, fontSize: 11, fontWeight: 700 }}>
+                            {cat}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                       {doc.nom_fichier} • {(doc.taille ? Math.round(doc.taille / 1024) + ' KB' : 'taille inconnue')}
                     </div>
@@ -378,7 +426,7 @@ export default function DocumentsAdministratifs() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                    <button onClick={() => visualiser(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155' }} title="Visualiser">
+                    <button onClick={() => visualiser(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Visualiser">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                     </button>
                     <button onClick={() => telecharger(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8' }} title="Télécharger">
@@ -401,6 +449,7 @@ export default function DocumentsAdministratifs() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
