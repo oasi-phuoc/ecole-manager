@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
@@ -421,13 +422,15 @@ export default function Notes() {
     if (vue === 'bulletin') {
       const node = printRef.current;
       if (!node) return;
-      const popup = window.open('', '_blank', 'width=1000,height=800');
-      if (!popup) return;
-      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;display:flex;flex-direction:column;min-height:100vh;}table{width:100%;border-collapse:collapse;}th,td{border:none!important;padding:5px 10px;font-size:11px;}th{background:transparent!important;font-weight:700;color:#111;}.bulletin-pdf-page{page-break-after:always;box-shadow:none!important;border:none!important;margin:0!important;padding:12px 0!important;display:flex!important;flex-direction:column!important;min-height:calc(297mm - 20mm)!important;}.bulletin-bas-page{margin-top:auto!important;padding-top:12px!important;}.no-print{display:none!important;}</style></head><body>${node.innerHTML}</body></html>`);
-      popup.document.close(); popup.focus(); popup.print();
+      const html = `<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;display:flex;flex-direction:column;min-height:100vh;}table{width:100%;border-collapse:collapse;}th,td{border:none!important;padding:5px 10px;font-size:11px;}th{background:transparent!important;font-weight:700;color:#111;}.bulletin-pdf-page{page-break-after:always;box-shadow:none!important;border:none!important;margin:0!important;padding:12px 0!important;display:flex!important;flex-direction:column!important;min-height:calc(297mm - 20mm)!important;}.bulletin-bas-page{margin-top:auto!important;padding-top:12px!important;}.no-print{display:none!important;}</style></head><body>${node.innerHTML}</body></html>`;
+      const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+      openPrintPopup(finalHtml, { title: 'Bulletin de notes', width: 1000, height: 800 });
       return;
     }
-    window.print();
+    const rootHtml = document.getElementById('root')?.innerHTML || '';
+    const html = `<html><head><title>Notes</title></head><body>${rootHtml}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+    openPrintPopup(finalHtml, { title: 'Notes', width: 1100, height: 820 });
   };
   const classeNom = classeObj?.nom || '';
 
@@ -629,15 +632,20 @@ export default function Notes() {
     const imprimerVueGenerale = (htmlId) => {
       const node = document.getElementById(htmlId);
       if (!node) return;
-      const popup = window.open('', '_blank', 'width=1100,height=820');
-      if (!popup) return;
+      let htmlDocument = '';
+      const origin = (typeof window !== 'undefined' && window.location?.origin) ? `${window.location.origin}/` : '';
+      let htmlOut = node.outerHTML;
+      if (origin) {
+        htmlOut = htmlOut.replace(/src="\/([^"]+)"/g, `src="${origin}$1"`);
+        htmlOut = htmlOut.replace(/src='\/([^']+)'/g, `src='${origin}$1'`);
+      }
       const isPortrait = htmlId === 'vg-eleve-bull';
       const pageSize = isPortrait ? 'A4 portrait' : 'A4 landscape';
       const pageHeight = isPortrait ? '297mm' : '210mm';
-      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:${pageSize};margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;width:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;align-items:stretch;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:calc(${pageHeight} - 20mm)!important;height:calc(${pageHeight} - 20mm)!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%!important;table-layout:fixed!important;}#vg-eleve-bull th,#vg-eleve-bull td{border:none!important;padding:3px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-tous-print td,#vg-branche-bull th,#vg-branche-bull td{padding:6px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-branche-bull th{background:#6366f1!important;color:#fff!important;border-top:1px solid #4338ca!important;border-bottom:1px solid #4338ca!important;border-left:1px solid #4338ca!important;border-right:1px solid #818cf8!important;}#vg-tous-print td,#vg-branche-bull td{border:1px solid #e2e8f0!important;background:#fff!important;}#vg-eleve-bull tr.vg-eval-row td{padding-top:2px!important;padding-bottom:2px!important;line-height:1.15!important;}.vg-bull-pied{margin-top:auto!important;padding-top:16px!important;}.vg-branch-gap td{padding:0!important;height:8px!important;border:none!important;}#vg-eleve-bull,#vg-branche-bull,#vg-tous-print{width:100%!important;max-width:100%!important;align-self:stretch!important;}#vg-eleve-bull table,#vg-branche-bull table,#vg-tous-print table{width:100%!important;min-width:100%!important;}#vg-eleve-bull col.vg-date-col{width:90px!important;}#vg-eleve-bull col.vg-nom-col{width:calc(100% - 395px)!important;}#vg-eleve-bull col.vg-prof-col{width:160px!important;}#vg-eleve-bull col.vg-coef-col{width:85px!important;}#vg-eleve-bull col.vg-note-col{width:60px!important;}#vg-eleve-bull .vg-prof-col,#vg-eleve-bull .vg-coef-col,#vg-eleve-bull .vg-note-col{text-align:right!important;}#vg-eleve-bull .vg-branch-title-cell{padding-left:0!important;border-bottom:1px solid #000!important;}#vg-eleve-bull .vg-date-col{padding-left:0!important;}#vg-eleve-bull .vg-nom-col{min-width:0!important;}#vg-branche-bull th.vg-moy-col,#vg-tous-print th.vg-moy-col{white-space:normal!important;min-width:88px!important;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
-      popup.document.close();
-      popup.focus();
-      popup.print();
+      const baseTag = origin ? `<base href="${origin}">` : '';
+      htmlDocument = `<html><head>${baseTag}<title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:${pageSize};margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;width:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;align-items:stretch;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:calc(${pageHeight} - 20mm)!important;height:calc(${pageHeight} - 20mm)!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%!important;table-layout:fixed!important;}#vg-eleve-bull th,#vg-eleve-bull td{border:none!important;padding:3px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-tous-print td,#vg-branche-bull th,#vg-branche-bull td{padding:6px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-branche-bull th{background:#6366f1!important;color:#fff!important;border-top:1px solid #4338ca!important;border-bottom:1px solid #4338ca!important;border-left:1px solid #4338ca!important;border-right:1px solid #818cf8!important;}#vg-tous-print td,#vg-branche-bull td{border:1px solid #e2e8f0!important;background:#fff!important;}#vg-eleve-bull tr.vg-eval-row td{padding-top:2px!important;padding-bottom:2px!important;line-height:1.15!important;}.vg-bull-pied{margin-top:auto!important;padding-top:16px!important;}.vg-branch-gap td{padding:0!important;height:8px!important;border:none!important;}#vg-eleve-bull,#vg-branche-bull,#vg-tous-print{width:100%!important;max-width:100%!important;align-self:stretch!important;}#vg-eleve-bull table,#vg-branche-bull table,#vg-tous-print table{width:100%!important;min-width:100%!important;}#vg-eleve-bull col.vg-date-col{width:90px!important;}#vg-eleve-bull col.vg-nom-col{width:calc(100% - 395px)!important;}#vg-eleve-bull col.vg-prof-col{width:160px!important;}#vg-eleve-bull col.vg-coef-col{width:85px!important;}#vg-eleve-bull col.vg-note-col{width:60px!important;}#vg-eleve-bull .vg-prof-col,#vg-eleve-bull .vg-coef-col,#vg-eleve-bull .vg-note-col{text-align:right!important;}#vg-eleve-bull .vg-branch-title-cell{padding-left:0!important;border-bottom:1px solid #000!important;}#vg-eleve-bull .vg-date-col{padding-left:0!important;}#vg-eleve-bull .vg-nom-col{min-width:0!important;}#vg-branche-bull th.vg-moy-col,#vg-tous-print th.vg-moy-col{white-space:normal!important;min-width:88px!important;}img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}</style></head><body>${htmlOut}</body></html>`;
+      const finalHtml = injectForcedPrintCss(htmlDocument, pageSize, '10mm');
+      openPrintPopup(finalHtml, { title: "Notes de l'élève", width: 1100, height: 820 });
     };
     const canPrintVueGenerale =
       !!rapport &&
@@ -805,7 +813,7 @@ export default function Notes() {
             <div style={{ overflowX: 'auto', marginTop: 0, borderRadius: 12 }}>
             <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
-                <col />
+                <col style={{ width: 144, maxWidth: 144 }} />
                 <col />
                 {brPrin.map(b => <col key={`col-prin-${b.id}`} style={{ width: 78 }} />)}
                 {brSec.map(b => <col key={`col-sec-${b.id}`} style={{ width: 78 }} />)}
@@ -813,7 +821,7 @@ export default function Notes() {
               </colgroup>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left' }}>Nom</th>
+                  <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left', width: 144, maxWidth: 144, boxSizing: 'border-box' }}>Nom</th>
                   <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left' }}>Prénom</th>
                   {brPrin.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
                   {brSec.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
@@ -834,7 +842,7 @@ export default function Notes() {
                   );
                 })}
                 <tr style={{ ...s.tr, fontWeight: 700 }}>
-                  <td style={{ ...tdBas, textAlign: 'left' }} colSpan={2}>Moyennes de classe</td>
+                  <td style={{ ...tdBas, textAlign: 'left' }} colSpan={2}>Moyennes de la classe</td>
                   {brPrin.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={tdBas}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   {brSec.map(b => { const vals = rapport.eleves.map(e => getMoy(b.id, e.id)).filter(v => v !== null); const moy = vals.length ? Math.round(vals.reduce((a,v)=>a+v,0)/vals.length*10)/10 : null; return <td key={b.id} style={tdBas}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                   <td style={tdBas}>
@@ -901,10 +909,9 @@ export default function Notes() {
                     <button onClick={() => {
                       const node = document.getElementById('bulletin-popup-pdf');
                       if (!node) return;
-                      const popup = window.open('', '_blank', 'width=1000,height=800');
-                      if (!popup) return;
-                      popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;display:flex;flex-direction:column;min-height:100vh;}table{width:100%;border-collapse:collapse;}th,td{border:none;padding:5px 14px;font-size:13px;}tr{border-bottom:none;}#bulletin-popup-pdf{min-height:calc(297mm - 20mm);display:flex;flex-direction:column;padding:0;flex:1;}.bulletin-bas-page{margin-top:auto;padding-top:12px;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
-                      popup.document.close(); popup.focus(); popup.print();
+                      const html = `<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;display:flex;flex-direction:column;min-height:100vh;}table{width:100%;border-collapse:collapse;}th,td{border:none;padding:5px 14px;font-size:13px;}tr{border-bottom:none;}#bulletin-popup-pdf{min-height:calc(297mm - 20mm);display:flex;flex-direction:column;padding:0;flex:1;}.bulletin-bas-page{margin-top:auto;padding-top:12px;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`;
+                      const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+                      openPrintPopup(finalHtml, { title: 'Bulletin de notes', width: 1000, height: 800 });
                     }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
                   </div>
                 </div>

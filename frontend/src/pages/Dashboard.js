@@ -88,7 +88,7 @@ export default function Dashboard() {
   return (
     <div style={styles.page}>
       <div style={styles.main}>
-        <div style={{ ...stickyPageChrome('#ede9fe'), marginTop: -32, paddingTop: 32, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
+        <div style={{ ...stickyPageChrome('#ede9fe'), marginBottom: 0, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
         <div style={styles.topBar}>
           <div>
             <h1 style={styles.greeting}>{salut}, {user?.prenom} 👋</h1>

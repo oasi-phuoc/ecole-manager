@@ -216,7 +216,7 @@ const s = {
   tableWrap: { borderRadius: 10, overflow: 'hidden', background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#6366f1' },
-  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', background: '#6366f1', position: 'sticky', top: 0, zIndex: 2, boxShadow: 'none' },
+  th: { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', background: '#6366f1', position: 'static', top: 'auto', zIndex: 'auto', boxShadow: 'none' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   trActive: { borderBottom: '1px solid #f1f5f9', background: '#eef2ff' },
   td: { padding: '10px 12px', fontSize: 13, color: '#334155' },

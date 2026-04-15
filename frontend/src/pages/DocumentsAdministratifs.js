@@ -22,6 +22,7 @@ export default function DocumentsAdministratifs() {
   const [sousCategorie, setSousCategorie] = useState('');
   const [categorieOnglet, setCategorieOnglet] = useState('Administratifs');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
+  const [rechercheDocs, setRechercheDocs] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -54,10 +55,15 @@ export default function DocumentsAdministratifs() {
         if (categorieOnglet !== 'Pédagogiques' || niveauOnglet === 'tous') return true;
         return (d.sous_categorie || '') === niveauOnglet;
       })
+      .filter(d => {
+        if (!rechercheDocs.trim()) return true;
+        const q = rechercheDocs.toLowerCase();
+        return (d.designation || '').toLowerCase().includes(q) || (d.nom_fichier || '').toLowerCase().includes(q);
+      })
       .sort((a, b) =>
         (a.designation || '').localeCompare(b.designation || '', 'fr', { sensitivity: 'base' })
       );
-  }, [documents, categorieOnglet, niveauOnglet]);
+  }, [documents, categorieOnglet, niveauOnglet, rechercheDocs]);
 
   const lireFichier = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -171,6 +177,15 @@ export default function DocumentsAdministratifs() {
     }
   };
 
+  const visualiser = async (doc) => {
+    try {
+      const r = await axios.get(API + '/documents-administratifs/' + doc.id + '/telecharger', { headers });
+      window.open(r.data.contenu, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setMsg('❌ Erreur prévisualisation');
+    }
+  };
+
   const now = new Date();
   const auteurSession = `${currentUser?.nom || ''} ${currentUser?.prenom || ''}`.trim() || '—';
 
@@ -178,7 +193,15 @@ export default function DocumentsAdministratifs() {
     <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🗂️ Documents</h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>Documents</h2>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <input
+          value={rechercheDocs}
+          onChange={(e) => setRechercheDocs(e.target.value)}
+          placeholder="Rechercher un document..."
+          style={{ width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' }}
+        />
       </div>
 
       {/* Onglets catégories */}
@@ -207,6 +230,20 @@ export default function DocumentsAdministratifs() {
       </div>
 
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '0 12px 12px 12px', padding: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 derniers documents modifiés/ajoutés</div>
+            {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
+              <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
+            ))}
+          </div>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 documents les plus utilisés</div>
+            {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
+              <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
+            ))}
+          </div>
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 14, color: '#475569' }}>Documents classés par ordre alphabétique</div>
           {isAdmin && (
@@ -341,11 +378,20 @@ export default function DocumentsAdministratifs() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                    <button onClick={() => telecharger(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }} title="Télécharger">⬇️</button>
+                    <button onClick={() => visualiser(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155' }} title="Visualiser">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    </button>
+                    <button onClick={() => telecharger(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8' }} title="Télécharger">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                    </button>
                     {isAdmin && (
                       <>
-                        <button onClick={() => ouvrirEdition(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6366f1' }} title="Modifier">✏️</button>
-                        <button onClick={() => handleDelete(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#ef4444' }} title="Supprimer">🗑️</button>
+                        <button onClick={() => ouvrirEdition(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Modifier">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onClick={() => handleDelete(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Supprimer">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
                       </>
                     )}
                   </div>

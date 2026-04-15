@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const getHeaders = () => { const u = JSON.parse(localStorage.getItem('user') || '{}'); return { Authorization: `Bearer ${u.token}` }; };
@@ -244,12 +245,9 @@ export default function SortieScolaire() {
       <img src="${publicBase}/logo-pied-page.png" style="height:28px;object-fit:contain;" onerror="this.style.display='none'" />
       <span>Zone Industrielle 4, 1963 Vétroz &nbsp;·&nbsp; Tél. 027 606 18 60</span>
     </div>
-    <script>window.onload = function(){ window.print(); }</script>
     </body></html>`;
-    const popup = window.open('', '_blank', 'width=820,height=900');
-    if (!popup) return;
-    popup.document.write(html);
-    popup.document.close();
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '18mm 18mm 32mm 18mm');
+    openPrintPopup(finalHtml, { title: 'Sortie scolaire', width: 820, height: 900 });
   };
 
   const sortiesOnglet = sorties.filter(s => s.type === onglet);

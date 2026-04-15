@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -365,8 +366,7 @@ export default function Eleves() {
       </tr>
     `).join('');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -389,7 +389,7 @@ export default function Eleves() {
             <h1>📋 Rapport d'observations — ${obsEleve.prenom} ${obsEleve.nom}</h1>
             <div class="sub">Classe : ${classeNom} · ${observations.length} observation(s) · Généré le ${new Date().toLocaleDateString('fr-CH')}</div>
           </div>
-          <button class="no-print" onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
+          <span class="no-print" style="padding:10px 20px;background:#e2e8f0;color:#475569;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit">Impression automatique</span>
         </div>
         <table>
           <thead>
@@ -402,8 +402,9 @@ export default function Eleves() {
         <div class="footer">École Manager</div>
       </body>
       </html>
-    `);
-    win.document.close();
+    `;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '1.5cm');
+    openPrintPopup(finalHtml, { title: `Observations - ${obsEleve.prenom} ${obsEleve.nom}`, width: 1100, height: 800 });
   };
 
   const handleImport = async (e) => {

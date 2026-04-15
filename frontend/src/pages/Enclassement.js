@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const SESSION_LABEL = { "Test d'août": 'Test de placement' };
@@ -347,10 +348,8 @@ export default function Enclassement() {
       ${classesHTML}
     </body></html>`;
 
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => win.print(), 500);
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm');
+    openPrintPopup(finalHtml, { title: enc.nom, width: 1100, height: 820 });
   };
 
   // ─── Vues ────────────────────────────────────────────────────────────────────

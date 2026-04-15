@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -309,8 +310,7 @@ export default function Classes() {
       </tr>
     `).join('');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -333,7 +333,7 @@ export default function Classes() {
             <h1>📋 Rapport d'observations — ${eleveDetail.prenom} ${eleveDetail.nom}</h1>
             <div class="sub">Classe : ${detailClasse.nom} · ${observations.length} observation(s) · Généré le ${new Date().toLocaleDateString('fr-CH')}</div>
           </div>
-          <button class="no-print" onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">🖨️ Imprimer</button>
+          <span class="no-print" style="padding:10px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit">Impression automatique</span>
         </div>
         <table>
           <thead>
@@ -346,8 +346,9 @@ export default function Classes() {
         <div class="footer">École Manager</div>
       </body>
       </html>
-    `);
-    win.document.close();
+    `;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '1.5cm');
+    openPrintPopup(finalHtml, { title: `Observations - ${eleveDetail.prenom} ${eleveDetail.nom}`, width: 1100, height: 800 });
   };
 
   const chargerPlanClasse = async () => {
@@ -405,17 +406,8 @@ export default function Classes() {
       <div class="sub">${detailClasse.annee_scolaire||''} · Titulaire : ${detailClasse.prof_prenom||''} ${detailClasse.prof_nom||''}</div>
       <table><tbody><tr>${cells}</tr></tbody></table>
     </body></html>`;
-    const blob = new Blob([htmlContent], {type: 'text/html'});
-    const url = URL.createObjectURL(blob);
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    iframe.src = url;
-    iframe.onload = () => {
-      iframe.contentWindow.print();
-      URL.revokeObjectURL(url);
-      setTimeout(() => document.body.removeChild(iframe), 2000);
-    };
+    const finalHtml = injectForcedPrintCss(htmlContent, 'A4 portrait', '10mm');
+    openPrintPopup(finalHtml, { title: `Plan de classe - ${detailClasse.nom}`, width: 1100, height: 800 });
   };
 
   const dropOnCell = (row, col) => {
@@ -550,17 +542,8 @@ export default function Classes() {
         <div class="grid">${cards}</div>
       </body>
       </html>`;
-    const blob = new Blob([htmlContent], {type: 'text/html'});
-    const url = URL.createObjectURL(blob);
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    iframe.src = url;
-    iframe.onload = () => {
-      iframe.contentWindow.print();
-      URL.revokeObjectURL(url);
-      setTimeout(() => document.body.removeChild(iframe), 2000);
-    };
+    const finalHtml = injectForcedPrintCss(htmlContent, 'A4 portrait', '1cm');
+    openPrintPopup(finalHtml, { title: `Trombinoscope - ${detailClasse.nom}`, width: 1100, height: 800 });
   };
 
   const tauxPresence = (eleve) => {
@@ -627,9 +610,9 @@ export default function Classes() {
   const imprimerObsEleve = () => {
     if (!obsEleve) return;
     const rows = observations.map(obs => `<tr><td>${new Date(obs.created_at).toLocaleDateString('fr-CH')}</td><td style="font-weight:700">${obs.titre||''}</td><td>${obs.contenu||''}</td><td>${obs.mesure_prise||'—'}</td><td>${obs.auteur_prenom||''} ${obs.auteur_nom||''}</td><td style="text-align:center">${obs.intervention_responsable?'<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🚨 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}</td><td style="text-align:center">${obs.demande_entretien?'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">🤝 Oui</span>':'<span style="color:#94a3b8;font-size:11px">Non</span>'}</td></tr>`).join('');
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Observations - ${obsEleve.prenom} ${obsEleve.nom}</title><style>body{font-family:'Century Gothic',sans-serif;padding:32px;color:#1e293b}h1{font-size:20px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#64748b;margin-bottom:24px}table{width:100%;border-collapse:collapse;background:white}th{background:#f1f5f9;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #e2e8f0}td{padding:10px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:top}@media print{.no-print{display:none}@page{margin:1.5cm}}</style></head><body><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h1>📋 Observations — ${obsEleve.prenom} ${obsEleve.nom}</h1><div class="sub">Classe : ${detailClasse?.nom||'—'} · ${observations.length} observation(s) · Généré le ${new Date().toLocaleDateString('fr-CH')}</div></div><button class="no-print" onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">🖨️ Imprimer</button></div><table><thead><tr><th>Date</th><th>Titre</th><th>Remarque</th><th>Mesure prise</th><th>Auteur</th><th>Intervention</th><th>Entretien</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    win.document.close();
+    const html = `<!DOCTYPE html><html><head><title>Observations - ${obsEleve.prenom} ${obsEleve.nom}</title><style>body{font-family:'Century Gothic',sans-serif;padding:32px;color:#1e293b}h1{font-size:20px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#64748b;margin-bottom:24px}table{width:100%;border-collapse:collapse;background:white}th{background:#f1f5f9;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:2px solid #e2e8f0}td{padding:10px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:top}@media print{.no-print{display:none}@page{margin:1.5cm}}</style></head><body><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><h1>📋 Observations — ${obsEleve.prenom} ${obsEleve.nom}</h1><div class="sub">Classe : ${detailClasse?.nom||'—'} · ${observations.length} observation(s) · Généré le ${new Date().toLocaleDateString('fr-CH')}</div></div><span class="no-print" style="padding:10px 20px;background:#e2e8f0;color:#475569;border-radius:8px;font-size:13px;font-weight:700">Impression automatique</span></div><table><thead><tr><th>Date</th><th>Titre</th><th>Remarque</th><th>Mesure prise</th><th>Auteur</th><th>Intervention</th><th>Entretien</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '1.5cm');
+    openPrintPopup(finalHtml, { title: `Observations - ${obsEleve.prenom} ${obsEleve.nom}`, width: 1100, height: 800 });
   };
 
   const uploadDocumentEleve = async (file, type) => {

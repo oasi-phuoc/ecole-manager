@@ -495,7 +495,7 @@ export default function Parametres() {
   return (
     <div style={styles.page}>
       <div style={styles.main}>
-        <div style={{ ...stickyPageChrome(), marginTop: -32, paddingTop: 32, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
+        <div style={{ ...stickyPageChrome(), marginBottom: 0, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
         <div style={styles.topBar}>
           <h1 style={styles.titre}>Paramètres</h1>
           <div style={styles.topBarRight}>

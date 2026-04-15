@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -235,10 +236,9 @@ export default function Bulletins() {
             <button onClick={() => {
               const node = document.getElementById('bulletin-popup-pdf');
               if (!node) return;
-              const popup = window.open('', '_blank', 'width=1000,height=800');
-              if (!popup) return;
-              popup.document.write(`<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}span[style*="border-radius: 50%"],span[style*="border-radius:50%"]{display:inline-block!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`);
-              popup.document.close(); popup.focus(); popup.print();
+              const html = `<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}span[style*="border-radius: 50%"],span[style*="border-radius:50%"]{display:inline-block!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`;
+              const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm');
+              openPrintPopup(finalHtml, { title: 'Bulletin de notes', width: 1000, height: 800 });
             }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
           </div>
           {!critValide ? (

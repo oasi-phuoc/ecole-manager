@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
 import { stickyPageChrome } from '../styles/pageShell';
+import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2148,10 +2149,9 @@ export default function TCF() {
     const sitePlan = planningsSite || siteOrder[0] || '';
     const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
     const filename = `${siteNom}_Convocation_classe`;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${buildConvocationPage(classeConvocation, sitePlan)}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
+    openPrintPopup(finalHtml, { title: filename, width: 1100, height: 820 });
   };
 
   const printAllConvocations = () => {
@@ -2163,10 +2163,9 @@ export default function TCF() {
     );
     const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
     const filename = `${siteNom}_Convocation_classe`;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${convocPrintCSS}</style></head><body>${pages.join('')}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
+    openPrintPopup(finalHtml, { title: filename, width: 1100, height: 820 });
   };
 
   const buildProfPlanningPage = (siteKey, publicBase) => {
@@ -2294,19 +2293,17 @@ export default function TCF() {
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
     const filename = `${siteNom}_Répartition_prof`;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesPrintCSS}</style></head><body>${buildProfPlanningPage(sitePlan, publicBase)}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesPrintCSS}</style></head><body>${buildProfPlanningPage(sitePlan, publicBase)}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+    openPrintPopup(finalHtml, { title: filename, width: 1200, height: 820 });
   };
 
   const printAllProfPlannings = () => {
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const pages = siteOrder.map(sk => buildProfPlanningPage(sk, publicBase));
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Repartition_tous_sites</title><style>${rolesPrintCSS}</style></head><body>${pages.join('')}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Repartition_tous_sites</title><style>${rolesPrintCSS}</style></head><body>${pages.join('')}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+    openPrintPopup(finalHtml, { title: 'Repartition_tous_sites', width: 1200, height: 820 });
   };
 
   const rolesPrintCSS = `
@@ -2497,10 +2494,9 @@ export default function TCF() {
     const numDemi = demi ? jourNumero(demi.jour) : '00';
     const momentLabel = demi?.moment === 'matin' ? 'Matin' : 'Après-midi';
     const filename = `${siteNom}_Role_${numDemi}-${demi?.jour || ''}-${momentLabel}`;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${buildRolesPage(rolesDemiJourneeSelect, sitePlan, publicBase)}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${buildRolesPage(rolesDemiJourneeSelect, sitePlan, publicBase)}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 landscape', '10mm');
+    openPrintPopup(finalHtml, { title: filename, width: 1300, height: 820 });
   };
 
   const printAllRoles = () => {
@@ -2511,10 +2507,9 @@ export default function TCF() {
     const pages = demisActives.map(d => buildRolesPage(d.id, sitePlan, publicBase));
     const siteNom = (siteNames[sitePlan] || sitePlan).toUpperCase().replace(/\s+/g, '_');
     const filename = `${siteNom}_Role_toutes_demi_journees`;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${pages.join('')}</body></html>`);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${filename}</title><style>${rolesLandscapeCSS}</style></head><body>${pages.join('')}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 landscape', '10mm');
+    openPrintPopup(finalHtml, { title: filename, width: 1300, height: 820 });
   };
 
   const printCharts = (charts, isFr, maxScore) => {
@@ -2594,10 +2589,8 @@ export default function TCF() {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       </style></head><body>${pagesWithLayout.join('')}</body></html>`;
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.onload = () => win.print();
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
+    openPrintPopup(finalHtml, { title: 'Graphiques TCF', width: 1200, height: 820 });
   };
 
   const renderGraphique = () => {
