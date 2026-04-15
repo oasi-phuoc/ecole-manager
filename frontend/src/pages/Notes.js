@@ -631,10 +631,10 @@ export default function Notes() {
       if (!node) return;
       const popup = window.open('', '_blank', 'width=1100,height=820');
       if (!popup) return;
-      const isPortrait = htmlId === 'vg-branche-bull' || htmlId === 'vg-eleve-bull';
+      const isPortrait = htmlId === 'vg-eleve-bull';
       const pageSize = isPortrait ? 'A4 portrait' : 'A4 landscape';
       const pageHeight = isPortrait ? '297mm' : '210mm';
-      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:${pageSize};margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:calc(${pageHeight} - 20mm)!important;height:calc(${pageHeight} - 20mm)!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%;}th,td{border:none!important;padding:3px 8px!important;font-size:11px;line-height:1.2!important;}.vg-bull-pied{margin-top:auto!important;padding-top:16px!important;}.vg-branch-gap td{padding:0!important;height:8px!important;border:none!important;}#vg-eleve-bull col.vg-date-col{width:90px!important;}#vg-eleve-bull col.vg-nom-col{width:auto!important;}#vg-eleve-bull col.vg-prof-col{width:165px!important;}#vg-eleve-bull col.vg-coef-col{width:80px!important;}#vg-eleve-bull col.vg-note-col{width:62px!important;}#vg-eleve-bull .vg-prof-col,#vg-eleve-bull .vg-coef-col,#vg-eleve-bull .vg-note-col{text-align:right!important;}#vg-eleve-bull .vg-branch-title-cell{padding-left:0!important;border-bottom:1px solid #000!important;}#vg-eleve-bull .vg-date-col{padding-left:0!important;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
+      popup.document.write(`<html><head><title>Notes de l'élève</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:${pageSize};margin:10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}html,body{height:100%;width:100%;margin:0;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;color:#111;font-size:12px;display:flex;flex-direction:column;min-height:100vh;align-items:stretch;}.vg-bull-sheet{flex:1;display:flex;flex-direction:column;justify-content:flex-start;min-height:calc(${pageHeight} - 20mm)!important;height:calc(${pageHeight} - 20mm)!important;max-width:none!important;width:100%!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;border-radius:0!important;background:transparent!important;}table{border-collapse:collapse;width:100%!important;table-layout:fixed!important;}#vg-eleve-bull th,#vg-eleve-bull td{border:none!important;padding:3px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-tous-print td,#vg-branche-bull th,#vg-branche-bull td{padding:6px 8px!important;font-size:11px;line-height:1.2!important;}#vg-tous-print th,#vg-branche-bull th{background:#6366f1!important;color:#fff!important;border-top:1px solid #4338ca!important;border-bottom:1px solid #4338ca!important;border-left:1px solid #4338ca!important;border-right:1px solid #818cf8!important;}#vg-tous-print td,#vg-branche-bull td{border:1px solid #e2e8f0!important;background:#fff!important;}#vg-eleve-bull tr.vg-eval-row td{padding-top:2px!important;padding-bottom:2px!important;line-height:1.15!important;}.vg-bull-pied{margin-top:auto!important;padding-top:16px!important;}.vg-branch-gap td{padding:0!important;height:8px!important;border:none!important;}#vg-eleve-bull,#vg-branche-bull,#vg-tous-print{width:100%!important;max-width:100%!important;align-self:stretch!important;}#vg-eleve-bull table,#vg-branche-bull table,#vg-tous-print table{width:100%!important;min-width:100%!important;}#vg-eleve-bull col.vg-date-col{width:90px!important;}#vg-eleve-bull col.vg-nom-col{width:calc(100% - 395px)!important;}#vg-eleve-bull col.vg-prof-col{width:160px!important;}#vg-eleve-bull col.vg-coef-col{width:85px!important;}#vg-eleve-bull col.vg-note-col{width:60px!important;}#vg-eleve-bull .vg-prof-col,#vg-eleve-bull .vg-coef-col,#vg-eleve-bull .vg-note-col{text-align:right!important;}#vg-eleve-bull .vg-branch-title-cell{padding-left:0!important;border-bottom:1px solid #000!important;}#vg-eleve-bull .vg-date-col{padding-left:0!important;}#vg-eleve-bull .vg-nom-col{min-width:0!important;}#vg-branche-bull th.vg-moy-col,#vg-tous-print th.vg-moy-col{white-space:normal!important;min-width:88px!important;}.no-print{display:none!important;}</style></head><body>${node.outerHTML}</body></html>`);
       popup.document.close();
       popup.focus();
       popup.print();
@@ -685,12 +685,18 @@ export default function Notes() {
         <style>{`
           @media print {
             .no-print { display: none !important; }
-            @page { size: A4 landscape; margin: 10mm; }
+            @page { size: ${vueGeneraleMode === 'tous' || vueGeneraleMode === 'branche' ? 'A4 landscape' : 'A4 portrait'}; margin: 10mm; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { margin: 0; font-size: 9px; }
             th, td { font-size: 9px !important; padding: 3px 5px !important; }
             h3 { font-size: 11px !important; margin: 0 0 6px 0 !important; }
             div[class] { box-shadow: none !important; }
+            #vg-eleve-bull, #vg-branche-bull, #vg-tous-print { width: 100% !important; max-width: 100% !important; }
+            #vg-eleve-bull table, #vg-branche-bull table, #vg-tous-print table { width: 100% !important; table-layout: fixed !important; }
+            #vg-branche-bull th, #vg-branche-bull td { border: 1px solid #e2e8f0 !important; }
+            #vg-branche-bull thead th { background: #6366f1 !important; color: #fff !important; border-color: #4338ca !important; }
+            #vg-eleve-bull tr.vg-eval-row td { padding-top: 4px !important; padding-bottom: 4px !important; line-height: 1.2 !important; }
+            #vg-branche-bull th.vg-moy-col, #vg-tous-print th.vg-moy-col { white-space: normal !important; min-width: 96px !important; }
           }
         `}</style>
         <div style={s.header} className="no-print">
@@ -811,7 +817,7 @@ export default function Notes() {
                   <th style={{ ...thTCF, whiteSpace: 'nowrap', textAlign: 'left' }}>Prénom</th>
                   {brPrin.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
                   {brSec.map(b => <th key={b.id} style={thTCF}>{colNom(b)}</th>)}
-                  <th style={thTCF}>Moyenne</th>
+                  <th className="vg-moy-col" style={{ ...thTCF, whiteSpace: 'normal', minWidth: 112, maxWidth: 140 }}>Moyenne</th>
                 </tr>
               </thead>
               <tbody>
@@ -823,7 +829,7 @@ export default function Notes() {
                       <td style={{ ...tdTCF, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                       {brPrin.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...tdTCF, textAlign: 'center', color: moy !== null ? (moy >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
                       {brSec.map(b => { const moy = getMoy(b.id, eleve.id); return <td key={b.id} style={{ ...tdTCF, textAlign: 'center', color: moy !== null ? (moy >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{moy !== null ? fmtNote(moy) : '—'}</td>; })}
-                      <td style={{ ...tdMoyCol, fontSize: 14, color: mg !== null ? (mg >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
+                      <td className="vg-moy-col" style={{ ...tdMoyCol, fontSize: 14, color: mg !== null ? (mg >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>{mg !== null ? fmtNote(mg) : '—'}</td>
                     </tr>
                   );
                 })}
@@ -1021,36 +1027,49 @@ export default function Notes() {
 
         {/* ---- VUE PAR BRANCHE ---- */}
         {vueGeneraleMode === 'branche' && rapport && matiereRapport && (() => {
+          const thTCFB = {
+            ...s.th,
+            position: 'static',
+            top: 'auto',
+            zIndex: 'auto',
+            background: '#6366f1',
+            color: 'white',
+            textAlign: 'center',
+            borderTop: '1px solid #4338ca',
+            borderBottom: '1px solid #4338ca',
+            borderLeft: '1px solid #4338ca',
+            borderRight: '1px solid #818cf8',
+          };
+          const tdTCFB = { ...s.td, border: '1px solid #e2e8f0', background: 'white' };
+          const tdMoyBr = { ...tdTCFB, textAlign: 'center', fontSize: 14 };
+          const colEvalW = 72;
           return (
             <div id="vg-branche-bull" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', width: '100%', boxSizing: 'border-box' }}>
               {enteteBulletinVueGenerale()}
               <div style={{ marginTop: 40, marginBottom: 16 }}>
-                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Notes de l'élève</div>
+                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Moyennes de la classe</div>
                 <div style={{ textAlign: 'right', fontSize: 13, color: '#475569', fontFamily: fontVG, marginBottom: 12 }}>Vétroz, le {todayFormatted}</div>
-                <div style={{ fontFamily: fontVG, paddingLeft: 14, paddingRight: 14 }}>
+                <div style={{ fontFamily: fontVG }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{matiereRapport.matiere_nom}</div>
                   <div style={{ fontSize: 12, color: '#475569' }}>{classeNom} — {generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
                 </div>
               </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
+              <div style={{ overflowX: 'auto', marginTop: 0, borderRadius: 12 }}>
+                <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'fixed', width: '100%' }}>
                   <colgroup>
                     <col />
                     <col />
-                    {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: 72 }} />)}
-                    <col style={{ width: 72 }} />
+                    {matiereRapport.evaluations.map(ev => <col key={`col-ev-${ev.id}`} style={{ width: colEvalW }} />)}
+                    <col style={{ width: 112 }} />
                   </colgroup>
                   <thead>
                     <tr style={s.theadRow}>
-                      <th style={{ ...s.th, borderTopLeftRadius: 12 }}>Nom</th>
-                      <th style={s.th}>Prénom</th>
-                      {matiereRapport.evaluations.map(ev => (
-                        <th key={ev.id} style={{ ...s.th, textAlign: 'center' }}>
-                          <div>{ev.nom}</div>
-                          <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{ev.type} • Coef.{ev.coefficient}</div>
-                        </th>
+                      <th style={{ ...thTCFB, whiteSpace: 'nowrap', textAlign: 'left', borderTopLeftRadius: 12 }}>Nom</th>
+                      <th style={{ ...thTCFB, whiteSpace: 'nowrap', textAlign: 'left' }}>Prénom</th>
+                      {matiereRapport.evaluations.map((ev, ei) => (
+                        <th key={ev.id} style={{ ...thTCFB, whiteSpace: 'nowrap' }} title={ev.nom}>{ei + 1}</th>
                       ))}
-                      <th style={{ ...s.th, textAlign: 'center', borderTopRightRadius: 12 }}>Moyenne</th>
+                      <th className="vg-moy-col" style={{ ...thTCFB, whiteSpace: 'normal', minWidth: 112, maxWidth: 140, borderTopRightRadius: 12 }}>Moyenne</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1058,18 +1077,18 @@ export default function Notes() {
                       const moy = moyenneEleveMatiere(matiereRapport, eleve.id);
                       return (
                         <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                          <td style={{ ...s.td, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
-                          <td style={{ ...s.td, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
+                          <td style={{ ...tdTCFB, fontWeight: 700, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                          <td style={{ ...tdTCFB, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                           {matiereRapport.evaluations.map(ev => {
                             const n = ev.notes.find(n => n.eleve_id === eleve.id);
-                            const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#2e7d32' : '#ef4444') : '#aaa';
+                            const color = n && !n.absent && !n.dispense && n.valeur !== null ? (parseFloat(n.valeur) >= 4 ? '#111827' : '#ef4444') : '#94a3b8';
                             return (
-                              <td key={ev.id} style={{ ...s.td, textAlign: 'center', fontWeight: 700, color }}>
+                              <td key={ev.id} style={{ ...tdTCFB, textAlign: 'center', color }}>
                                 {n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : (n && n.valeur !== null ? fmtNote(n.valeur) : '—')}
                               </td>
                             );
                           })}
-                          <td style={{ ...s.td, textAlign: 'center', fontWeight: 700, fontSize: 14, color: moy !== null ? (moy >= 4 ? '#2e7d32' : '#ef4444') : '#aaa' }}>
+                          <td className="vg-moy-col" style={{ ...tdMoyBr, color: moy !== null ? (moy >= 4 ? '#111827' : '#ef4444') : '#94a3b8' }}>
                             {moy !== null ? fmtNote(moy) : '—'}
                           </td>
                         </tr>
@@ -1087,7 +1106,8 @@ export default function Notes() {
         {/* ---- VUE PAR ELEVE ---- */}
         {vueGeneraleMode === 'eleve' && rapport && eleveRapport && (() => {
           return (
-            <div id="vg-eleve-bull" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ width: '100%', maxWidth: '210mm', margin: '0 auto', boxSizing: 'border-box' }}>
+            <div id="vg-eleve-bull" className="vg-bull-sheet" style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #f1f5f9', fontFamily: fontVG, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               {enteteBulletinVueGenerale()}
               <div style={{ marginTop: 40, marginBottom: 16 }}>
                 <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 20, letterSpacing: 2, fontFamily: fontVG, textTransform: 'uppercase', marginBottom: 15 }}>Notes de l'élève</div>
@@ -1097,10 +1117,10 @@ export default function Notes() {
                   <div style={{ fontSize: 12, color: '#475569' }}>{classeNom} — {generaleSemestre === '1' ? '1er semestre' : '2e semestre'}</div>
                 </div>
               </div>
-              <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%', fontFamily: fontVG }}>
+              <table style={{ ...s.tbl, fontSize: 13, tableLayout: 'fixed', width: '100%', minWidth: '100%', fontFamily: fontVG }}>
                 <colgroup>
                   <col className="vg-date-col" style={{ width: 90 }} />
-                  <col className="vg-nom-col" />
+                  <col className="vg-nom-col" style={{ width: 'calc(100% - 395px)' }} />
                   <col className="vg-prof-col" style={{ width: 160 }} />
                   <col className="vg-coef-col" style={{ width: 85 }} />
                   <col className="vg-note-col" style={{ width: 60 }} />
@@ -1109,7 +1129,7 @@ export default function Notes() {
                   {modeMatieres.map((matiere, matiereIdx) => {
                     const moy = moyenneEleveMatiere(matiere, eleveRapport.id);
                     return [
-                      ...(matiereIdx > 0 ? [<tr key={`gap-${matiere.matiere_id}`} className="vg-branch-gap"><td colSpan={6}></td></tr>] : []),
+                      ...(matiereIdx > 0 ? [<tr key={`gap-${matiere.matiere_id}`} className="vg-branch-gap"><td colSpan={5}></td></tr>] : []),
                       <tr key={`sep-${matiere.matiere_id}`}>
                         <td className="vg-branch-title-cell" colSpan={5} style={{ padding: `${matiereIdx === 0 ? 8 : 16}px 0 4px`, borderBottom: '1px solid #000' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1127,13 +1147,14 @@ export default function Notes() {
                             const valeur = n && !n.absent && !n.dispense ? n.valeur : null;
                             const statut = n && n.absent ? 'ABS' : n && n.dispense ? 'DISP' : null;
                             const profAff = [ev.prof_prenom, nomSansSuffixe(ev.prof_nom)].filter(Boolean).join(' ').trim() || '—';
+                            const padEval = { paddingTop: 5, paddingBottom: 5, lineHeight: 1.25 };
                             return (
-                              <tr key={ev.id} style={{ ...s.tr, background: 'white' }}>
-                                <td className="vg-date-col" style={{ ...s.td, paddingLeft: 0, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
-                                <td style={{ ...s.td, fontWeight: 400, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.nom}</td>
-                                <td className="vg-prof-col" style={{ ...s.td, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profAff}</td>
-                                <td className="vg-coef-col" style={{ ...s.td, textAlign: 'right', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
-                                <td className="vg-note-col" style={{ ...s.td, textAlign: 'right', fontWeight: 400, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
+                              <tr key={ev.id} className="vg-eval-row" style={{ ...s.tr, background: 'white' }}>
+                                <td className="vg-date-col" style={{ ...s.td, ...padEval, paddingLeft: 0, whiteSpace: 'nowrap', color: '#64748b' }}>{ev.date ? new Date(ev.date).toLocaleDateString('fr-CH') : '—'}</td>
+                                <td className="vg-nom-col" style={{ ...s.td, ...padEval, fontWeight: 400, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{ev.nom}</td>
+                                <td className="vg-prof-col" style={{ ...s.td, ...padEval, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profAff}</td>
+                                <td className="vg-coef-col" style={{ ...s.td, ...padEval, textAlign: 'right', color: '#64748b', whiteSpace: 'nowrap' }}>Coef. {ev.coefficient}</td>
+                                <td className="vg-note-col" style={{ ...s.td, ...padEval, textAlign: 'right', fontWeight: 400, color: '#1e293b' }}>{statut || (valeur !== null ? fmtNote(valeur) : '—')}</td>
                               </tr>
                             );
                           })
@@ -1143,6 +1164,7 @@ export default function Notes() {
                 </tbody>
               </table>
               {piedBulletinVueGenerale()}
+            </div>
             </div>
           );
         })()}
