@@ -459,7 +459,8 @@ export default function Comptabilite() {
     return 3;                         // Apr–Jun → 25%  (3/12)
   };
 
-  const ouvrirFactureImprime = async (eleve) => {
+  const construireDonneesFactureEleve = async (eleve, options = {}) => {
+    const { persistReference = true } = options;
     const classe = classes.find(c => String(c.id) === String(classeFacturationId));
     const classeNom = classe?.nom || '—';
     const lignes = materielsFacturation.map(m => {
@@ -479,10 +480,20 @@ export default function Comptabilite() {
     const refGeneree = calcQRRef(classeNom, dateFacture, eleve);
     let reference = refGeneree;
     try {
-      const resp = await axios.post(API + '/comptabilite/factures/reference', { eleve_id: eleve.id, annee_scolaire, reference: refGeneree }, { headers });
-      reference = resp.data.reference;
+      if (persistReference) {
+        const resp = await axios.post(API + '/comptabilite/factures/reference', { eleve_id: eleve.id, annee_scolaire, reference: refGeneree }, { headers });
+        reference = resp.data.reference;
+      } else {
+        const resp = await axios.get(API + `/comptabilite/factures/reference?eleve_id=${eleve.id}&annee_scolaire=${annee_scolaire}`, { headers });
+        reference = resp.data?.reference || refGeneree;
+      }
     } catch (e) { /* utilise la référence générée localement si erreur */ }
-    setFactureImprime({ eleve, classeNom, dateFacture, lignes, lignesEcolage, total: totalEcolage + totalMateriel, reference });
+    return { eleve, classeNom, dateFacture, lignes, lignesEcolage, total: totalEcolage + totalMateriel, reference };
+  };
+
+  const ouvrirFactureImprime = async (eleve) => {
+    const data = await construireDonneesFactureEleve(eleve, { persistReference: true });
+    setFactureImprime(data);
   };
   const imprimerFacture = () => {
     if (!factureImprime) return;
@@ -492,10 +503,11 @@ export default function Comptabilite() {
     const dateStr = now.toLocaleDateString('fr-CH');
     const { eleve, classeNom, lignes, lignesEcolage, total } = factureImprime;
     const cg = `<colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup>`;
-    const th = (col1) => `<thead><tr style="background:#6366f1;color:white"><th style="padding:8px 10px;text-align:left">${col1}</th><th style="padding:8px 10px;text-align:right">Prorata</th><th style="padding:8px 10px;text-align:right">Prix</th><th style="padding:8px 10px;text-align:right">Montant</th></tr></thead>`;
-    const tdR = `border:1px solid #dbe3ee;padding:7px 10px;font-size:10pt;text-align:right`;
-    const tdL = `border:1px solid #dbe3ee;padding:7px 10px;font-size:10pt`;
-    const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:10pt;padding:5px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:16px"><span style="font-weight:600">${label}</span><b>${val.toFixed(2)} CHF</b></div>`;
+    const th = (col1, col2 = 'Prorata') => `<thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;font-size:9pt;text-align:left">${col1}</th><th style="padding:6px 8px;font-size:9pt;text-align:center">${col2}</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Prix</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Montant</th></tr></thead>`;
+    const tdR = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center`;
+    const tdMoney = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right`;
+    const tdL = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt`;
+    const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:9pt;padding:4px 8px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:10px"><span style="font-weight:600">${label}</span><b>${val.toFixed(2)} CHF</b></div>`;
     const totalEcolageVal = (lignesEcolage||[]).reduce((a,l)=>a+l.montant,0);
     const totalMaterielVal = lignes.reduce((a,l)=>a+l.montant,0);
     const ecolageHtml = (lignesEcolage || []).length > 0 ? `
@@ -505,21 +517,21 @@ export default function Comptabilite() {
           <tr style="background:${i%2===0?'white':'#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
             <td style="${tdR}">${Math.round(l.prorata/12*100)}%</td>
-            <td style="${tdR}">${Number(l.prix).toFixed(2)} CHF</td>
-            <td style="${tdR};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+            <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
+            <td style="${tdMoney};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
           </tr>`).join('')}
         </tbody>
       </table>
       ${stLine('Sous-total', totalEcolageVal)}` : '';
     const lignesHtml = lignes.length > 0 ? `
       <table style="table-layout:fixed">
-        ${cg}${th('Matériel scolaire')}
+        ${cg}${th('Matériel scolaire', 'Quantité')}
         <tbody>${lignes.map((l,i) => `
           <tr style="background:${i%2===0?'white':'#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
             <td style="${tdR}">${l.qte}</td>
-            <td style="${tdR}">${Number(l.prix).toFixed(2)} CHF</td>
-            <td style="${tdR};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+            <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
+            <td style="${tdMoney};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -561,8 +573,8 @@ export default function Comptabilite() {
       <div style="font-size:9pt;color:#64748b;margin-bottom:16px">Référence : <b style="color:#334155;font-family:monospace;letter-spacing:1px">${factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)}</b></div>
       ${ecolageHtml}
       ${lignesHtml}
-      <div style="display:flex;justify-content:space-between;font-size:13pt;font-weight:700;border-top:2px solid #0f172a;padding-top:10px;margin-top:8px">
-        <span>MONTANT DE LA FACTURE</span><b>${Number(total).toFixed(2)} CHF</b>
+      <div style="display:flex;justify-content:space-between;font-size:11pt;font-weight:700;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px">
+        <span>Montant de la facture</span><b>${Number(total).toFixed(2)} CHF</b>
       </div>
       ${eleve.categorie === 'EUCMS' ? (() => {
         const ref5 = (factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)).replace(/\s/g,'').slice(-5);
@@ -601,37 +613,65 @@ export default function Comptabilite() {
     }
   };
 
-  const imprimerFacturesClasse = () => {
+  const imprimerFacturesClasse = async () => {
     if (!classeFacturationId) return;
-    const dateStr = new Date().toLocaleDateString('fr-CH');
-    const rows = elevesClasseFacturation.map(e => `
-      <tr>
-        <td>${e.nom || ''}</td>
-        <td>${e.prenom || ''}</td>
-        <td style="text-align:right">${totalFactureEleve(e.id).toFixed(2)} CHF</td>
-        <td style="text-align:center">${facturesValidees[e.id] ? '✓' : '—'}</td>
-      </tr>
-    `).join('');
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Factures ${classeFactureNom}</title>
-      <style>
-        @page { size: A4 landscape; margin: 10mm; }
-        body { font-family: 'Century Gothic', Arial, sans-serif; color: #1e293b; }
-        h1 { margin: 0 0 6px; font-size: 20px; }
-        .sub { margin-bottom: 16px; color: #64748b; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #6366f1; color: white; text-align: left; font-size: 12px; padding: 8px 10px; }
-        td { border: 1px solid #e2e8f0; padding: 8px 10px; font-size: 12px; }
-      </style>
-    </head><body>
-      <h1>Factures - ${classeFactureNom}</h1>
-      <div class="sub">Imprimé le ${dateStr}</div>
-      <table>
-        <thead><tr><th>Nom</th><th>Prénom</th><th style="text-align:right">Montant total</th><th style="text-align:center">Validation</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </body></html>`;
-    const finalHtml = injectForcedPrintCss(html, 'A4 landscape', '10mm');
-    openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1200, height: 800 });
+    const q = rechercheClasseFacture.trim().toLowerCase();
+    const elevesVisibles = elevesClasseFacturation.filter(e => {
+      if (!q) return true;
+      const full = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase();
+      return full.includes(q) || String(totalFactureEleve(e.id).toFixed(2)).includes(q);
+    });
+    if (elevesVisibles.length === 0) return;
+    const pages = [];
+    for (const e of elevesVisibles) {
+      // eslint-disable-next-line no-await-in-loop
+      const data = await construireDonneesFactureEleve(e, { persistReference: false });
+      const lignesEcolage = data.lignesEcolage || [];
+      const lignes = data.lignes || [];
+      const totalEcolageVal = lignesEcolage.reduce((a, l) => a + l.montant, 0);
+      const totalMaterielVal = lignes.reduce((a, l) => a + l.montant, 0);
+      const rowsEcolage = lignesEcolage.map((l, i) => `
+        <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt">${l.nom}</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center">${Math.round(l.prorata / 12 * 100)}%</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right">${Number(l.prix).toFixed(2)} CHF</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+        </tr>
+      `).join('');
+      const rowsMat = lignes.map((l, i) => `
+        <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt">${l.nom}</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center">${l.qte}</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right">${Number(l.prix).toFixed(2)} CHF</td>
+          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+        </tr>
+      `).join('');
+      pages.push(`
+        <section class="facture-page">
+          <div class="date">Vétroz, le ${data.dateFacture}</div>
+          <div class="meta"><b>Nom Prénom :</b> ${data.eleve.nom} ${data.eleve.prenom}</div>
+          <div class="meta"><b>Classe :</b> ${data.classeNom}</div>
+          <div class="meta">Référence : <b style="font-family:monospace;letter-spacing:1px">${data.reference || ''}</b></div>
+          ${lignesEcolage.length ? `<table style="table-layout:fixed"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;text-align:left;font-size:9pt">Frais d'écolage</th><th style="padding:6px 8px;text-align:center;font-size:9pt">Prorata</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Prix</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Montant</th></tr></thead><tbody>${rowsEcolage}</tbody></table><div class="st">Sous-total <b>${totalEcolageVal.toFixed(2)} CHF</b></div>` : ''}
+          ${lignes.length ? `<table style="table-layout:fixed"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;text-align:left;font-size:9pt">Matériel scolaire</th><th style="padding:6px 8px;text-align:center;font-size:9pt">Quantité</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Prix</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Montant</th></tr></thead><tbody>${rowsMat}</tbody></table><div class="st">Sous-total <b>${totalMaterielVal.toFixed(2)} CHF</b></div>` : ''}
+          <table style="table-layout:fixed;margin-top:4px"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><tbody><tr style="background:#f8fafc"><td colspan="3" style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;font-weight:700;text-transform:uppercase">Montant de la facture</td><td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:800">${Number(data.total).toFixed(2)} CHF</td></tr></tbody></table>
+          <div class="signature">Signature : ____________________________</div>
+        </section>
+      `);
+    }
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Factures ${classeFactureNom}</title><style>
+      @page { size: A4 portrait; margin: 12mm 16mm; }
+      body { font-family: 'Century Gothic', Arial, sans-serif; color: #1e293b; }
+      .facture-page { page-break-after: always; }
+      .facture-page:last-child { page-break-after: auto; }
+      .date { text-align: right; font-size: 10pt; margin-bottom: 10px; }
+      .meta { font-size: 10pt; margin-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      .st { display:flex; justify-content:space-between; font-size:9pt; padding:4px 8px; background:#f1f5f9; border:1px solid #e2e8f0; border-top:none; margin-bottom:8px; }
+      .signature { margin-top: 16px; text-align: right; font-size: 10pt; }
+    </style></head><body>${pages.join('')}</body></html>`;
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm 16mm');
+    openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1000, height: 800 });
   };
 
   const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
@@ -659,7 +699,7 @@ export default function Comptabilite() {
       {/* ===== CLASSES (liste → factures par classe) ===== */}
       {onglet === 'classes' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher une classe..." value={rechercheFactures} onChange={e => setRechercheFactures(e.target.value)} />
             {!showFacturesNiveaux ? (
               <button style={styles.btnGhostPill} onClick={() => setShowFacturesNiveaux(true)}>Trier</button>
@@ -740,7 +780,7 @@ export default function Comptabilite() {
             </div>
           ) : (
             <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap', borderBottom: '1px solid #eef2f7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                   <input
                     style={styles.tabSearch}
                     placeholder="Rechercher un élève ou un montant..."
@@ -835,9 +875,8 @@ export default function Comptabilite() {
       {/* ===== PAIEMENTS ===== */}
       {onglet === 'paiements' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher nom, prénom, classe, montant..." value={recherchePaiements} onChange={e => setRecherchePaiements(e.target.value)} />
-            <button style={styles.btnGhostPill} onClick={validerTousPaiementsFiltres}>Valider tous les paiements</button>
             {!showPaiementsNiveaux ? (
               <button style={styles.btnGhostPill} onClick={() => setShowPaiementsNiveaux(true)}>Trier</button>
             ) : (
@@ -923,7 +962,7 @@ export default function Comptabilite() {
       {/* ===== LISTE DE PRIX ===== */}
       {onglet === 'prix' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <input style={styles.tabSearch} placeholder="Rechercher un article..." value={recherchePrix} onChange={e => setRecherchePrix(e.target.value)} />
             <div style={styles.toggleGroup}>
               {[{ key: 'ecolage', label: 'Écolage' }, { key: 'scolaire', label: 'Matériel scolaire' }, { key: 'fournitures', label: 'Autres fournitures' }].map(t => (
@@ -1464,7 +1503,7 @@ export default function Comptabilite() {
           <div style={{ background: 'white', width: 900, maxWidth: '95vw', maxHeight: '90vh', overflow: 'auto', borderRadius: 14, padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 12 }}>
               <button style={styles.btnAnnuler} onClick={() => setFactureImprime(null)}>Fermer</button>
-              <button style={styles.btnSauver} onClick={imprimerFacture}>🖨️ Imprimer / PDF</button>
+              <button style={styles.btnSauver} onClick={imprimerFacture}>Imprimer</button>
             </div>
             <div id="facture-pdf" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 10, padding: '28px 32px', color: '#1e293b', fontFamily: "'Century Gothic', CenturyGothic, 'Trebuchet MS', sans-serif" }}>
               {/* En-tête */}
@@ -1512,7 +1551,7 @@ export default function Comptabilite() {
                   </div>
                 );
                 const totalTable = (label, val) => (
-                  <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed', marginTop: 4, marginBottom: 10 }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed', marginTop: 4, marginBottom: 20, borderRadius: 0, clipPath: 'none' }}>
                     {cg}
                     <tbody>
                       <tr style={{ background:'#f8fafc' }}>
@@ -1534,7 +1573,7 @@ export default function Comptabilite() {
                     Référence : <b style={{ color:'#334155', fontFamily:'monospace', letterSpacing:1 }}>{ref}</b>
                   </div>
                   {factureImprime.lignesEcolage?.length > 0 && (<>
-                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed', borderRadius: 0, clipPath: 'none' }}>
                       {cg}{mkThead("Frais d'écolage")}
                       <tbody>
                         {factureImprime.lignesEcolage.map((l,i) => (
@@ -1550,7 +1589,7 @@ export default function Comptabilite() {
                     {stRow('Sous-total', totalEcol)}
                   </>)}
                   {factureImprime.lignes?.length > 0 && (<>
-                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed', borderRadius: 0, clipPath: 'none' }}>
                       {cg}{mkThead('Matériel scolaire', 'Quantité')}
                       <tbody>
                         {factureImprime.lignes.map((l,i) => (
@@ -1581,7 +1620,7 @@ export default function Comptabilite() {
                   </>
                 );
               })()}
-              <div style={{ marginTop: 20, fontSize: 12, textAlign: 'right' }}>Signature : ____________________________</div>
+              <div style={{ marginTop: 40, fontSize: 12, textAlign: 'right' }}>Signature : ____________________________</div>
               {/* QR EUCMS */}
               {factureImprime.eleve.categorie === 'EUCMS' && (
                 <div style={{ marginTop: 32, borderTop: '2px dashed #e2e8f0', paddingTop: 24, textAlign: 'center' }}>
@@ -1604,7 +1643,7 @@ export default function Comptabilite() {
 
 const styles = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, flexWrap: 'wrap' },
   btnRetourListe: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569', fontWeight: 600 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
   titre: { fontSize: 24, fontWeight: 700, flex: 1 },
@@ -1613,7 +1652,7 @@ const styles = {
   statCard: { background: 'white', padding: '16px 20px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center' },
   statValeur: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 4 },
   statLabel: { fontSize: 12, color: '#888' },
-  tabSearch: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, width: 280, color: '#1e293b' },
+  tabSearch: { padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', outline: 'none', fontSize: 13, width: 280, color: '#1e293b', fontFamily: 'inherit' },
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },

@@ -40,8 +40,6 @@ const fmtHeure = (h) => {
 
 export default function SortieScolaire() {
   const navigate = useNavigate();
-  const [onglet, setOnglet] = useState('automne');
-  const [sousOngletSuivi, setSousOngletSuivi] = useState('automne');
   const [sorties, setSorties] = useState([]);
   const [classes, setClasses] = useState([]);
   const [profs, setProfs] = useState([]);
@@ -69,9 +67,6 @@ export default function SortieScolaire() {
 
   useEffect(() => { charger(); }, []);
   useEffect(() => {
-    // Toujours revenir sur la vue d'accueil (ajout/listing), jamais sur le suivi.
-    setOnglet('automne');
-    setSousOngletSuivi('automne');
     setSuiviClasseSelect(null);
   }, []);
 
@@ -97,7 +92,7 @@ export default function SortieScolaire() {
   };
 
   const ouvrirNouvelle = () => {
-    setForm({ ...FORM_VIDE, type: onglet === 'suivi' ? 'automne' : onglet });
+    setForm({ ...FORM_VIDE, type: 'autres' });
     setEditId(null);
     setShowForm(true);
   };
@@ -260,7 +255,6 @@ export default function SortieScolaire() {
   };
 
   const sortiesOnglet = sorties
-    .filter(s => s.type === onglet)
     .filter(s => {
       if (triType === 'Tous') return true;
       return (s.type || '').toLowerCase() === triType.toLowerCase();
@@ -288,9 +282,7 @@ export default function SortieScolaire() {
       {/* Header */}
       <div style={st.header}>
         <h1 style={st.titre}>Gestion des sorties scolaires</h1>
-        {onglet !== 'suivi' && (
-          <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter</button>
-        )}
+        <button style={{ ...st.btnAdd, marginLeft: 'auto' }} onClick={ouvrirNouvelle}>+ Ajouter</button>
       </div>
       <div style={st.searchRow}>
         <input
@@ -308,7 +300,7 @@ export default function SortieScolaire() {
                 key={t}
                 type="button"
                 style={{ ...st.toggleBtn, ...(triType === t ? st.toggleBtnActif : {}) }}
-                onClick={() => { setTriType(t); setShowTriTypes(false); }}
+                onClick={() => { setTriType(t); }}
               >
                 {t}
               </button>
@@ -317,187 +309,18 @@ export default function SortieScolaire() {
         )}
       </div>
 
-      {/* Main tabs — style EmploiDuTemps */}
-      <div style={st.tabsRow}>
-        {ONGLETS.map(o => (
-          <button key={o.id}
-            style={{ ...st.onglet, ...(onglet === o.id ? st.ongletActif : {}) }}
-            onClick={() => setOnglet(o.id)}>
-            {o.label}
-          </button>
-        ))}
-      </div>
-      <div style={st.tabLine} />
-
-      {/* Sous-onglets suivi — hors du cadre blanc */}
-      {onglet === 'suivi' && (
-        <div style={st.subTabsBar}>
-          {[{id:'automne',label:'Automne'},{id:'juin',label:'Juin'},{id:'autres',label:'Autres'}].map(o => (
-            <button key={o.id}
-              style={{ ...st.subTabBtn, ...(sousOngletSuivi === o.id ? st.subTabBtnActif : {}) }}
-              onClick={() => setSousOngletSuivi(o.id)}>
-              {o.label}
-            </button>
+      {sortiesOnglet.length === 0 ? (
+        <div style={{ ...st.empty, marginTop: 15 }}>
+          Aucune sortie trouvée.
+          <br/><br/>
+          <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 15 }}>
+          {sortiesOnglet.map(sortie => (
+            <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
           ))}
         </div>
-      )}
-
-      {/* Suivi — hors cadre blanc */}
-      {onglet === 'suivi' && (() => {
-        const sortiesDuSousOnglet = sorties.filter(s => s.type === sousOngletSuivi);
-        // Pour chaque classe, trouver si une sortie existe
-        const classesAvecSortie = classesSorted.map(cl => {
-          const sortie = sortiesDuSousOnglet.find(s =>
-            (s.classes_ids || '').split(',').map(x => x.trim()).includes(String(cl.id))
-          );
-          return { ...cl, sortie: sortie || null };
-        });
-        // Grouper par niveau (préfixe avant le numéro)
-        const niveauxMap = {};
-        classesAvecSortie.forEach(cl => {
-          const niv = cl.nom.replace(/\s*\d+.*$/, '').trim() || cl.nom;
-          if (!niveauxMap[niv]) niveauxMap[niv] = [];
-          niveauxMap[niv].push(cl);
-        });
-        const sortieSelectionnee = suiviClasseSelect
-          ? classesAvecSortie.find(cl => cl.id === suiviClasseSelect)?.sortie
-          : null;
-
-        // Suivi des professeurs
-        // Tronque le nom composé : "TOUZANI-BOULAADAS" → "TOUZANI"
-        const nomCourt = (fullName) => {
-          const parts = (fullName || '').trim().split(' ');
-          return parts.map((p, i) => i === parts.length - 1 ? p.split('-')[0] : p).join(' ');
-        };
-        const tousProfs = profs.filter(p => p.prenom && p.nom)
-          .map(p => nomCourt(`${p.prenom} ${p.nom}`))
-          .sort((a,b) => a.localeCompare(b,'fr'));
-        const profsAffectes = new Set(
-          sortiesDuSousOnglet.flatMap(s =>
-            (s.titulaires || '').split(' et ').map(p => nomCourt(p)).filter(Boolean)
-          )
-        );
-
-        return (
-          <div style={{ marginTop: 15 }}>
-            {/* Suivi des professeurs */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                Suivi des professeurs
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-                {tousProfs.map(prof => {
-                  const affecte = profsAffectes.has(prof);
-                  return (
-                    <span key={prof} style={{
-                      padding: '5px 16px', borderRadius: 20,
-                      background: affecte ? '#dcfce7' : '#f1f5f9',
-                      color: affecte ? '#15803d' : '#94a3b8',
-                      fontWeight: 700, fontSize: 13,
-                      textAlign: 'center',
-                    }}>
-                      {prof}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Suivi des classes */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                  Suivi des classes
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                  Total budgets : {sortiesDuSousOnglet.reduce((sum, s) => sum + (parseFloat(s.budget) || 0), 0).toFixed(2)} CHF
-                </div>
-              </div>
-              {Object.entries(niveauxMap).map(([niv, cls]) => (
-                <div key={niv} style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{niv}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {cls.map(cl => {
-                      const actif = suiviClasseSelect === cl.id;
-                      return (
-                        <button key={cl.id} type="button"
-                          onClick={() => cl.sortie ? setSuiviClasseSelect(actif ? null : cl.id) : null}
-                          style={{
-                            padding: '5px 16px', borderRadius: 20, border: actif ? '2px solid #15803d' : '2px solid transparent',
-                            background: cl.sortie ? '#dcfce7' : '#f1f5f9',
-                            color: cl.sortie ? '#15803d' : '#94a3b8',
-                            fontWeight: 700, fontSize: 13,
-                            cursor: cl.sortie ? 'pointer' : 'default',
-                            transition: 'all .12s',
-                          }}>
-                          {cl.nom}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              {/* Détail de la sortie sélectionnée */}
-              {sortieSelectionnee && (
-                <div style={{ marginTop: 16, background: 'white', borderRadius: 12, padding: '18px 22px', border: '1px solid #bbf7d0', boxShadow: '0 2px 8px rgba(21,128,61,0.08)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d' }}>
-                      {sortieSelectionnee.classes_noms || '—'}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => imprimer(sortieSelectionnee)} style={{ padding: '4px 10px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>🖨️ Imprimer</button>
-                      <button onClick={() => ouvrirEdit(sortieSelectionnee)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#6366f1' }}>✏️</button>
-                      <button onClick={() => setSuiviClasseSelect(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8', lineHeight: 1 }}>✕</button>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 13, color: '#374151' }}>
-                    {sortieSelectionnee.date_sortie && <div><span style={{ fontWeight: 600 }}>Date :</span> {new Date(sortieSelectionnee.date_sortie).toLocaleDateString('fr-CH')}</div>}
-                    {sortieSelectionnee.destination && <div><span style={{ fontWeight: 600 }}>Destination :</span> {sortieSelectionnee.destination}</div>}
-                    {sortieSelectionnee.titulaires && <div><span style={{ fontWeight: 600 }}>Titulaires :</span> {sortieSelectionnee.titulaires}</div>}
-                    {sortieSelectionnee.autres_accompagnants && <div><span style={{ fontWeight: 600 }}>Autres accompagnants :</span> {sortieSelectionnee.autres_accompagnants}</div>}
-                    {sortieSelectionnee.lieu_depart && <div><span style={{ fontWeight: 600 }}>Départ :</span> {sortieSelectionnee.lieu_depart} {fmtHeure(sortieSelectionnee.heure_depart) ? `à ${fmtHeure(sortieSelectionnee.heure_depart)}` : ''}</div>}
-                    {sortieSelectionnee.lieu_retour && <div><span style={{ fontWeight: 600 }}>Retour :</span> {sortieSelectionnee.lieu_retour} {fmtHeure(sortieSelectionnee.heure_retour) ? `à ${fmtHeure(sortieSelectionnee.heure_retour)}` : ''}</div>}
-                    {sortieSelectionnee.budget && <div><span style={{ fontWeight: 600 }}>Budget :</span> {parseFloat(sortieSelectionnee.budget).toFixed(2)} CHF</div>}
-                    {sortieSelectionnee.activites && <div style={{ gridColumn: '1 / -1' }}><span style={{ fontWeight: 600 }}>Activités :</span> {sortieSelectionnee.activites}</div>}
-                  </div>
-                  <div style={{ marginTop: 10 }}>
-                    <button onClick={() => toggleApprouve(sortieSelectionnee)}
-                      style={{ padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: sortieSelectionnee.approuve ? '#16a34a' : '#e2e8f0', color: sortieSelectionnee.approuve ? 'white' : '#64748b' }}>
-                      {sortieSelectionnee.approuve ? '✓ Approuvé' : 'À approuver'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Tableau de suivi existant */}
-            <SuiviTable
-              sorties={sortiesDuSousOnglet}
-              onEdit={ouvrirEdit}
-              onDelete={supprimer}
-              onPrint={imprimer}
-              onToggleApprouve={toggleApprouve}
-            />
-          </div>
-        );
-      })()}
-
-      {/* Automne / Juin / Autres — hors cadre blanc */}
-      {onglet !== 'suivi' && (
-        sortiesOnglet.length === 0 ? (
-          <div style={{ ...st.empty, marginTop: 15 }}>
-            Aucune sortie pour <b>{ONGLETS.find(o => o.id === onglet)?.label}</b>.
-            <br/><br/>
-            <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 15 }}>
-            {sortiesOnglet.map(sortie => (
-              <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
-            ))}
-          </div>
-        )
       )}
 
       {/* Form popup */}
@@ -732,7 +555,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
 
 const st = {
   page: { minHeight: '100%', boxSizing: 'border-box', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
-  header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24 },
+  header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24, width: '100%' },
   btnBack: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 500, fontSize: 13, cursor: 'pointer' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, flex: 1 },
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
