@@ -500,12 +500,17 @@ export default function Comptabilite() {
     const now = new Date();
     const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear() + 1}` : `${now.getFullYear() - 1}-${now.getFullYear()}`;
     const ref = data.reference || calcQRRef(data.classeNom, data.dateFacture, data.eleve);
+    const fmtPrintCHF = (value) => `CHF ${Number(value || 0).toFixed(2).replace('.', ',')}`;
     const cg = `<colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup>`;
     const th = (col1, col2 = 'Prorata') => `<thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;font-size:9pt;text-align:left">${col1}</th><th style="padding:6px 8px;font-size:9pt;text-align:center">${col2}</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Prix</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Montant</th></tr></thead>`;
     const tdR = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center`;
     const tdMoney = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right`;
     const tdL = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt`;
-    const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:9pt;padding:4px 8px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:10px"><span style="font-weight:600">${label}</span><b>${val.toFixed(2)} CHF</b></div>`;
+    const footerHtml = `<div class="footer">
+      <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
+      <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
+    </div>`;
+    const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:9pt;padding:4px 8px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:10px"><span style="font-weight:600">${label}</span><b>${fmtPrintCHF(val)}</b></div>`;
     const totalEcolageVal = (data.lignesEcolage || []).reduce((a, l) => a + l.montant, 0);
     const totalMaterielVal = (data.lignes || []).reduce((a, l) => a + l.montant, 0);
     const ecolageHtml = (data.lignesEcolage || []).length > 0 ? `
@@ -515,8 +520,8 @@ export default function Comptabilite() {
           <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
             <td style="${tdR}">${Math.round(l.prorata / 12 * 100)}%</td>
-            <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
-            <td style="${tdMoney};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+            <td style="${tdMoney}">${fmtPrintCHF(l.prix)}</td>
+            <td style="${tdMoney};font-weight:700">${fmtPrintCHF(l.montant)}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -528,8 +533,8 @@ export default function Comptabilite() {
           <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
             <td style="${tdR}">${l.qte}</td>
-            <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
-            <td style="${tdMoney};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
+            <td style="${tdMoney}">${fmtPrintCHF(l.prix)}</td>
+            <td style="${tdMoney};font-weight:700">${fmtPrintCHF(l.montant)}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -550,26 +555,40 @@ export default function Comptabilite() {
         </div>
         <div class="titre">Facture</div>
         <div class="date">Vétroz, le ${data.dateFacture}</div>
-        <div style="font-size:10pt;color:#64748b;margin-bottom:2px">NOM Prénom</div>
-        <div style="font-size:13pt;font-weight:700;color:#0f172a;margin-bottom:6px">${data.eleve.nom} ${data.eleve.prenom}</div>
-        <div style="font-size:10pt;color:#64748b;margin-bottom:2px">Classe</div>
-        <div style="font-size:11pt;color:#334155;margin-bottom:16px">${data.classeNom}</div>
+        <div style="font-size:12pt;color:#334155;margin-bottom:6px;line-height:1.35">
+          <span style="color:#64748b;font-weight:700">Nom Prénom :</span>
+          <span style="font-weight:700;color:#0f172a;margin-left:6px">${data.eleve.nom} ${data.eleve.prenom}</span>
+        </div>
+        <div style="font-size:12pt;color:#334155;margin-bottom:16px;line-height:1.35">
+          <span style="color:#64748b;font-weight:700">Classe :</span>
+          <span style="margin-left:6px">${data.classeNom}</span>
+        </div>
         <div style="font-size:9pt;color:#64748b;margin-bottom:24px">Référence : <b style="color:#334155;font-family:monospace;letter-spacing:1px">${ref}</b></div>
         ${ecolageHtml}
         ${lignesHtml}
-        <div style="display:flex;justify-content:space-between;font-size:11pt;font-weight:700;border-top:none;padding-top:0;margin-top:4px">
-          <span>Montant de la facture</span><b>${Number(data.total).toFixed(2)} CHF</b>
-        </div>
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-top:4px;margin-bottom:20px;border-radius:0;clip-path:none">
+          ${cg}
+          <tbody>
+            <tr style="background:#f8fafc">
+              <td colspan="3" style="${tdL};font-weight:700;text-transform:uppercase;letter-spacing:0.3">Montant de la facture</td>
+              <td style="${tdMoney};font-weight:800">${fmtPrintCHF(data.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="signature">Signature : ____________________________</div>
+        ${data.eleve.categorie === 'EUCMS' ? footerHtml : ''}
         ${data.eleve.categorie === 'EUCMS' ? (() => {
           const ref5 = String(ref).replace(/\s/g, '').slice(-5);
-          return `<p style="margin-top:16px;font-size:9pt;color:#1e293b;line-height:1.6">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
-          <p style="margin-top:8px;font-size:9pt;color:#1e293b;line-height:1.6">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>`;
+          return `
+          <div style="page-break-before:always;break-before:page;margin-top:24px;border-top:2px dashed #e2e8f0;padding-top:16px;text-align:center;">
+            <p style="margin:0 0 8px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
+            <p style="margin:0 0 12px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>
+            <div style="font-size:8pt;color:#64748b;margin-bottom:8px;">Page 2 - Bulletin de versement</div>
+            <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:360px;object-fit:contain;" alt="QR facture" onerror="this.style.display='none'" />
+          </div>
+        `;
         })() : ''}
-        <div class="signature">Signature : ____________________________</div>
-        <div class="footer">
-          <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
-          <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
-        </div>
+        ${footerHtml}
       </section>
     `;
   };

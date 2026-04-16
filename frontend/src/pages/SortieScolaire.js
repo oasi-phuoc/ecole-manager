@@ -317,7 +317,7 @@ export default function SortieScolaire() {
         )}
       </div>
 
-      {sortiesOnglet.length === 0 ? (
+      {!showSuivi && (sortiesOnglet.length === 0 ? (
         <div style={{ ...st.empty, marginTop: 15 }}>
           Aucune sortie trouvée.
           <br/><br/>
@@ -329,9 +329,10 @@ export default function SortieScolaire() {
             <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
           ))}
         </div>
-      )}
+      ))}
       {showSuivi && (
         <div style={{ marginTop: 16 }}>
+          <SuiviProfClasse sorties={sortiesOnglet} />
           <SuiviTable
             sorties={sortiesOnglet}
             onEdit={ouvrirEdit}
@@ -568,6 +569,58 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function SuiviProfClasse({ sorties }) {
+  const classesMap = new Map();
+  const profsMap = new Map();
+  sorties.forEach((s) => {
+    const classNames = (s.classes_noms || [s.classe1, s.classe2].filter(Boolean).join(', ') || '')
+      .split(',')
+      .map(v => v.trim())
+      .filter(Boolean);
+    const profNames = (s.titulaires || '')
+      .split(' et ')
+      .map(v => v.trim())
+      .filter(Boolean);
+    classNames.forEach((nom) => classesMap.set(nom, (classesMap.get(nom) || 0) + 1));
+    profNames.forEach((nom) => profsMap.set(nom, (profsMap.get(nom) || 0) + 1));
+  });
+  const classesList = [...classesMap.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  const profsList = [...profsMap.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 12 }}>
+      <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des professeurs ayant des sorties</div>
+        {profsList.length === 0 ? (
+          <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun professeur trouvé.</div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {profsList.map(([nom, count]) => (
+              <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
+                {nom} ({count})
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des classes ayant des sorties</div>
+        {classesList.length === 0 ? (
+          <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune classe trouvée.</div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {classesList.map(([nom, count]) => (
+              <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
+                {nom} ({count})
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
