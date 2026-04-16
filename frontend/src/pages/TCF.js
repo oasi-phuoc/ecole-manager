@@ -1030,31 +1030,50 @@ export default function TCF() {
             placeholder="Nom du site"
           />
         </div>
-      </div>
-
-      <div style={styles.niveauSection}>
-        <div style={styles.sectionTitle}>Niveau</div>
-        <div style={styles.siteLevelsWrap}>
-          {niveauxTabs.map(level => {
-            const actif = (siteLevels[siteKey] || []).includes(level);
-            return (
-              <button
-                key={`${siteKey}-${level}`}
-                type="button"
-                onClick={() => {
-                  toggleSiteLevel(siteKey, level);
-                  setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: false }));
-                }}
-                style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}) }}
-              >
-                {level}
-              </button>
-            );
-          })}
+        <div style={styles.niveauSection}>
+          <div style={styles.niveauSectionTitle}>Niveau</div>
+          <div style={styles.siteLevelsWrap}>
+            {niveauxTabs.map(level => {
+              const actif = (siteLevels[siteKey] || []).includes(level);
+              return (
+                <button
+                  key={`${siteKey}-${level}`}
+                  type="button"
+                  onClick={() => {
+                    toggleSiteLevel(siteKey, level);
+                    setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: false }));
+                  }}
+                  style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}) }}
+                >
+                  {level}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div style={styles.sectionTitle}>Liste des professeurs</div>
+      <div style={styles.profsHeaderRow}>
+        <div style={{ ...styles.sectionTitle, margin: 0 }}>Liste des professeurs</div>
+        {(() => {
+          const niveauxSelectionnes = siteLevels[siteKey] || [];
+          const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
+          const afficherAutres = !!showAutresProfsBySite[siteKey];
+          if (niveauxSet.size === 0) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !prev[siteKey] }))}
+              style={{
+                ...styles.autresProfsToggleBtn,
+                ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
+              }}
+            >
+              {afficherAutres ? 'Masquer les autres professeurs' : 'Afficher les autres professeurs'}
+            </button>
+          );
+        })()}
+      </div>
       {(() => {
         const niveauxSelectionnes = siteLevels[siteKey] || [];
         const afficherAutres = !!showAutresProfsBySite[siteKey];
@@ -1066,20 +1085,6 @@ export default function TCF() {
         });
         return (
           <>
-            {niveauxSet.size > 0 && (
-              <div style={styles.autresProfsToggleWrap}>
-                <button
-                  type="button"
-                  onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !prev[siteKey] }))}
-                  style={{
-                    ...styles.autresProfsToggleBtn,
-                    ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
-                  }}
-                >
-                  {afficherAutres ? 'Masquer les autres professeurs' : 'Afficher les autres professeurs'}
-                </button>
-              </div>
-            )}
             {chargement ? <div style={styles.empty}>Chargement...</div> : profsParNiveauFiltres.map(([niveau, liste]) => (
         <div key={niveau} style={styles.niveauBlock}>
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
@@ -3376,7 +3381,7 @@ export default function TCF() {
 
   return (
     <div style={styles.page}>
-      <div style={{...stickyPageChrome(), marginBottom:0}}>
+      <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3816,22 +3821,23 @@ const styles = {
   btnAddSite: { padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
   siteCardPlain: { border: 'none', borderRadius: 0, padding: 0, background: 'transparent' },
-  siteHeader: { display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  siteHeader: { display: 'flex', alignItems: 'stretch', gap: 10, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
-  siteNameField: { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 260, flex: '1 1 260px' },
+  siteNameField: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6, minWidth: 300, flex: '1 1 420px' },
   siteInputLabel: { fontSize: 12, fontWeight: 700, color: '#334155' },
   siteInput: { width: '100%', maxWidth: '100%', padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b', background: 'white', fontFamily: 'inherit', boxSizing: 'border-box' },
-  niveauSection: { marginBottom: 10 },
+  niveauSection: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6, minWidth: 290, flex: '0 1 420px' },
+  niveauSectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
   siteLevelsWrap: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  levelBtn: { padding: '6px 10px', borderRadius: 999, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
-  levelBtnActif: { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
+  levelBtn: { padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 },
+  levelBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1', fontWeight: 700 },
   btnRemoveSite: { padding: '6px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 12 },
   siteFooterActions: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
   niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
-  autresProfsToggleWrap: { marginBottom: 10 },
-  autresProfsToggleBtn: { padding: '7px 16px', minWidth: 230, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center' },
+  profsHeaderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, marginBottom: 8, flexWrap: 'wrap' },
+  autresProfsToggleBtn: { padding: '7px 14px', minWidth: 230, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center', lineHeight: 1 },
   autresProfsToggleBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1', fontWeight: 700 },
   profsList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 6 },
   profItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 8px', background: 'white', minHeight: 34 },

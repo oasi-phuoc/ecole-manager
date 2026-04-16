@@ -669,7 +669,7 @@ export default function Comptabilite() {
     && elevesClasseFacturation.every(e => !!facturesValidees[e.id]);
   return (
     <div style={styles.page}>
-      <div style={{...stickyPageChrome(), marginBottom:0}}>
+      <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         {onglet === 'factures' && classeFacturationId ? (
           <>

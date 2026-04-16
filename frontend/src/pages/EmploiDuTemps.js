@@ -1648,7 +1648,7 @@ export default function EmploiDuTemps() {
 
   return (
     <div style={styles.page}>
-      <div style={{...stickyPageChrome(), marginBottom:0}}>
+      <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.titre}>Emploi du temps</h2>
         {isAdmin() && onglet === 'pools' && (
