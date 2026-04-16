@@ -721,7 +721,12 @@ export default function Comptabilite() {
             <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={imprimerFacturesClasse}>Imprimer</button>
           </>
         ) : (
-          <h2 style={styles.titre}>Comptabilité</h2>
+          <>
+            <h2 style={styles.titre}>Comptabilité</h2>
+            {onglet === 'commandes' && (
+              <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={() => ouvrirCommandePopup()}>+ Ajouter</button>
+            )}
+          </>
         )}
       </div>
       </div>
@@ -992,10 +997,7 @@ export default function Comptabilite() {
       {/* ===== COMMANDES ===== */}
       {onglet === 'commandes' && (
         <>
-          <div style={styles.filtersRow}>
-            <button style={styles.btnAjouter} onClick={() => ouvrirCommandePopup()}>+ Ajouter</button>
-          </div>
-          <div style={{ ...styles.tabContent, marginTop: 0 }}>
+          <div style={{ ...styles.tabContent, marginTop: 8 }}>
             {commandes.length === 0 ? (
               <div style={styles.vide}>Aucune commande enregistrée.</div>
             ) : (

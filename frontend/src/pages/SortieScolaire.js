@@ -48,6 +48,7 @@ export default function SortieScolaire() {
   const [editId, setEditId] = useState(null);
   const [showAddTit, setShowAddTit] = useState(false);
   const [suiviClasseSelect, setSuiviClasseSelect] = useState(null);
+  const [showSuivi, setShowSuivi] = useState(false);
   const [rechercheSorties, setRechercheSorties] = useState('');
   const [showTriTypes, setShowTriTypes] = useState(false);
   const [triType, setTriType] = useState('Tous');
@@ -298,7 +299,14 @@ export default function SortieScolaire() {
       {/* Header */}
       <div style={st.header}>
         <h1 style={st.titre}>Gestion des sorties scolaires</h1>
-        <button style={{ ...st.btnAdd, marginLeft: 'auto' }} onClick={ouvrirNouvelle}>+ Ajouter</button>
+        <button
+          type="button"
+          onClick={() => setShowSuivi(v => !v)}
+          style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: showSuivi ? '#ede9fe' : 'white', color: showSuivi ? '#5b21b6' : '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+        >
+          {showSuivi ? 'Masquer le suivi' : 'Afficher le suivi'}
+        </button>
+        <button style={{ ...st.btnAdd }} onClick={ouvrirNouvelle}>+ Ajouter</button>
       </div>
       <div style={st.searchRow}>
         <input
@@ -334,6 +342,12 @@ export default function SortieScolaire() {
           onToggleApprouve={toggleApprouve}
         />
       </div>
+
+      {showSuivi && (
+        <div style={{ marginTop: 24 }}>
+          <SuiviProfClasse sorties={sortiesOnglet} classes={classes} profs={profs} />
+        </div>
+      )}
 
       {/* Form popup */}
       {showForm && (
