@@ -23,7 +23,7 @@ export default function Sondage() {
 
 const s = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0 },
   placeholder: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 320, background: 'white', borderRadius: 16, border: '2px dashed #e0e7ff', color: '#94a3b8' },
   placeholderTitre: { fontSize: 16, fontWeight: 700, color: '#6366f1', marginBottom: 8 },

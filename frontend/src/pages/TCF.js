@@ -162,8 +162,22 @@ export default function TCF() {
   const headers = useMemo(() => ({}), []);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const onglet = searchParams.get('tab') || 'pool';
-  const setOnglet = (tab) => setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('tab', tab); return p; });
+  const normalizeTCFTab = (tabValue) => {
+    const tab = String(tabValue || '').trim().toLowerCase();
+    if (!tab) return 'pool';
+    if (tab === 'affectation') return 'classes';
+    if (tab === 'resultats') return 'resultat';
+    return tab;
+  };
+  const onglet = normalizeTCFTab(searchParams.get('tab'));
+  const setOnglet = (tab) => {
+    const normalized = normalizeTCFTab(tab);
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev);
+      p.set('tab', normalized);
+      return p;
+    });
+  };
   const [profs, setProfs] = useState([]);
   const [pools, setPools] = useState([]);
   const [creneaux, setCreneaux] = useState([]);
@@ -178,6 +192,7 @@ export default function TCF() {
   const [siteOrder, setSiteOrder] = useState(['site1', 'site2']);
   const [siteCounter, setSiteCounter] = useState(2);
   const [siteActif, setSiteActif] = useState('site1');
+  const [showAutresProfsBySite, setShowAutresProfsBySite] = useState({});
   const [planningsSite, setPlanningsSite] = useState(null);
   const [planningsType, setPlanningsType] = useState('classes');
   const [planningsProfId, setPlanningsProfId] = useState('');
@@ -1015,6 +1030,10 @@ export default function TCF() {
             placeholder="Nom du site"
           />
         </div>
+      </div>
+
+      <div style={styles.niveauSection}>
+        <div style={styles.sectionTitle}>Niveau</div>
         <div style={styles.siteLevelsWrap}>
           {niveauxTabs.map(level => {
             const actif = (siteLevels[siteKey] || []).includes(level);
@@ -1022,7 +1041,10 @@ export default function TCF() {
               <button
                 key={`${siteKey}-${level}`}
                 type="button"
-                onClick={() => toggleSiteLevel(siteKey, level)}
+                onClick={() => {
+                  toggleSiteLevel(siteKey, level);
+                  setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: false }));
+                }}
                 style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}) }}
               >
                 {level}
@@ -1030,17 +1052,35 @@ export default function TCF() {
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => supprimerSite(siteKey)}
-          style={styles.btnRemoveSite}
-        >
-          Supprimer ce site
-        </button>
       </div>
 
       <div style={styles.sectionTitle}>Liste des professeurs</div>
-      {chargement ? <div style={styles.empty}>Chargement...</div> : Object.entries(profsParNiveauPool).map(([niveau, liste]) => (
+      {(() => {
+        const niveauxSelectionnes = siteLevels[siteKey] || [];
+        const afficherAutres = !!showAutresProfsBySite[siteKey];
+        const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
+        const profsParNiveauFiltres = Object.entries(profsParNiveauPool).filter(([niveau]) => {
+          if (niveauxSet.size === 0) return true;
+          if (afficherAutres) return true;
+          return niveauxSet.has(normaliserNiveau(niveau));
+        });
+        return (
+          <>
+            {niveauxSet.size > 0 && (
+              <div style={styles.autresProfsToggleWrap}>
+                <button
+                  type="button"
+                  onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !prev[siteKey] }))}
+                  style={{
+                    ...styles.autresProfsToggleBtn,
+                    ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
+                  }}
+                >
+                  {afficherAutres ? 'Masquer les autres professeurs' : 'Afficher les autres professeurs'}
+                </button>
+              </div>
+            )}
+            {chargement ? <div style={styles.empty}>Chargement...</div> : profsParNiveauFiltres.map(([niveau, liste]) => (
         <div key={niveau} style={styles.niveauBlock}>
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
           <div style={styles.profsList}>
@@ -1070,9 +1110,21 @@ export default function TCF() {
             })}
           </div>
         </div>
-      ))}
+            ))}
+          </>
+        );
+      })()}
 
       <div style={{marginTop:15}}>{renderTablePoolSite(siteKey)}</div>
+      <div style={styles.siteFooterActions}>
+        <button
+          type="button"
+          onClick={() => supprimerSite(siteKey)}
+          style={styles.btnRemoveSite}
+        >
+          Supprimer
+        </button>
+      </div>
     </div>
   );
 
@@ -3733,7 +3785,7 @@ const styles = {
     boxSizing: 'border-box',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   pillGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
@@ -3769,13 +3821,18 @@ const styles = {
   siteNameField: { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 260, flex: '1 1 260px' },
   siteInputLabel: { fontSize: 12, fontWeight: 700, color: '#334155' },
   siteInput: { width: '100%', maxWidth: '100%', padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b', background: 'white', fontFamily: 'inherit', boxSizing: 'border-box' },
+  niveauSection: { marginBottom: 10 },
   siteLevelsWrap: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   levelBtn: { padding: '6px 10px', borderRadius: 999, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   levelBtnActif: { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
-  btnRemoveSite: { marginLeft: 'auto', padding: '6px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 12 },
+  btnRemoveSite: { padding: '6px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 12 },
+  siteFooterActions: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
   niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
+  autresProfsToggleWrap: { marginBottom: 10 },
+  autresProfsToggleBtn: { padding: '7px 16px', minWidth: 230, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center' },
+  autresProfsToggleBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1', fontWeight: 700 },
   profsList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 6 },
   profItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #e2e8f0', borderRadius: 7, padding: '6px 8px', background: 'white', minHeight: 34 },
   profItemBlocked: { opacity: 0.5, background: '#f8fafc' },

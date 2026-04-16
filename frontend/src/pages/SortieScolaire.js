@@ -20,7 +20,7 @@ const LIEUX_PREDEFINIS = ['Sion, Synecom', 'Vétroz, Botza'];
 const FORM_VIDE = {
   type: 'juin', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '', autres_acc_arr: [],
   date_sortie: '', destination: '', activites: '',
-  lieu_depart: 'Sion, Synecom', lieu_depart_autre: '',
+  lieu_depart: '', lieu_depart_autre: '',
   heure_depart: '', lieu_retour: '', heure_retour: '',
   budget: '', commentaires: '',
 };
@@ -51,7 +51,6 @@ export default function SortieScolaire() {
   const [rechercheSorties, setRechercheSorties] = useState('');
   const [showTriTypes, setShowTriTypes] = useState(false);
   const [triType, setTriType] = useState('Tous');
-  const [showSuivi, setShowSuivi] = useState(false);
 
   const charger = async () => {
     try {
@@ -100,7 +99,7 @@ export default function SortieScolaire() {
 
   const ouvrirEdit = (s) => {
     const ids = s.classes_ids ? s.classes_ids.split(',').map(x => x.trim()).filter(Boolean) : [];
-    const lieuDepart = LIEUX_PREDEFINIS.includes(s.lieu_depart) ? s.lieu_depart : (s.lieu_depart ? 'autre' : 'Sion, Synecom');
+    const lieuDepart = LIEUX_PREDEFINIS.includes(s.lieu_depart) ? s.lieu_depart : (s.lieu_depart ? 'autre' : '');
     setForm({
       type: s.type || 'autres',
       classes_ids: ids,
@@ -130,6 +129,22 @@ export default function SortieScolaire() {
       return;
     }
     const lieuDepart = form.lieu_depart === 'autre' ? form.lieu_depart_autre : form.lieu_depart;
+    if (!String(lieuDepart || '').trim()) {
+      alert('Le lieu de départ est obligatoire.');
+      return;
+    }
+    if (!String(form.heure_depart || '').trim()) {
+      alert("L'heure de départ est obligatoire.");
+      return;
+    }
+    if (!String(form.lieu_retour || '').trim()) {
+      alert('Le lieu de retour est obligatoire.');
+      return;
+    }
+    if (!String(form.heure_retour || '').trim()) {
+      alert("L'heure de retour est obligatoire.");
+      return;
+    }
     const payload = {
       ...form,
       classes_ids: (form.classes_ids || []).join(','),
@@ -292,13 +307,6 @@ export default function SortieScolaire() {
           onChange={(e) => setRechercheSorties(e.target.value)}
           placeholder="Rechercher professeur, classe, destination..."
         />
-        <button
-          type="button"
-          style={{ ...st.btnSuivi, ...(showSuivi ? st.btnSuiviActif : {}) }}
-          onClick={() => setShowSuivi(v => !v)}
-        >
-          {showSuivi ? 'Masquer le suivi' : 'Afficher le suivi'}
-        </button>
         {!showTriTypes ? (
           <button type="button" style={st.btnTri} onClick={() => setShowTriTypes(true)}>Trier</button>
         ) : (
@@ -317,31 +325,15 @@ export default function SortieScolaire() {
         )}
       </div>
 
-      {!showSuivi && (sortiesOnglet.length === 0 ? (
-        <div style={{ ...st.empty, marginTop: 15 }}>
-          Aucune sortie trouvée.
-          <br/><br/>
-          <button style={st.btnAdd} onClick={ouvrirNouvelle}>+ Ajouter une sortie</button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 15 }}>
-          {sortiesOnglet.map(sortie => (
-            <SortieCard key={sortie.id} sortie={sortie} onEdit={ouvrirEdit} onDelete={supprimer} onPrint={imprimer} onToggleApprouve={toggleApprouve} />
-          ))}
-        </div>
-      ))}
-      {showSuivi && (
-        <div style={{ marginTop: 16 }}>
-          <SuiviProfClasse sorties={sortiesOnglet} classes={classes} profs={profs} />
-          <SuiviTable
-            sorties={sortiesOnglet}
-            onEdit={ouvrirEdit}
-            onDelete={supprimer}
-            onPrint={imprimer}
-            onToggleApprouve={toggleApprouve}
-          />
-        </div>
-      )}
+      <div style={{ marginTop: 16 }}>
+        <SuiviTable
+          sorties={sortiesOnglet}
+          onEdit={ouvrirEdit}
+          onDelete={supprimer}
+          onPrint={imprimer}
+          onToggleApprouve={toggleApprouve}
+        />
+      </div>
 
       {/* Form popup */}
       {showForm && (
@@ -439,11 +431,11 @@ export default function SortieScolaire() {
               {/* Ligne départ */}
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={st.lbl}>Lieu de départ</label>
+                  <label style={st.lbl}>Lieu de départ *</label>
                   <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                     {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
                       <button key={lieu} type="button"
-                        onClick={() => setForm({...form, lieu_depart: lieu})}
+                        onClick={() => setForm({...form, lieu_depart: lieu, ...(lieu !== 'autre' ? { lieu_depart_autre: '' } : {})})}
                         style={{
                           padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
                           background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
@@ -461,7 +453,7 @@ export default function SortieScolaire() {
                   )}
                 </div>
                 <div style={{ width: 170 }}>
-                  <label style={st.lbl}>Heure de départ</label>
+                  <label style={st.lbl}>Heure de départ *</label>
                   <TimePicker value={form.heure_depart} onChange={e => setForm({...form, heure_depart: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
                 </div>
               </div>
@@ -469,11 +461,11 @@ export default function SortieScolaire() {
               {/* Ligne retour — heure toujours alignée avec lieu retour */}
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={st.lbl}>Lieu de retour</label>
+                  <label style={st.lbl}>Lieu de retour *</label>
                   <input style={{ ...st.inp, width: '100%', boxSizing: 'border-box' }} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
                 </div>
                 <div style={{ width: 170 }}>
-                  <label style={st.lbl}>Heure de retour</label>
+                  <label style={st.lbl}>Heure de retour *</label>
                   <TimePicker value={form.heure_retour} onChange={e => setForm({...form, heure_retour: e.target.value})} style={{ ...st.inp, cursor: 'pointer' }} />
                 </div>
               </div>
@@ -542,7 +534,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
-            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget','Approbation',''].map(h => (
+            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget','',''].map(h => (
               <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' }}>{h}</th>
             ))}
           </tr>
@@ -566,23 +558,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                     : (fmtHeure(s.heure_retour) || '—')}
                 </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
-                <td style={{ ...sc.td, textAlign: 'center' }}>
-                  <button
-                    onClick={() => onToggleApprouve(s)}
-                    title={s.approuve ? 'Approuvé' : 'Non approuvé'}
-                    style={{ padding: 5, background: s.approuve ? '#dcfce7' : '#fee2e2', color: s.approuve ? '#16a34a' : '#dc2626', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
-                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
-                      {s.approuve
-                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
-                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
-                      }
-                    </svg>
-                  </button>
-                </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                  <button style={sc.btnPrint} onClick={() => onPrint(s)}>🖨️</button>
                   <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -595,6 +571,18 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                       <path d="M19 6l-1 14H6L5 6"/>
                       <path d="M10 11v6M14 11v6"/>
                       <path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
+                </td>
+                <td style={{ ...sc.td, textAlign: 'center' }}>
+                  <button
+                    onClick={() => onToggleApprouve(s)}
+                    title={s.approuve ? 'Approuvé' : 'Non approuvé'}
+                    style={{ padding: 5, background: s.approuve ? '#dcfce7' : '#e2e8f0', color: s.approuve ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
                     </svg>
                   </button>
                 </td>
@@ -638,6 +626,44 @@ function SuiviProfClasse({ sorties, classes, profs }) {
   );
   const unassignedClasses = allClassNames.filter((nom) => !assignedClasses.has(nom.toLowerCase()));
   const unassignedProfs = allProfNames.filter((nom) => !assignedProfs.has(nom.toLowerCase()));
+  const chipProfStyle = {
+    display: 'inline-block',
+    width: 210,
+    padding: '4px 10px',
+    borderRadius: 999,
+    background: '#eef2ff',
+    color: '#3730a3',
+    fontSize: 12,
+    fontWeight: 600,
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    boxSizing: 'border-box',
+  };
+  const chipClasseStyle = {
+    display: 'inline-block',
+    width: 140,
+    padding: '4px 10px',
+    borderRadius: 999,
+    background: '#eef2ff',
+    color: '#3730a3',
+    fontSize: 12,
+    fontWeight: 600,
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    boxSizing: 'border-box',
+  };
+  const chipNeutreStyle = {
+    padding: '4px 10px',
+    borderRadius: 999,
+    background: '#f1f5f9',
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: 600,
+  };
 
   return (
     <>
@@ -658,7 +684,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {profsList.map(([nom, count]) => (
-                <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
+                <span key={nom} style={chipProfStyle}>
                   {nom} ({count})
                 </span>
               ))}
@@ -681,7 +707,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {classesList.map(([nom, count]) => (
-                <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
+                <span key={nom} style={chipClasseStyle}>
                   {nom} ({count})
                 </span>
               ))}
@@ -699,7 +725,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {unassignedProfs.map((nom) => (
-                    <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#ede9fe', color: '#5b21b6', fontSize: 12, fontWeight: 600 }}>
+                    <span key={nom} style={{ ...chipNeutreStyle, width: 210, display: 'inline-block', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', boxSizing: 'border-box' }}>
                       {nom}
                     </span>
                   ))}
@@ -715,7 +741,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {unassignedClasses.map((nom) => (
-                    <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
+                    <span key={nom} style={{ ...chipNeutreStyle, width: 140, display: 'inline-block', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', boxSizing: 'border-box' }}>
                       {nom}
                     </span>
                   ))}
@@ -731,11 +757,11 @@ function SuiviProfClasse({ sorties, classes, profs }) {
 
 const st = {
   page: { minHeight: '100%', boxSizing: 'border-box', background: '#f8fafc', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif", padding: '28px 32px' },
-  header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 24, width: '100%' },
+  header: { display: 'flex', alignItems: 'center', gap: 18, marginBottom: 12, width: '100%' },
   btnBack: { padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 500, fontSize: 13, cursor: 'pointer' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0, flex: 1 },
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
-  searchRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
+  searchRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
   searchInput: { width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' },
   btnSuivi: { padding: '7px 16px', minWidth: 138, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center' },
   btnSuiviActif: { border: '1.5px solid #6366f1', background: '#e0e7ff', color: '#4338ca' },

@@ -223,7 +223,7 @@ export default function DocumentsAdministratifs() {
   return (
     <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       <div style={{...stickyPageChrome(), marginBottom:0}}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>Documents</h2>
       </div>
       <div style={{ marginBottom: 14 }}>

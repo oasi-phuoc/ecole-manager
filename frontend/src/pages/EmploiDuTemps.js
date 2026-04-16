@@ -1741,7 +1741,7 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
             <select
               style={styles.selOnglet}
               value={profSelectionne || ''}
@@ -2147,7 +2147,7 @@ export default function EmploiDuTemps() {
       {onglet === 'affectations' && (
         <div>
           {/* Dropdowns + toggles — une seule ligne */}
-          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:15,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
             {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
               <select style={styles.selOnglet} value={poolAffId} onChange={e => {
                 if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
@@ -3361,7 +3361,7 @@ export default function EmploiDuTemps() {
 
 const styles = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:15,marginBottom:24,width:'100%'},
+  header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
@@ -3372,7 +3372,7 @@ const styles = {
   toggleGroup:{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2},
   toggleBtn:{padding:'7px 16px',borderRadius:17,border:'none',background:'transparent',cursor:'pointer',fontWeight:600,color:'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'},
   toggleBtnActif:{background:'#6366f1',color:'white',fontWeight:700},
-  affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:16,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
+  affActionsWrap:{display:'flex',alignItems:'center',gap:10,marginBottom:12,background:'white',padding:'12px 16px',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',flexWrap:'wrap'},
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},

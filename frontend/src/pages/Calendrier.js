@@ -392,8 +392,8 @@ export default function Calendrier() {
 
       <div style={{...stickyPageChrome(), marginBottom:0}}>
       {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
-        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>📅 Calendrier scolaire</h2>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
+        <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Calendrier scolaire</h2>
       </div>
       </div>
 
