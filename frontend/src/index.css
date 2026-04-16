@@ -69,3 +69,17 @@ table thead th {
 table thead th * {
   color: #ffffff !important;
 }
+
+/* Arrondi de tableaux cross-browser (Firefox / Edge / Chrome) */
+:root {
+  --table-radius: 10px;
+}
+
+@media screen {
+  table {
+    border-radius: var(--table-radius);
+    overflow: hidden;
+    /* Force le clipping des coins, y compris sur Firefox */
+    clip-path: inset(0 round var(--table-radius));
+  }
+}

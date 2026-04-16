@@ -61,6 +61,24 @@ app.use(helmet({
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
+// Health-check léger pour monitorings externes (UptimeRobot, etc.)
+app.get('/healthz', (req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: 'ecole-manager-backend',
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+app.get('/api/healthz', (req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: 'ecole-manager-backend',
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
     const proto = String(req.headers['x-forwarded-proto'] || '').toLowerCase().split(',')[0].trim();

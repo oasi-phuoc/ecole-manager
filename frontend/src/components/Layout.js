@@ -64,6 +64,12 @@ const DOCS_ONGLETS = [
   { key: 'divers',         label: 'Divers',         adminOnly: false },
 ];
 
+const COMPTA_ONGLETS = [
+  { key: 'factures',  label: 'Factures', adminOnly: false },
+  { key: 'paiements', label: 'Paiements', adminOnly: false },
+  { key: 'prix',      label: 'Liste de prix', adminOnly: false },
+];
+
 const ALL_MODULES = [
   { label: 'Employés',          path: '/employes-administratifs', adminOnly: true },
   { label: 'Professeurs',       path: '/professeurs',             accentKey: 'professeurs' },
@@ -189,7 +195,7 @@ export default function Layout() {
                   style={{ ...s.navItem, background: isActive ? '#ede9fe' : isHov ? '#f5f3ff' : 'transparent' }}
                   onClick={() => {
                     if (m.path === '/comptabilite') {
-                      navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                      navigate('/comptabilite?tab=classes');
                     } else if (m.path === '/documents-administratifs') {
                       navigate('/documents-administratifs?tab=accueil');
                     } else {
@@ -317,6 +323,31 @@ export default function Layout() {
                     })}
                   </div>
                 )}
+                {m.path === '/comptabilite' && isActive && (
+                  <div style={s.subNav}>
+                    {(() => {
+                      const params = new URLSearchParams(location.search);
+                      const classeId = params.get('classeId');
+                      const ongletsCompta = COMPTA_ONGLETS
+                        .filter(o => !o.adminOnly || isAdmin)
+                        .filter(o => (o.key === 'factures' ? !!classeId : true));
+                      return ongletsCompta.map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'classes' : 'paiements');
+                      const isTabActive = activeTab === o.key;
+                      const target = o.key === 'factures' && classeId
+                        ? `/comptabilite?tab=factures&classeId=${classeId}`
+                        : `/comptabilite?tab=${o.key}`;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(target); }}>
+                          {o.label}
+                        </button>
+                      );
+                      });
+                    })()}
+                  </div>
+                )}
               </React.Fragment>
             );
           })}
@@ -346,7 +377,7 @@ export default function Layout() {
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
                         onClick={() => {
                           if (m.path === '/comptabilite') {
-                            navigate(isAdmin ? '/comptabilite?tab=classes' : '/comptabilite?tab=paiements');
+                            navigate('/comptabilite?tab=classes');
                           } else if (m.path === '/documents-administratifs') {
                             navigate('/documents-administratifs?tab=accueil');
                           } else {
