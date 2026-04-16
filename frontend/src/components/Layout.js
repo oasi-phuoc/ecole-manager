@@ -65,8 +65,9 @@ const DOCS_ONGLETS = [
 ];
 
 const COMPTA_ONGLETS = [
-  { key: 'factures',  label: 'Factures', adminOnly: false },
-  { key: 'paiements', label: 'Paiements', adminOnly: false },
+  { key: 'factures',  label: 'Factures',      adminOnly: false },
+  { key: 'paiements', label: 'Paiements',     adminOnly: false },
+  { key: 'commandes', label: 'Commandes',     adminOnly: true  },
   { key: 'prix',      label: 'Liste de prix', adminOnly: false },
 ];
 

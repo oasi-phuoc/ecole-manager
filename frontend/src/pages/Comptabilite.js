@@ -119,6 +119,12 @@ export default function Comptabilite() {
   const [showPaiementsNiveaux, setShowPaiementsNiveaux] = useState(false);
   const [rechercheClasseFacture, setRechercheClasseFacture] = useState('');
 
+  // Commandes
+  const [commandes, setCommandes] = useState([]);
+  const [showCommandePopup, setShowCommandePopup] = useState(false);
+  const [commandeEdit, setCommandeEdit] = useState(null);
+  const [commandeForm, setCommandeForm] = useState({ article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
+
   // Liste de prix sub-tab
   const [prixOnglet, setPrixOnglet] = useState('ecolage');
   const [materielDistribue, setMaterielDistribue] = useState({});
@@ -144,7 +150,7 @@ export default function Comptabilite() {
 
   const tabParam = searchParams.get('tab');
   useEffect(() => {
-    if (!isAdmin() && (tabParam === 'classes' || tabParam === 'factures' || tabParam === 'prix')) {
+    if (!isAdmin() && (tabParam === 'classes' || tabParam === 'factures' || tabParam === 'prix' || tabParam === 'commandes')) {
       setSearchParams({ tab: 'paiements' }, { replace: true });
     }
   }, [tabParam, setSearchParams]);
@@ -663,6 +669,41 @@ export default function Comptabilite() {
     openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1000, height: 800 });
   };
 
+  const chargerCommandes = async () => {
+    try {
+      const res = await axios.get(API + '/comptabilite/commandes', { headers });
+      setCommandes(res.data || []);
+    } catch { setCommandes([]); }
+  };
+
+  useEffect(() => { chargerCommandes(); }, []);
+
+  const ouvrirCommandePopup = (cmd = null) => {
+    setCommandeEdit(cmd);
+    setCommandeForm(cmd ? { article: cmd.article || '', quantite: cmd.quantite || 1, fournisseur: cmd.fournisseur || '', prix_unitaire: cmd.prix_unitaire || '', statut: cmd.statut || 'en_attente', remarques: cmd.remarques || '' } : { article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
+    setShowCommandePopup(true);
+  };
+
+  const sauvegarderCommande = async () => {
+    try {
+      if (commandeEdit) {
+        await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id, commandeForm, { headers });
+      } else {
+        await axios.post(API + '/comptabilite/commandes', commandeForm, { headers });
+      }
+      setShowCommandePopup(false);
+      chargerCommandes();
+    } catch (e) { alert('Erreur lors de la sauvegarde'); }
+  };
+
+  const supprimerCommande = async (id) => {
+    if (!window.confirm('Supprimer cette commande ?')) return;
+    try {
+      await axios.delete(API + '/comptabilite/commandes/' + id, { headers });
+      chargerCommandes();
+    } catch { alert('Erreur lors de la suppression'); }
+  };
+
   const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
   const classeFactureNom = classeFactureObj?.nom || '—';
   const toutesFacturesClasseValidees = elevesClasseFacturation.length > 0
@@ -945,6 +986,98 @@ export default function Comptabilite() {
             })}
           </tbody>
         </table></div>
+        </>
+      )}
+
+      {/* ===== COMMANDES ===== */}
+      {onglet === 'commandes' && (
+        <>
+          <div style={styles.filtersRow}>
+            <button style={styles.btnAjouter} onClick={() => ouvrirCommandePopup()}>+ Ajouter</button>
+          </div>
+          <div style={{ ...styles.tabContent, marginTop: 0 }}>
+            {commandes.length === 0 ? (
+              <div style={styles.vide}>Aucune commande enregistrée.</div>
+            ) : (
+              <div style={styles.tableWrap}>
+                <table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
+                  <thead>
+                    <tr>
+                      {['Article', 'Qté', 'Fournisseur', 'Prix unit.', 'Total', 'Statut', 'Remarques', ''].map((h, i) => (
+                        <th key={i} style={styles.thMateriel}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commandes.map(cmd => {
+                      const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0)).toFixed(2);
+                      const statutInfo = { en_attente: { label: 'En attente', color: '#92400e', bg: '#fef3c7' }, commande: { label: 'Commandé', color: '#1e40af', bg: '#dbeafe' }, recu: { label: 'Reçu', color: '#065f46', bg: '#d1fae5' } }[cmd.statut] || { label: cmd.statut, color: '#555', bg: '#f0f0f0' };
+                      return (
+                        <tr key={cmd.id} style={styles.tr}>
+                          <td style={styles.td}>{cmd.article}</td>
+                          <td style={{ ...styles.td, textAlign: 'center' }}>{cmd.quantite}</td>
+                          <td style={styles.td}>{cmd.fournisseur || '—'}</td>
+                          <td style={{ ...styles.td, textAlign: 'right' }}>{cmd.prix_unitaire ? Number(cmd.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
+                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{cmd.prix_unitaire ? total + ' CHF' : '—'}</td>
+                          <td style={styles.td}><span style={{ ...styles.statutBadge, background: statutInfo.bg, color: statutInfo.color }}>{statutInfo.label}</span></td>
+                          <td style={{ ...styles.td, color: '#64748b', fontSize: 12 }}>{cmd.remarques || '—'}</td>
+                          <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                            <button style={styles.btnEdit} onClick={() => ouvrirCommandePopup(cmd)} title="Modifier">✏️</button>
+                            <button style={styles.btnDelete} onClick={() => supprimerCommande(cmd.id)} title="Supprimer">🗑</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Popup nouvelle commande */}
+          {showCommandePopup && (
+            <div style={styles.overlay} onClick={() => setShowCommandePopup(false)}>
+              <div style={{ ...styles.modal, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ margin: '0 0 18px', fontSize: 16, fontWeight: 700 }}>{commandeEdit ? 'Modifier la commande' : 'Nouvelle commande'}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label style={styles.label}>Article *</label>
+                    <input style={styles.input} value={commandeForm.article} onChange={e => setCommandeForm(f => ({ ...f, article: e.target.value }))} placeholder="Nom du matériel..." />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={styles.label}>Quantité</label>
+                      <input style={styles.input} type="number" min="1" value={commandeForm.quantite} onChange={e => setCommandeForm(f => ({ ...f, quantite: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={styles.label}>Prix unitaire (CHF)</label>
+                      <input style={styles.input} type="number" step="0.05" min="0" value={commandeForm.prix_unitaire} onChange={e => setCommandeForm(f => ({ ...f, prix_unitaire: e.target.value }))} placeholder="0.00" />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={styles.label}>Fournisseur</label>
+                    <input style={styles.input} value={commandeForm.fournisseur} onChange={e => setCommandeForm(f => ({ ...f, fournisseur: e.target.value }))} placeholder="Nom du fournisseur..." />
+                  </div>
+                  <div>
+                    <label style={styles.label}>Statut</label>
+                    <select style={styles.input} value={commandeForm.statut} onChange={e => setCommandeForm(f => ({ ...f, statut: e.target.value }))}>
+                      <option value="en_attente">En attente</option>
+                      <option value="commande">Commandé</option>
+                      <option value="recu">Reçu</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={styles.label}>Remarques</label>
+                    <textarea style={{ ...styles.input, minHeight: 70, resize: 'vertical' }} value={commandeForm.remarques} onChange={e => setCommandeForm(f => ({ ...f, remarques: e.target.value }))} placeholder="Notes, références..." />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                  <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={() => setShowCommandePopup(false)}>Annuler</button>
+                  <button style={{ ...styles.btnAjouter, opacity: commandeForm.article.trim() ? 1 : 0.5 }} disabled={!commandeForm.article.trim()} onClick={sauvegarderCommande}>{commandeEdit ? 'Enregistrer' : 'Ajouter'}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
