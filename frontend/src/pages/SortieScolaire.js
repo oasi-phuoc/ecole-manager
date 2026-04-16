@@ -18,7 +18,7 @@ const ONGLETS = [
 const LIEUX_PREDEFINIS = ['Sion, Synecom', 'Vétroz, Botza'];
 
 const FORM_VIDE = {
-  type: 'automne', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '', autres_acc_arr: [],
+  type: 'juin', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '', autres_acc_arr: [],
   date_sortie: '', destination: '', activites: '',
   lieu_depart: 'Sion, Synecom', lieu_depart_autre: '',
   heure_depart: '', lieu_retour: '', heure_retour: '',
@@ -51,6 +51,7 @@ export default function SortieScolaire() {
   const [rechercheSorties, setRechercheSorties] = useState('');
   const [showTriTypes, setShowTriTypes] = useState(false);
   const [triType, setTriType] = useState('Tous');
+  const [showSuivi, setShowSuivi] = useState(false);
 
   const charger = async () => {
     try {
@@ -101,7 +102,7 @@ export default function SortieScolaire() {
     const ids = s.classes_ids ? s.classes_ids.split(',').map(x => x.trim()).filter(Boolean) : [];
     const lieuDepart = LIEUX_PREDEFINIS.includes(s.lieu_depart) ? s.lieu_depart : (s.lieu_depart ? 'autre' : 'Sion, Synecom');
     setForm({
-      type: s.type || 'autre',
+      type: s.type || 'autres',
       classes_ids: ids,
       classes_noms: s.classes_noms || '',
       titulaires: s.titulaires || '',
@@ -291,6 +292,13 @@ export default function SortieScolaire() {
           onChange={(e) => setRechercheSorties(e.target.value)}
           placeholder="Rechercher professeur, classe, destination..."
         />
+        <button
+          type="button"
+          style={{ ...st.btnSuivi, ...(showSuivi ? st.btnSuiviActif : {}) }}
+          onClick={() => setShowSuivi(v => !v)}
+        >
+          {showSuivi ? 'Masquer le suivi' : 'Afficher le suivi'}
+        </button>
         {!showTriTypes ? (
           <button type="button" style={st.btnTri} onClick={() => setShowTriTypes(true)}>Trier</button>
         ) : (
@@ -300,9 +308,9 @@ export default function SortieScolaire() {
                 key={t}
                 type="button"
                 style={{ ...st.toggleBtn, ...(triType === t ? st.toggleBtnActif : {}) }}
-                onClick={() => { setTriType(t); }}
+                onClick={() => { setTriType(t); if (t === 'Tous') setShowTriTypes(false); }}
               >
-                {t}
+                {t === 'Tous' ? 'Trier' : t}
               </button>
             ))}
           </div>
@@ -322,6 +330,17 @@ export default function SortieScolaire() {
           ))}
         </div>
       )}
+      {showSuivi && (
+        <div style={{ marginTop: 16 }}>
+          <SuiviTable
+            sorties={sortiesOnglet}
+            onEdit={ouvrirEdit}
+            onDelete={supprimer}
+            onPrint={imprimer}
+            onToggleApprouve={toggleApprouve}
+          />
+        </div>
+      )}
 
       {/* Form popup */}
       {showForm && (
@@ -336,7 +355,7 @@ export default function SortieScolaire() {
               {/* Type */}
               <div style={st.formSection}>Type</div>
               <div style={st.grid3}>
-                {['automne', 'juin', 'autres'].map(t => (
+                {['juin', 'autres'].map(t => (
                   <button key={t} type="button"
                     style={{ ...st.typeBtn, ...(form.type === t ? st.typeBtnActif : {}) }}
                     onClick={() => setForm({ ...form, type: t })}>
@@ -561,8 +580,10 @@ const st = {
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
   searchRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
   searchInput: { width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' },
-  btnTri: { padding: '7px 16px', borderRadius: 17, border: '1px solid #d8b4fe', background: 'white', color: '#7e22ce', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' },
-  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' },
+  btnSuivi: { padding: '7px 16px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  btnSuiviActif: { border: '1.5px solid #6366f1', background: '#e0e7ff', color: '#4338ca' },
+  btnTri: { padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
   toggleBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: '#6d28d9', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tabsRow: { display: 'flex', gap: 0 },

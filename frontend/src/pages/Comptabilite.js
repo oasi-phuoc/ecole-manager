@@ -495,39 +495,37 @@ export default function Comptabilite() {
     const data = await construireDonneesFactureEleve(eleve, { persistReference: true });
     setFactureImprime(data);
   };
-  const imprimerFacture = () => {
-    if (!factureImprime) return;
-    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+
+  const renderFacturePageHtml = (data, publicBase) => {
     const now = new Date();
-    const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
-    const dateStr = now.toLocaleDateString('fr-CH');
-    const { eleve, classeNom, lignes, lignesEcolage, total } = factureImprime;
+    const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear() + 1}` : `${now.getFullYear() - 1}-${now.getFullYear()}`;
+    const ref = data.reference || calcQRRef(data.classeNom, data.dateFacture, data.eleve);
     const cg = `<colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup>`;
     const th = (col1, col2 = 'Prorata') => `<thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;font-size:9pt;text-align:left">${col1}</th><th style="padding:6px 8px;font-size:9pt;text-align:center">${col2}</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Prix</th><th style="padding:6px 8px;font-size:9pt;text-align:right">Montant</th></tr></thead>`;
     const tdR = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center`;
     const tdMoney = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right`;
     const tdL = `border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt`;
     const stLine = (label, val) => `<div style="display:flex;justify-content:space-between;font-size:9pt;padding:4px 8px;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;margin-bottom:10px"><span style="font-weight:600">${label}</span><b>${val.toFixed(2)} CHF</b></div>`;
-    const totalEcolageVal = (lignesEcolage||[]).reduce((a,l)=>a+l.montant,0);
-    const totalMaterielVal = lignes.reduce((a,l)=>a+l.montant,0);
-    const ecolageHtml = (lignesEcolage || []).length > 0 ? `
+    const totalEcolageVal = (data.lignesEcolage || []).reduce((a, l) => a + l.montant, 0);
+    const totalMaterielVal = (data.lignes || []).reduce((a, l) => a + l.montant, 0);
+    const ecolageHtml = (data.lignesEcolage || []).length > 0 ? `
       <table style="table-layout:fixed">
-        ${cg}${th('Frais d\'écolage')}
-        <tbody>${(lignesEcolage || []).map((l,i) => `
-          <tr style="background:${i%2===0?'white':'#fafafa'}">
+        ${cg}${th("Frais d'écolage")}
+        <tbody>${(data.lignesEcolage || []).map((l, i) => `
+          <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
-            <td style="${tdR}">${Math.round(l.prorata/12*100)}%</td>
+            <td style="${tdR}">${Math.round(l.prorata / 12 * 100)}%</td>
             <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
             <td style="${tdMoney};font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
           </tr>`).join('')}
         </tbody>
       </table>
       ${stLine('Sous-total', totalEcolageVal)}` : '';
-    const lignesHtml = lignes.length > 0 ? `
+    const lignesHtml = (data.lignes || []).length > 0 ? `
       <table style="table-layout:fixed">
         ${cg}${th('Matériel scolaire', 'Quantité')}
-        <tbody>${lignes.map((l,i) => `
-          <tr style="background:${i%2===0?'white':'#fafafa'}">
+        <tbody>${(data.lignes || []).map((l, i) => `
+          <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
             <td style="${tdL}">${l.nom}</td>
             <td style="${tdR}">${l.qte}</td>
             <td style="${tdMoney}">${Number(l.prix).toFixed(2)} CHF</td>
@@ -536,61 +534,68 @@ export default function Comptabilite() {
         </tbody>
       </table>
       ${stLine('Sous-total', totalMaterielVal)}` : '';
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Facture</title><style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
-      @page { size: A4 portrait; margin: 15mm 20mm; }
-      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-      .entete, .entete * { font-size: 6pt !important; }
-      .scai { font-size: 17pt !important; font-weight: 800; line-height: 1; color: #1e293b; }
-      .footer { font-size: 6pt !important; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
-      .footer * { font-size: 6pt !important; }
-      .signature { position: fixed; bottom: 100px; right: 20mm; font-size: 10pt; text-align: right; }
-      .titre { text-align: center; font-weight: 700; font-size: 17pt; letter-spacing: 1px; text-transform: uppercase; margin-top: 25pt; margin-bottom: 20pt; color: #0f172a; }
-      .date { text-align: right; font-size: 10pt; margin-bottom: 20pt; }
-      table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-      thead tr { background: #6366f1; color: white; }
-      thead th { padding: 8px 10px; font-size: 10pt; text-align: left; }
-      p { font-size: 10pt; margin-bottom: 8pt; }
-    </style></head><body>
-      <div class="entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
-          <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
+
+    return `
+      <section class="facture-page">
+        <div class="entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'" />
+            <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="scai">SCAI</div>
+            <div style="font-size:12px;font-weight:700;color:#374151;">${annee}</div>
+            <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
+          </div>
         </div>
-        <div style="text-align:right;">
-          <div class="scai">SCAI</div>
-          <div style="font-size:12px;font-weight:700;color:#374151;">${annee}</div>
-          <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
+        <div class="titre">Facture</div>
+        <div class="date">Vétroz, le ${data.dateFacture}</div>
+        <div style="font-size:10pt;color:#64748b;margin-bottom:2px">NOM Prénom</div>
+        <div style="font-size:13pt;font-weight:700;color:#0f172a;margin-bottom:6px">${data.eleve.nom} ${data.eleve.prenom}</div>
+        <div style="font-size:10pt;color:#64748b;margin-bottom:2px">Classe</div>
+        <div style="font-size:11pt;color:#334155;margin-bottom:16px">${data.classeNom}</div>
+        <div style="font-size:9pt;color:#64748b;margin-bottom:24px">Référence : <b style="color:#334155;font-family:monospace;letter-spacing:1px">${ref}</b></div>
+        ${ecolageHtml}
+        ${lignesHtml}
+        <div style="display:flex;justify-content:space-between;font-size:11pt;font-weight:700;border-top:none;padding-top:0;margin-top:4px">
+          <span>Montant de la facture</span><b>${Number(data.total).toFixed(2)} CHF</b>
         </div>
-      </div>
-      <div class="titre">Facture</div>
-      <div class="date">Vétroz, le ${dateStr}</div>
-      <div style="font-size:10pt;color:#64748b;margin-bottom:2px">NOM Prénom</div>
-      <div style="font-size:13pt;font-weight:700;color:#0f172a;margin-bottom:6px">${eleve.nom} ${eleve.prenom}</div>
-      <div style="font-size:10pt;color:#64748b;margin-bottom:2px">Classe</div>
-      <div style="font-size:11pt;color:#334155;margin-bottom:16px">${classeNom}</div>
-      <div style="font-size:9pt;color:#64748b;margin-bottom:16px">Référence : <b style="color:#334155;font-family:monospace;letter-spacing:1px">${factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)}</b></div>
-      ${ecolageHtml}
-      ${lignesHtml}
-      <div style="display:flex;justify-content:space-between;font-size:11pt;font-weight:700;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px">
-        <span>Montant de la facture</span><b>${Number(total).toFixed(2)} CHF</b>
-      </div>
-      ${eleve.categorie === 'EUCMS' ? (() => {
-        const ref5 = (factureImprime.reference || calcQRRef(classeNom, dateStr, eleve)).replace(/\s/g,'').slice(-5);
-        return `<p style="margin-top:16px;font-size:9pt;color:#1e293b;line-height:1.6">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
-        <p style="margin-top:8px;font-size:9pt;color:#1e293b;line-height:1.6">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${classeNom})</b>.</p>`;
-      })() : ''}
-      <div class="signature">Signature : ____________________________</div>
-      <div class="footer">
-        <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
-        <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
-      </div>
-      ${eleve.categorie === 'EUCMS' ? `
-      <div style="page-break-before:always;display:flex;align-items:center;justify-content:center;min-height:100vh;">
-        <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:100vh;object-fit:contain;" />
-      </div>` : ''}
-    </body></html>`;
+        ${data.eleve.categorie === 'EUCMS' ? (() => {
+          const ref5 = String(ref).replace(/\s/g, '').slice(-5);
+          return `<p style="margin-top:16px;font-size:9pt;color:#1e293b;line-height:1.6">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
+          <p style="margin-top:8px;font-size:9pt;color:#1e293b;line-height:1.6">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>`;
+        })() : ''}
+        <div class="signature">Signature : ____________________________</div>
+        <div class="footer">
+          <img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'" />
+          <span>Zone Industrielle 4, 1963 Vétroz<br>Tél. 027 606 18 60</span>
+        </div>
+      </section>
+    `;
+  };
+
+  const wrapFacturePrintDocument = (pagesHtml, title = 'Facture') => `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title><style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
+    @page { size: A4 portrait; margin: 15mm 20mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    .facture-page { page-break-after: always; position: relative; min-height: calc(297mm - 30mm); }
+    .facture-page:last-child { page-break-after: auto; }
+    .entete, .entete * { font-size: 6pt !important; }
+    .scai { font-size: 17pt !important; font-weight: 800; line-height: 1; color: #1e293b; }
+    .titre { text-align: center; font-weight: 700; font-size: 17pt; letter-spacing: 1px; text-transform: uppercase; margin-top: 25pt; margin-bottom: 20pt; color: #0f172a; }
+    .date { text-align: right; font-size: 10pt; margin-bottom: 20pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; border-radius: 0 !important; clip-path: none !important; }
+    .signature { margin-top: 30px; font-size: 10pt; text-align: right; }
+    .footer { font-size: 6pt !important; margin-top: 18px; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
+    .footer * { font-size: 6pt !important; }
+  </style></head><body>${pagesHtml}</body></html>`;
+
+  const imprimerFacture = () => {
+    if (!factureImprime) return;
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const page = renderFacturePageHtml(factureImprime, publicBase);
+    const html = wrapFacturePrintDocument(page, 'Facture');
     const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
     openPrintPopup(finalHtml, { title: 'Facture', width: 900, height: 800 });
   };
@@ -622,54 +627,14 @@ export default function Comptabilite() {
       return full.includes(q) || String(totalFactureEleve(e.id).toFixed(2)).includes(q);
     });
     if (elevesVisibles.length === 0) return;
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const pages = [];
     for (const e of elevesVisibles) {
       // eslint-disable-next-line no-await-in-loop
       const data = await construireDonneesFactureEleve(e, { persistReference: false });
-      const lignesEcolage = data.lignesEcolage || [];
-      const lignes = data.lignes || [];
-      const totalEcolageVal = lignesEcolage.reduce((a, l) => a + l.montant, 0);
-      const totalMaterielVal = lignes.reduce((a, l) => a + l.montant, 0);
-      const rowsEcolage = lignesEcolage.map((l, i) => `
-        <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt">${l.nom}</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center">${Math.round(l.prorata / 12 * 100)}%</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right">${Number(l.prix).toFixed(2)} CHF</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
-        </tr>
-      `).join('');
-      const rowsMat = lignes.map((l, i) => `
-        <tr style="background:${i % 2 === 0 ? 'white' : '#fafafa'}">
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt">${l.nom}</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:center">${l.qte}</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right">${Number(l.prix).toFixed(2)} CHF</td>
-          <td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:700">${Number(l.montant).toFixed(2)} CHF</td>
-        </tr>
-      `).join('');
-      pages.push(`
-        <section class="facture-page">
-          <div class="date">Vétroz, le ${data.dateFacture}</div>
-          <div class="meta"><b>Nom Prénom :</b> ${data.eleve.nom} ${data.eleve.prenom}</div>
-          <div class="meta"><b>Classe :</b> ${data.classeNom}</div>
-          <div class="meta">Référence : <b style="font-family:monospace;letter-spacing:1px">${data.reference || ''}</b></div>
-          ${lignesEcolage.length ? `<table style="table-layout:fixed"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;text-align:left;font-size:9pt">Frais d'écolage</th><th style="padding:6px 8px;text-align:center;font-size:9pt">Prorata</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Prix</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Montant</th></tr></thead><tbody>${rowsEcolage}</tbody></table><div class="st">Sous-total <b>${totalEcolageVal.toFixed(2)} CHF</b></div>` : ''}
-          ${lignes.length ? `<table style="table-layout:fixed"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><thead><tr style="background:#6366f1;color:white"><th style="padding:6px 8px;text-align:left;font-size:9pt">Matériel scolaire</th><th style="padding:6px 8px;text-align:center;font-size:9pt">Quantité</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Prix</th><th style="padding:6px 8px;text-align:right;font-size:9pt">Montant</th></tr></thead><tbody>${rowsMat}</tbody></table><div class="st">Sous-total <b>${totalMaterielVal.toFixed(2)} CHF</b></div>` : ''}
-          <table style="table-layout:fixed;margin-top:4px"><colgroup><col/><col style="width:90px"/><col style="width:110px"/><col style="width:110px"/></colgroup><tbody><tr style="background:#f8fafc"><td colspan="3" style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;font-weight:700;text-transform:uppercase">Montant de la facture</td><td style="border:1px solid #dbe3ee;padding:5px 8px;font-size:9pt;text-align:right;font-weight:800">${Number(data.total).toFixed(2)} CHF</td></tr></tbody></table>
-          <div class="signature">Signature : ____________________________</div>
-        </section>
-      `);
+      pages.push(renderFacturePageHtml(data, publicBase));
     }
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Factures ${classeFactureNom}</title><style>
-      @page { size: A4 portrait; margin: 12mm 16mm; }
-      body { font-family: 'Century Gothic', Arial, sans-serif; color: #1e293b; }
-      .facture-page { page-break-after: always; }
-      .facture-page:last-child { page-break-after: auto; }
-      .date { text-align: right; font-size: 10pt; margin-bottom: 10px; }
-      .meta { font-size: 10pt; margin-bottom: 4px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-      .st { display:flex; justify-content:space-between; font-size:9pt; padding:4px 8px; background:#f1f5f9; border:1px solid #e2e8f0; border-top:none; margin-bottom:8px; }
-      .signature { margin-top: 16px; text-align: right; font-size: 10pt; }
-    </style></head><body>${pages.join('')}</body></html>`;
+    const html = wrapFacturePrintDocument(pages.join(''), `Factures ${classeFactureNom}`);
     const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm 16mm');
     openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1000, height: 800 });
   };
@@ -707,7 +672,7 @@ export default function Comptabilite() {
               <div style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }}
-                    onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); }}>
+                    onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); if (niv === 'Tous') setShowFacturesNiveaux(false); }}>
                     {niv}
                   </button>
                 ))}
@@ -883,7 +848,7 @@ export default function Comptabilite() {
               <div style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(paiementsNiveau === niv ? styles.toggleBtnActif : {}) }}
-                    onClick={() => { setPaiementsNiveau(niv); }}>{niv}</button>
+                    onClick={() => { setPaiementsNiveau(niv); if (niv === 'Tous') setShowPaiementsNiveaux(false); }}>{niv}</button>
                 ))}
               </div>
             )}
