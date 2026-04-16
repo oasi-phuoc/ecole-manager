@@ -667,7 +667,7 @@ export default function Comptabilite() {
               <div style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }}
-                    onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); setShowFacturesNiveaux(false); }}>
+                    onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); }}>
                     {niv}
                   </button>
                 ))}
@@ -739,7 +739,7 @@ export default function Comptabilite() {
               </div>
             </div>
           ) : (
-            <div style={styles.tabContent}>
+            <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flexWrap: 'wrap', borderBottom: '1px solid #eef2f7' }}>
                   <input
                     style={styles.tabSearch}
@@ -752,17 +752,16 @@ export default function Comptabilite() {
                     onClick={validerToutesFacturesClasse}
                     disabled={toutesFacturesClasseValidees}
                   >
-                    {toutesFacturesClasseValidees ? 'Critères validés' : 'Valider toutes les factures'}
+                    {toutesFacturesClasseValidees ? 'Factures validées' : 'Valider toutes les factures'}
                   </button>
                 </div>
-                <div style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ ...styles.tableMateriel, minWidth: 900, tableLayout: 'auto' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: 1, whiteSpace: 'nowrap' }}></th>
                         <th style={styles.thMateriel}>Nom</th>
                         <th style={styles.thMateriel}>Prénom</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: 1, whiteSpace: 'nowrap' }}></th>
                         {materielsFacturation.map(m => {
                           const IcComp = m.icone ? ICONS_MATERIELS[m.icone] : null;
                           return (
@@ -792,13 +791,13 @@ export default function Comptabilite() {
                           const valide = !!facturesValidees[e.id];
                           return (
                         <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                          <td style={styles.tdMateriel}>{e.nom || '—'}</td>
-                          <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           <td style={{ ...styles.tdMateriel, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                             <button style={styles.btnDetailClasse} onClick={() => ouvrirFactureImprime(e)} title="Détail facture">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
+                          <td style={styles.tdMateriel}>{e.nom || '—'}</td>
+                          <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           {materielsFacturation.map(m => (
                             <td key={m.id} style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                               <input type="number" min="0"
@@ -828,7 +827,6 @@ export default function Comptabilite() {
                     </tbody>
                   </table>
                 </div>
-                </div>
             </div>
           )}
         </>
@@ -846,7 +844,7 @@ export default function Comptabilite() {
               <div style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(paiementsNiveau === niv ? styles.toggleBtnActif : {}) }}
-                    onClick={() => { setPaiementsNiveau(niv); setShowPaiementsNiveaux(false); }}>{niv}</button>
+                    onClick={() => { setPaiementsNiveau(niv); }}>{niv}</button>
                 ))}
               </div>
             )}
