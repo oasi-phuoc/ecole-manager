@@ -313,7 +313,7 @@ export default function SortieScolaire() {
                 {t === 'Tous' ? 'Trier' : t}
               </button>
             ))}
-          )}
+          </div>
         )}
       </div>
 
@@ -488,7 +488,7 @@ export default function SortieScolaire() {
                 <button type="submit" style={st.btnSave}>Enregistrer</button>
               </div>
             </form>
-          )}
+          </div>
         </div>
       )}
     </div>
