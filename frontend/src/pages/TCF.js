@@ -98,6 +98,65 @@ const lireObjetLocal = () => {
   return {};
 };
 
+function FiltreDropdown({ label = 'Trier', value = '', options = [], onSelect, allLabel = 'Tous niveaux', width = 190 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const activeLabel = options.find((option) => option.value === value)?.label || '';
+  const buttonLabel = value ? activeLabel : label;
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{ ...styles.filterDropdownButton, minWidth: width }}
+      >
+        <span>{buttonLabel}</span>
+        <span style={{ fontSize: 10 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ ...styles.filterDropdownMenu, minWidth: width }}>
+          <button
+            type="button"
+            onClick={() => {
+              onSelect('');
+              setOpen(false);
+            }}
+            style={{ ...styles.filterDropdownItem, ...(!value ? styles.filterDropdownItemActive : {}) }}
+          >
+            {allLabel}
+          </button>
+          {options.map((option) => {
+            const actif = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+                style={{ ...styles.filterDropdownItem, ...(actif ? styles.filterDropdownItemActive : {}) }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TCF() {
   const navigate = useNavigate();
   const headers = useMemo(() => ({}), []);
@@ -139,6 +198,7 @@ export default function TCF() {
   const [resultatClasseId, setResultatClasseId] = useState('');
   const [resultatEleveId, setResultatEleveId] = useState('');
   const [resultatEleveSearch, setResultatEleveSearch] = useState('');
+  const [resultatRecherche, setResultatRecherche] = useState('');
   const [scores, setScores] = useState({});
   const [absences, setAbsences] = useState({});
   const [responsablesTCF, setResponsablesTCF] = useState([]);
@@ -150,6 +210,7 @@ export default function TCF() {
   const [statSession, setStatSession] = useState('');
   const [statSeuil, setStatSeuil] = useState('60');
   const [statNiveau, setStatNiveau] = useState('');
+  const [statRecherche, setStatRecherche] = useState('');
   const [rolesGroupActif, setRolesGroupActif] = useState('g1');
   const [affectationDateDebutBySite, setAffectationDateDebutBySite] = useState({});
   const [affectationHorairesBySite, setAffectationHorairesBySite] = useState({});
@@ -167,7 +228,9 @@ export default function TCF() {
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
+  const [graphRecherche, setGraphRecherche] = useState('');
   const [anneeScolaire, setAnneeScolaire] = useState('');
+  const savedScoresRef = useRef({});
 
   const appliquerPoolState = (poolState = {}) => {
     const savedOrder = Array.isArray(poolState?.siteOrder) && poolState.siteOrder.length
@@ -236,7 +299,10 @@ export default function TCF() {
       const rsLocal = lireObjetLocal('tcf_resultats_scores');
       const affLocal = lireObjetLocal('tcf_affectation_state');
       appliquerPoolState(poolLocal);
-      if (rsLocal && typeof rsLocal === 'object') setScores(rsLocal);
+      if (rsLocal && typeof rsLocal === 'object') {
+        setScores(rsLocal);
+        savedScoresRef.current = rsLocal;
+      }
       appliquerAffectationState(affLocal);
 
       try {
@@ -256,7 +322,9 @@ export default function TCF() {
         }
         if (rsSrv?.data?.updated_at) {
           const donnees = rsSrv.data?.donnees || {};
-          setScores(donnees && typeof donnees === 'object' ? donnees : {});
+          const nextScores = donnees && typeof donnees === 'object' ? donnees : {};
+          setScores(nextScores);
+          savedScoresRef.current = nextScores;
         }
       } catch {}
       setChargement(false);
@@ -306,8 +374,10 @@ export default function TCF() {
   }, [niveauxDB, niveaux]);
 
   useEffect(() => {
-    if (!resultatNiveau && niveauxTabs.length) setResultatNiveau(niveauxTabs[0]);
-  }, [niveaux, resultatNiveau]);
+    if (resultatNiveau && !niveauxTabs.includes(resultatNiveau)) setResultatNiveau('');
+    if (graphNiveau && !niveauxTabs.includes(graphNiveau)) setGraphNiveau('');
+    if (statNiveau && !niveauxTabs.includes(statNiveau)) setStatNiveau('');
+  }, [niveauxTabs, resultatNiveau, graphNiveau, statNiveau]);
 
   useEffect(() => {
     if (!siteOrder.length) return;
@@ -397,8 +467,9 @@ export default function TCF() {
   }, [siteOrder, siteLevels, classes]);
 
   const elevesNiveau = useMemo(() => {
-    if (!resultatNiveau) return [];
-    const cls = classes.filter(c => normaliserNiveau(c.niveau) === resultatNiveau);
+    const cls = resultatNiveau
+      ? classes.filter(c => normaliserNiveau(c.niveau) === resultatNiveau)
+      : classes;
     const clsIds = new Set(cls.map(c => String(c.id)));
     return eleves
       .filter(e => clsIds.has(String(e.classe_id)))
@@ -932,16 +1003,18 @@ export default function TCF() {
   const renderSelectionSite = (siteKey, siteLabel, sansCadre = false) => (
     <div key={siteKey} style={sansCadre ? styles.siteCardPlain : styles.siteCard}>
       <div style={styles.siteHeader}>
-        <span style={styles.siteTitle}>{siteLabel} - </span>
-        <input
-          value={siteNames[siteKey] ?? ''}
-          onChange={e => {
-            setPoolDirty(true);
-            setSiteNames(prev => ({ ...prev, [siteKey]: e.target.value }));
-          }}
-          style={styles.siteInput}
-          placeholder="Nom du site"
-        />
+        <div style={styles.siteNameField}>
+          <label style={styles.siteInputLabel}>{siteLabel}</label>
+          <input
+            value={siteNames[siteKey] ?? ''}
+            onChange={e => {
+              setPoolDirty(true);
+              setSiteNames(prev => ({ ...prev, [siteKey]: e.target.value }));
+            }}
+            style={styles.siteInput}
+            placeholder="Nom du site"
+          />
+        </div>
         <div style={styles.siteLevelsWrap}>
           {niveauxTabs.map(level => {
             const actif = (siteLevels[siteKey] || []).includes(level);
@@ -1245,23 +1318,33 @@ export default function TCF() {
     if (!niveaux.length) return <div style={styles.msgVide}>Aucun niveau de classe trouvé.</div>;
     const titreSession = resultatSession || 'Session non sélectionnée';
     const isFr = resultatMatiere === 'francais';
+    const search = resultatRecherche.trim().toLowerCase();
     const classesNiveau = classes
-      .filter(c => normaliserNiveau(c.niveau) === resultatNiveau)
+      .filter(c => !resultatNiveau || normaliserNiveau(c.niveau) === resultatNiveau)
       .sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
-    const elevesResultat = resultatVue === 'classe'
+    const elevesResultatBase = resultatVue === 'classe'
       ? (resultatClasseId ? elevesNiveau.filter(e => String(e.classe_id) === String(resultatClasseId)) : [])
       : (resultatEleveId ? elevesNiveau.filter(e => String(e.id) === String(resultatEleveId)) : elevesNiveau);
+    const elevesResultat = elevesResultatBase.filter((e) => {
+      if (!search) return true;
+      const classeNom = classesMap[String(e.classe_id)]?.nom || '';
+      return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
+    });
+    const elevesOptions = elevesNiveau.filter((e) => {
+      if (!search) return true;
+      const classeNom = classesMap[String(e.classe_id)]?.nom || '';
+      return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
+    });
 
     return (
       <div>
-        {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-          <div style={styles.pillGroup}>
-            {niveauxTabs.map(n => (
-              <button key={n} onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
-                style={{ ...styles.pillBtn, ...(resultatNiveau === n ? styles.pillBtnActif : {}) }}>{n}</button>
-            ))}
-          </div>
+        <div style={styles.filtersStack}>
+          <input
+            value={resultatRecherche}
+            onChange={(e) => setResultatRecherche(e.target.value)}
+            placeholder="Rechercher un élève, une classe..."
+            style={styles.searchInput}
+          />
           <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
               <button key={val} onClick={() => setResultatMatiere(val)}
@@ -1274,10 +1357,20 @@ export default function TCF() {
                 style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
+          <FiltreDropdown
+            value={resultatNiveau}
+            options={niveauxTabs.map(n => ({ value: n, label: n }))}
+            onSelect={(value) => {
+              setResultatNiveau(value);
+              setResultatClasseId('');
+              setResultatEleveId('');
+              setResultatEleveSearch('');
+            }}
+            allLabel="Tous niveaux"
+          />
         </div>
 
-        {/* Dropdowns 15px sous les sous-onglets */}
-        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={styles.filtersRow}>
           <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
             <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
@@ -1300,7 +1393,7 @@ export default function TCF() {
               />
               <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
                 <option value="">Choisir un élève</option>
-                {elevesNiveau.map((e, idx) => (
+                {elevesOptions.map((e, idx) => (
                   <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
                 ))}
               </select>
@@ -1572,7 +1665,7 @@ export default function TCF() {
     return (
       <div>
         {/* Site sub-tabs */}
-        <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
           {siteOrder.map((sKey, idx) => (
             <button
               key={`roles-site-tab-${sKey}`}
@@ -2596,14 +2689,19 @@ export default function TCF() {
   const renderGraphique = () => {
     const isFr = ongletGraphiqueMatiere === 'francais';
     const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
+    const search = graphRecherche.trim().toLowerCase();
     const classesNiveau = classes
-      .filter(c => normaliserNiveau(c.niveau) === niveauActif)
+      .filter(c => !graphNiveau || normaliserNiveau(c.niveau) === graphNiveau)
       .sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
     const classeIdsNiveau = new Set(classesNiveau.map(c => String(c.id)));
     const elevesNiveauGraph = eleves
       .filter(e => classeIdsNiveau.has(String(e.classe_id)))
       .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
-    const elevesFiltered = elevesNiveauGraph;
+    const elevesFiltered = elevesNiveauGraph.filter((e) => {
+      if (!search) return true;
+      const classeNom = classesMap[String(e.classe_id)]?.nom || '';
+      return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
+    });
 
     const maxScore = isFr ? 60 : 50;
     const label1 = isFr ? 'Oral' : 'Partie 1-2';
@@ -2661,7 +2759,9 @@ export default function TCF() {
     };
 
     const getClassMoyennes = () => {
-      return classesNiveau.map((cl) => {
+      return classesNiveau
+        .filter((cl) => !search || String(cl.nom || '').toLowerCase().includes(search))
+        .map((cl) => {
         const elevesClasse = eleves.filter(e => String(e.classe_id) === String(cl.id));
         const frTotals = elevesClasse
           .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).total)
@@ -2826,31 +2926,35 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-          {/* Niveaux */}
-          {niveaux.length > 0 && (
-            <div style={styles.pillGroup}>
-              {niveauxTabs.map(n => (
-                <button key={n} type="button" onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                  style={{ ...styles.pillBtn, ...(niveauActif === n ? styles.pillBtnActif : {}) }}>{n}</button>
-              ))}
-            </div>
-          )}
-          {/* Matière */}
+        <div style={styles.filtersStack}>
+          <input
+            value={graphRecherche}
+            onChange={(e) => setGraphRecherche(e.target.value)}
+            placeholder="Rechercher un élève, une classe..."
+            style={styles.searchInput}
+          />
           <div style={styles.pillGroup}>
             <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
             <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
           </div>
-          {/* Vue */}
           <div style={styles.pillGroup}>
             <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
             <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
             <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Moyenne globale</button>
           </div>
+          <FiltreDropdown
+            value={graphNiveau}
+            options={niveauxTabs.map(n => ({ value: n, label: n }))}
+            onSelect={(value) => {
+              setGraphNiveau(value);
+              setGraphClasseId('');
+              setGraphEleveId('');
+              setGraphEleveSearch('');
+            }}
+            allLabel="Tous niveaux"
+          />
         </div>
-        {/* Listes déroulantes */}
-        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
           <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.select}>
             <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
@@ -2974,8 +3078,9 @@ export default function TCF() {
     const matiere = statMatiere;
     const session = statSession;
     const niveauActifStat = statNiveau || (niveaux.length ? niveaux[0] : '');
-    const classesNiveauStat = niveauActifStat
-      ? new Set(classes.filter(c => normaliserNiveau(c.niveau) === niveauActifStat).map(c => String(c.id)))
+    const search = statRecherche.trim().toLowerCase();
+    const classesNiveauStat = statNiveau
+      ? new Set(classes.filter(c => normaliserNiveau(c.niveau) === statNiveau).map(c => String(c.id)))
       : null;
     const sessionsColonnes = session === '2e semestre'
       ? ["Test d'août", '1e semestre', '2e semestre']
@@ -3007,23 +3112,24 @@ export default function TCF() {
           totalsBySession,
         };
       })
-      .filter(r => r.totalSessionChoisie != null);
+      .filter(r => {
+        if (r.totalSessionChoisie == null) return false;
+        if (!search) return true;
+        return `${r.classe} ${toDisplayNom(r.nom)} ${r.prenom}`.toLowerCase().includes(search);
+      });
 
     const filtres = rows.filter(r => (statSens === 'fort' ? r.totalSessionChoisie >= seuil : r.totalSessionChoisie <= seuil));
     filtres.sort((a, b) => (statOrdre === 'croissant' ? a.totalSessionChoisie - b.totalSessionChoisie : b.totalSessionChoisie - a.totalSessionChoisie));
 
     return (
       <div>
-        {/* Tous les sous-onglets sur une ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-          {niveaux.length > 0 && (
-            <div style={styles.pillGroup}>
-              {niveauxTabs.map(n => (
-                <button key={n} type="button" onClick={() => setStatNiveau(n)}
-                  style={{ ...styles.pillBtn, ...(niveauActifStat === n ? styles.pillBtnActif : {}) }}>{n}</button>
-              ))}
-            </div>
-          )}
+        <div style={styles.filtersStack}>
+          <input
+            value={statRecherche}
+            onChange={(e) => setStatRecherche(e.target.value)}
+            placeholder="Rechercher un élève, une classe..."
+            style={styles.searchInput}
+          />
           <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
               <button key={val} onClick={() => setStatMatiere(val)}
@@ -3042,10 +3148,15 @@ export default function TCF() {
                 style={{ ...styles.pillBtn, ...(statOrdre === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
+          <FiltreDropdown
+            value={statNiveau}
+            options={niveauxTabs.map(n => ({ value: n, label: n }))}
+            onSelect={setStatNiveau}
+            allLabel="Tous niveaux"
+          />
         </div>
 
-        {/* Dropdown session + seuil — 15px sous les sous-onglets */}
-        <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
           <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
             <option value="">Choisir une session</option>
             {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
@@ -3182,6 +3293,7 @@ export default function TCF() {
       alert('Erreur sauvegarde serveur (Résultats): ' + (err.response?.data?.message || err.message));
       return;
     }
+    savedScoresRef.current = scores;
     setResultatDirty(false);
     afficherSaveMsg('resultat');
   };
@@ -3189,7 +3301,7 @@ export default function TCF() {
   const tabHasUnsaved = (tab) => {
     if (tab === 'pool') return poolDirty;
     if (tab === 'classes' || tab === 'roles') return affectationDirty;
-    if (tab === 'resultat') return resultatDirty;
+    if (tab === 'resultat') return resultatDirty && JSON.stringify(scores) !== JSON.stringify(savedScoresRef.current || {});
     return false;
   };
 
@@ -3292,34 +3404,12 @@ export default function TCF() {
         </div>
       </div>
 
-      <div style={styles.tabsBar}>
-        <div style={styles.tabsRow}>
-          {[
-            { id: 'pool', label: 'Pool' },
-            { id: 'classes', label: 'Affectation' },
-            { id: 'roles', label: 'Rôles' },
-            { id: 'plannings', label: 'Plannings' },
-            { id: 'resultat', label: 'Résultat' },
-            { id: 'statistique', label: 'Statistique' },
-            { id: 'graphique', label: 'Graphique' },
-          ].map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => handleTabChange(t.id)}
-              style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
       </div>
 
       <div style={styles.tabContent}>
         {onglet === 'pool' && (
           <div>
-            <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
+            <div style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
               {siteOrder.map((siteKey, idx) => (
                 <button
                   key={`pool-site-tab-${siteKey}`}
@@ -3332,14 +3422,14 @@ export default function TCF() {
               ))}
             </div>
             <div>
-              {siteActif && renderSelectionSite(siteActif, `Site ${siteOrder.indexOf(siteActif) + 1}`, true)}
+              {siteActif && renderSelectionSite(siteActif, `Site N°${siteOrder.indexOf(siteActif) + 1}`, true)}
             </div>
           </div>
         )}
 
         {onglet === 'classes' && (
         <div>
-          <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
+          <div style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
             {siteOrder.map((siteKey, idx) => (
               <button
                 key={`classes-site-tab-${siteKey}`}
@@ -3674,9 +3764,11 @@ const styles = {
   btnAddSite: { padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#ede9fe', color: '#4c1d95', fontWeight: 700, cursor: 'pointer', lineHeight: '1' },
   siteCard: { border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#fcfdff' },
   siteCardPlain: { border: 'none', borderRadius: 0, padding: 0, background: 'transparent' },
-  siteHeader: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  siteHeader: { display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
-  siteInput: { width: 260, maxWidth: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#1e293b' },
+  siteNameField: { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 260, flex: '1 1 260px' },
+  siteInputLabel: { fontSize: 12, fontWeight: 700, color: '#334155' },
+  siteInput: { width: '100%', maxWidth: '100%', padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b', background: 'white', fontFamily: 'inherit', boxSizing: 'border-box' },
   siteLevelsWrap: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   levelBtn: { padding: '6px 10px', borderRadius: 999, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   levelBtnActif: { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
@@ -3752,8 +3844,8 @@ const styles = {
   noticeBand: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
 
   subTabsRow: { display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' },
-  subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: '#e0e7ff', color: '#3730a3', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', textAlign: 'center' },
-  subTabBtnActif: { background: '#4f46e5', color: 'white', marginTop: -1, zIndex: 2, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' },
+  subTabBtn: { padding: '7px 14px', borderRadius: 17, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: 'transparent', color: '#6d28d9', lineHeight: 1, position: 'relative', zIndex: 1, outline: 'none', textAlign: 'center', whiteSpace: 'nowrap' },
+  subTabBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700, boxShadow: 'none' },
   poolSiteTabsBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   btnAddSitePoolTabs: { marginLeft: 'auto', padding: '8px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: '#ffffff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: '1' },
   rolesTopRight: { display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
@@ -3767,8 +3859,8 @@ const styles = {
   dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
-  select: { padding: '9px 18px', borderRadius: 10, border: '2px solid #4f46e5', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 14, outline: 'none', cursor: 'pointer' },
-  selectRole: { padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer' },
+  select: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 14, outline: 'none', cursor: 'pointer', fontFamily: 'inherit', minWidth: 190 },
+  selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit' },
   inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
@@ -3776,6 +3868,13 @@ const styles = {
   tdLeftRead: { borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, textAlign: 'left', fontWeight: 700 },
   affectationMetaWrap: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 },
   inlineLabel: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#334155', flexWrap: 'wrap' },
+  filtersStack: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 },
+  filtersRow: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 15 },
+  searchInput: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, minWidth: 280, flex: '1 1 320px', color: '#1e293b', fontFamily: 'inherit' },
+  filterDropdownButton: { display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  filterDropdownMenu: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, display: 'flex', flexDirection: 'column', gap: 4, padding: 6, background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 10px 24px rgba(15,23,42,0.12)', zIndex: 20 },
+  filterDropdownItem: { padding: '8px 12px', borderRadius: 10, border: 'none', background: 'transparent', color: '#6d28d9', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', textAlign: 'left', whiteSpace: 'nowrap' },
+  filterDropdownItemActive: { background: '#ede9fe', color: '#4f46e5', fontWeight: 700 },
   dayInactiveCell: { background: '#000000', minHeight: 42, borderBottom: '1px solid #111827', borderRight: '1px solid #111827' },
   pastillesWrap: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   classChip: { border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },

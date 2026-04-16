@@ -313,7 +313,7 @@ export default function SortieScolaire() {
                 {t === 'Tous' ? 'Trier' : t}
               </button>
             ))}
-          </div>
+          )}
         )}
       </div>
 
@@ -488,7 +488,7 @@ export default function SortieScolaire() {
                 <button type="submit" style={st.btnSave}>Enregistrer</button>
               </div>
             </form>
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -636,7 +636,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
                 </span>
               ))}
             </div>
-          </div>
+          )}
           <button
             type="button"
             style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #c7d2fe', background: showUnassignedProfs ? '#e0e7ff' : 'white', color: '#4338ca', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
@@ -657,7 +657,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
                 </span>
               ))}
             </div>
-          </div>
+          )}
           <button
             type="button"
             style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #cbd5e1', background: showUnassignedClasses ? '#e2e8f0' : 'white', color: '#334155', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
