@@ -540,7 +540,7 @@ export default function Comptabilite() {
       </table>
       ${stLine('Sous-total', totalMaterielVal)}` : '';
 
-    return `
+    const mainPageHtml = `
       <section class="facture-page">
         <div class="entete" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;">
           <div style="display:flex;align-items:flex-start;gap:10px;">
@@ -576,21 +576,24 @@ export default function Comptabilite() {
           </tbody>
         </table>
         <div class="signature">Signature : ____________________________</div>
-        ${data.eleve.categorie === 'EUCMS' ? footerHtml : ''}
-        ${data.eleve.categorie === 'EUCMS' ? (() => {
-          const ref5 = String(ref).replace(/\s/g, '').slice(-5);
-          return `
-          <div style="page-break-before:always;break-before:page;margin-top:24px;border-top:2px dashed #e2e8f0;padding-top:16px;text-align:center;">
-            <p style="margin:0 0 8px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
-            <p style="margin:0 0 12px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>
-            <div style="font-size:8pt;color:#64748b;margin-bottom:8px;">Page 2 - Bulletin de versement</div>
-            <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:360px;object-fit:contain;" alt="QR facture" onerror="this.style.display='none'" />
-          </div>
-        `;
-        })() : ''}
         ${footerHtml}
       </section>
     `;
+    if (data.eleve.categorie !== 'EUCMS') return mainPageHtml;
+
+    const ref5 = String(ref).replace(/\s/g, '').slice(-5);
+    const qrPageHtml = `
+      <section class="facture-page">
+        <div style="border-top:2px dashed #e2e8f0;padding-top:16px;text-align:center;">
+          <p style="margin:0 0 8px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
+          <p style="margin:0 0 12px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>
+          <div style="font-size:8pt;color:#64748b;margin-bottom:8px;">Page 2 - Bulletin de versement</div>
+          <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:360px;object-fit:contain;" alt="QR facture" onerror="this.style.display='none'" />
+        </div>
+        ${footerHtml}
+      </section>
+    `;
+    return `${mainPageHtml}${qrPageHtml}`;
   };
 
   const wrapFacturePrintDocument = (pagesHtml, title = 'Facture') => `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title><style>
@@ -598,7 +601,7 @@ export default function Comptabilite() {
     body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
     @page { size: A4 portrait; margin: 15mm 20mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-    .facture-page { page-break-after: always; position: relative; min-height: calc(297mm - 30mm); }
+    .facture-page { page-break-after: always; min-height: calc(297mm - 30mm); display: flex; flex-direction: column; }
     .facture-page:last-child { page-break-after: auto; }
     .entete, .entete * { font-size: 6pt !important; }
     .scai { font-size: 17pt !important; font-weight: 800; line-height: 1; color: #1e293b; }
@@ -606,7 +609,7 @@ export default function Comptabilite() {
     .date { text-align: right; font-size: 10pt; margin-bottom: 20pt; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; border-radius: 0 !important; clip-path: none !important; }
     .signature { margin-top: 30px; font-size: 10pt; text-align: right; }
-    .footer { font-size: 6pt !important; margin-top: 18px; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
+    .footer { font-size: 6pt !important; margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
     .footer * { font-size: 6pt !important; }
   </style></head><body>${pagesHtml}</body></html>`;
 

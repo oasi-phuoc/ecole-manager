@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
@@ -332,7 +332,7 @@ export default function SortieScolaire() {
       ))}
       {showSuivi && (
         <div style={{ marginTop: 16 }}>
-          <SuiviProfClasse sorties={sortiesOnglet} />
+          <SuiviProfClasse sorties={sortiesOnglet} classes={classes} profs={profs} />
           <SuiviTable
             sorties={sortiesOnglet}
             onEdit={ouvrirEdit}
@@ -351,14 +351,14 @@ export default function SortieScolaire() {
               <h3 style={st.modalTitre}>{editId ? 'Modifier' : 'Nouvelle'} sortie scolaire</h3>
               <button style={st.btnClose} onClick={() => setShowForm(false)}>✕</button>
             </div>
-            <form onSubmit={sauvegarder} style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 80px)', paddingRight: 6 }}>
+            <form onSubmit={sauvegarder}>
 
               {/* Type */}
               <div style={st.formSection}>Type</div>
-              <div style={st.grid3}>
+              <div style={st.typeToggleWrap}>
                 {['juin', 'autres'].map(t => (
                   <button key={t} type="button"
-                    style={{ ...st.typeBtn, ...(form.type === t ? st.typeBtnActif : {}) }}
+                    style={{ ...st.typeToggleBtn, ...(form.type === t ? st.typeToggleBtnActif : {}) }}
                     onClick={() => setForm({ ...form, type: t })}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -495,7 +495,7 @@ export default function SortieScolaire() {
   );
 }
 
-function SortieCard({ sortie, onEdit, onDelete, onPrint, onToggleApprouve }) {
+function SortieCard({ sortie, onEdit, onDelete }) {
   const classesNoms = sortie.classes_noms || [sortie.classe1, sortie.classe2].filter(Boolean).join(', ') || '';
   const nbClasses = classesNoms ? classesNoms.split(',').filter(Boolean).length : 0;
   const classeLabel = nbClasses > 1 ? 'Classes' : 'Classe';
@@ -510,13 +510,16 @@ function SortieCard({ sortie, onEdit, onDelete, onPrint, onToggleApprouve }) {
           {sortie.destination && <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}><span style={{ fontWeight: 600 }}>Destination :</span> {sortie.destination}</div>}
         </div>
         <div style={sc.actions}>
-          <button onClick={() => onToggleApprouve(sortie)}
-            style={{ padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, background: sortie.approuve ? '#16a34a' : '#e2e8f0', color: sortie.approuve ? 'white' : '#64748b', whiteSpace: 'nowrap' }}>
-            {sortie.approuve ? '✓ Approuvé' : 'À approuver'}
+          <button style={sc.btnEdit} onClick={() => onEdit(sortie)} title="Modifier">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 000-1.42l-2.5-2.5a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z"/>
+            </svg>
           </button>
-          <button style={sc.btnPrint} onClick={() => onPrint(sortie)}>🖨️ Imprimer</button>
-          <button style={sc.btnEdit} onClick={() => onEdit(sortie)}>✏️</button>
-          <button style={sc.btnDel} onClick={() => onDelete(sortie.id)}>🗑️</button>
+          <button style={sc.btnDel} onClick={() => onDelete(sortie.id)} title="Supprimer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm3-4h6a1 1 0 011 1v2H8V4a1 1 0 011-1zM4 6h16v1H4V6z"/>
+            </svg>
+          </button>
         </div>
       </div>
       {sortie.activites && <div style={sc.activites}>{sortie.activites}</div>}
@@ -554,15 +557,28 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                 <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_retour) || '—'}</td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
                 <td style={{ ...sc.td, textAlign: 'center' }}>
-                  <button onClick={() => onToggleApprouve(s)}
-                    style={{ padding: '3px 10px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 11, background: s.approuve ? '#16a34a' : '#e2e8f0', color: s.approuve ? 'white' : '#64748b', whiteSpace: 'nowrap' }}>
-                    {s.approuve ? '✓ Oui' : '—'}
+                  <button
+                    onClick={() => onToggleApprouve(s)}
+                    title={s.approuve ? 'Approuvé (v)' : 'Refusé (v gris)'}
+                    style={{ width: 24, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: s.approuve ? '#16a34a' : '#cbd5e1', color: 'white' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M7 12l3 3 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
                   <button style={sc.btnPrint} onClick={() => onPrint(s)}>🖨️</button>
-                  <button style={sc.btnEdit} onClick={() => onEdit(s)}>✏️</button>
-                  <button style={sc.btnDel} onClick={() => onDelete(s.id)}>🗑️</button>
+                  <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 000-1.42l-2.5-2.5a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z"/>
+                    </svg>
+                  </button>
+                  <button style={sc.btnDel} onClick={() => onDelete(s.id)} title="Supprimer">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm3-4h6a1 1 0 011 1v2H8V4a1 1 0 011-1zM4 6h16v1H4V6z"/>
+                    </svg>
+                  </button>
                 </td>
               </tr>
             );
@@ -573,7 +589,9 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
   );
 }
 
-function SuiviProfClasse({ sorties }) {
+function SuiviProfClasse({ sorties, classes, profs }) {
+  const [showUnassignedProfs, setShowUnassignedProfs] = useState(false);
+  const [showUnassignedClasses, setShowUnassignedClasses] = useState(false);
   const classesMap = new Map();
   const profsMap = new Map();
   sorties.forEach((s) => {
@@ -590,38 +608,102 @@ function SuiviProfClasse({ sorties }) {
   });
   const classesList = [...classesMap.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
   const profsList = [...profsMap.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  const assignedClasses = new Set(classesList.map(([nom]) => nom.toLowerCase()));
+  const assignedProfs = new Set(profsList.map(([nom]) => nom.toLowerCase()));
+  const allClassNames = useMemo(
+    () => [...new Set((classes || []).map((c) => (c.nom || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [classes]
+  );
+  const allProfNames = useMemo(
+    () => [...new Set((profs || []).map((p) => `${p.prenom || ''} ${p.nom || ''}`.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [profs]
+  );
+  const unassignedClasses = allClassNames.filter((nom) => !assignedClasses.has(nom.toLowerCase()));
+  const unassignedProfs = allProfNames.filter((nom) => !assignedProfs.has(nom.toLowerCase()));
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 12 }}>
-      <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des professeurs ayant des sorties</div>
-        {profsList.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun professeur trouvé.</div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {profsList.map(([nom, count]) => (
-              <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
-                {nom} ({count})
-              </span>
-            ))}
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 12 }}>
+        <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des professeurs ayant des sorties</div>
+          {profsList.length === 0 ? (
+            <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun professeur trouvé.</div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {profsList.map(([nom, count]) => (
+                <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#eef2ff', color: '#3730a3', fontSize: 12, fontWeight: 600 }}>
+                  {nom} ({count})
+                </span>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-      <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des classes ayant des sorties</div>
-        {classesList.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune classe trouvée.</div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {classesList.map(([nom, count]) => (
-              <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
-                {nom} ({count})
-              </span>
-            ))}
+          <button
+            type="button"
+            style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #c7d2fe', background: showUnassignedProfs ? '#e0e7ff' : 'white', color: '#4338ca', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            onClick={() => setShowUnassignedProfs(v => !v)}
+          >
+            Professeurs non affectés ({unassignedProfs.length})
+          </button>
+        </div>
+        <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des classes ayant des sorties</div>
+          {classesList.length === 0 ? (
+            <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune classe trouvée.</div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {classesList.map(([nom, count]) => (
+                <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
+                  {nom} ({count})
+                </span>
+              ))}
+            </div>
           </div>
-        )}
+          <button
+            type="button"
+            style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #cbd5e1', background: showUnassignedClasses ? '#e2e8f0' : 'white', color: '#334155', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            onClick={() => setShowUnassignedClasses(v => !v)}
+          >
+            Classes non affectées ({unassignedClasses.length})
+          </button>
+        </div>
       </div>
-    </div>
+      {(showUnassignedProfs || showUnassignedClasses) && (
+        <div style={{ marginBottom: 12, background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
+          {showUnassignedProfs && (
+            <div style={{ marginBottom: showUnassignedClasses ? 12 : 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#3730a3', marginBottom: 8 }}>Professeurs non affectés</div>
+              {unassignedProfs.length === 0 ? (
+                <div style={{ color: '#94a3b8', fontSize: 13 }}>Tous les professeurs sont affectés.</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {unassignedProfs.map((nom) => (
+                    <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#ede9fe', color: '#5b21b6', fontSize: 12, fontWeight: 600 }}>
+                      {nom}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {showUnassignedClasses && (
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#334155', marginBottom: 8 }}>Classes non affectées</div>
+              {unassignedClasses.length === 0 ? (
+                <div style={{ color: '#94a3b8', fontSize: 13 }}>Toutes les classes sont affectées.</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {unassignedClasses.map((nom) => (
+                    <span key={nom} style={{ padding: '4px 10px', borderRadius: 999, background: '#f1f5f9', color: '#334155', fontSize: 12, fontWeight: 600 }}>
+                      {nom}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -633,7 +715,7 @@ const st = {
   btnAdd: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
   searchRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
   searchInput: { width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' },
-  btnSuivi: { padding: '7px 16px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  btnSuivi: { padding: '7px 16px', minWidth: 138, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center' },
   btnSuiviActif: { border: '1.5px solid #6366f1', background: '#e0e7ff', color: '#4338ca' },
   btnTri: { padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' },
   toggleGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
@@ -649,7 +731,7 @@ const st = {
   subTabBtnActif: { background: '#4f46e5', color: 'white', marginTop: -1, zIndex: 2, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' },
   empty: { color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  modal: { background: 'white', borderRadius: 14, padding: 28, width: 'min(700px, 96vw)', maxHeight: '90vh', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' },
+  modal: { background: 'white', borderRadius: 14, padding: 28, width: 'min(700px, 96vw)', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitre: { fontSize: 17, fontWeight: 800, color: '#0f172a' },
   btnClose: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' },
@@ -659,8 +741,9 @@ const st = {
   field: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 },
   lbl: { fontSize: 11, fontWeight: 600, color: '#475569' },
   inp: { padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#1e293b', background: 'white', fontFamily: 'inherit' },
-  typeBtn: { padding: '8px 0', border: '2px solid #e0e7ff', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#f8fafc', color: '#64748b' },
-  typeBtnActif: { background: '#6366f1', color: 'white', border: '2px solid #6366f1' },
+  typeToggleWrap: { display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: 8 },
+  typeToggleBtn: { padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1, background: '#f8fafc', color: '#475569' },
+  typeToggleBtnActif: { background: '#6366f1', color: 'white' },
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, paddingTop: 16, borderTop: '1px solid #f1f5f9' },
   btnCancel: { padding: '9px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' },
   btnSave: { padding: '9px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13 },
@@ -677,6 +760,6 @@ const sc = {
   actions: { display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' },
   td: { padding: '8px 10px', borderRight: '1px solid #f1f5f9', color: '#1e293b' },
   btnPrint: { padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#6366f1' },
-  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, opacity: 0.9, color: '#ef4444' },
+  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', opacity: 0.85, color: '#6366f1', display: 'inline-flex', alignItems: 'center', padding: 2 },
+  btnDel: { background: 'none', border: 'none', cursor: 'pointer', opacity: 0.85, color: '#ef4444', display: 'inline-flex', alignItems: 'center', padding: 2 },
 };
