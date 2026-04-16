@@ -586,8 +586,8 @@ export default function Comptabilite() {
       <section class="facture-page">
         <div style="border-top:2px dashed #e2e8f0;padding-top:16px;text-align:center;">
           <p style="margin:0 0 8px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Nous vous prions de bien vouloir régler cette facture dans un délai de <b>30 jours</b> dès réception. Sans paiement dans ce délai, l'école se réserve le droit d'annuler l'admission de l'élève.</p>
-          <p style="margin:0 0 12px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>
-          <div style="font-size:8pt;color:#64748b;margin-bottom:8px;">Page 2 - Bulletin de versement</div>
+          <p style="margin:0 0 22px 0;font-size:9pt;color:#1e293b;line-height:1.6;text-align:left;">Lors du paiement, veuillez indiquer dans le motif les <b>5 derniers chiffres de la référence (${ref5})</b> ainsi que la <b>classe (${data.classeNom})</b>.</p>
+          <div style="font-size:8pt;color:#64748b;margin-bottom:18px;">Bulletin de versement</div>
           <img src="${publicBase}/facture-qr.png" style="max-width:100%;max-height:360px;object-fit:contain;" alt="QR facture" onerror="this.style.display='none'" />
         </div>
         ${footerHtml}
@@ -618,7 +618,8 @@ export default function Comptabilite() {
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const page = renderFacturePageHtml(factureImprime, publicBase);
     const html = wrapFacturePrintDocument(page, 'Facture');
-    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
+    // Marges à 0 pour supprimer les entêtes/pieds navigateur à l'impression PDF.
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '0mm');
     openPrintPopup(finalHtml, { title: 'Facture', width: 900, height: 800 });
   };
 
@@ -657,7 +658,8 @@ export default function Comptabilite() {
       pages.push(renderFacturePageHtml(data, publicBase));
     }
     const html = wrapFacturePrintDocument(pages.join(''), `Factures ${classeFactureNom}`);
-    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm 16mm');
+    // Marges à 0 pour supprimer les entêtes/pieds navigateur à l'impression PDF.
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '0mm');
     openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1000, height: 800 });
   };
 

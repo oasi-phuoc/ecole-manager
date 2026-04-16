@@ -511,13 +511,17 @@ function SortieCard({ sortie, onEdit, onDelete }) {
         </div>
         <div style={sc.actions}>
           <button style={sc.btnEdit} onClick={() => onEdit(sortie)} title="Modifier">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 000-1.42l-2.5-2.5a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z"/>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
           <button style={sc.btnDel} onClick={() => onDelete(sortie.id)} title="Supprimer">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm3-4h6a1 1 0 011 1v2H8V4a1 1 0 011-1zM4 6h16v1H4V6z"/>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
             </svg>
           </button>
         </div>
@@ -538,7 +542,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
-            {['Classes','Date de la sortie','Destination','Lieu de départ','Heure de départ','Lieu de retour','Heure de retour','Budget','Approbation',''].map(h => (
+            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget','Approbation',''].map(h => (
               <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' }}>{h}</th>
             ))}
           </tr>
@@ -551,32 +555,46 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                 <td style={sc.td}>{classesNoms}</td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{s.date_sortie ? new Date(s.date_sortie).toLocaleDateString('fr-CH') : '—'}</td>
                 <td style={{ ...sc.td, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.destination || '—'}</td>
-                <td style={sc.td}>{s.lieu_depart || '—'}</td>
-                <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_depart) || '—'}</td>
-                <td style={sc.td}>{s.lieu_retour || '—'}</td>
-                <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{fmtHeure(s.heure_retour) || '—'}</td>
+                <td style={sc.td}>
+                  {s.lieu_depart
+                    ? `${s.lieu_depart}${fmtHeure(s.heure_depart) ? ` - ${fmtHeure(s.heure_depart)}` : ''}`
+                    : (fmtHeure(s.heure_depart) || '—')}
+                </td>
+                <td style={sc.td}>
+                  {s.lieu_retour
+                    ? `${s.lieu_retour}${fmtHeure(s.heure_retour) ? ` - ${fmtHeure(s.heure_retour)}` : ''}`
+                    : (fmtHeure(s.heure_retour) || '—')}
+                </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
                 <td style={{ ...sc.td, textAlign: 'center' }}>
                   <button
                     onClick={() => onToggleApprouve(s)}
-                    title={s.approuve ? 'Approuvé (v)' : 'Refusé (v gris)'}
-                    style={{ width: 24, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: s.approuve ? '#16a34a' : '#cbd5e1', color: 'white' }}
+                    title={s.approuve ? 'Approuvé' : 'Non approuvé'}
+                    style={{ padding: 5, background: s.approuve ? '#dcfce7' : '#fee2e2', color: s.approuve ? '#16a34a' : '#dc2626', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M7 12l3 3 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
+                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                      {s.approuve
+                        ? <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        : <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                      }
                     </svg>
                   </button>
                 </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
                   <button style={sc.btnPrint} onClick={() => onPrint(s)}>🖨️</button>
                   <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 000-1.42l-2.5-2.5a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z"/>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </button>
                   <button style={sc.btnDel} onClick={() => onDelete(s.id)} title="Supprimer">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm3-4h6a1 1 0 011 1v2H8V4a1 1 0 011-1zM4 6h16v1H4V6z"/>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14H6L5 6"/>
+                      <path d="M10 11v6M14 11v6"/>
+                      <path d="M9 6V4h6v2"/>
                     </svg>
                   </button>
                 </td>
@@ -625,7 +643,16 @@ function SuiviProfClasse({ sorties, classes, profs }) {
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 12 }}>
         <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des professeurs ayant des sorties</div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>Suivi des professeurs ayant des sorties</div>
+            <button
+              type="button"
+              style={{ ...st.btnSuivi, ...(showUnassignedProfs ? st.btnSuiviActif : {}), flexShrink: 0 }}
+              onClick={() => setShowUnassignedProfs(v => !v)}
+            >
+              Professeurs non affectés ({unassignedProfs.length})
+            </button>
+          </div>
           {profsList.length === 0 ? (
             <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun professeur trouvé.</div>
           ) : (
@@ -637,16 +664,18 @@ function SuiviProfClasse({ sorties, classes, profs }) {
               ))}
             </div>
           )}
-          <button
-            type="button"
-            style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #c7d2fe', background: showUnassignedProfs ? '#e0e7ff' : 'white', color: '#4338ca', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-            onClick={() => setShowUnassignedProfs(v => !v)}
-          >
-            Professeurs non affectés ({unassignedProfs.length})
-          </button>
         </div>
         <div style={{ background: 'white', border: '1px solid #e8eaf6', borderRadius: 10, padding: 12 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', marginBottom: 8 }}>Suivi des classes ayant des sorties</div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>Suivi des classes ayant des sorties</div>
+            <button
+              type="button"
+              style={{ ...st.btnSuivi, ...(showUnassignedClasses ? st.btnSuiviActif : {}), flexShrink: 0 }}
+              onClick={() => setShowUnassignedClasses(v => !v)}
+            >
+              Classes non affectées ({unassignedClasses.length})
+            </button>
+          </div>
           {classesList.length === 0 ? (
             <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune classe trouvée.</div>
           ) : (
@@ -658,13 +687,6 @@ function SuiviProfClasse({ sorties, classes, profs }) {
               ))}
             </div>
           )}
-          <button
-            type="button"
-            style={{ marginTop: 8, padding: '4px 10px', borderRadius: 999, border: '1px solid #cbd5e1', background: showUnassignedClasses ? '#e2e8f0' : 'white', color: '#334155', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-            onClick={() => setShowUnassignedClasses(v => !v)}
-          >
-            Classes non affectées ({unassignedClasses.length})
-          </button>
         </div>
       </div>
       {(showUnassignedProfs || showUnassignedClasses) && (
