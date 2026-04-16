@@ -601,7 +601,7 @@ export default function Comptabilite() {
     body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
     @page { size: A4 portrait; margin: 15mm 20mm; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-    .facture-page { page-break-after: always; min-height: calc(297mm - 30mm); display: flex; flex-direction: column; }
+    .facture-page { page-break-after: always; position: relative; min-height: calc(297mm - 30mm); padding-bottom: 16mm; display: flex; flex-direction: column; }
     .facture-page:last-child { page-break-after: auto; }
     .entete, .entete * { font-size: 6pt !important; }
     .scai { font-size: 17pt !important; font-weight: 800; line-height: 1; color: #1e293b; }
@@ -609,7 +609,7 @@ export default function Comptabilite() {
     .date { text-align: right; font-size: 10pt; margin-bottom: 20pt; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; border-radius: 0 !important; clip-path: none !important; }
     .signature { margin-top: 30px; font-size: 10pt; text-align: right; }
-    .footer { font-size: 6pt !important; margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
+    .footer { font-size: 6pt !important; position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding-top: 0; }
     .footer * { font-size: 6pt !important; }
   </style></head><body>${pagesHtml}</body></html>`;
 
@@ -618,8 +618,8 @@ export default function Comptabilite() {
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const page = renderFacturePageHtml(factureImprime, publicBase);
     const html = wrapFacturePrintDocument(page, 'Facture');
-    // Marges à 0 pour supprimer les entêtes/pieds navigateur à l'impression PDF.
-    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '0mm');
+    // Marges imprimables restaurées pour conserver une mise en page A4 propre.
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
     openPrintPopup(finalHtml, { title: 'Facture', width: 900, height: 800 });
   };
 
@@ -658,8 +658,8 @@ export default function Comptabilite() {
       pages.push(renderFacturePageHtml(data, publicBase));
     }
     const html = wrapFacturePrintDocument(pages.join(''), `Factures ${classeFactureNom}`);
-    // Marges à 0 pour supprimer les entêtes/pieds navigateur à l'impression PDF.
-    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '0mm');
+    // Marges imprimables restaurées pour conserver une mise en page A4 propre.
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm 20mm');
     openPrintPopup(finalHtml, { title: `Factures ${classeFactureNom}`, width: 1000, height: 800 });
   };
 
