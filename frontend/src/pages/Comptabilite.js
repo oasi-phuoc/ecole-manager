@@ -124,6 +124,7 @@ export default function Comptabilite() {
   const [showCommandePopup, setShowCommandePopup] = useState(false);
   const [commandeEdit, setCommandeEdit] = useState(null);
   const [commandeForm, setCommandeForm] = useState({ article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
+  const [commandeDetail, setCommandeDetail] = useState(null);
 
   // Liste de prix sub-tab
   const [prixOnglet, setPrixOnglet] = useState('ecolage');
@@ -704,6 +705,14 @@ export default function Comptabilite() {
     } catch { alert('Erreur lors de la suppression'); }
   };
 
+  const toggleCommandeValide = async (cmd) => {
+    try {
+      await axios.put(API + '/comptabilite/commandes/' + cmd.id, { ...cmd, valide: !cmd.valide }, { headers });
+      chargerCommandes();
+    } catch { alert('Erreur lors de la mise à jour'); }
+  };
+
+  const cmdTh = { padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' };
   const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
   const classeFactureNom = classeFactureObj?.nom || '—';
   const toutesFacturesClasseValidees = elevesClasseFacturation.length > 0
@@ -1001,31 +1010,46 @@ export default function Comptabilite() {
             {commandes.length === 0 ? (
               <div style={styles.vide}>Aucune commande enregistrée.</div>
             ) : (
-              <div style={styles.tableWrap}>
-                <table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
+              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #e8eaf6' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr>
-                      {['Article', 'Qté', 'Fournisseur', 'Prix unit.', 'Total', 'Statut', 'Remarques', ''].map((h, i) => (
-                        <th key={i} style={styles.thMateriel}>{h}</th>
-                      ))}
+                    <tr style={{ background: '#6366f1', color: 'white' }}>
+                      <th style={cmdTh}></th>
+                      <th style={cmdTh}>N° commande</th>
+                      <th style={cmdTh}>Fournisseur</th>
+                      <th style={{ ...cmdTh, textAlign: 'right' }}>Montant total</th>
+                      <th style={{ ...cmdTh, textAlign: 'center' }}></th>
+                      <th style={{ ...cmdTh, textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {commandes.map(cmd => {
-                      const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0)).toFixed(2);
-                      const statutInfo = { en_attente: { label: 'En attente', color: '#92400e', bg: '#fef3c7' }, commande: { label: 'Commandé', color: '#1e40af', bg: '#dbeafe' }, recu: { label: 'Reçu', color: '#065f46', bg: '#d1fae5' } }[cmd.statut] || { label: cmd.statut, color: '#555', bg: '#f0f0f0' };
+                    {commandes.map((cmd, i) => {
+                      const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0));
+                      const num = String(cmd.id).padStart(4, '0');
                       return (
-                        <tr key={cmd.id} style={styles.tr}>
-                          <td style={styles.td}>{cmd.article}</td>
-                          <td style={{ ...styles.td, textAlign: 'center' }}>{cmd.quantite}</td>
+                        <tr key={cmd.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ ...styles.td, textAlign: 'center', width: 40 }}>
+                            <button onClick={() => setCommandeDetail(cmd)} title="Détail"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', display: 'inline-flex', alignItems: 'center', padding: 4 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                            </button>
+                          </td>
+                          <td style={{ ...styles.td, fontWeight: 600 }}>CMD-{num}</td>
                           <td style={styles.td}>{cmd.fournisseur || '—'}</td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>{cmd.prix_unitaire ? Number(cmd.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
-                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{cmd.prix_unitaire ? total + ' CHF' : '—'}</td>
-                          <td style={styles.td}><span style={{ ...styles.statutBadge, background: statutInfo.bg, color: statutInfo.color }}>{statutInfo.label}</span></td>
-                          <td style={{ ...styles.td, color: '#64748b', fontSize: 12 }}>{cmd.remarques || '—'}</td>
-                          <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                            <button style={styles.btnEdit} onClick={() => ouvrirCommandePopup(cmd)} title="Modifier">✏️</button>
-                            <button style={styles.btnDelete} onClick={() => supprimerCommande(cmd.id)} title="Supprimer">🗑</button>
+                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
+                          <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <button style={styles.btnEdit} onClick={() => ouvrirCommandePopup(cmd)} title="Modifier">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button style={styles.btnDelete} onClick={() => supprimerCommande(cmd.id)} title="Supprimer">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                            </button>
+                          </td>
+                          <td style={{ ...styles.td, textAlign: 'center', width: 48 }}>
+                            <button onClick={() => toggleCommandeValide(cmd)} title={cmd.valide ? 'Validé' : 'Non validé'}
+                              style={{ padding: 5, background: cmd.valide ? '#dcfce7' : '#e2e8f0', color: cmd.valide ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden><path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/></svg>
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1035,6 +1059,32 @@ export default function Comptabilite() {
               </div>
             )}
           </div>
+
+          {/* Popup détail commande */}
+          {commandeDetail && (
+            <div style={styles.overlay} onClick={() => setCommandeDetail(null)}>
+              <div style={{ ...styles.modal, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>CMD-{String(commandeDetail.id).padStart(4, '0')}</h3>
+                  <button onClick={() => setCommandeDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
+                </div>
+                {[
+                  ['Article', commandeDetail.article],
+                  ['Quantité', commandeDetail.quantite],
+                  ['Fournisseur', commandeDetail.fournisseur || '—'],
+                  ['Prix unitaire', commandeDetail.prix_unitaire ? Number(commandeDetail.prix_unitaire).toFixed(2) + ' CHF' : '—'],
+                  ['Montant total', ((parseFloat(commandeDetail.prix_unitaire) || 0) * (parseInt(commandeDetail.quantite) || 0)).toFixed(2) + ' CHF'],
+                  ['Statut', { en_attente: 'En attente', commande: 'Commandé', recu: 'Reçu' }[commandeDetail.statut] || commandeDetail.statut],
+                  ['Remarques', commandeDetail.remarques || '—'],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>{k}</span>
+                    <span style={{ color: '#1e293b' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Popup nouvelle commande */}
           {showCommandePopup && (
