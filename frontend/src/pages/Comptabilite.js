@@ -636,45 +636,24 @@ export default function Comptabilite() {
 
   const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
   const classeFactureNom = classeFactureObj?.nom || '—';
-  const comptaTabs = isAdmin()
-    ? (onglet === 'factures' && classeFacturationId
-      ? COMPTA_TABS_ADMIN.filter(t => t.key === 'factures' || t.key === 'paiements' || t.key === 'prix')
-      : COMPTA_TABS_ADMIN.filter(t => t.key === 'paiements' || t.key === 'prix'))
-    : [];
-
+  const toutesFacturesClasseValidees = elevesClasseFacturation.length > 0
+    && elevesClasseFacturation.every(e => !!facturesValidees[e.id]);
   return (
     <div style={styles.page}>
       <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={styles.header}>
         {onglet === 'factures' && classeFacturationId ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
               <button type="button" style={styles.btnRetourListe} onClick={retourListeClasses}>← Retour</button>
               <h2 style={styles.titre}>Factures — {classeFactureNom}</h2>
             </div>
-            <button type="button" style={styles.btnAjouter} onClick={imprimerFacturesClasse}>Imprimer</button>
+            <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={imprimerFacturesClasse}>Imprimer</button>
           </>
         ) : (
           <h2 style={styles.titre}>Comptabilité</h2>
         )}
       </div>
-
-      {isAdmin() && (
-        <div style={styles.tabsRowCompta} role="tablist" aria-label="Sections comptabilité">
-          {comptaTabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={onglet === t.key}
-              style={{ ...styles.tabCompta, ...(onglet === t.key ? styles.tabComptaActif : {}) }}
-              onClick={() => setOnglet(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
       </div>
 
       {/* ===== CLASSES (liste → factures par classe) ===== */}
@@ -768,18 +747,13 @@ export default function Comptabilite() {
                     value={rechercheClasseFacture}
                     onChange={e => setRechercheClasseFacture(e.target.value)}
                   />
-                  <button style={styles.btnGhostPill} onClick={validerToutesFacturesClasse}>Valider toutes les factures</button>
-                  {!showFacturesNiveaux ? (
-                    <button style={styles.btnGhostPill} onClick={() => setShowFacturesNiveaux(true)}>Trier</button>
-                  ) : (
-                    <div style={styles.toggleGroup}>
-                      {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
-                        <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }} onClick={() => { setFacturesNiveau(niv); setShowFacturesNiveaux(false); }}>
-                          {niv}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    style={toutesFacturesClasseValidees ? styles.btnValidatedPill : styles.btnGhostPill}
+                    onClick={validerToutesFacturesClasse}
+                    disabled={toutesFacturesClasseValidees}
+                  >
+                    {toutesFacturesClasseValidees ? 'Critères validés' : 'Valider toutes les factures'}
+                  </button>
                 </div>
                 <div style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
@@ -787,8 +761,8 @@ export default function Comptabilite() {
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
                         <th style={styles.thMateriel}>Nom</th>
-                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: 1, whiteSpace: 'nowrap' }}></th>
                         <th style={styles.thMateriel}>Prénom</th>
+                        <th style={{ ...styles.thMateriel, textAlign: 'center', width: 1, whiteSpace: 'nowrap' }}></th>
                         {materielsFacturation.map(m => {
                           const IcComp = m.icone ? ICONS_MATERIELS[m.icone] : null;
                           return (
@@ -804,10 +778,6 @@ export default function Comptabilite() {
                     <tbody>
                       {(() => {
                         const elevesFiltres = elevesClasseFacturation.filter(e => {
-                          if (facturesNiveau !== 'Tous') {
-                            const niv = String(classeFactureObj?.niveau || '').toUpperCase();
-                            if (!niv.includes(facturesNiveau)) return false;
-                          }
                           if (rechercheClasseFacture.trim()) {
                             const q = rechercheClasseFacture.toLowerCase();
                             const full = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase();
@@ -823,12 +793,12 @@ export default function Comptabilite() {
                           return (
                         <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={styles.tdMateriel}>{e.nom || '—'}</td>
+                          <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           <td style={{ ...styles.tdMateriel, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                             <button style={styles.btnDetailClasse} onClick={() => ouvrirFactureImprime(e)} title="Détail facture">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
-                          <td style={styles.tdMateriel}>{e.prenom || '—'}</td>
                           {materielsFacturation.map(m => (
                             <td key={m.id} style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                               <input type="number" min="0"
@@ -871,7 +841,7 @@ export default function Comptabilite() {
             <input style={styles.tabSearch} placeholder="Rechercher nom, prénom, classe, montant..." value={recherchePaiements} onChange={e => setRecherchePaiements(e.target.value)} />
             <button style={styles.btnGhostPill} onClick={validerTousPaiementsFiltres}>Valider tous les paiements</button>
             {!showPaiementsNiveaux ? (
-              <button style={{ ...styles.btnGhostPill, marginLeft: 'auto' }} onClick={() => setShowPaiementsNiveaux(true)}>Trier</button>
+              <button style={styles.btnGhostPill} onClick={() => setShowPaiementsNiveaux(true)}>Trier</button>
             ) : (
               <div style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
@@ -1534,19 +1504,31 @@ export default function Comptabilite() {
               {(() => {
                 const ref = factureImprime.reference || calcQRRef(factureImprime.classeNom, factureImprime.dateFacture, factureImprime.eleve);
                 const cg = <colgroup><col/><col style={{width:90}}/><col style={{width:110}}/><col style={{width:110}}/></colgroup>;
-                const thS = (i) => ({ padding:'8px 10px', fontSize:11, color:'white', textAlign:i===0?'left':'right', fontWeight:700 });
-                const tdR = { border:'1px solid #dbe3ee', padding:'7px 10px', fontSize:12, textAlign:'right' };
+                const thS = (i) => ({ padding:'8px 10px', fontSize:11, color:'white', textAlign:i===0?'left':'center', fontWeight:700 });
+                const tdR = { border:'1px solid #dbe3ee', padding:'7px 10px', fontSize:12, textAlign:'center' };
+                const tdMoney = { ...tdR, textAlign: 'right' };
                 const tdL = { border:'1px solid #dbe3ee', padding:'7px 10px', fontSize:12 };
                 const stRow = (label, val) => (
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, padding:'5px 10px', background:'#f1f5f9', border:'1px solid #e2e8f0', borderTop:'none', marginBottom:16 }}>
                     <span style={{ fontWeight:600 }}>{label}</span><b>{fmtCHF(val)}</b>
                   </div>
                 );
+                const totalTable = (label, val) => (
+                  <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed', marginTop: 4, marginBottom: 10 }}>
+                    {cg}
+                    <tbody>
+                      <tr style={{ background:'#f8fafc' }}>
+                        <td colSpan={3} style={{ ...tdL, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 }}>{label}</td>
+                        <td style={{ ...tdMoney, fontWeight: 800 }}>{fmtCHF(val)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                );
                 const totalEcol = (factureImprime.lignesEcolage||[]).reduce((a,l)=>a+l.montant,0);
                 const totalMat = (factureImprime.lignes||[]).reduce((a,l)=>a+l.montant,0);
-                const mkThead = (col1) => (
+                const mkThead = (col1, col2 = 'Prorata') => (
                   <thead><tr style={{ background:'#6366f1' }}>
-                    {[col1,'Prorata','Prix','Montant'].map((h,i) => <th key={h} style={thS(i)}>{h}</th>)}
+                    {[col1, col2, 'Prix', 'Montant'].map((h,i) => <th key={h} style={thS(i)}>{h}</th>)}
                   </tr></thead>
                 );
                 return <>
@@ -1561,8 +1543,8 @@ export default function Comptabilite() {
                           <tr key={l.id} style={{ background:i%2===0?'white':'#fafafa' }}>
                             <td style={tdL}>{l.nom}</td>
                             <td style={tdR}>{Math.round(l.prorata/12*100)}%</td>
-                            <td style={tdR}>{Number(l.prix).toFixed(2)} CHF</td>
-                            <td style={{...tdR,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
+                            <td style={tdMoney}>{Number(l.prix).toFixed(2)} CHF</td>
+                            <td style={{...tdMoney,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1571,25 +1553,23 @@ export default function Comptabilite() {
                   </>)}
                   {factureImprime.lignes?.length > 0 && (<>
                     <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
-                      {cg}{mkThead('Matériel scolaire')}
+                      {cg}{mkThead('Matériel scolaire', 'Quantité')}
                       <tbody>
                         {factureImprime.lignes.map((l,i) => (
                           <tr key={l.id} style={{ background:i%2===0?'white':'#fafafa' }}>
                             <td style={tdL}>{l.nom}</td>
                             <td style={tdR}>{l.qte}</td>
-                            <td style={tdR}>{Number(l.prix).toFixed(2)} CHF</td>
-                            <td style={{...tdR,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
+                            <td style={tdMoney}>{Number(l.prix).toFixed(2)} CHF</td>
+                            <td style={{...tdMoney,fontWeight:700}}>{Number(l.montant).toFixed(2)} CHF</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     {stRow('Sous-total', totalMat)}
                   </>)}
+                  {totalTable('Montant de la facture', factureImprime.total)}
                 </>;
               })()}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, borderTop: '2px solid #0f172a', paddingTop: 10, marginTop: 8 }}>
-                <span>MONTANT DE LA FACTURE</span><b>{fmtCHF(factureImprime.total)}</b>
-              </div>
               {factureImprime.eleve.categorie === 'EUCMS' && (() => {
                 const ref5 = (factureImprime.reference || '').replace(/\s/g,'').slice(-5);
                 return (
@@ -1671,6 +1651,7 @@ const styles = {
   btnAnnuler: { padding: '9px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' },
   btnSauver: { padding: '9px 18px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   btnGhostPill: { padding: '7px 16px', borderRadius: 17, border: '1px solid #d1d9e6', background: '#f8fafc', color: '#94a3b8', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' },
+  btnValidatedPill: { padding: '7px 16px', borderRadius: 17, border: '1px solid #6366f1', background: '#eef2ff', color: '#4338ca', cursor: 'default', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' },
   tableWrap: { borderRadius: 12, overflow: 'hidden', background: 'white' },
   tableMateriel: { width: '100%', borderCollapse: 'collapse', background: 'white', tableLayout: 'fixed' },
   thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', boxShadow: 'none' },
