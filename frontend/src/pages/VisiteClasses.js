@@ -1,6 +1,10 @@
 /* eslint-disable */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { stickyPageChrome } from '../styles/pageShell';
+
+const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const OPTIONS_NOTE = ['Acquis', "En cours d'acquisition", 'Non acquis', 'N/O'];
 
@@ -80,9 +84,10 @@ function BlocEvaluation({ title, prefix, criteres, values, setValues }) {
   );
 }
 
-function FormulaireVisite() {
+function FormulaireVisite({ profs }) {
   const [notes, setNotes] = useState({});
   const annexes = useMemo(() => ['Annexe à la visite de classe - Commentaires', 'Annexe à la visite de classe - Commentaires', 'Annexe à la visite de classe - Commentaires'], []);
+  const [formateurVal, setFormateurVal] = useState('');
 
   return (
     <div style={s.formCard}>
@@ -91,14 +96,30 @@ function FormulaireVisite() {
       <div style={s.gridInfos}>
         <label style={s.field}>
           <span style={s.fieldLabel}>Formateur, Formatrice</span>
+          <input
+            style={s.input}
+            list="profs-list"
+            value={formateurVal}
+            onChange={e => setFormateurVal(e.target.value)}
+            placeholder="Sélectionner ou taper un nom..."
+            autoComplete="off"
+          />
+          <datalist id="profs-list">
+            {profs.map(p => (
+              <option key={p.id} value={`${p.prenom} ${p.nom}`} />
+            ))}
+          </datalist>
+        </label>
+        <label style={s.field}>
+          <span style={s.fieldLabel}>Classe</span>
           <input style={s.input} />
         </label>
         <label style={s.field}>
-          <span style={s.fieldLabel}>Classe / Branche</span>
+          <span style={s.fieldLabel}>Branche</span>
           <input style={s.input} />
         </label>
         <label style={s.field}>
-          <span style={s.fieldLabel}>Nombre d’apprenants</span>
+          <span style={s.fieldLabel}>Nombre d'apprenants</span>
           <input style={s.input} />
         </label>
         <label style={s.field}>
@@ -169,11 +190,11 @@ function EntretienFeedback() {
           <textarea style={s.textarea} />
         </label>
         <label style={s.field}>
-          <span style={s.fieldLabel}>Qu’est-ce que j’aimerais améliorer au niveau technique ou autres ? (1 à 2 points)</span>
+          <span style={s.fieldLabel}>Qu'est-ce que j'aimerais améliorer au niveau technique ou autres ? (1 à 2 points)</span>
           <textarea style={s.textarea} />
         </label>
         <label style={s.field}>
-          <span style={s.fieldLabel}>De quoi ai-je besoin pour m’améliorer ? (1 à 2 avis)</span>
+          <span style={s.fieldLabel}>De quoi ai-je besoin pour m'améliorer ? (1 à 2 avis)</span>
           <textarea style={s.textarea} />
         </label>
       </div>
@@ -188,7 +209,7 @@ function EntretienFeedback() {
           <textarea style={s.textarea} />
         </label>
         <label style={s.field}>
-          <span style={s.fieldLabel}>Objectifs à mettre en place d’ici la prochaine visite</span>
+          <span style={s.fieldLabel}>Objectifs à mettre en place d'ici la prochaine visite</span>
           <textarea style={s.textarea} />
         </label>
         <label style={s.field}>
@@ -216,7 +237,17 @@ function EntretienFeedback() {
 }
 
 export default function VisiteClasses() {
-  const [activeTab, setActiveTab] = useState('visite');
+  const location = useLocation();
+  const activeTab = new URLSearchParams(location.search).get('tab') || 'visite';
+  const [profs, setProfs] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    axios.get(API + '/profs', { headers })
+      .then(r => setProfs((r.data || []).sort((a, b) => a.nom.localeCompare(b.nom))))
+      .catch(() => setProfs([]));
+  }, []);
 
   return (
     <div style={s.page}>
@@ -226,24 +257,7 @@ export default function VisiteClasses() {
         </div>
       </div>
 
-      <div style={s.tabs}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('visite')}
-          style={{ ...s.tabBtn, ...(activeTab === 'visite' ? s.tabBtnActive : {}) }}
-        >
-          Formulaire de visite
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('feedback')}
-          style={{ ...s.tabBtn, ...(activeTab === 'feedback' ? s.tabBtnActive : {}) }}
-        >
-          Entretien de feedback
-        </button>
-      </div>
-
-      {activeTab === 'visite' ? <FormulaireVisite /> : <EntretienFeedback />}
+      {activeTab === 'visite' ? <FormulaireVisite profs={profs} /> : <EntretienFeedback />}
     </div>
   );
 }
@@ -252,9 +266,6 @@ const s = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
   header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' },
   titre: { fontSize: 22, fontWeight: 800, color: '#0f172a', margin: 0 },
-  tabs: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 },
-  tabBtn: { padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit' },
-  tabBtnActive: { background: '#6366f1', color: 'white', borderColor: '#6366f1', fontWeight: 700 },
   formCard: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 },
   formTitle: { fontSize: 18, fontWeight: 800, color: '#0f172a' },
   gridInfos: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(240px, 1fr))', gap: 10 },

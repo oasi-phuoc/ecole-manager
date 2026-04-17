@@ -64,6 +64,11 @@ const DOCS_ONGLETS = [
   { key: 'divers',         label: 'Divers',         adminOnly: false },
 ];
 
+const VISITE_ONGLETS = [
+  { key: 'visite',    label: 'Formulaire de visite' },
+  { key: 'feedback',  label: 'Entretien de feedback' },
+];
+
 const COMPTA_ONGLETS = [
   { key: 'factures',  label: 'Factures',      adminOnly: false },
   { key: 'paiements', label: 'Paiements',     adminOnly: false },
@@ -199,6 +204,8 @@ export default function Layout() {
                       navigate('/comptabilite?tab=classes');
                     } else if (m.path === '/documents-administratifs') {
                       navigate('/documents-administratifs?tab=accueil');
+                    } else if (m.path === '/visite-classes') {
+                      navigate('/visite-classes?tab=visite');
                     } else {
                       navigate(m.path);
                     }
@@ -324,6 +331,21 @@ export default function Layout() {
                     })}
                   </div>
                 )}
+                {m.path === '/visite-classes' && isActive && (
+                  <div style={s.subNav}>
+                    {VISITE_ONGLETS.map(o => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'visite';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button key={o.key}
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={e => { e.stopPropagation(); navigate(`/visite-classes?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {m.path === '/comptabilite' && isActive && (
                   <div style={s.subNav}>
                     {(() => {
@@ -381,6 +403,8 @@ export default function Layout() {
                             navigate('/comptabilite?tab=classes');
                           } else if (m.path === '/documents-administratifs') {
                             navigate('/documents-administratifs?tab=accueil');
+                          } else if (m.path === '/visite-classes') {
+                            navigate('/visite-classes?tab=visite');
                           } else {
                             navigate(m.path);
                           }
