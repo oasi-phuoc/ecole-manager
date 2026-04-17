@@ -236,12 +236,17 @@ const getCommandes = async (req, res) => {
 };
 
 const creerCommande = async (req, res) => {
-  const { article, quantite, fournisseur, prix_unitaire, statut, remarques } = req.body;
-  if (!article) return res.status(400).json({ message: 'article est requis' });
+  const { article, quantite, fournisseur, prix_unitaire, statut, remarques, date_commande } = req.body;
   try {
+    const now = new Date();
+    const annee1 = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+    const prefix = `${String(annee1).slice(-2)}-${String(annee1 + 1).slice(-2)}`;
+    const countRes = await pool.query("SELECT COUNT(*) FROM commandes WHERE numero_commande LIKE $1", [prefix + '%']);
+    const num = parseInt(countRes.rows[0].count) + 1;
+    const numero = `${prefix}_${String(num).padStart(4, '0')}`;
     const r = await pool.query(
-      'INSERT INTO commandes (article, quantite, fournisseur, prix_unitaire, statut, remarques) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [article, quantite || 1, fournisseur || null, prix_unitaire || null, statut || 'en_attente', remarques || null]
+      'INSERT INTO commandes (article, quantite, fournisseur, prix_unitaire, statut, remarques, numero_commande, date_commande) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+      [article || null, quantite || 1, fournisseur || null, prix_unitaire || null, statut || 'en_attente', remarques || null, numero, date_commande || null]
     );
     res.status(201).json(r.rows[0]);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

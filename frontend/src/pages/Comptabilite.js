@@ -679,9 +679,16 @@ export default function Comptabilite() {
 
   useEffect(() => { chargerCommandes(); }, []);
 
+  const ajouterCommandeInline = async () => {
+    try {
+      await axios.post(API + '/comptabilite/commandes', { date_commande: new Date().toISOString().slice(0, 10) }, { headers });
+      chargerCommandes();
+    } catch (e) { alert('Erreur lors de la création'); }
+  };
+
   const ouvrirCommandePopup = (cmd = null) => {
     setCommandeEdit(cmd);
-    setCommandeForm(cmd ? { article: cmd.article || '', quantite: cmd.quantite || 1, fournisseur: cmd.fournisseur || '', prix_unitaire: cmd.prix_unitaire || '', statut: cmd.statut || 'en_attente', remarques: cmd.remarques || '' } : { article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
+    setCommandeForm(cmd ? { article: cmd.article || '', quantite: cmd.quantite || 1, fournisseur: cmd.fournisseur || '', prix_unitaire: cmd.prix_unitaire || '', statut: cmd.statut || 'en_attente', remarques: cmd.remarques || '', date_commande: cmd.date_commande ? cmd.date_commande.slice(0, 10) : '' } : { article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '', date_commande: '' });
     setShowCommandePopup(true);
   };
 
@@ -689,8 +696,6 @@ export default function Comptabilite() {
     try {
       if (commandeEdit) {
         await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id, commandeForm, { headers });
-      } else {
-        await axios.post(API + '/comptabilite/commandes', commandeForm, { headers });
       }
       setShowCommandePopup(false);
       chargerCommandes();
@@ -733,7 +738,7 @@ export default function Comptabilite() {
           <>
             <h2 style={styles.titre}>Comptabilité</h2>
             {onglet === 'commandes' && (
-              <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={() => ouvrirCommandePopup()}>+ Ajouter</button>
+              <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={ajouterCommandeInline}>+ Ajouter</button>
             )}
           </>
         )}
@@ -1013,7 +1018,7 @@ export default function Comptabilite() {
                     <tr style={{ background: '#6366f1', color: 'white' }}>
                       <th style={cmdTh}></th>
                       <th style={cmdTh}>N° commande</th>
-                      <th style={cmdTh}>Fournisseur</th>
+                      <th style={cmdTh}>Date</th>
                       <th style={{ ...cmdTh, textAlign: 'right' }}>Montant total</th>
                       <th style={{ ...cmdTh, textAlign: 'center' }}></th>
                       <th style={{ ...cmdTh, textAlign: 'center' }}></th>
@@ -1025,7 +1030,7 @@ export default function Comptabilite() {
                     )}
                     {commandes.map((cmd, i) => {
                       const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0));
-                      const num = String(cmd.id).padStart(4, '0');
+                      const dateStr = cmd.date_commande ? new Date(cmd.date_commande).toLocaleDateString('fr-CH') : '—';
                       return (
                         <tr key={cmd.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ ...styles.td, textAlign: 'center', width: 40 }}>
@@ -1034,8 +1039,8 @@ export default function Comptabilite() {
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
-                          <td style={{ ...styles.td, fontWeight: 600 }}>CMD-{num}</td>
-                          <td style={styles.td}>{cmd.fournisseur || '—'}</td>
+                          <td style={{ ...styles.td, fontWeight: 600 }}>{cmd.numero_commande || '—'}</td>
+                          <td style={styles.td}>{dateStr}</td>
                           <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
                           <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <button style={styles.btnEdit} onClick={() => ouvrirCommandePopup(cmd)} title="Modifier">
@@ -1064,7 +1069,7 @@ export default function Comptabilite() {
             <div style={styles.overlay} onClick={() => setCommandeDetail(null)}>
               <div style={{ ...styles.modal, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>CMD-{String(commandeDetail.id).padStart(4, '0')}</h3>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{commandeDetail.numero_commande || '—'}</h3>
                   <button onClick={() => setCommandeDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
                 </div>
                 {[
@@ -1089,7 +1094,7 @@ export default function Comptabilite() {
           {showCommandePopup && (
             <div style={styles.overlay} onClick={() => setShowCommandePopup(false)}>
               <div style={{ ...styles.modal, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ margin: '0 0 18px', fontSize: 16, fontWeight: 700 }}>{commandeEdit ? 'Modifier la commande' : 'Nouvelle commande'}</h3>
+                <h3 style={{ margin: '0 0 18px', fontSize: 16, fontWeight: 700 }}>Modifier la commande</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
                     <label style={styles.label}>Article *</label>
@@ -1124,7 +1129,7 @@ export default function Comptabilite() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                   <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={() => setShowCommandePopup(false)}>Annuler</button>
-                  <button style={{ ...styles.btnAjouter, opacity: commandeForm.article.trim() ? 1 : 0.5 }} disabled={!commandeForm.article.trim()} onClick={sauvegarderCommande}>{commandeEdit ? 'Enregistrer' : 'Ajouter'}</button>
+                  <button style={{ ...styles.btnAjouter }} onClick={sauvegarderCommande}>Enregistrer</button>
                 </div>
               </div>
             </div>
