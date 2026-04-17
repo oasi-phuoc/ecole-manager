@@ -1235,8 +1235,9 @@ export default function Comptabilite() {
                     </table>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-                    <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>Fermer</button>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+                    <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>Annuler</button>
+                    <button style={{ ...styles.btnAjouter }} onClick={() => { chargerCommandes(); fermerCommandePopup(); }}>Sauvegarder</button>
                   </div>
                 </div>
               </div>
