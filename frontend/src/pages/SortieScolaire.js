@@ -299,13 +299,6 @@ export default function SortieScolaire() {
       {/* Header */}
       <div style={st.header}>
         <h1 style={st.titre}>Gestion des sorties scolaires</h1>
-        <button
-          type="button"
-          onClick={() => setShowSuivi(v => !v)}
-          style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: showSuivi ? '#ede9fe' : 'white', color: showSuivi ? '#5b21b6' : '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-        >
-          {showSuivi ? 'Masquer le suivi' : 'Afficher le suivi'}
-        </button>
         <button style={{ ...st.btnAdd }} onClick={ouvrirNouvelle}>+ Ajouter</button>
       </div>
       <div style={st.searchRow}>
@@ -315,6 +308,13 @@ export default function SortieScolaire() {
           onChange={(e) => setRechercheSorties(e.target.value)}
           placeholder="Rechercher professeur, classe, destination..."
         />
+        <button
+          type="button"
+          onClick={() => setShowSuivi(v => !v)}
+          style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showSuivi ? '#6366f1' : '#e2e8f0'), background: showSuivi ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showSuivi ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', width: 140, textAlign: 'center' }}
+        >
+          {showSuivi ? 'Masquer suivi' : 'Afficher suivi'}
+        </button>
         {!showTriTypes ? (
           <button type="button" style={st.btnTri} onClick={() => setShowTriTypes(true)}>Trier</button>
         ) : (
@@ -333,6 +333,12 @@ export default function SortieScolaire() {
         )}
       </div>
 
+      {showSuivi && (
+        <div style={{ marginTop: 16 }}>
+          <SuiviProfClasse sorties={sortiesOnglet} classes={classes} profs={profs} />
+        </div>
+      )}
+
       <div style={{ marginTop: 16 }}>
         <SuiviTable
           sorties={sortiesOnglet}
@@ -342,12 +348,6 @@ export default function SortieScolaire() {
           onToggleApprouve={toggleApprouve}
         />
       </div>
-
-      {showSuivi && (
-        <div style={{ marginTop: 24 }}>
-          <SuiviProfClasse sorties={sortiesOnglet} classes={classes} profs={profs} />
-        </div>
-      )}
 
       {/* Form popup */}
       {showForm && (
@@ -609,6 +609,14 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
   );
 }
 
+const shortProfName = (fullName) => {
+  const parts = fullName.trim().split(' ');
+  if (parts.length < 2) return fullName;
+  const surname = parts[parts.length - 1];
+  const shortSurname = surname.includes('-') ? surname.split('-')[0] : surname;
+  return [...parts.slice(0, -1), shortSurname].join(' ');
+};
+
 function SuiviProfClasse({ sorties, classes, profs }) {
   const [showUnassignedProfs, setShowUnassignedProfs] = useState(false);
   const [showUnassignedClasses, setShowUnassignedClasses] = useState(false);
@@ -657,12 +665,12 @@ function SuiviProfClasse({ sorties, classes, profs }) {
   };
   const chipClasseStyle = {
     display: 'inline-block',
-    width: 140,
-    padding: '4px 10px',
+    width: 80,
+    padding: '3px 6px',
     borderRadius: 999,
     background: '#eef2ff',
     color: '#3730a3',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
     textAlign: 'center',
     whiteSpace: 'nowrap',
@@ -699,7 +707,7 @@ function SuiviProfClasse({ sorties, classes, profs }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {profsList.map(([nom, count]) => (
                 <span key={nom} style={chipProfStyle}>
-                  {nom} ({count})
+                  {shortProfName(nom)} ({count})
                 </span>
               ))}
             </div>
