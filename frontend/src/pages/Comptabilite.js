@@ -128,6 +128,7 @@ export default function Comptabilite() {
   const [commandeLignes, setCommandeLignes] = useState([]);
   const [ligneForm, setLigneForm] = useState({ article: '', quantite: 1 });
   const [statutsLocaux, setStatutsLocaux] = useState({});
+  const [remarquesOuvertes, setRemarquesOuvertes] = useState({});
   const [ligneArticleVal, setLigneArticleVal] = useState('');
 
   // Liste de prix sub-tab
@@ -696,6 +697,7 @@ export default function Comptabilite() {
     setLigneArticleVal('');
     setCommandeLignes([]);
     setStatutsLocaux({});
+    setRemarquesOuvertes({});
     setShowCommandePopup(true);
     try {
       const res = await axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers });
@@ -1184,43 +1186,50 @@ export default function Comptabilite() {
                           <th style={cmdTh}>Article</th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 70 }}>Qté</th>
                           <th style={cmdTh}>Référence</th>
-                          <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Prix unit.</th>
-                          <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Total</th>
-                          <th style={{ ...cmdTh, width: 120 }}>Remarques</th>
+                          <th style={{ ...cmdTh, textAlign: 'right', width: 100 }}>Prix unit.</th>
+                          <th style={{ ...cmdTh, textAlign: 'right', width: 100 }}>Total</th>
+                          <th style={{ ...cmdTh, textAlign: 'center', width: 36 }}></th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 80 }}></th>
                           <th style={{ ...cmdTh, width: 36 }}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {commandeLignes.length === 0 && (
-                          <tr><td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucun article. Ajoutez-en un ci-dessus.</td></tr>
+                          <tr><td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucun article. Ajoutez-en un ci-dessus.</td></tr>
                         )}
-                        {commandeLignes.map((ligne, i) => (
-                          <tr key={ligne.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={styles.td}>{ligne.article}</td>
-                            <td style={{ ...styles.td, textAlign: 'center' }}>
-                              <input
-                                type="number" min="1"
-                                defaultValue={ligne.quantite}
-                                style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 60, textAlign: 'center', boxSizing: 'border-box' }}
-                                onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
-                              />
-                            </td>
-                            <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
-                            <td style={{ ...styles.td, textAlign: 'right' }}>{ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
-                            <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{ligne.prix_unitaire ? (Number(ligne.prix_unitaire) * (parseInt(ligne.quantite) || 1)).toFixed(2) + ' CHF' : '—'}</td>
-                            <td style={{ ...styles.td, width: 120, maxWidth: 120 }}>
-                              <input
-                                style={{ ...styles.input, padding: '4px 8px', fontSize: 12, width: '100%', boxSizing: 'border-box' }}
-                                defaultValue={ligne.remarques || ''}
-                                onBlur={e => changerRemarqueLigne(ligne, e.target.value)}
-                                placeholder="Remarques..."
-                              />
-                            </td>
-                            <td style={{ ...styles.td, textAlign: 'center' }}>
-                              {(() => {
-                                const statut = statutsLocaux[ligne.id] ?? ligne.statut;
-                                return (
+                        {commandeLignes.map((ligne, i) => {
+                          const statut = statutsLocaux[ligne.id] ?? ligne.statut;
+                          const remarqueOuverte = !!remarquesOuvertes[ligne.id];
+                          const hasRemarque = !!(ligne.remarques && ligne.remarques.trim());
+                          const rowBg = i % 2 === 0 ? 'white' : '#fafafa';
+                          return (
+                            <React.Fragment key={ligne.id}>
+                              <tr style={{ background: rowBg, borderBottom: remarqueOuverte ? 'none' : '1px solid #f1f5f9' }}>
+                                <td style={styles.td}>{ligne.article}</td>
+                                <td style={{ ...styles.td, textAlign: 'center' }}>
+                                  <input type="number" min="1" defaultValue={ligne.quantite}
+                                    style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 60, textAlign: 'center', boxSizing: 'border-box' }}
+                                    onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
+                                  />
+                                </td>
+                                <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
+                                <td style={{ ...styles.td, textAlign: 'right' }}>
+                                  <input type="number" step="0.01" min="0" defaultValue={ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) : ''}
+                                    placeholder="0.00"
+                                    style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 80, textAlign: 'right', boxSizing: 'border-box' }}
+                                    onBlur={e => { const p = parseFloat(e.target.value) || null; axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, prix_unitaire: p }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); }}
+                                  />
+                                </td>
+                                <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                                  {ligne.prix_unitaire ? (Number(ligne.prix_unitaire) * (parseInt(ligne.quantite) || 1)).toFixed(2) : '—'}
+                                </td>
+                                <td style={{ ...styles.td, textAlign: 'center' }}>
+                                  <button onClick={() => setRemarquesOuvertes(prev => ({ ...prev, [ligne.id]: !prev[ligne.id] }))} title="Remarque"
+                                    style={{ padding: 4, border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none' }}>
+                                    <svg width={16} height={16} viewBox="0 0 24 24" fill={hasRemarque ? '#6366f1' : '#cbd5e1'}><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
+                                  </button>
+                                </td>
+                                <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'valide' ? null : 'valide')} title="Validé"
                                       style={{ padding: 5, border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9', transition: 'background 0.1s' }}>
@@ -1231,23 +1240,35 @@ export default function Comptabilite() {
                                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={statut === 'refuse' ? '#dc2626' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                     </button>
                                   </div>
-                                );
-                              })()}
-                            </td>
-                            <td style={{ ...styles.td, textAlign: 'center' }}>
-                              <button style={styles.btnDelete} onClick={() => supprimerLigne(ligne.id)} title="Supprimer">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                                </td>
+                                <td style={{ ...styles.td, textAlign: 'center' }}>
+                                  <button style={styles.btnDelete} onClick={() => supprimerLigne(ligne.id)} title="Supprimer">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                  </button>
+                                </td>
+                              </tr>
+                              {remarqueOuverte && (
+                                <tr style={{ background: rowBg, borderBottom: '1px solid #f1f5f9' }}>
+                                  <td colSpan={8} style={{ padding: '4px 12px 10px' }}>
+                                    <textarea
+                                      style={{ ...styles.input, width: '100%', minHeight: 64, resize: 'vertical', fontSize: 12, boxSizing: 'border-box' }}
+                                      defaultValue={ligne.remarques || ''}
+                                      placeholder="Saisir une remarque..."
+                                      onBlur={e => changerRemarqueLigne(ligne, e.target.value)}
+                                    />
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                         {commandeLignes.length > 0 && (() => {
                           const total = commandeLignes.reduce((acc, l) => acc + (parseFloat(l.prix_unitaire) || 0) * (parseInt(l.quantite) || 0), 0);
                           return (
                             <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
                               <td colSpan={3} style={{ ...styles.td, fontWeight: 700, color: '#334155' }}>Total</td>
-                              <td style={{ ...styles.td, textAlign: 'right', color: '#64748b' }}></td>
-                              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
+                              <td style={{ ...styles.td }}></td>
+                              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{total > 0 ? total.toFixed(2) : '—'}</td>
                               <td colSpan={3}></td>
                             </tr>
                           );
