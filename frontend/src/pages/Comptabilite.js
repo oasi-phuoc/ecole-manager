@@ -1232,12 +1232,18 @@ export default function Comptabilite() {
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'valide' ? null : 'valide')} title="Validé"
-                                      style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9', color: statut === 'valide' ? '#16a34a' : '#94a3b8' }}>
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                      style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9' }}>
+                                      <svg width={16} height={16} viewBox="0 0 24 24">
+                                        <path fillRule="evenodd" fill={statut === 'valide' ? '#16a34a' : '#cbd5e1'} d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                                        <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                                      </svg>
                                     </button>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'refuse' ? null : 'refuse')} title="Refusé"
-                                      style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9', color: statut === 'refuse' ? '#dc2626' : '#94a3b8' }}>
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                      style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9' }}>
+                                      <svg width={16} height={16} viewBox="0 0 24 24">
+                                        <path fillRule="evenodd" fill={statut === 'refuse' ? '#dc2626' : '#cbd5e1'} d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                                        <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
+                                      </svg>
                                     </button>
                                   </div>
                                 </td>
