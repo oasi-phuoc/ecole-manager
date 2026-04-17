@@ -273,10 +273,50 @@ const supprimerCommande = async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
+// ===== COMMANDES LIGNES =====
+const getLignesCommande = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM commandes_lignes WHERE commande_id=$1 ORDER BY created_at ASC', [req.params.id]);
+    res.json(r.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const ajouterLigneCommande = async (req, res) => {
+  const { article, quantite, ref, prix_unitaire, remarques, statut } = req.body;
+  if (!article) return res.status(400).json({ message: 'article est requis' });
+  try {
+    const r = await pool.query(
+      'INSERT INTO commandes_lignes (commande_id, article, quantite, ref, prix_unitaire, remarques, statut) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [req.params.id, article, quantite || 1, ref || null, prix_unitaire || null, remarques || null, statut || 'en_attente']
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const modifierLigneCommande = async (req, res) => {
+  const { article, quantite, ref, prix_unitaire, remarques, statut } = req.body;
+  try {
+    const r = await pool.query(
+      'UPDATE commandes_lignes SET article=$1, quantite=$2, ref=$3, prix_unitaire=$4, remarques=$5, statut=$6 WHERE id=$7 AND commande_id=$8 RETURNING *',
+      [article, quantite || 1, ref || null, prix_unitaire || null, remarques || null, statut || 'en_attente', req.params.ligneId, req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Ligne non trouvée' });
+    res.json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const supprimerLigneCommande = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM commandes_lignes WHERE id=$1 AND commande_id=$2', [req.params.ligneId, req.params.id]);
+    res.json({ message: 'Ligne supprimée' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
 module.exports = {
   getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques,
   getMateriels, creerMateriel, modifierMateriel, supprimerMateriel,
   getFactureRef, getOrCreateFactureRef,
   getFacturesValidations, toggleFactureValidation,
   getCommandes, creerCommande, modifierCommande, supprimerCommande,
+  getLignesCommande, ajouterLigneCommande, modifierLigneCommande, supprimerLigneCommande,
 };

@@ -125,6 +125,9 @@ export default function Comptabilite() {
   const [commandeEdit, setCommandeEdit] = useState(null);
   const [commandeForm, setCommandeForm] = useState({ article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
   const [commandeDetail, setCommandeDetail] = useState(null);
+  const [commandeLignes, setCommandeLignes] = useState([]);
+  const [ligneForm, setLigneForm] = useState({ article: '', quantite: 1 });
+  const [ligneArticleVal, setLigneArticleVal] = useState('');
 
   // Liste de prix sub-tab
   const [prixOnglet, setPrixOnglet] = useState('ecolage');
@@ -686,20 +689,56 @@ export default function Comptabilite() {
     } catch (e) { alert('Erreur lors de la création'); }
   };
 
-  const ouvrirCommandePopup = (cmd = null) => {
+  const ouvrirCommandePopup = async (cmd) => {
     setCommandeEdit(cmd);
-    setCommandeForm(cmd ? { article: cmd.article || '', quantite: cmd.quantite || 1, fournisseur: cmd.fournisseur || '', prix_unitaire: cmd.prix_unitaire || '', statut: cmd.statut || 'en_attente', remarques: cmd.remarques || '', date_commande: cmd.date_commande ? cmd.date_commande.slice(0, 10) : '' } : { article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '', date_commande: '' });
+    setLigneForm({ article: '', quantite: 1 });
+    setLigneArticleVal('');
+    setCommandeLignes([]);
     setShowCommandePopup(true);
+    try {
+      const res = await axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers });
+      setCommandeLignes(res.data || []);
+    } catch {}
   };
 
-  const sauvegarderCommande = async () => {
+  const fermerCommandePopup = () => { setShowCommandePopup(false); setCommandeEdit(null); setCommandeLignes([]); setLigneForm({ article: '', quantite: 1 }); setLigneArticleVal(''); };
+
+  const ajouterLigne = async () => {
+    if (!ligneArticleVal.trim() || !ligneForm.quantite) return;
+    const match = materiels.find(m => m.nom.toLowerCase() === ligneArticleVal.trim().toLowerCase());
+    const payload = {
+      article: ligneArticleVal.trim(),
+      quantite: ligneForm.quantite,
+      ref: match?.ref || null,
+      prix_unitaire: match?.prix || null,
+    };
     try {
-      if (commandeEdit) {
-        await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id, commandeForm, { headers });
-      }
-      setShowCommandePopup(false);
-      chargerCommandes();
-    } catch (e) { alert('Erreur lors de la sauvegarde'); }
+      const res = await axios.post(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes', payload, { headers });
+      setCommandeLignes(prev => [...prev, res.data]);
+      setLigneArticleVal('');
+      setLigneForm({ article: '', quantite: 1 });
+    } catch { alert('Erreur lors de l\'ajout'); }
+  };
+
+  const supprimerLigne = async (ligneId) => {
+    try {
+      await axios.delete(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligneId, { headers });
+      setCommandeLignes(prev => prev.filter(l => l.id !== ligneId));
+    } catch { alert('Erreur lors de la suppression'); }
+  };
+
+  const changerStatutLigne = async (ligne, statut) => {
+    try {
+      const res = await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, statut }, { headers });
+      setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? res.data : l));
+    } catch {}
+  };
+
+  const changerRemarqueLigne = async (ligne, remarques) => {
+    try {
+      const res = await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, remarques }, { headers });
+      setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? res.data : l));
+    } catch {}
   };
 
   const supprimerCommande = async (id) => {
@@ -1064,76 +1103,118 @@ export default function Comptabilite() {
               </div>
           </div>
 
-          {/* Popup détail commande */}
-          {commandeDetail && (
-            <div style={styles.overlay} onClick={() => setCommandeDetail(null)}>
-              <div style={{ ...styles.modal, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{commandeDetail.numero_commande || '—'}</h3>
-                  <button onClick={() => setCommandeDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
-                </div>
-                {[
-                  ['Article', commandeDetail.article],
-                  ['Quantité', commandeDetail.quantite],
-                  ['Fournisseur', commandeDetail.fournisseur || '—'],
-                  ['Prix unitaire', commandeDetail.prix_unitaire ? Number(commandeDetail.prix_unitaire).toFixed(2) + ' CHF' : '—'],
-                  ['Montant total', ((parseFloat(commandeDetail.prix_unitaire) || 0) * (parseInt(commandeDetail.quantite) || 0)).toFixed(2) + ' CHF'],
-                  ['Statut', { en_attente: 'En attente', commande: 'Commandé', recu: 'Reçu' }[commandeDetail.statut] || commandeDetail.statut],
-                  ['Remarques', commandeDetail.remarques || '—'],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>{k}</span>
-                    <span style={{ color: '#1e293b' }}>{v}</span>
+          {/* Popup modifier commande */}
+          {showCommandePopup && commandeEdit && (() => {
+            const allMateriels = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
+            const STATUTS_LIGNE = [
+              { key: 'en_attente', label: 'En attente', bg: '#f1f5f9', color: '#64748b' },
+              { key: 'valide',     label: 'Validé',     bg: '#dcfce7', color: '#16a34a' },
+              { key: 'refuse',     label: 'Refusé',     bg: '#fee2e2', color: '#dc2626' },
+            ];
+            return (
+              <div style={styles.overlay} onClick={fermerCommandePopup}>
+                <div style={{ ...styles.modal, maxWidth: 820, width: '95vw' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{commandeEdit.numero_commande || '—'}</h3>
+                    <button onClick={fermerCommandePopup} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Popup nouvelle commande */}
-          {showCommandePopup && (
-            <div style={styles.overlay} onClick={() => setShowCommandePopup(false)}>
-              <div style={{ ...styles.modal, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ margin: '0 0 18px', fontSize: 16, fontWeight: 700 }}>Modifier la commande</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div>
-                    <label style={styles.label}>Article *</label>
-                    <input style={styles.input} value={commandeForm.article} onChange={e => setCommandeForm(f => ({ ...f, article: e.target.value }))} placeholder="Nom du matériel..." />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={styles.label}>Quantité</label>
-                      <input style={styles.input} type="number" min="1" value={commandeForm.quantite} onChange={e => setCommandeForm(f => ({ ...f, quantite: e.target.value }))} />
+                  {/* Ligne d'ajout */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={styles.label}>Article *</label>
+                      <input
+                        style={styles.input}
+                        list="cmd-materiels-list"
+                        value={ligneArticleVal}
+                        onChange={e => setLigneArticleVal(e.target.value)}
+                        placeholder="Nom de l'article..."
+                        autoComplete="off"
+                        onKeyDown={e => e.key === 'Enter' && ajouterLigne()}
+                      />
+                      <datalist id="cmd-materiels-list">
+                        {allMateriels.map(m => <option key={m.id} value={m.nom} />)}
+                      </datalist>
                     </div>
-                    <div>
-                      <label style={styles.label}>Prix unitaire (CHF)</label>
-                      <input style={styles.input} type="number" step="0.05" min="0" value={commandeForm.prix_unitaire} onChange={e => setCommandeForm(f => ({ ...f, prix_unitaire: e.target.value }))} placeholder="0.00" />
+                    <div style={{ width: 90, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={styles.label}>Quantité *</label>
+                      <input
+                        style={styles.input}
+                        type="number" min="1"
+                        value={ligneForm.quantite}
+                        onChange={e => setLigneForm(f => ({ ...f, quantite: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && ajouterLigne()}
+                      />
                     </div>
+                    <button
+                      style={{ ...styles.btnAjouter, height: 38, alignSelf: 'flex-end', opacity: ligneArticleVal.trim() && ligneForm.quantite ? 1 : 0.45 }}
+                      disabled={!ligneArticleVal.trim() || !ligneForm.quantite}
+                      onClick={ajouterLigne}>
+                      + Ajouter
+                    </button>
                   </div>
-                  <div>
-                    <label style={styles.label}>Fournisseur</label>
-                    <input style={styles.input} value={commandeForm.fournisseur} onChange={e => setCommandeForm(f => ({ ...f, fournisseur: e.target.value }))} placeholder="Nom du fournisseur..." />
+
+                  {/* Tableau des lignes */}
+                  <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e8eaf6' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ background: '#6366f1', color: 'white' }}>
+                          <th style={cmdTh}>Article</th>
+                          <th style={{ ...cmdTh, textAlign: 'center', width: 70 }}>Qté</th>
+                          <th style={cmdTh}>Référence</th>
+                          <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Prix unit.</th>
+                          <th style={cmdTh}>Remarques</th>
+                          <th style={{ ...cmdTh, textAlign: 'center', width: 200 }}>Statut</th>
+                          <th style={{ ...cmdTh, width: 36 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commandeLignes.length === 0 && (
+                          <tr><td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucun article. Ajoutez-en un ci-dessus.</td></tr>
+                        )}
+                        {commandeLignes.map((ligne, i) => (
+                          <tr key={ligne.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={styles.td}>{ligne.article}</td>
+                            <td style={{ ...styles.td, textAlign: 'center' }}>{ligne.quantite}</td>
+                            <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
+                            <td style={{ ...styles.td, textAlign: 'right' }}>{ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
+                            <td style={{ ...styles.td, maxWidth: 180 }}>
+                              <input
+                                style={{ ...styles.input, padding: '4px 8px', fontSize: 12, width: '100%', boxSizing: 'border-box' }}
+                                defaultValue={ligne.remarques || ''}
+                                onBlur={e => changerRemarqueLigne(ligne, e.target.value)}
+                                placeholder="Remarques..."
+                              />
+                            </td>
+                            <td style={{ ...styles.td, textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                                {STATUTS_LIGNE.map(st => (
+                                  <button key={st.key}
+                                    onClick={() => changerStatutLigne(ligne, st.key)}
+                                    style={{ padding: '3px 8px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: ligne.statut === st.key ? st.bg : '#f1f5f9', color: ligne.statut === st.key ? st.color : '#94a3b8', fontFamily: 'inherit', transition: 'all 0.1s' }}>
+                                    {st.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                            <td style={{ ...styles.td, textAlign: 'center' }}>
+                              <button style={styles.btnDelete} onClick={() => supprimerLigne(ligne.id)} title="Supprimer">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div>
-                    <label style={styles.label}>Statut</label>
-                    <select style={styles.input} value={commandeForm.statut} onChange={e => setCommandeForm(f => ({ ...f, statut: e.target.value }))}>
-                      <option value="en_attente">En attente</option>
-                      <option value="commande">Commandé</option>
-                      <option value="recu">Reçu</option>
-                    </select>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                    <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>Fermer</button>
                   </div>
-                  <div>
-                    <label style={styles.label}>Remarques</label>
-                    <textarea style={{ ...styles.input, minHeight: 70, resize: 'vertical' }} value={commandeForm.remarques} onChange={e => setCommandeForm(f => ({ ...f, remarques: e.target.value }))} placeholder="Notes, références..." />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                  <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={() => setShowCommandePopup(false)}>Annuler</button>
-                  <button style={{ ...styles.btnAjouter }} onClick={sauvegarderCommande}>Enregistrer</button>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </>
       )}
 
