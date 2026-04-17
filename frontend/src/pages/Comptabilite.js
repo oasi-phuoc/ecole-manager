@@ -127,6 +127,7 @@ export default function Comptabilite() {
   const [commandeDetail, setCommandeDetail] = useState(null);
   const [commandeLignes, setCommandeLignes] = useState([]);
   const [ligneForm, setLigneForm] = useState({ article: '', quantite: 1 });
+  const [statutsLocaux, setStatutsLocaux] = useState({});
   const [ligneArticleVal, setLigneArticleVal] = useState('');
 
   // Liste de prix sub-tab
@@ -694,6 +695,7 @@ export default function Comptabilite() {
     setLigneForm({ article: '', quantite: 1 });
     setLigneArticleVal('');
     setCommandeLignes([]);
+    setStatutsLocaux({});
     setShowCommandePopup(true);
     try {
       const res = await axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers });
@@ -737,11 +739,8 @@ export default function Comptabilite() {
     } catch { alert('Erreur lors de la suppression'); }
   };
 
-  const changerStatutLigne = async (ligne, statut) => {
-    try {
-      const res = await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, statut }, { headers });
-      setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? res.data : l));
-    } catch {}
+  const changerStatutLigne = (ligne, statut) => {
+    setStatutsLocaux(prev => ({ ...prev, [ligne.id]: statut }));
   };
 
   const changerRemarqueLigne = async (ligne, remarques) => {
@@ -1116,10 +1115,6 @@ export default function Comptabilite() {
           {/* Popup modifier commande */}
           {showCommandePopup && commandeEdit && (() => {
             const allMateriels = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
-            const STATUTS_LIGNE = [
-              { key: 'valide',  label: 'Validé',  bg: '#dcfce7', color: '#16a34a' },
-              { key: 'refuse',  label: 'Refusé',  bg: '#fee2e2', color: '#dc2626' },
-            ];
             return (
               <div style={styles.overlay} onClick={fermerCommandePopup}>
                 <div style={{ ...styles.modal, maxWidth: 1100, width: '95vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
@@ -1191,7 +1186,7 @@ export default function Comptabilite() {
                           <th style={cmdTh}>Référence</th>
                           <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Prix unit.</th>
                           <th style={cmdTh}>Remarques</th>
-                          <th style={{ ...cmdTh, textAlign: 'center', width: 200 }}>Statut</th>
+                          <th style={{ ...cmdTh, textAlign: 'center', width: 80 }}></th>
                           <th style={{ ...cmdTh, width: 36 }}></th>
                         </tr>
                       </thead>
@@ -1221,15 +1216,21 @@ export default function Comptabilite() {
                               />
                             </td>
                             <td style={{ ...styles.td, textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                                {STATUTS_LIGNE.map(st => (
-                                  <button key={st.key}
-                                    onClick={() => changerStatutLigne(ligne, st.key)}
-                                    style={{ padding: '3px 8px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: ligne.statut === st.key ? st.bg : '#f1f5f9', color: ligne.statut === st.key ? st.color : '#94a3b8', fontFamily: 'inherit', transition: 'all 0.1s' }}>
-                                    {st.label}
-                                  </button>
-                                ))}
-                              </div>
+                              {(() => {
+                                const statut = statutsLocaux[ligne.id] ?? ligne.statut;
+                                return (
+                                  <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                    <button onClick={() => changerStatutLigne(ligne, statut === 'valide' ? null : 'valide')} title="Validé"
+                                      style={{ padding: 5, border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9', transition: 'background 0.1s' }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={statut === 'valide' ? '#16a34a' : '#94a3b8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </button>
+                                    <button onClick={() => changerStatutLigne(ligne, statut === 'refuse' ? null : 'refuse')} title="Refusé"
+                                      style={{ padding: 5, border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9', transition: 'background 0.1s' }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={statut === 'refuse' ? '#dc2626' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td style={{ ...styles.td, textAlign: 'center' }}>
                               <button style={styles.btnDelete} onClick={() => supprimerLigne(ligne.id)} title="Supprimer">
@@ -1244,7 +1245,16 @@ export default function Comptabilite() {
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
                     <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>Annuler</button>
-                    <button style={{ ...styles.btnAjouter }} onClick={() => { chargerCommandes(); fermerCommandePopup(); }}>Sauvegarder</button>
+                    <button style={{ ...styles.btnAjouter }} onClick={async () => {
+                      const saves = Object.entries(statutsLocaux).map(([id, statut]) => {
+                        const ligne = commandeLignes.find(l => String(l.id) === String(id));
+                        if (!ligne) return Promise.resolve();
+                        return axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + id, { ...ligne, statut }, { headers }).catch(() => {});
+                      });
+                      await Promise.all(saves);
+                      chargerCommandes();
+                      fermerCommandePopup();
+                    }}>Sauvegarder</button>
                   </div>
                 </div>
               </div>
