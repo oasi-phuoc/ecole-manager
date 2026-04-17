@@ -1239,6 +1239,16 @@ export default function Comptabilite() {
                             </td>
                           </tr>
                         ))}
+                        {commandeLignes.length > 0 && (() => {
+                          const total = commandeLignes.reduce((acc, l) => acc + (parseFloat(l.prix_unitaire) || 0) * (parseInt(l.quantite) || 0), 0);
+                          return (
+                            <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                              <td colSpan={3} style={{ ...styles.td, fontWeight: 700, color: '#334155' }}>Total</td>
+                              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
+                              <td colSpan={3}></td>
+                            </tr>
+                          );
+                        })()}
                       </tbody>
                     </table>
                   </div>
