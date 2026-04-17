@@ -1093,12 +1093,16 @@ export default function Comptabilite() {
                           <td style={styles.td}>{dateStr}</td>
                           <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
                           <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            <button style={styles.btnEdit} onClick={() => ouvrirCommandePopup(cmd)} title="Modifier">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </button>
-                            <button style={styles.btnDelete} onClick={() => supprimerCommande(cmd.id)} title="Supprimer">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                            </button>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                              <button onClick={() => ouvrirCommandePopup(cmd)} title="Modifier"
+                                style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              </button>
+                              <button onClick={() => supprimerCommande(cmd.id)} title="Supprimer"
+                                style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                              </button>
+                            </div>
                           </td>
                           <td style={{ ...styles.td, textAlign: 'center', width: 48 }}>
                             <button onClick={() => toggleCommandeValide(cmd)} title={cmd.valide ? 'Validé' : 'Non validé'}
@@ -1186,7 +1190,7 @@ export default function Comptabilite() {
                           <th style={cmdTh}>Article</th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 70 }}>Qté</th>
                           <th style={cmdTh}>Référence</th>
-                          <th style={{ ...cmdTh, textAlign: 'right', width: 100 }}>Prix unit.</th>
+                          <th style={{ ...cmdTh, textAlign: 'center', width: 100 }}>Prix</th>
                           <th style={{ ...cmdTh, textAlign: 'right', width: 100 }}>Total</th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 36 }}></th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 80 }}></th>
@@ -1248,8 +1252,9 @@ export default function Comptabilite() {
                                   </div>
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
-                                  <button style={styles.btnDelete} onClick={() => supprimerLigne(ligne.id)} title="Supprimer">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                  <button onClick={() => supprimerLigne(ligne.id)} title="Supprimer"
+                                    style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                   </button>
                                 </td>
                               </tr>
