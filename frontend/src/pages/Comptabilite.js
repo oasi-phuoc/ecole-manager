@@ -1175,7 +1175,14 @@ export default function Comptabilite() {
                         {commandeLignes.map((ligne, i) => (
                           <tr key={ligne.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
                             <td style={styles.td}>{ligne.article}</td>
-                            <td style={{ ...styles.td, textAlign: 'center' }}>{ligne.quantite}</td>
+                            <td style={{ ...styles.td, textAlign: 'center' }}>
+                              <input
+                                type="number" min="1"
+                                defaultValue={ligne.quantite}
+                                style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 60, textAlign: 'center', boxSizing: 'border-box' }}
+                                onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
+                              />
+                            </td>
                             <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
                             <td style={{ ...styles.td, textAlign: 'right' }}>{ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
                             <td style={{ ...styles.td, maxWidth: 180 }}>
