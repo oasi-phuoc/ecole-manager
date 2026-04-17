@@ -845,6 +845,6 @@ const s = {
   badgePrimary:{background:'#e0e7ff',color:'#3730a3',padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:600},
   badgeActive:{background:'#d1fae5',color:'#065f46',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
   badgeInactive:{background:'#fee2e2',color:'#991b1b',padding:'3px 10px',borderRadius:99,fontSize:11,fontWeight:600,border:'none',cursor:'pointer'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',marginRight:6,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2},
-  btnDel:{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2},
+  btnEdit:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#e0e7ff',color:'#4338ca'},
+  btnDel:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'},
 };

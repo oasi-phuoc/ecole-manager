@@ -253,6 +253,6 @@ const s = {
   tr:{},
   td:{padding:'12px 16px',fontSize:13,color:'#374151',background:'white',borderBottom:'1px solid #f8fafc',verticalAlign:'middle'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8',background:'white'},
-  btnEdit:{background:'none',border:'none',cursor:'pointer',fontSize:15,marginRight:6,opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2},
-  btnDel:{background:'none',border:'none',cursor:'pointer',fontSize:15,opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2},
+  btnEdit:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#e0e7ff',color:'#4338ca'},
+  btnDel:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'},
 };

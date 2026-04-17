@@ -1071,44 +1071,39 @@ export default function Comptabilite() {
                       <th style={cmdTh}>Date</th>
                       <th style={{ ...cmdTh, textAlign: 'right' }}>Montant total</th>
                       <th style={{ ...cmdTh, textAlign: 'center' }}></th>
-                      <th style={{ ...cmdTh, textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {commandes.length === 0 && (
-                      <tr><td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucune commande enregistrée.</td></tr>
+                      <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucune commande enregistrée.</td></tr>
                     )}
                     {commandes.map((cmd, i) => {
-                      const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0));
+                      const montant = parseFloat(cmd.montant_total) || 0;
                       const dateStr = cmd.date_commande ? new Date(cmd.date_commande).toLocaleDateString('fr-CH') : '—';
                       return (
                         <tr key={cmd.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ ...styles.td, textAlign: 'center', width: 40 }}>
-                            <button onClick={() => setCommandeDetail(cmd)} title="Détail"
-                              style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#3730a3' }}>
+                            <button onClick={() => ouvrirCommandePopup(cmd)} title="Détail / Modifier"
+                              style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#3730a3' }}>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
                           <td style={{ ...styles.td, fontWeight: 600 }}>{cmd.numero_commande || '—'}</td>
                           <td style={styles.td}>{dateStr}</td>
-                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
-                          <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                              <button onClick={() => ouvrirCommandePopup(cmd)} title="Modifier"
-                                style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                              </button>
-                              <button onClick={() => supprimerCommande(cmd.id)} title="Supprimer"
-                                style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{montant > 0 ? montant.toFixed(2) + ' CHF' : '—'}</td>
+                          <td style={{ ...styles.td, textAlign: 'center', width: 90 }}>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
+                              {!cmd.valide && (
+                                <button onClick={() => supprimerCommande(cmd.id)} title="Supprimer"
+                                  style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                </button>
+                              )}
+                              <button onClick={() => toggleCommandeValide(cmd)} title={cmd.valide ? 'Validé' : 'Non validé'}
+                                style={{ padding: 5, background: cmd.valide ? '#dcfce7' : '#e2e8f0', color: cmd.valide ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width={16} height={16} viewBox="0 0 24 24"><path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/></svg>
                               </button>
                             </div>
-                          </td>
-                          <td style={{ ...styles.td, textAlign: 'center', width: 48 }}>
-                            <button onClick={() => toggleCommandeValide(cmd)} title={cmd.valide ? 'Validé' : 'Non validé'}
-                              style={{ padding: 5, background: cmd.valide ? '#dcfce7' : '#e2e8f0', color: cmd.valide ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden><path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/></svg>
-                            </button>
                           </td>
                         </tr>
                       );
@@ -1121,16 +1116,20 @@ export default function Comptabilite() {
           {/* Popup modifier commande */}
           {showCommandePopup && commandeEdit && (() => {
             const allMateriels = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
+            const readOnly = !!commandeEdit.valide;
             return (
               <div style={styles.overlay} onClick={fermerCommandePopup}>
                 <div style={{ ...styles.modal, maxWidth: 1100, width: '95vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Commande — {commandeEdit.numero_commande || '—'}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Commande — {commandeEdit.numero_commande || '—'}</h3>
+                      {readOnly && <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: 99 }}>Validée — lecture seule</span>}
+                    </div>
                     <button onClick={fermerCommandePopup} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
                   </div>
 
                   {/* Ligne d'ajout */}
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-end' }}>
+                  {!readOnly && <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-end' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <label style={styles.label}>Article *</label>
                       <input
@@ -1180,7 +1179,7 @@ export default function Comptabilite() {
                       onClick={ajouterLigne}>
                       + Ajouter
                     </button>
-                  </div>
+                  </div>}
 
                   {/* Tableau des lignes */}
                   <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e8eaf6' }}>
@@ -1211,7 +1210,7 @@ export default function Comptabilite() {
                               <tr style={{ background: rowBg, borderBottom: remarqueOuverte ? 'none' : '1px solid #f1f5f9' }}>
                                 <td style={styles.td}>{ligne.article}</td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
-                                  <input type="number" min="1" defaultValue={ligne.quantite}
+                                  <input type="number" min="1" defaultValue={ligne.quantite} disabled={readOnly}
                                     style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 60, textAlign: 'center', boxSizing: 'border-box' }}
                                     onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
                                   />
@@ -1252,10 +1251,12 @@ export default function Comptabilite() {
                                   </div>
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
-                                  <button onClick={() => supprimerLigne(ligne.id)} title="Supprimer"
-                                    style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                                  </button>
+                                  {!readOnly && (
+                                    <button onClick={() => supprimerLigne(ligne.id)} title="Supprimer"
+                                      style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                               {remarqueOuverte && (
@@ -1289,8 +1290,8 @@ export default function Comptabilite() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-                    <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>Annuler</button>
-                    <button style={{ ...styles.btnAjouter }} onClick={async () => {
+                    <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>{readOnly ? 'Fermer' : 'Annuler'}</button>
+                    {!readOnly && <button style={{ ...styles.btnAjouter }} onClick={async () => {
                       const saves = Object.entries(statutsLocaux).map(([id, statut]) => {
                         const ligne = commandeLignes.find(l => String(l.id) === String(id));
                         if (!ligne) return Promise.resolve();
@@ -1299,7 +1300,7 @@ export default function Comptabilite() {
                       await Promise.all(saves);
                       chargerCommandes();
                       fermerCommandePopup();
-                    }}>Sauvegarder</button>
+                    }}>Sauvegarder</button>}
                   </div>
                 </div>
               </div>
@@ -2025,8 +2026,8 @@ const styles = {
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
   typeBadge: { background: '#eef2ff', color: '#3730a3', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
   statutBadge: { padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 },
-  btnEdit: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, marginRight: 4, opacity: 0.85, color: '#6366f1', display: 'inline-flex', alignItems: 'center', padding: 2 },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: 0.85, color: '#ef4444', display: 'inline-flex', alignItems: 'center', padding: 2 },
+  btnEdit: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' },
+  btnDelete: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' },
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' },
   modal: { background: 'white', padding: 28, borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' },
   modalTitre: { fontSize: 18, fontWeight: 700, marginBottom: 18 },

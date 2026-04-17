@@ -230,7 +230,13 @@ const getOrCreateFactureRef = async (req, res) => {
 // ===== COMMANDES =====
 const getCommandes = async (req, res) => {
   try {
-    const r = await pool.query('SELECT * FROM commandes ORDER BY created_at DESC');
+    const r = await pool.query(`
+      SELECT c.*, COALESCE(SUM(cl.prix_unitaire * cl.quantite), 0) AS montant_total
+      FROM commandes c
+      LEFT JOIN commandes_lignes cl ON cl.commande_id = c.id
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `);
     res.json(r.rows);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };

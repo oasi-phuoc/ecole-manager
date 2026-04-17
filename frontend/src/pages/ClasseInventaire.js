@@ -225,5 +225,5 @@ const s = {
   form: { display: 'grid', gridTemplateColumns: '140px 1.4fr 0.8fr 1fr auto', gap: 8, marginBottom: 12 },
   inp: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' },
   btnAdd: { padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' },
-  btnDel: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.9, color: '#ef4444' },
+  btnDel: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' },
 };
