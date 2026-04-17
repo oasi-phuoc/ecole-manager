@@ -1107,7 +1107,7 @@ export default function Comptabilite() {
           {showCommandePopup && commandeEdit && (() => {
             const allMateriels = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
             const STATUTS_LIGNE = [
-              { key: 'en_attente', label: 'En attente', bg: '#f1f5f9', color: '#64748b' },
+              { key: 'en_attente', label: 'En attente', bg: '#e0e7ff', color: '#4338ca' },
               { key: 'valide',     label: 'Validé',     bg: '#dcfce7', color: '#16a34a' },
               { key: 'refuse',     label: 'Refusé',     bg: '#fee2e2', color: '#dc2626' },
             ];
