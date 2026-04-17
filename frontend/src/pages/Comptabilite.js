@@ -1225,8 +1225,8 @@ export default function Comptabilite() {
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <button onClick={() => setRemarquesOuvertes(prev => ({ ...prev, [ligne.id]: !prev[ligne.id] }))} title="Remarque"
-                                    style={{ padding: 4, border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none' }}>
-                                    <svg width={16} height={16} viewBox="0 0 24 24" fill={hasRemarque ? '#6366f1' : '#cbd5e1'}><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
+                                    style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: hasRemarque ? '#eef2ff' : '#f1f5f9', color: hasRemarque ? '#4338ca' : '#94a3b8' }}>
+                                    <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
                                   </button>
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
