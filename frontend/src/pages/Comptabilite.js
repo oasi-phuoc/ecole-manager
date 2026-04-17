@@ -705,18 +705,21 @@ export default function Comptabilite() {
 
   const ajouterLigne = async () => {
     if (!ligneArticleVal.trim() || !ligneForm.quantite) return;
-    const match = materiels.find(m => m.nom.toLowerCase() === ligneArticleVal.trim().toLowerCase());
+    const allMats = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
+    const matchByRef = ligneForm.ref ? allMats.find(m => m.ref && m.ref.toLowerCase() === ligneForm.ref.trim().toLowerCase()) : null;
+    const matchByNom = allMats.find(m => m.nom.toLowerCase() === ligneArticleVal.trim().toLowerCase());
+    const match = matchByRef || matchByNom;
     const payload = {
       article: ligneArticleVal.trim(),
       quantite: ligneForm.quantite,
-      ref: match?.ref || null,
+      ref: match?.ref || ligneForm.ref || null,
       prix_unitaire: match?.prix || null,
     };
     try {
       const res = await axios.post(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes', payload, { headers });
       setCommandeLignes(prev => [...prev, res.data]);
       setLigneArticleVal('');
-      setLigneForm({ article: '', quantite: 1 });
+      setLigneForm({ article: '', quantite: 1, ref: '' });
     } catch { alert('Erreur lors de l\'ajout'); }
   };
 
@@ -1126,7 +1129,10 @@ export default function Comptabilite() {
                         style={styles.input}
                         list="cmd-materiels-list"
                         value={ligneArticleVal}
-                        onChange={e => setLigneArticleVal(e.target.value)}
+                        onChange={e => {
+                          setLigneArticleVal(e.target.value);
+                          setLigneForm(f => ({ ...f, ref: '' }));
+                        }}
                         placeholder="Nom de l'article..."
                         autoComplete="off"
                         onKeyDown={e => e.key === 'Enter' && ajouterLigne()}
@@ -1134,6 +1140,21 @@ export default function Comptabilite() {
                       <datalist id="cmd-materiels-list">
                         {allMateriels.map(m => <option key={m.id} value={m.nom} />)}
                       </datalist>
+                    </div>
+                    <div style={{ width: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={styles.label}>Référence</label>
+                      <input
+                        style={styles.input}
+                        value={ligneForm.ref || ''}
+                        onChange={e => {
+                          const ref = e.target.value;
+                          setLigneForm(f => ({ ...f, ref }));
+                          const match = allMateriels.find(m => m.ref && m.ref.toLowerCase() === ref.trim().toLowerCase());
+                          if (match) setLigneArticleVal(match.nom);
+                        }}
+                        placeholder="Réf..."
+                        onKeyDown={e => e.key === 'Enter' && ajouterLigne()}
+                      />
                     </div>
                     <div style={{ width: 90, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <label style={styles.label}>Quantité *</label>
