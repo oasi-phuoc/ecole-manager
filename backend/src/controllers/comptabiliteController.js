@@ -227,9 +227,51 @@ const getOrCreateFactureRef = async (req, res) => {
   }
 };
 
+// ===== COMMANDES =====
+const getCommandes = async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM commandes ORDER BY created_at DESC');
+    res.json(r.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const creerCommande = async (req, res) => {
+  const { article, quantite, fournisseur, prix_unitaire, statut, remarques } = req.body;
+  if (!article) return res.status(400).json({ message: 'article est requis' });
+  try {
+    const r = await pool.query(
+      'INSERT INTO commandes (article, quantite, fournisseur, prix_unitaire, statut, remarques) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [article, quantite || 1, fournisseur || null, prix_unitaire || null, statut || 'en_attente', remarques || null]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const modifierCommande = async (req, res) => {
+  const { id } = req.params;
+  const { article, quantite, fournisseur, prix_unitaire, statut, remarques, valide } = req.body;
+  try {
+    const r = await pool.query(
+      'UPDATE commandes SET article=$1, quantite=$2, fournisseur=$3, prix_unitaire=$4, statut=$5, remarques=$6, valide=$7 WHERE id=$8 RETURNING *',
+      [article, quantite || 1, fournisseur || null, prix_unitaire || null, statut || 'en_attente', remarques || null, valide || false, id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ message: 'Commande non trouvée' });
+    res.json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
+const supprimerCommande = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM commandes WHERE id=$1', [id]);
+    res.json({ message: 'Commande supprimée' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
+};
+
 module.exports = {
   getPaiements, creerPaiement, modifierPaiement, supprimerPaiement, getStatistiques,
   getMateriels, creerMateriel, modifierMateriel, supprimerMateriel,
   getFactureRef, getOrCreateFactureRef,
-  getFacturesValidations, toggleFactureValidation
+  getFacturesValidations, toggleFactureValidation,
+  getCommandes, creerCommande, modifierCommande, supprimerCommande,
 };

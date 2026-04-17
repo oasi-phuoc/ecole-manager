@@ -1007,9 +1007,6 @@ export default function Comptabilite() {
       {onglet === 'commandes' && (
         <>
           <div style={{ ...styles.tabContent, marginTop: 8 }}>
-            {commandes.length === 0 ? (
-              <div style={styles.vide}>Aucune commande enregistrée.</div>
-            ) : (
               <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #e8eaf6' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
@@ -1023,6 +1020,9 @@ export default function Comptabilite() {
                     </tr>
                   </thead>
                   <tbody>
+                    {commandes.length === 0 && (
+                      <tr><td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucune commande enregistrée.</td></tr>
+                    )}
                     {commandes.map((cmd, i) => {
                       const total = ((parseFloat(cmd.prix_unitaire) || 0) * (parseInt(cmd.quantite) || 0));
                       const num = String(cmd.id).padStart(4, '0');
@@ -1057,7 +1057,6 @@ export default function Comptabilite() {
                   </tbody>
                 </table>
               </div>
-            )}
           </div>
 
           {/* Popup détail commande */}
