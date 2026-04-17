@@ -1113,7 +1113,7 @@ export default function Comptabilite() {
             ];
             return (
               <div style={styles.overlay} onClick={fermerCommandePopup}>
-                <div style={{ ...styles.modal, maxWidth: 820, width: '95vw' }} onClick={e => e.stopPropagation()}>
+                <div style={{ ...styles.modal, maxWidth: 1100, width: '95vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{commandeEdit.numero_commande || '—'}</h3>
                     <button onClick={fermerCommandePopup} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
