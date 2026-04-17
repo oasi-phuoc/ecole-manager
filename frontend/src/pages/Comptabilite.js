@@ -705,6 +705,13 @@ export default function Comptabilite() {
 
   const ajouterLigne = async () => {
     if (!ligneArticleVal.trim() || !ligneForm.quantite) return;
+    const articleNorm = ligneArticleVal.trim().toLowerCase();
+    const refNorm = ligneForm.ref?.trim().toLowerCase();
+    const doublon = commandeLignes.some(l =>
+      l.article.toLowerCase() === articleNorm ||
+      (refNorm && l.ref && l.ref.toLowerCase() === refNorm)
+    );
+    if (doublon) { alert('Cet article ou cette référence est déjà dans la commande.'); return; }
     const allMats = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
     const matchByRef = ligneForm.ref ? allMats.find(m => m.ref && m.ref.toLowerCase() === ligneForm.ref.trim().toLowerCase()) : null;
     const matchByNom = allMats.find(m => m.nom.toLowerCase() === ligneArticleVal.trim().toLowerCase());
