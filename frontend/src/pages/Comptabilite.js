@@ -1232,12 +1232,12 @@ export default function Comptabilite() {
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'valide' ? null : 'valide')} title="Validé"
-                                      style={{ padding: 5, border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9', transition: 'background 0.1s' }}>
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={statut === 'valide' ? '#16a34a' : '#94a3b8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                      style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9', color: statut === 'valide' ? '#16a34a' : '#94a3b8' }}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                     </button>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'refuse' ? null : 'refuse')} title="Refusé"
-                                      style={{ padding: 5, border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9', transition: 'background 0.1s' }}>
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={statut === 'refuse' ? '#dc2626' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                      style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9', color: statut === 'refuse' ? '#dc2626' : '#94a3b8' }}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                     </button>
                                   </div>
                                 </td>
