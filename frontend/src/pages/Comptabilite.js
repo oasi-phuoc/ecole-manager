@@ -1185,7 +1185,8 @@ export default function Comptabilite() {
                           <th style={{ ...cmdTh, textAlign: 'center', width: 70 }}>Qté</th>
                           <th style={cmdTh}>Référence</th>
                           <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Prix unit.</th>
-                          <th style={cmdTh}>Remarques</th>
+                          <th style={{ ...cmdTh, textAlign: 'right', width: 90 }}>Total</th>
+                          <th style={{ ...cmdTh, width: 120 }}>Remarques</th>
                           <th style={{ ...cmdTh, textAlign: 'center', width: 80 }}></th>
                           <th style={{ ...cmdTh, width: 36 }}></th>
                         </tr>
@@ -1207,7 +1208,8 @@ export default function Comptabilite() {
                             </td>
                             <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
                             <td style={{ ...styles.td, textAlign: 'right' }}>{ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) + ' CHF' : '—'}</td>
-                            <td style={{ ...styles.td, maxWidth: 180 }}>
+                            <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{ligne.prix_unitaire ? (Number(ligne.prix_unitaire) * (parseInt(ligne.quantite) || 1)).toFixed(2) + ' CHF' : '—'}</td>
+                            <td style={{ ...styles.td, width: 120, maxWidth: 120 }}>
                               <input
                                 style={{ ...styles.input, padding: '4px 8px', fontSize: 12, width: '100%', boxSizing: 'border-box' }}
                                 defaultValue={ligne.remarques || ''}
@@ -1244,6 +1246,7 @@ export default function Comptabilite() {
                           return (
                             <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
                               <td colSpan={3} style={{ ...styles.td, fontWeight: 700, color: '#334155' }}>Total</td>
+                              <td style={{ ...styles.td, textAlign: 'right', color: '#64748b' }}></td>
                               <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{total > 0 ? total.toFixed(2) + ' CHF' : '—'}</td>
                               <td colSpan={3}></td>
                             </tr>
