@@ -840,7 +840,7 @@ export default function Comptabilite() {
                         <tr key={c.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
                           <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                             <button type="button" style={{ ...styles.btnDetailClasse, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }} onClick={() => openFacturesClasse(c.id)} title="Voir les factures de la classe">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
                           <td style={{ ...styles.tdMateriel, ...styles.tdClasseListe, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', width: 1 }}>{c.nom}</td>
@@ -932,7 +932,7 @@ export default function Comptabilite() {
                         <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={{ ...styles.tdMateriel, textAlign: 'center', whiteSpace: 'nowrap', width: 1 }}>
                             <button style={styles.btnDetailClasse} onClick={() => ouvrirFactureImprime(e)} title="Détail facture">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
                           <td style={styles.tdMateriel}>{e.nom || '—'}</td>
@@ -953,7 +953,7 @@ export default function Comptabilite() {
                               onClick={() => toggleValidationFacture(e.id)}
                               title={valide ? 'Facture validée' : 'Facture non validée'}
                               style={{ padding: 4, borderRadius: 8, border: 'none', cursor: 'pointer', background: valide ? '#dcfce7' : '#f1f5f9', color: valide ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width={16} height={16} viewBox="0 0 24 24">
+                              <svg width={15} height={15} viewBox="0 0 24 24">
                                 <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
                                 <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
                               </svg>
@@ -1033,10 +1033,10 @@ export default function Comptabilite() {
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                     <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)} title="Modifier">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)} title="Supprimer">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </td>
                   <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1044,7 +1044,7 @@ export default function Comptabilite() {
                       onClick={() => toggleValidePaiement(p)}
                       title={valide ? 'Paiement validé' : 'Paiement non validé'}
                       style={{ padding: 4, borderRadius: 8, border: 'none', cursor: 'pointer', background: valide ? '#dcfce7' : '#f1f5f9', color: valide ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width={16} height={16} viewBox="0 0 24 24">
+                      <svg width={15} height={15} viewBox="0 0 24 24">
                         <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
                         <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
                       </svg>
@@ -1085,7 +1085,7 @@ export default function Comptabilite() {
                           <td style={{ ...styles.td, textAlign: 'center', width: 40 }}>
                             <button onClick={() => ouvrirCommandePopup(cmd)} title="Détail / Modifier"
                               style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#3730a3' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                             </button>
                           </td>
                           <td style={{ ...styles.td, fontWeight: 600 }}>{cmd.numero_commande || '—'}</td>
@@ -1096,12 +1096,12 @@ export default function Comptabilite() {
                               {!cmd.valide && (
                                 <button onClick={() => supprimerCommande(cmd.id)} title="Supprimer"
                                   style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                 </button>
                               )}
                               <button onClick={() => toggleCommandeValide(cmd)} title={cmd.valide ? 'Validé' : 'Non validé'}
                                 style={{ padding: 5, background: cmd.valide ? '#dcfce7' : '#e2e8f0', color: cmd.valide ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width={16} height={16} viewBox="0 0 24 24"><path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/></svg>
+                                <svg width={15} height={15} viewBox="0 0 24 24"><path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/></svg>
                               </button>
                             </div>
                           </td>
@@ -1229,21 +1229,21 @@ export default function Comptabilite() {
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <button onClick={() => setRemarquesOuvertes(prev => ({ ...prev, [ligne.id]: !prev[ligne.id] }))} title="Remarque"
                                     style={{ padding: 6, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: hasRemarque ? '#eef2ff' : '#f1f5f9', color: hasRemarque ? '#4338ca' : '#94a3b8' }}>
-                                    <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
+                                    <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
                                   </button>
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'valide' ? null : 'valide')} title="Validé"
                                       style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'valide' ? '#dcfce7' : '#f1f5f9' }}>
-                                      <svg width={16} height={16} viewBox="0 0 24 24">
+                                      <svg width={15} height={15} viewBox="0 0 24 24">
                                         <path fillRule="evenodd" fill={statut === 'valide' ? '#16a34a' : '#cbd5e1'} d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
                                         <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
                                       </svg>
                                     </button>
                                     <button onClick={() => changerStatutLigne(ligne, statut === 'refuse' ? null : 'refuse')} title="Refusé"
                                       style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: statut === 'refuse' ? '#fee2e2' : '#f1f5f9' }}>
-                                      <svg width={16} height={16} viewBox="0 0 24 24">
+                                      <svg width={15} height={15} viewBox="0 0 24 24">
                                         <path fillRule="evenodd" fill={statut === 'refuse' ? '#dc2626' : '#cbd5e1'} d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
                                         <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" d="M8 8l8 8M16 8l-8 8"/>
                                       </svg>
@@ -1254,7 +1254,7 @@ export default function Comptabilite() {
                                   {!readOnly && (
                                     <button onClick={() => supprimerLigne(ligne.id)} title="Supprimer"
                                       style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}>
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                     </button>
                                   )}
                                 </td>
@@ -1360,10 +1360,10 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                       <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
                       <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     </td>
                   </tr>
@@ -1398,10 +1398,10 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                       <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
                       <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     </td>
                   </tr>
@@ -1436,10 +1436,10 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
                       <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
                       <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     </td>
                   </tr>

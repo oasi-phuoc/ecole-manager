@@ -2150,9 +2150,9 @@ export default function TCF() {
     // Légendes à droite, alignées en bas du cadre
     const lx = chartRight + 18;
     const ly = chartBottom - 64;
-    parts.push(`<rect x="${lx}" y="${ly}" width="14" height="14" fill="#60a5fa" rx="2"/>`);
+    parts.push(`<rect x="${lx}" y="${ly}" width="15" height="15" fill="#60a5fa" rx="2"/>`);
     parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
-    parts.push(`<rect x="${lx}" y="${ly + 28}" width="14" height="14" fill="#34d399" rx="2"/>`);
+    parts.push(`<rect x="${lx}" y="${ly + 28}" width="15" height="15" fill="#34d399" rx="2"/>`);
     parts.push(`<text x="${lx + 22}" y="${ly + 39}" font-size="12" fill="#334155" font-weight="700">${label2}</text>`);
     if (showTrend && series.length > 1) {
       parts.push(`<line x1="${lx}" y1="${ly + 58}" x2="${lx + 18}" y2="${ly + 58}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);

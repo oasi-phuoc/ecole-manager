@@ -503,11 +503,11 @@ export default function Presences() {
           <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'nowrap',width:240}}>
               <button onClick={allerJourPrecedent} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,flex:'0 0 20px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
               </button>
               <input style={{...s.inp,flex:'1 1 auto',minWidth:0}} type="date" value={date} onChange={e => setDate(e.target.value)} />
               <button onClick={allerJourSuivant} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,flex:'0 0 20px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
               </button>
             </div>
             <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
@@ -541,7 +541,7 @@ export default function Presences() {
           <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
             <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'nowrap'}}>
               <button onClick={allerMoisPrecedent} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
               </button>
               <select
                 style={{...s.inp, minWidth:170, textTransform:'capitalize', cursor:'pointer'}}
@@ -557,7 +557,7 @@ export default function Presences() {
                 ))}
               </select>
               <button onClick={allerMoisSuivant} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
               </button>
             </div>
             <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
@@ -629,13 +629,13 @@ export default function Presences() {
                   <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
                   <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH, maxWidth: COL_PRENOM_WIDTH }} />
                   <col style={{ width: 74, minWidth: 74, maxWidth: 74 }} />
-                  {PERIODES.map(i => <col key={`col-p-${i}`} style={{ width: 64, minWidth: 64, maxWidth: 64 }} />)}
+                  {PERIODES.map(i => <col key={`col-p-${i}`} style={{ width: 46, minWidth: 46, maxWidth: 46 }} />)}
                   <col style={{ width: 'auto' }} />
                 </colgroup>
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
-                    <th style={{ ...s.th, borderRadius: '12px 0 0 0', background: '#f8fafc', boxShadow: 'none' }} rowSpan={2}>NOM</th>
-                    <th style={{ ...s.th, background: '#f8fafc', boxShadow: 'none' }} rowSpan={2}>Prénom</th>
+                    <th style={{ ...s.th, borderRadius: '12px 0 0 0', background: '#f8fafc', boxShadow: 'none', textAlign: 'left' }} rowSpan={2}>NOM</th>
+                    <th style={{ ...s.th, background: '#f8fafc', boxShadow: 'none', textAlign: 'left' }} rowSpan={2}>Prénom</th>
                     <th style={{ ...s.th, fontSize: 13, textAlign: 'center', background: '#f8fafc', boxShadow: 'none' }} rowSpan={2} title="Appliquer à toutes les périodes">Tout</th>
                     <th style={{ ...s.th, background: '#dbeafe', color: '#1e40af', boxShadow: 'none' }} colSpan={4}>Matin</th>
                     <th style={{ ...s.th, background: '#fef3c7', color: '#92400e', boxShadow: 'none' }} colSpan={4}>Après-midi</th>
@@ -645,11 +645,12 @@ export default function Presences() {
                     {PERIODES.map(i => (
                       <th key={i} style={{
                         ...s.th,
+                        padding: i === 4 ? '10px 4px 10px 3px' : i === 5 ? '10px 3px 10px 4px' : '10px 3px',
                         background: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#f1f5f9' : isBloque(i) ? '#f1f5f9' : i <= 4 ? '#eff6ff' : '#fffbeb',
                         color: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#cbd5e1' : isBloque(i) ? '#cbd5e1' : i <= 4 ? '#3b82f6' : '#f59e0b',
                         fontSize: 11,
                         boxShadow: 'none',
-                      }}>P{i <= 4 ? i : i - 4}</th>
+                      }}>P{i}</th>
                     ))}
                   </tr>
                 </thead>
@@ -700,7 +701,7 @@ export default function Presences() {
                               const bloque = isBloque(i);
                               const val = presences[e.id]?.['p' + i] || '';
                               return (
-                                <td key={i} style={{ ...s.td, padding: '11px 4px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
+                                <td key={i} style={{ ...s.td, padding: i === 4 ? '11px 4px 11px 3px' : i === 5 ? '11px 3px 11px 4px' : '11px 3px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
                                   {bloque ? (
                                     <div style={{ width: 40, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
                                   ) : (
