@@ -548,8 +548,8 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
-            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget','',''].map(h => (
-              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' }}>{h}</th>
+            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget',''].map(h => (
+              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -557,7 +557,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
           {sorties.map((s, i) => {
             const classesNoms = s.classes_noms || [s.classe1, s.classe2].filter(Boolean).join(', ') || '—';
             return (
-              <tr key={s.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <td style={sc.td}>{classesNoms}</td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap' }}>{s.date_sortie ? new Date(s.date_sortie).toLocaleDateString('fr-CH') : '—'}</td>
                 <td style={{ ...sc.td, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.destination || '—'}</td>
@@ -573,32 +573,32 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                 </td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                  <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button style={sc.btnDel} onClick={() => onDelete(s.id)} title="Supprimer">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6l-1 14H6L5 6"/>
-                      <path d="M10 11v6M14 11v6"/>
-                      <path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
-                </td>
-                <td style={{ ...sc.td, textAlign: 'center' }}>
-                  <button
-                    onClick={() => onToggleApprouve(s)}
-                    title={s.approuve ? 'Approuvé' : 'Non approuvé'}
-                    style={{ padding: 5, background: s.approuve ? '#dcfce7' : '#e2e8f0', color: s.approuve ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <svg width={15} height={15} viewBox="0 0 24 24" aria-hidden="true">
-                      <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
-                      <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
-                    </svg>
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                    <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button style={sc.btnDel} onClick={() => onDelete(s.id)} title="Supprimer">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14H6L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V4h6v2"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onToggleApprouve(s)}
+                      title={s.approuve ? 'Approuvé' : 'Non approuvé'}
+                      style={{ padding: 5, background: s.approuve ? '#dcfce7' : '#e2e8f0', color: s.approuve ? '#16a34a' : '#64748b', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <svg width={15} height={15} viewBox="0 0 24 24" aria-hidden="true">
+                        <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                        <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
@@ -828,7 +828,7 @@ const sc = {
   chip: { padding: '2px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: '#e0e7ff', color: '#3730a3' },
   activites: { marginTop: 10, fontSize: 12, color: '#64748b', whiteSpace: 'pre-wrap', borderTop: '1px solid #f1f5f9', paddingTop: 8 },
   actions: { display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' },
-  td: { padding: '8px 10px', borderRight: '1px solid #f1f5f9', color: '#1e293b' },
+  td: { padding: '8px 10px', color: '#1e293b' },
   btnPrint: { padding: '4px 8px', background: '#e0e7ff', color: '#3730a3', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   btnEdit: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' },
   btnDel: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' },

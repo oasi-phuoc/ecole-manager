@@ -65,8 +65,9 @@ export default function DocumentsAdministratifs() {
     setLoading(false);
   };
 
-  const activeTab = searchParams.get('tab') || 'accueil';
-  const isAccueil = activeTab === 'accueil';
+  const activeTab = searchParams.get('tab') || 'administratifs';
+  useEffect(() => { if (activeTab === 'accueil') setSearchParams({ tab: 'administratifs' }, { replace: true }); }, [activeTab]);
+  const isAccueil = false;
 
   useEffect(() => {
     const nextCategory = TAB_TO_CATEGORY[activeTab];
@@ -224,22 +225,27 @@ export default function DocumentsAdministratifs() {
     <div style={{ padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
       <div style={{...stickyPageChrome(), marginBottom:0}}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' }}>Documents</h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a', flex: 1 }}>Documents</h2>
+        {isAdmin && (
+          <button onClick={ouvrirAjout} style={{ padding: '8px 14px', border: 'none', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            + Ajouter
+          </button>
+        )}
       </div>
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <input
             value={rechercheDocs}
             onChange={(e) => setRechercheDocs(e.target.value)}
-            placeholder={activeTab === 'pedagogiques' ? 'Rechercher un document pédagogique...' : isAccueil ? 'Rechercher un document (tous les sous-menus)...' : 'Rechercher un document...'}
-            style={{ width: '100%', maxWidth: 460, padding: '10px 12px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b' }}
+            placeholder="Rechercher un document..."
+            style={{ width: 280, padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 14, color: '#1e293b', fontFamily: 'inherit' }}
           />
           {activeTab === 'pedagogiques' && (
             !showNiveauxFiltres ? (
               <button
                 type="button"
                 onClick={() => setShowNiveauxFiltres(true)}
-                style={{ padding: '7px 16px', borderRadius: 17, border: '1px solid #d8b4fe', background: 'white', color: '#7e22ce', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' }}
+                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
               >
                 Trier
               </button>
@@ -263,13 +269,13 @@ export default function DocumentsAdministratifs() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 derniers documents modifiés/ajoutés</div>
           {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
             <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
           ))}
         </div>
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' }}>
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 documents les plus utilisés</div>
           {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
             <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
@@ -278,21 +284,7 @@ export default function DocumentsAdministratifs() {
       </div>
 
       {(!isAccueil || rechercheDocs.trim()) && (
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderTopLeftRadius: 0, borderRadius: '12px', padding: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 14, color: '#475569' }}>
-            {isAccueil ? 'Résultats de recherche (tous les sous-menus)' : 'Documents classés par ordre alphabétique'}
-          </div>
-          {isAdmin && (
-            <button
-              onClick={ouvrirAjout}
-              style={{ padding: '8px 14px', border: 'none', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 700, cursor: 'pointer' }}
-            >
-              + Ajouter un document
-            </button>
-          )}
-        </div>
-
+      <div>
         {msg && (
           <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontSize: 13, fontWeight: 600 }}>
             {msg}
@@ -312,40 +304,32 @@ export default function DocumentsAdministratifs() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
-                <input
-                  value={designation}
-                  onChange={e => setDesignation(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155', boxSizing: 'border-box' }}
-                  placeholder="Ex: Attestation de suivi TCF"
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Catégorie</div>
-                <select
-                  value={categorie}
-                  onChange={e => { setCategorie(e.target.value); if (e.target.value !== 'Pédagogiques') setSousCategorie(''); }}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155' }}
-                >
-                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
+              <input
+                value={designation}
+                onChange={e => setDesignation(e.target.value)}
+                required
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155', boxSizing: 'border-box' }}
+                placeholder="Ex: Attestation de suivi TCF"
+              />
             </div>
 
-            {categorie === 'Pédagogiques' && niveauxDB.length > 0 && (
+            {activeTab === 'pedagogiques' && niveauxDB.length > 0 && (
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau</div>
-                <select
-                  value={sousCategorie}
-                  onChange={e => setSousCategorie(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155' }}
-                >
-                  <option value="">— Tous niveaux —</option>
-                  {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
-                </select>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau *</div>
+                <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+                  {[{ id: '', label: 'Tous les niveaux' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => setSousCategorie(n.id)}
+                      style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: sousCategorie === n.id ? '#6366f1' : 'transparent', cursor: 'pointer', fontWeight: sousCategorie === n.id ? 700 : 600, color: sousCategorie === n.id ? 'white' : '#6d28d9', fontSize: 13, fontFamily: 'inherit', outline: 'none', whiteSpace: 'nowrap' }}
+                    >
+                      {n.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -401,52 +385,74 @@ export default function DocumentsAdministratifs() {
         ) : documentsTries.length === 0 ? (
           <div style={{ color: '#94a3b8', padding: 12 }}>Aucun document</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {documentsTries.map(doc => (
-              <div key={doc.id} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', background: '#fff' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{doc.designation}</div>
-                      {(() => {
-                        const cat = doc.categorie || 'Administratifs';
-                        const style = CATEGORY_BADGE_STYLES[cat] || { bg: '#e2e8f0', color: '#334155' };
-                        return (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 999, background: style.bg, color: style.color, fontSize: 11, fontWeight: 700 }}>
-                            {cat}
-                          </span>
-                        );
-                      })()}
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                {activeTab === 'pedagogiques' ? (
+                  <>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Nom</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Niveau</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>VISA</th>
+                  </>
+                ) : (
+                  <>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Désignation</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Fichier</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Ajouté par</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
+                  </>
+                )}
+                <th style={{ textAlign: 'right', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documentsTries.map((doc, i) => {
+                const visa = [doc.auteur_prenom, doc.auteur_nom].filter(Boolean).map(s => s.charAt(0).toUpperCase()).join('');
+                return (
+                <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? 'white' : '#f8fafc' }}>
+                  {activeTab === 'pedagogiques' ? (
+                    <>
+                      <td style={{ padding: '10px 10px', color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
+                      <td style={{ padding: '10px 10px', color: '#6366f1', fontSize: 12, fontWeight: 600 }}>{doc.sous_categorie || '—'}</td>
+                      <td style={{ padding: '10px 10px' }}>
+                        {visa ? <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: '#e0e7ff', color: '#4338ca', fontSize: 11, fontWeight: 700 }}>{visa}</span> : '—'}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
+                      <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{doc.nom_fichier}{doc.taille ? ' · ' + Math.round(doc.taille / 1024) + ' KB' : ''}</td>
+                      <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{(doc.auteur_nom || '')} {(doc.auteur_prenom || '')}</td>
+                      <td style={{ padding: '10px 10px', color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                    </>
+                  )}
+                  <td style={{ padding: '10px 10px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button onClick={() => visualiser(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }} title="Visualiser">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                      </button>
+                      <button onClick={() => telecharger(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#dbeafe', color: '#1d4ed8' }} title="Télécharger">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                      </button>
+                      {isAdmin && (
+                        <>
+                          <button onClick={() => ouvrirEdition(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }} title="Modifier">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button onClick={() => handleDelete(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#ef4444' }} title="Supprimer">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          </button>
+                        </>
+                      )}
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                      {doc.nom_fichier} • {(doc.taille ? Math.round(doc.taille / 1024) + ' KB' : 'taille inconnue')}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
-                      Uploadé par {(doc.auteur_nom || '')} {(doc.auteur_prenom || '')} • {new Date(doc.created_at).toLocaleDateString('fr-CH')}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                    <button onClick={() => visualiser(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Visualiser">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
-                    </button>
-                    <button onClick={() => telecharger(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1d4ed8' }} title="Télécharger">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-                    </button>
-                    {isAdmin && (
-                      <>
-                        <button onClick={() => ouvrirEdition(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Modifier">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button onClick={() => handleDelete(doc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Supprimer">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </td>
+                </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
       )}

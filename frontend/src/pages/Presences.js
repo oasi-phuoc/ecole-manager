@@ -387,10 +387,16 @@ export default function Presences() {
   };
 
   const setCell = (eleveId, periode, val) => {
-    setPresences(prev => ({
-      ...prev,
-      [eleveId]: { ...prev[eleveId], ['p' + periode]: val }
-    }));
+    setPresences(prev => {
+      const row = { ...prev[eleveId] };
+      if (val === 'R') {
+        // Max 1 retard par demi-journée : efface l'ancien R de la même demi-journée
+        const demijour = periode <= 4 ? [1,2,3,4] : [5,6,7,8];
+        demijour.forEach(p => { if (row['p' + p] === 'R') row['p' + p] = ''; });
+      }
+      row['p' + periode] = val;
+      return { ...prev, [eleveId]: row };
+    });
   };
 
   const setRemarque = (eleveId, val) => {
@@ -469,9 +475,20 @@ export default function Presences() {
   const setToutEleve = (eleveId, val) => {
     setPresences(prev => {
       const row = { ...prev[eleveId] };
-      PERIODES.forEach(i => {
-        if (!isBloque(i)) row['p' + i] = val;
-      });
+      if (val === 'R') {
+        // R : première période de chaque demi-journée active = R, les autres = P
+        [[1,2,3,4],[5,6,7,8]].forEach(dj => {
+          const actives = dj.filter(i => !isBloque(i));
+          if (actives.length > 0) {
+            row['p' + actives[0]] = 'R';
+            actives.slice(1).forEach(i => { row['p' + i] = 'P'; });
+          }
+        });
+      } else {
+        PERIODES.forEach(i => {
+          if (!isBloque(i)) row['p' + i] = val;
+        });
+      }
       return { ...prev, [eleveId]: row };
     });
   };
@@ -645,7 +662,8 @@ export default function Presences() {
                     {PERIODES.map(i => (
                       <th key={i} style={{
                         ...s.th,
-                        padding: i === 4 ? '10px 4px 10px 3px' : i === 5 ? '10px 3px 10px 4px' : '10px 3px',
+                        padding: i === 1 ? '10px 3px 10px 10px' : i === 4 ? '10px 10px 10px 3px' : i === 5 ? '10px 3px 10px 10px' : i === 8 ? '10px 10px 10px 3px' : '10px 3px',
+                        borderRight: i === 4 ? '2px solid #e2e8f0' : 'none',
                         background: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#f1f5f9' : isBloque(i) ? '#f1f5f9' : i <= 4 ? '#eff6ff' : '#fffbeb',
                         color: (!classeSelectionnee || isWeekend() || isVacance() || !getHoraireJour()) ? '#cbd5e1' : isBloque(i) ? '#cbd5e1' : i <= 4 ? '#3b82f6' : '#f59e0b',
                         fontSize: 11,
@@ -680,7 +698,7 @@ export default function Presences() {
                     return (
                       <>
                         {eleves.map((e, idx) => (
-                          <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                          <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
                             <td style={{ ...s.td, fontWeight: 800, color: '#0f172a' }}>{e.nom}</td>
                             <td style={{ ...s.td, color: '#374151' }}>{e.prenom}</td>
                             <td style={{ ...s.td, padding: '11px 4px', textAlign: 'center', background: isWeekend() ? '#f1f5f9' : 'transparent' }}>
@@ -701,7 +719,7 @@ export default function Presences() {
                               const bloque = isBloque(i);
                               const val = presences[e.id]?.['p' + i] || '';
                               return (
-                                <td key={i} style={{ ...s.td, padding: i === 4 ? '11px 4px 11px 3px' : i === 5 ? '11px 3px 11px 4px' : '11px 3px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white' }}>
+                                <td key={i} style={{ ...s.td, padding: i === 1 ? '11px 3px 11px 10px' : i === 4 ? '11px 10px 11px 3px' : i === 5 ? '11px 3px 11px 10px' : i === 8 ? '11px 10px 11px 3px' : '11px 3px', textAlign: 'center', background: bloque ? '#f1f5f9' : 'white', borderRight: i === 4 ? '2px solid #e2e8f0' : 'none' }}>
                                   {bloque ? (
                                     <div style={{ width: 40, height: 28, borderRadius: 6, background: '#e2e8f0', margin: '0 auto' }}></div>
                                   ) : (
@@ -760,6 +778,7 @@ export default function Presences() {
               const dateStr = annee+'-'+String(moisNum).padStart(2,'0')+'-'+String(jour).padStart(2,'0');
               const pr = (apercuMois.presences||[]).find(p => String(p.eleve_id)===String(eleve_id) && cleDatePresence(p.date) === dateStr);
               if (!pr) return '';
+              for (let i=1; i<=8; i++) { if (pr['p'+i] === 'R') return 'R'; }
               for (let i=1; i<=8; i++) { if (pr['p'+i]) return pr['p'+i]; }
               return '';
             };
@@ -862,7 +881,7 @@ export default function Presences() {
             </colgroup>
             <thead>
               <tr style={{background:'#6366f1'}}>
-                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Présence réelle','Présence BN'].map((h, hi) => (
+                {['NOM','Prénom','Périodes','Présents','Absents','Retards','Excusés','Congés','Taux','Taux BN'].map((h, hi) => (
                   <th key={h} style={{
                     ...s.th,
                     textAlign: h==='NOM'||h==='Prénom'?'left':'center',
@@ -916,7 +935,7 @@ export default function Presences() {
 const s = {
   inp:{padding:'8px 12px',border:'1px solid #c7d2fe',borderRadius:8,fontSize:13,outline:'none',background:'white'},
   /** Liste classe : même gabarit visuel que les barres de recherche. */
-  selClasse:{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',color:'#1e293b',fontWeight:400,fontSize:14,outline:'none',cursor:'pointer',width:240,fontFamily:'inherit'},
+  selClasse:{height:36,padding:'0 14px',boxSizing:'border-box',borderRadius:8,border:'1px solid #c7d2fe',background:'white',color:'#1e293b',fontWeight:400,fontSize:13,outline:'none',cursor:'pointer',width:240,fontFamily:'inherit'},
   tabSelect:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center'},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   th:{padding:'10px 8px',textAlign:'center',fontSize:12,fontWeight:700,color:'#475569',borderBottom:'none',whiteSpace:'nowrap'},

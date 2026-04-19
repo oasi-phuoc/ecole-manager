@@ -83,6 +83,8 @@ export default function Comptabilite() {
   const retourListeClasses = () => setSearchParams({ tab: 'classes' });
   const [rechercheFactures, setRechercheFactures] = useState('');
   const [recherchePrix, setRecherchePrix] = useState('');
+  const [rechercheCommandes, setRechercheCommandes] = useState('');
+  const [allLignesMap, setAllLignesMap] = useState({});
 
   // Data
   const [paiements, setPaiements] = useState([]);
@@ -225,6 +227,18 @@ export default function Comptabilite() {
     }
     return true;
   });
+  const qCmd = rechercheCommandes.trim().toLowerCase();
+  const commandesFiltrees = qCmd
+    ? commandes.filter(cmd => {
+        if ((cmd.numero_commande || '').toLowerCase().includes(qCmd)) return true;
+        if ((parseFloat(cmd.montant_total) || 0).toFixed(2).includes(qCmd)) return true;
+        return (allLignesMap[cmd.id] || []).some(l =>
+          (l.article || '').toLowerCase().includes(qCmd) ||
+          (l.ref || '').toLowerCase().includes(qCmd)
+        );
+      })
+    : commandes;
+
   const paiementsAffiches = [...paiementsFiltres].sort((a, b) => {
     const na = `${a.prenom || ''} ${a.nom || ''}`.trim();
     const nb = `${b.prenom || ''} ${b.nom || ''}`.trim();
@@ -678,7 +692,18 @@ export default function Comptabilite() {
   const chargerCommandes = async () => {
     try {
       const res = await axios.get(API + '/comptabilite/commandes', { headers });
-      setCommandes(res.data || []);
+      const cmds = res.data || [];
+      setCommandes(cmds);
+      const results = await Promise.all(
+        cmds.map(cmd =>
+          axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers })
+            .then(r => ({ id: cmd.id, lignes: r.data || [] }))
+            .catch(() => ({ id: cmd.id, lignes: [] }))
+        )
+      );
+      const map = {};
+      results.forEach(({ id, lignes }) => { map[id] = lignes; });
+      setAllLignesMap(map);
     } catch { setCommandes([]); }
   };
 
@@ -789,6 +814,9 @@ export default function Comptabilite() {
             <h2 style={styles.titre}>Comptabilité</h2>
             {onglet === 'commandes' && (
               <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={ajouterCommandeInline}>+ Ajouter</button>
+            )}
+            {onglet === 'prix' && ['ecolage', 'scolaire', 'fournitures'].includes(prixOnglet) && (
+              <button type="button" style={{ ...styles.btnAjouter, marginLeft: 'auto' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
             )}
           </>
         )}
@@ -997,12 +1025,11 @@ export default function Comptabilite() {
               <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Émis</th>
               <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap' }}>Date</th>
               <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}></th>
-              <th style={{ ...styles.th, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}></th>
             </tr>
           </thead>
           <tbody>
             {paiementsAffiches.length === 0 ? (
-              <tr><td colSpan="8" style={styles.vide}>Aucun paiement</td></tr>
+              <tr><td colSpan="7" style={styles.vide}>Aucun paiement</td></tr>
             ) : paiementsAffiches.map(p => {
               const PILLS = [
                 { val: 'paye',       label: '✓ Payé',       bg: '#dcfce7', color: '#166534' },
@@ -1032,23 +1059,23 @@ export default function Comptabilite() {
                   <td style={{ ...styles.td, whiteSpace: 'nowrap', color: '#64748b' }}>{p.emis_at ? new Date(p.emis_at).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                    <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)} title="Modifier">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)} title="Supprimer">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                    </button>
-                  </td>
-                  <td style={{ ...styles.td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    <button
-                      onClick={() => toggleValidePaiement(p)}
-                      title={valide ? 'Paiement validé' : 'Paiement non validé'}
-                      style={{ padding: 4, borderRadius: 8, border: 'none', cursor: 'pointer', background: valide ? '#dcfce7' : '#f1f5f9', color: valide ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width={15} height={15} viewBox="0 0 24 24">
-                        <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
-                        <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
-                      </svg>
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button style={styles.btnEdit} onClick={() => ouvrirEdit(p)} title="Modifier">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button style={styles.btnDelete} onClick={() => supprimerPaiement(p.id)} title="Supprimer">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                      <button
+                        onClick={() => toggleValidePaiement(p)}
+                        title={valide ? 'Paiement validé' : 'Paiement non validé'}
+                        style={{ padding: 4, borderRadius: 8, border: 'none', cursor: 'pointer', background: valide ? '#dcfce7' : '#f1f5f9', color: valide ? '#16a34a' : '#9ca3af', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width={15} height={15} viewBox="0 0 24 24">
+                          <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                          <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -1061,6 +1088,9 @@ export default function Comptabilite() {
       {/* ===== COMMANDES ===== */}
       {onglet === 'commandes' && (
         <>
+          <div style={styles.filtersRow}>
+            <input style={styles.tabSearch} placeholder="Rechercher un article, une réf, un montant total..." value={rechercheCommandes} onChange={e => setRechercheCommandes(e.target.value)} />
+          </div>
           <div style={{ ...styles.tabContent, marginTop: 8 }}>
               <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #e8eaf6' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -1074,10 +1104,10 @@ export default function Comptabilite() {
                     </tr>
                   </thead>
                   <tbody>
-                    {commandes.length === 0 && (
-                      <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucune commande enregistrée.</td></tr>
+                    {commandesFiltrees.length === 0 && (
+                      <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{qCmd ? 'Aucun résultat.' : 'Aucune commande enregistrée.'}</td></tr>
                     )}
-                    {commandes.map((cmd, i) => {
+                    {commandesFiltrees.map((cmd, i) => {
                       const montant = parseFloat(cmd.montant_total) || 0;
                       const dateStr = cmd.date_commande ? new Date(cmd.date_commande).toLocaleDateString('fr-CH') : '—';
                       return (
@@ -1359,12 +1389,14 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1397,12 +1429,14 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1435,12 +1469,14 @@ export default function Comptabilite() {
                     <td style={{ ...styles.tdMateriel, textAlign: 'right' }}>{Number(m.rabais || 0).toFixed(2)}%</td>
                     <td style={{ ...styles.tdMateriel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.remarques || ''}>{m.remarques || '—'}</td>
                     <td style={{ ...styles.tdMateriel, textAlign: 'center' }}>
-                      <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <button style={styles.btnEdit} onClick={() => ouvrirFormMateriel(m)} title="Modifier">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteMateriel(m.id)} title="Supprimer">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1449,11 +1485,6 @@ export default function Comptabilite() {
           )}
 
         </div>
-        {['ecolage', 'scolaire', 'fournitures'].includes(prixOnglet) && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 15 }}>
-            <button style={{ ...styles.btnAjouter, padding: '7px 14px', fontSize: '13px' }} onClick={() => ouvrirFormMateriel(null)}>+ Ajouter</button>
-          </div>
-        )}
         <div style={{ display: 'none' }}>
           {/* Facturation classe */}
           {prixOnglet === 'facturation' && (
@@ -1993,10 +2024,10 @@ export default function Comptabilite() {
 
 const styles = {
   page: { padding: '28px 32px', background: '#f8fafc', minHeight: '100%', boxSizing: 'border-box', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" },
-  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' },
+  header: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap', minHeight: 40 },
   btnRetourListe: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569', fontWeight: 600 },
   btnRetour: { padding: '8px 16px', background: 'white', border: '2px solid #e0e0e0', borderRadius: 8, cursor: 'pointer' },
-  titre: { fontSize: 24, fontWeight: 700, flex: 1 },
+  titre: { fontSize: 24, fontWeight: 700, flex: 1, margin: 0 },
   btnAjouter: { padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
   statCard: { background: 'white', padding: '16px 20px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center' },

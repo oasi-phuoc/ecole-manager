@@ -714,7 +714,7 @@ const s = {
   empty: { color: '#94a3b8', fontSize: 15, textAlign: 'center', padding: '40px 0' },
   label: { display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4, marginTop: 14 },
   input: { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', marginBottom: 0, outline: 'none', fontFamily: 'inherit' },
-  select: { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', background: 'white', fontFamily: 'inherit' },
+  select: { width:'100%', height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit' },
   tableWrap: { background: 'white', borderRadius: 14, overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
   thead: { background: '#6366f1' },

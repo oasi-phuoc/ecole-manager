@@ -56,7 +56,6 @@ const PARAMS_ONGLETS = [
 ];
 
 const DOCS_ONGLETS = [
-  { key: 'accueil',        label: 'Accueil',        adminOnly: false },
   { key: 'administratifs', label: 'Administratifs', adminOnly: false },
   { key: 'pedagogiques',   label: 'Pédagogiques',   adminOnly: false },
   { key: 'seances',        label: 'Séances',        adminOnly: false },
@@ -203,7 +202,7 @@ export default function Layout() {
                     if (m.path === '/comptabilite') {
                       navigate('/comptabilite?tab=classes');
                     } else if (m.path === '/documents-administratifs') {
-                      navigate('/documents-administratifs?tab=accueil');
+                      navigate('/documents-administratifs?tab=administratifs');
                     } else if (m.path === '/visite-classes') {
                       navigate('/visite-classes?tab=visite');
                     } else {
@@ -402,7 +401,7 @@ export default function Layout() {
                           if (m.path === '/comptabilite') {
                             navigate('/comptabilite?tab=classes');
                           } else if (m.path === '/documents-administratifs') {
-                            navigate('/documents-administratifs?tab=accueil');
+                            navigate('/documents-administratifs?tab=administratifs');
                           } else if (m.path === '/visite-classes') {
                             navigate('/visite-classes?tab=visite');
                           } else {

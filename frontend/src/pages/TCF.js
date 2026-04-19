@@ -3922,7 +3922,7 @@ const styles = {
   dayToggleOutsideCell: { display: 'flex', justifyContent: 'center' },
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
-  select: { padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 14, outline: 'none', cursor: 'pointer', fontFamily: 'inherit', minWidth: 190 },
+  select: { height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:190 },
   selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit' },
   inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
