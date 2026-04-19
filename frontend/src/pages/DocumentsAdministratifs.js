@@ -44,6 +44,7 @@ export default function DocumentsAdministratifs() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -212,7 +213,7 @@ export default function DocumentsAdministratifs() {
   const visualiser = async (doc) => {
     try {
       const r = await axios.get(API + '/documents-administratifs/' + doc.id + '/telecharger', { headers });
-      window.open(r.data.contenu, '_blank', 'noopener,noreferrer');
+      setDocPreview({ url: r.data.contenu, nom: r.data.nom_fichier || doc.designation });
     } catch (err) {
       setMsg('❌ Erreur prévisualisation');
     }
@@ -390,10 +391,10 @@ export default function DocumentsAdministratifs() {
               <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                 {activeTab === 'pedagogiques' ? (
                   <>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Date</th>
                     <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Nom</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Niveau</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>VISA</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Niveau</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>VISA</th>
                   </>
                 ) : (
                   <>
@@ -403,7 +404,7 @@ export default function DocumentsAdministratifs() {
                     <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
                   </>
                 )}
-                <th style={{ textAlign: 'right', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Actions</th>
+                <th style={{ textAlign: 'right', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -413,19 +414,17 @@ export default function DocumentsAdministratifs() {
                 <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? 'white' : '#f8fafc' }}>
                   {activeTab === 'pedagogiques' ? (
                     <>
-                      <td style={{ padding: '10px 10px', color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
-                      <td style={{ padding: '10px 10px', color: '#6366f1', fontSize: 12, fontWeight: 600 }}>{doc.sous_categorie || '—'}</td>
-                      <td style={{ padding: '10px 10px' }}>
-                        {visa ? <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: '#e0e7ff', color: '#4338ca', fontSize: 11, fontWeight: 700 }}>{visa}</span> : '—'}
-                      </td>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, whiteSpace: 'nowrap', width: 1 }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', width: '100%' }}>{doc.designation}</td>
+                      <td style={{ padding: '10px 10px', color: '#6366f1', fontSize: 12, whiteSpace: 'nowrap', width: 1 }}>{doc.sous_categorie || '—'}</td>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, width: 1, whiteSpace: 'nowrap' }}>{visa || '—'}</td>
                     </>
                   ) : (
                     <>
                       <td style={{ padding: '10px 10px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
                       <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{doc.nom_fichier}{doc.taille ? ' · ' + Math.round(doc.taille / 1024) + ' KB' : ''}</td>
                       <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{(doc.auteur_nom || '')} {(doc.auteur_prenom || '')}</td>
-                      <td style={{ padding: '10px 10px', color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
                     </>
                   )}
                   <td style={{ padding: '10px 10px', textAlign: 'right' }}>
@@ -433,7 +432,7 @@ export default function DocumentsAdministratifs() {
                       <button onClick={() => visualiser(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }} title="Visualiser">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                       </button>
-                      <button onClick={() => telecharger(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#dbeafe', color: '#1d4ed8' }} title="Télécharger">
+                      <button onClick={() => telecharger(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }} title="Télécharger">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
                       </button>
                       {isAdmin && (
@@ -455,6 +454,21 @@ export default function DocumentsAdministratifs() {
           </table>
         )}
       </div>
+      )}
+      {docPreview && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }} onClick={() => setDocPreview(null)}>
+          <div style={{ position: 'relative', width: '90vw', height: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>{docPreview.nom}</span>
+              <button onClick={() => setDocPreview(null)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', padding: '6px 14px', fontWeight: 600, fontSize: 13 }}>✕ Fermer</button>
+            </div>
+            {docPreview.url.match(/^data:image\//i) ? (
+              <img src={docPreview.url} alt={docPreview.nom} style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8, objectFit: 'contain', background: 'white' }} />
+            ) : (
+              <iframe src={docPreview.url} title={docPreview.nom} style={{ width: '100%', flex: 1, borderRadius: 8, border: 'none' }} />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
