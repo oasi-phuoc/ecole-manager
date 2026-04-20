@@ -61,6 +61,7 @@ export default function EmploiDuTemps() {
   const [sousOngletPlanning, setSousOngletPlanning] = useState('classes');
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [sousOngletDisp, setSousOngletDisp] = useState('tous');
+  const [showPoolsFiltresDispo, setShowPoolsFiltresDispo] = useState(false);
   const [profs, setProfs] = useState([]);
   const [classes, setClasses] = useState([]);
   const [matieres, setMatieres] = useState([]);
@@ -97,6 +98,8 @@ export default function EmploiDuTemps() {
   const [modeAffectationRapideClasse, setModeAffectationRapideClasse] = useState(false);
   const [classeRapideId, setClasseRapideId] = useState('');
   const [classeRapideId2, setClasseRapideId2] = useState('');
+  const [sallesDraftMap, setSallesDraftMap] = useState({});
+  const [hasSallesUnsaved, setHasSallesUnsaved] = useState(false);
   const [remarquesDispo, setRemarquesDispo] = useState('');
   const [allDispos, setAllDispos] = useState([]);
   const [rechercheProfDispo, setRechercheProfDispo] = useState('');
@@ -333,7 +336,7 @@ export default function EmploiDuTemps() {
       setPausesParPeriode(clonePausesParPeriode(pausesParPeriodeForm));
       setShowPoolForm(false);
       setPoolEdit(null);
-      setPoolForm({nom:'',site:'',couleur:'#1a73e8',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
+      setPoolForm({nom:'',site:'',couleur:'#6366f1',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
       await chargerTout();
       showToast('Pool sauvegardé.');
     } catch(err) { showToast(err.response?.data?.message || err.message, 'error'); }
@@ -624,7 +627,7 @@ export default function EmploiDuTemps() {
     if (!creneau) return [];
     return classesSallesParCellule(jour, periode);
   };
-  const getClasseAffecteeSalleCellule = (jour, periode, ordre) => {
+  const getClasseAffecteeSalleCelluleSaved = (jour, periode, ordre) => {
     if (!salleSelectionnee) return '';
     const creneau = getCreneauCelluleSalle(jour, periode, ordre);
     if (!creneau) return '';
@@ -637,6 +640,13 @@ export default function EmploiDuTemps() {
       String((c.salle || '').trim()) === String((salleSelectionnee || '').trim())
     );
     return cours ? String(cours.classe_id) : '';
+  };
+  const getClasseAffecteeSalleCellule = (jour, periode, ordre) => {
+    const key = `${jour}|${periode}|${ordre}`;
+    if (Object.prototype.hasOwnProperty.call(sallesDraftMap, key)) {
+      return sallesDraftMap[key] || '';
+    }
+    return getClasseAffecteeSalleCelluleSaved(jour, periode, ordre);
   };
   const getProfAffecteSalleCellule = (jour, periode, ordre, classeId) => {
     if (!classeId) return '';
@@ -659,58 +669,23 @@ export default function EmploiDuTemps() {
       salle: nouvelleSalle || null,
     }, { headers });
   };
-  const handleAffectationSalleChange = async ({ jour, periode, ordre, classeId }) => {
+  const handleAffectationSalleChange = ({ jour, periode, ordre, classeId }) => {
     if (!isAdmin() || !salleSelectionnee) return;
     const creneau = getCreneauCelluleSalle(jour, periode, ordre);
     if (!creneau) return;
-    try {
-      const debut = normaliserHeureCreneau(creneau.heure_debut);
-      const fin = normaliserHeureCreneau(creneau.heure_fin);
-      const coursDuCreneau = coursEmploiDuTemps.filter(c =>
-        c.jour === jour &&
-        normaliserHeureCreneau(c.heure_debut) === debut &&
-        normaliserHeureCreneau(c.heure_fin) === fin
-      );
-      const updates = [];
-      const salleCourante = String((salleSelectionnee || '').trim());
-
-      coursDuCreneau.forEach(c => {
-        const salleDuCours = String((c.salle || '').trim());
-        if (salleDuCours === salleCourante && String(c.classe_id) !== String(classeId || '')) {
-          updates.push(updateCoursSalle(c, null));
-        }
-      });
-
-      if (classeId) {
-        const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classeId));
-        if (!coursClasse) {
-          updates.push(
-            axios.post(API + '/emploi-du-temps', {
-              classe_id: classeId,
-              matiere_id: null,
-              prof_id: null,
-              jour,
-              heure_debut: creneau.heure_debut,
-              heure_fin: creneau.heure_fin,
-              salle: salleSelectionnee,
-            }, { headers })
-          );
-        } else {
-          const salleDuCoursClasse = String((coursClasse.salle || '').trim());
-          if (salleDuCoursClasse !== salleCourante) {
-            updates.push(updateCoursSalle(coursClasse, salleSelectionnee));
-          }
-        }
-      }
-
-      if (updates.length === 0) return;
-      await Promise.all(updates);
-      await chargerTout();
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation de la salle.");
+    const key = `${jour}|${periode}|${ordre}`;
+    const nouvelleValeur = String(classeId || '');
+    const valeurSauvegardee = getClasseAffecteeSalleCelluleSaved(jour, periode, ordre) || '';
+    const next = { ...sallesDraftMap };
+    if (nouvelleValeur === valeurSauvegardee) {
+      delete next[key];
+    } else {
+      next[key] = nouvelleValeur;
     }
+    setSallesDraftMap(next);
+    setHasSallesUnsaved(Object.keys(next).length > 0);
   };
-  const handleAffectationRapideClasse = async () => {
+  const handleAffectationRapideClasse = () => {
     if (!isAdmin()) return;
     if (!salleSelectionnee) {
       alert("Sélectionnez d'abord une salle.");
@@ -732,68 +707,94 @@ export default function EmploiDuTemps() {
       return;
     }
 
+    const nextDraft = { ...sallesDraftMap };
+    let modifications = 0;
+    for (const cr of creneaux) {
+      const classesEligibles = classesSelectionnees.filter(cl => classeAHoraire(cl.id, cr.jour, cr.periode));
+      if (!classesEligibles.length) continue;
+      const classe = classesEligibles[0];
+      const key = `${cr.jour}|${cr.periode}|${cr.ordre}`;
+      const valeurActuelle = Object.prototype.hasOwnProperty.call(nextDraft, key)
+        ? (nextDraft[key] || '')
+        : (getClasseAffecteeSalleCelluleSaved(cr.jour, cr.periode, cr.ordre) || '');
+      const nouvelleValeur = String(classe.id);
+      const valeurSauvegardee = getClasseAffecteeSalleCelluleSaved(cr.jour, cr.periode, cr.ordre) || '';
+      if (valeurActuelle === nouvelleValeur) continue;
+      if (nouvelleValeur === valeurSauvegardee) {
+        delete nextDraft[key];
+      } else {
+        nextDraft[key] = nouvelleValeur;
+      }
+      modifications += 1;
+    }
+    if (modifications === 0) {
+      alert("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).");
+      return;
+    }
+    setSallesDraftMap(nextDraft);
+    setHasSallesUnsaved(Object.keys(nextDraft).length > 0);
+    showToast(`${modifications} changement(s) ajouté(s). Cliquez sur Sauvegarder pour les enregistrer.`, 'info');
+  };
+  const sauvegarderAffectationsSalles = async () => {
+    if (!hasSallesUnsaved || Object.keys(sallesDraftMap).length === 0) {
+      showToast('Aucun changement à sauvegarder.', 'info');
+      return;
+    }
+    if (!salleSelectionnee) {
+      alert("Sélectionnez d'abord une salle.");
+      return;
+    }
     try {
       const salleCourante = String((salleSelectionnee || '').trim());
-      let modifications = 0;
-      let conflitsPriorite = 0;
-      const localCours = [...coursEmploiDuTemps];
-
-      for (const cr of creneaux) {
-        const classesEligibles = classesSelectionnees.filter(cl => classeAHoraire(cl.id, cr.jour, cr.periode));
-        if (!classesEligibles.length) continue;
-        if (classesEligibles.length > 1) conflitsPriorite += 1;
-        const classe = classesEligibles[0]; // priorite a la 1ere liste
-
-        const debut = normaliserHeureCreneau(cr.heure_debut);
-        const fin = normaliserHeureCreneau(cr.heure_fin);
-        const coursDuCreneau = localCours.filter(c =>
-          c.jour === cr.jour &&
+      for (const [key, classeIdStr] of Object.entries(sallesDraftMap)) {
+        const [jour, periode, ordreStr] = key.split('|');
+        const ordre = Number(ordreStr);
+        const creneau = getCreneauCelluleSalle(jour, periode, ordre);
+        if (!creneau) continue;
+        const debut = normaliserHeureCreneau(creneau.heure_debut);
+        const fin = normaliserHeureCreneau(creneau.heure_fin);
+        const coursDuCreneau = coursEmploiDuTemps.filter(c =>
+          c.jour === jour &&
           normaliserHeureCreneau(c.heure_debut) === debut &&
           normaliserHeureCreneau(c.heure_fin) === fin
         );
-
-        const coursSalle = coursDuCreneau.filter(c =>
-          String((c.salle || '').trim()) === salleCourante &&
-          String(c.classe_id) !== String(classe.id)
-        );
-        for (const c of coursSalle) {
-          await updateCoursSalle(c, null);
-          c.salle = null;
-          modifications += 1;
+        for (const c of coursDuCreneau) {
+          const salleDuCours = String((c.salle || '').trim());
+          if (salleDuCours === salleCourante && String(c.classe_id) !== String(classeIdStr || '')) {
+            await updateCoursSalle(c, null);
+          }
         }
-
-        const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classe.id));
-        if (!coursClasse) {
-          const rep = await axios.post(API + '/emploi-du-temps', {
-            classe_id: classe.id,
-            matiere_id: null,
-            prof_id: null,
-            jour: cr.jour,
-            heure_debut: cr.heure_debut,
-            heure_fin: cr.heure_fin,
-            salle: salleSelectionnee,
-          }, { headers });
-          if (rep?.data?.cours) localCours.push(rep.data.cours);
-          modifications += 1;
-          continue;
-        }
-
-        const salleCoursClasse = String((coursClasse.salle || '').trim());
-        if (salleCoursClasse !== salleCourante) {
-          await updateCoursSalle(coursClasse, salleSelectionnee);
-          coursClasse.salle = salleSelectionnee;
-          modifications += 1;
+        if (classeIdStr) {
+          const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classeIdStr));
+          if (!coursClasse) {
+            await axios.post(API + '/emploi-du-temps', {
+              classe_id: Number(classeIdStr),
+              matiere_id: null,
+              prof_id: null,
+              jour,
+              heure_debut: creneau.heure_debut,
+              heure_fin: creneau.heure_fin,
+              salle: salleSelectionnee,
+            }, { headers });
+          } else {
+            const salleDuCoursClasse = String((coursClasse.salle || '').trim());
+            if (salleDuCoursClasse !== salleCourante) {
+              await updateCoursSalle(coursClasse, salleSelectionnee);
+            }
+          }
         }
       }
-
-      if (modifications === 0) {
-        alert("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).");
-        return;
-      }
+      setSallesDraftMap({});
+      setHasSallesUnsaved(false);
       await chargerTout();
+      showToast('Changements sauvegardés.');
     } catch (err) {
-      alert(err.response?.data?.message || err.message || "Erreur lors de l'affectation rapide.");
+      showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des salles.", 'error');
     }
+  };
+  const abandonnerSallesNonSauvegardees = () => {
+    setSallesDraftMap({});
+    setHasSallesUnsaved(false);
   };
   const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
   const creneauxTheoriquesKeys = new Set(
@@ -977,6 +978,9 @@ export default function EmploiDuTemps() {
     if (sousOngletAff === 'branches' && hasBranchesUnsaved) {
       return window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Quitter sans sauvegarder ?");
     }
+    if (sousOngletAff === 'salles' && hasSallesUnsaved) {
+      return window.confirm("Des changements dans Affectations > Salles ne sont pas sauvegardés. Quitter sans sauvegarder ?");
+    }
     return true;
   };
   const abandonnerAffectationsNonSauvegardees = () => {
@@ -1009,6 +1013,9 @@ export default function EmploiDuTemps() {
     }
     if (sousOngletAff === 'branches' && hasBranchesUnsaved) {
       abandonnerBranchesNonSauvegardees();
+    }
+    if (sousOngletAff === 'salles' && hasSallesUnsaved) {
+      abandonnerSallesNonSauvegardees();
     }
   };
   const sauvegarderAffectationsProfs = async () => {
@@ -1677,6 +1684,7 @@ export default function EmploiDuTemps() {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
               if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
+              if (sousOngletAff === 'salles') return sauvegarderAffectationsSalles();
               showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
             }}>Sauvegarder</button>
           </div>
@@ -1744,15 +1752,32 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            <div style={styles.toggleGroup}>
-              {[{id:'tous', label:'Tous'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => (
-                <button key={tab.id}
-                  style={{...styles.toggleBtn,...(sousOngletDisp===tab.id?styles.toggleBtnActif:{})}}
-                  onClick={() => { setSousOngletDisp(tab.id); setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {!showPoolsFiltresDispo ? (
+              <button
+                onClick={() => setShowPoolsFiltresDispo(true)}
+                style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                Trier
+              </button>
+            ) : (
+              <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+                {[{id:'tous', label:'Trier'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => {
+                  const actif = sousOngletDisp === tab.id;
+                  return (
+                    <button key={tab.id}
+                      style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                      onClick={() => {
+                        setSousOngletDisp(tab.id);
+                        setProfSelectionne(null);
+                        setDispos({});
+                        setRemarquesDispo('');
+                        if (tab.id === 'tous') setShowPoolsFiltresDispo(false);
+                      }}>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <input
               type="text"
               style={styles.selAff}
@@ -1774,7 +1799,8 @@ export default function EmploiDuTemps() {
                 return (
               <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
                 <colgroup>
-                  <col style={{width:70}} />
+                  <col style={{width:56}} />
+                  <col />
                   <col />
                   <col style={{width:70}} />
                   {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
@@ -1783,8 +1809,9 @@ export default function EmploiDuTemps() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th style={{...styles.th, textAlign:'center'}}></th>
-                    <th style={styles.th}>Professeur</th>
+                    <th style={{...styles.th, width:56, minWidth:56, maxWidth:56, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}></th>
+                    <th style={styles.th}>Nom</th>
+                    <th style={styles.th}>Prénom</th>
                     <th style={{...styles.th, textAlign:'center'}}>Taux</th>
                     {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
                       <th key={j} style={{...styles.th, textAlign:'center'}}>{j}</th>
@@ -1796,18 +1823,16 @@ export default function EmploiDuTemps() {
                     const profDispos = allDispos.filter(d => String(d.prof_id) === String(prof.id));
                     return (
                       <tr key={prof.id} style={{borderBottom:'1px solid #e2e8f0'}}>
-                        <td style={{...styles.td, textAlign:'center'}}>
+                        <td style={{...styles.td, width:56, minWidth:56, maxWidth:56, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}>
                           <button
                             title="Voir le détail des disponibilités"
                             onClick={() => chargerDispos(prof.id)}
-                            style={{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#eef2ff',color:'#4338ca'}}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                              <circle cx="12" cy="12" r="3"/>
-                            </svg>
+                            style={{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#e0e7ff',color:'#4338ca'}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                           </button>
                         </td>
-                        <td style={styles.td}>{prof.prenom} {prof.nom}</td>
+                        <td style={{...styles.td, whiteSpace:'nowrap'}}><b style={{color:'#1e293b'}}>{nomSansSuffixe(prof.nom)}</b></td>
+                        <td style={{...styles.td, whiteSpace:'nowrap'}}>{prof.prenom}</td>
                         <td style={{...styles.td, textAlign:'center'}}>{prof.taux_activite ? `${prof.taux_activite}%` : '—'}</td>
                         {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(jour => {
                           const creneauxJour = creneaux.filter(c => c.jour === jour);
@@ -1950,7 +1975,7 @@ export default function EmploiDuTemps() {
                               minHeight:36,
                               padding:'7px 10px',
                               borderRadius:10,
-                              background:poolForm.classe_ids.includes(c.id)?poolForm.couleur:'#f0f0f0',
+                              background:poolForm.classe_ids.includes(c.id)?'#c7d2fe':'#f0f0f0',
                               color:'#111827'
                             }}
                           >
@@ -2004,7 +2029,7 @@ export default function EmploiDuTemps() {
                                       minHeight:36,
                                       padding:'7px 10px',
                                       borderRadius:10,
-                                      background:poolForm.prof_ids.includes(p.id)?poolForm.couleur:'#f0f0f0',
+                                      background:poolForm.prof_ids.includes(p.id)?'#c7d2fe':'#f0f0f0',
                                       color:'#111827'
                                     }}
                                   >
@@ -2210,11 +2235,19 @@ export default function EmploiDuTemps() {
             )}
             {sousOngletAff === 'salles' && (
               <>
-                <select style={styles.selAff} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+                <select style={styles.selAff} value={sallesLieuTravailId} onChange={e => {
+                  if (hasSallesUnsaved && !window.confirm("Des changements dans Affectations > Salles ne sont pas sauvegardés. Changer de lieu sans sauvegarder ?")) return;
+                  if (hasSallesUnsaved) abandonnerSallesNonSauvegardees();
+                  setSallesLieuTravailId(e.target.value);
+                }}>
                   <option value="">Choisir un lieu de travail</option>
                   {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
                 </select>
-                <select style={styles.selAff} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+                <select style={styles.selAff} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => {
+                  if (hasSallesUnsaved && !window.confirm("Des changements dans Affectations > Salles ne sont pas sauvegardés. Changer de salle sans sauvegarder ?")) return;
+                  if (hasSallesUnsaved) abandonnerSallesNonSauvegardees();
+                  setSalleSelectionnee(e.target.value);
+                }}>
                   <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
                   {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
                 </select>
@@ -2232,7 +2265,7 @@ export default function EmploiDuTemps() {
               ) : (
               <>
               <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Couleurs des classes</h3>
+                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleur</h3>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
                   {classesPool.map(cl => {
                     const selected = String(classeCouleurEditionId) === String(cl.id);
@@ -2272,8 +2305,8 @@ export default function EmploiDuTemps() {
                   </div>
                 )}
               </div>
-              <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi des horaires classes</h3>
+              <div style={{marginTop:16,marginBottom:12}}>
+                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
                 <div style={styles.suiviJoursGrid}>
                   {JOURS.map(j => (
                     <div key={j} style={styles.suiviJourChip}>
@@ -2297,15 +2330,15 @@ export default function EmploiDuTemps() {
                     </tr>
                   </thead>
                   <tbody>
-                    {classesPool.map((cl,ri) => (
-                      <tr key={cl.id} style={{background:ri%2===0?'white':'#fafbfc'}}>
+                    {classesPool.map((cl) => (
+                      <tr key={cl.id} style={{background:'white',borderBottom:'1px solid #e2e8f0'}}>
                         <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180}}>
                           {cl.nom}
                         </td>
                         {JOURS.map(jour => {
                           const periode = getHoraireJourClasse(cl.id, jour);
                           return (
-                            <td key={jour} style={{padding:'10px 8px',textAlign:'center',borderBottom:'1px solid #f1f5f9'}}>
+                            <td key={jour} style={{padding:'10px 8px',textAlign:'center'}}>
                               <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={{
                                 padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
                                 cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
@@ -2687,15 +2720,19 @@ export default function EmploiDuTemps() {
                     {suiviSalles.length === 0 ? (
                       <div style={styles.msgVide}>Aucune salle configurée pour ce lieu.</div>
                     ) : (
-                      <div style={styles.suiviBranchesGrid}>
+                      <div style={{display:'flex',gap:8,width:'100%'}}>
                         {suiviSalles.map(salle => (
                           <div
                             key={salle.salle}
                             style={{
                               ...styles.suiviBrancheChip,
-                              borderColor: salle.complet ? '#bbf7d0' : '#fecaca',
-                              background: salle.complet ? '#f0fdf4' : '#fef2f2',
-                              color: salle.complet ? '#166534' : '#991b1b'
+                              flex:1,
+                              width:'auto',
+                              minWidth:0,
+                              maxWidth:'none',
+                              borderColor: salle.complet ? '#6366f1' : '#e2e8f0',
+                              background: salle.complet ? '#e0e7ff' : '#ffffff',
+                              color: salle.complet ? '#3730a3' : '#0f172a'
                             }}
                           >
                             <div style={styles.suiviBrancheNom}>{salle.salle}</div>
@@ -2705,52 +2742,44 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
-                    <button
-                      type="button"
-                      style={{...styles.affTabBtn, ...(modeAffectationRapideClasse ? styles.affTabBtnActif : {})}}
-                      onClick={() => setModeAffectationRapideClasse(prev => !prev)}
-                    >
-                      Affecter automatiquement
-                    </button>
-                    {modeAffectationRapideClasse && (
-                      <>
-                        <select
-                          style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
-                          value={classeRapideId}
-                          onChange={e => setClasseRapideId(e.target.value)}
-                          disabled={!sallesLieuTravailId}
-                        >
-                          <option value="">Choisir classe 1</option>
-                          {classesPourSalles
-                          .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
-                          .map(cl => (
-                            <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
-                          ))}
-                        </select>
-                        <select
-                          style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
-                          value={classeRapideId2}
-                          onChange={e => setClasseRapideId2(e.target.value)}
-                          disabled={!sallesLieuTravailId}
-                        >
-                          <option value="">Choisir classe 2 (optionnel)</option>
-                          {classesPourSalles
-                          .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
-                          .map(cl => (
-                            <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          style={{...styles.btnBleu, opacity: (!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee) ? 0.65 : 1}}
-                          disabled={!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee}
-                          onClick={handleAffectationRapideClasse}
-                        >
-                          Affectation rapide
-                        </button>
-                      </>
-                    )}
+                  <div style={{marginTop:16,marginBottom:12}}>
+                    <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Affectation rapide</h3>
+                    <div style={{display:'flex',alignItems:'center',gap:8,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
+                      <select
+                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
+                        value={classeRapideId}
+                        onChange={e => setClasseRapideId(e.target.value)}
+                        disabled={!sallesLieuTravailId}
+                      >
+                        <option value="">Choisir classe 1</option>
+                        {classesPourSalles
+                        .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
+                        .map(cl => (
+                          <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
+                        ))}
+                      </select>
+                      <select
+                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
+                        value={classeRapideId2}
+                        onChange={e => setClasseRapideId2(e.target.value)}
+                        disabled={!sallesLieuTravailId}
+                      >
+                        <option value="">Choisir classe 2 (optionnel)</option>
+                        {classesPourSalles
+                        .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
+                        .map(cl => (
+                          <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        style={{...styles.btnBleu, opacity: (!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee) ? 0.65 : 1}}
+                        disabled={!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee}
+                        onClick={handleAffectationRapideClasse}
+                      >
+                        Appliquer
+                      </button>
+                    </div>
                   </div>
                   {!salleSelectionnee ? (
                     <div style={styles.msgVide}>
@@ -3402,7 +3431,7 @@ const styles = {
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   suiviGrandTitre:{fontSize:14,fontWeight:700,color:'#475569',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:'0.05em'},
   suiviJoursGrid:{display:'flex',gap:8,width:'100%'},
-  suiviJourChip:{flex:1,minWidth:0,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  suiviJourChip:{flex:1,minWidth:0,padding:'8px 10px',borderRadius:10,border:'1px solid #c7d2fe',background:'#eef2ff',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviJourNom:{fontSize:13,fontWeight:800,color:'#334155',lineHeight:1.2},
   suiviJourLigne:{fontSize:12,fontWeight:700,color:'#475569',lineHeight:1.25,marginTop:2},
   suiviClassesGrid:{display:'flex',flexWrap:'wrap',gap:8},
