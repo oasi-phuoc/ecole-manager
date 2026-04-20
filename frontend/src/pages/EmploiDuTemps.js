@@ -1761,7 +1761,13 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            {!profSelectionne && (
+            {profSelectionne ? (
+              <button
+                style={styles.btnRetour}
+                onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
+                ← Retour
+              </button>
+            ) : (
               <input
                 type="text"
                 style={styles.selAff}
@@ -1769,32 +1775,6 @@ export default function EmploiDuTemps() {
                 value={rechercheProfDispo}
                 onChange={e => setRechercheProfDispo(e.target.value)}
               />
-            )}
-            {!showPoolsFiltresDispo ? (
-              <button
-                onClick={() => setShowPoolsFiltresDispo(true)}
-                style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
-                Trier
-              </button>
-            ) : (
-              <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
-                {[{id:'tous', label:'Trier'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => {
-                  const actif = sousOngletDisp === tab.id;
-                  return (
-                    <button key={tab.id}
-                      style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-                      onClick={() => {
-                        setSousOngletDisp(tab.id);
-                        setProfSelectionne(null);
-                        setDispos({});
-                        setRemarquesDispo('');
-                        if (tab.id === 'tous') setShowPoolsFiltresDispo(false);
-                      }}>
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
             )}
           </div>
 
@@ -2454,8 +2434,8 @@ export default function EmploiDuTemps() {
                         <div style={styles.suiviClasseNom}>{cl.nom}</div>
                         {cl.niveauClasse === 'CSC' && (
                           <>
-                            <div style={styles.suiviClasseLigne}>Périodes normales : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
-                            <div style={styles.suiviClasseLigne}>Périodes de soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                            <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                            <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
                           </>
                         )}
                         {cl.niveauClasse !== 'CSC' && (
@@ -2539,7 +2519,7 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0}}>
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',borderLeft:'none',borderRight:'none',lineHeight:0}}>
                           <div style={{height: 30,background:'#f8fafc'}} />
                         </td>
                       </tr>,
@@ -2744,26 +2724,28 @@ export default function EmploiDuTemps() {
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Affectation rapide</h3>
                     <div style={{display:'flex',alignItems:'center',gap:8,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
                       <select
-                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
+                        style={{...styles.selAff, minWidth:220}}
                         value={classeRapideId}
                         onChange={e => setClasseRapideId(e.target.value)}
                         disabled={!sallesLieuTravailId}
                       >
                         <option value="">Choisir classe 1</option>
                         {classesPourSalles
+                        .filter(cl => classeHoraires.some(h => String(h.classe_id) === String(cl.id)))
                         .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
                         .map(cl => (
                           <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
                         ))}
                       </select>
                       <select
-                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
+                        style={{...styles.selAff, minWidth:220}}
                         value={classeRapideId2}
                         onChange={e => setClasseRapideId2(e.target.value)}
                         disabled={!sallesLieuTravailId}
                       >
                         <option value="">Choisir classe 2 (optionnel)</option>
                         {classesPourSalles
+                        .filter(cl => classeHoraires.some(h => String(h.classe_id) === String(cl.id)))
                         .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
                         .map(cl => (
                           <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
@@ -2989,22 +2971,21 @@ export default function EmploiDuTemps() {
                     {suiviBranchesClasse.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
                     ) : (
-                      <div style={{display:'flex',gap:8,width:'100%'}}>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                         {suiviBranchesClasse.map(b => {
                           const ok = b.affectees === b.requises;
+                          const couleurBg = getCouleurBranche(b.id);
+                          const couleurText = getCouleurTexteSurFond(couleurBg);
+                          const abrev = b.nom.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
                           return (
                             <div key={b.id} style={{
-                              ...styles.suiviBrancheChip,
-                              flex:1,
-                              width:'auto',
-                              minWidth:0,
-                              maxWidth:'none',
-                              borderColor: ok ? '#c7d2fe' : '#e2e8f0',
-                              background: ok ? '#eef2ff' : '#ffffff',
-                              color: ok ? '#3730a3' : '#0f172a'
+                              display:'inline-flex', flexDirection:'column', alignItems:'center',
+                              padding:'5px 10px', borderRadius:8, background:couleurBg, color:couleurText,
+                              fontWeight:700, fontSize:12, gap:1,
+                              outline: ok ? 'none' : '2px solid #ef4444'
                             }}>
-                              <div style={styles.suiviBrancheNom}>{b.nom}</div>
-                              <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
+                              <span>{abrev}</span>
+                              <span style={{fontWeight:600, fontSize:10}}>{b.affectees}/{b.requises}</span>
                             </div>
                           );
                         })}
@@ -3146,7 +3127,7 @@ export default function EmploiDuTemps() {
                                   return (
                                     <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle'}}>
                                       <div style={{fontWeight:classeNom?700:500,color:classeNom?'#1f2937':'#94a3b8',background:couleurClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{classeNom||'—'}</div>
-                                      {classeNom&&<div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
+                                      {classeNom&&<div style={{color:'#334155',fontWeight:400,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
                                     </td>
                                   );
                                 })}
@@ -3225,13 +3206,17 @@ export default function EmploiDuTemps() {
                             const indispo = dispo && !dispo.disponible;
                             const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
                             const affBranche = classeAffectee && hasBrancheAffectee(aff);
-                            const couleurFondBranche = affBranche ? getCouleurBranche(aff.matiere_id) : '#ffffff';
-                            const couleurTexteBranche = affBranche ? getCouleurTexteSurFond(couleurFondBranche) : '#111827';
+                            const couleurFondClasse = aff?.classe_id ? getCouleurClasse(aff.classe_id) : '#e2e8f0';
+                            const couleurTexteClasse = getCouleurTexteSurFond(couleurFondClasse);
                             return (
                               <td key={jour} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:affBranche?couleurFondBranche:(!classeAffectee||indispo)?'#eeeeee':'#fff',
-                                color:affBranche?couleurTexteBranche:undefined}}>
-                                {affBranche?<><b style={{color:couleurTexteBranche}}>{aff.classe_nom}</b><br/><span style={{color:couleurTexteBranche,fontSize:11}}>{aff.matiere_nom}</span></>:''}
+                                background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
+                                {affBranche ? (
+                                  <div>
+                                    <span style={{display:'inline-block',padding:'2px 8px',borderRadius:6,background:couleurFondClasse,color:couleurTexteClasse,fontWeight:700,fontSize:12}}>{aff.classe_nom}</span>
+                                    <div style={{color:'#475569',fontSize:11,marginTop:2}}>{aff.matiere_nom}</div>
+                                  </div>
+                                ) : ''}
                               </td>
                             );
                           })}
@@ -3328,12 +3313,11 @@ export default function EmploiDuTemps() {
                               return (
                                 <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,height:HAUTEUR_LIGNE_COURS,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                  background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
-                                  color: aff ? couleurTexteProf : undefined}}>
+                                  background:aCours?'#fff':'#f5f5f5'}}>
                                   {aff ? (
                                     <div>
-                                      <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
-                                      {aff.matiere_nom && <div style={{color:couleurTexteProf,fontSize:11}}>{aff.matiere_nom}</div>}
+                                      <span style={{display:'inline-block',padding:'2px 8px',borderRadius:6,background:couleurFondProf,color:couleurTexteProf,fontWeight:700,fontSize:12}}>{aff.prof_nom}</span>
+                                      {aff.matiere_nom && <div style={{color:'#475569',fontSize:11,marginTop:2}}>{aff.matiere_nom}</div>}
                                     </div>
                                   ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>Aucun professeur affecté</span> : ''}
                                 </td>
@@ -3415,11 +3399,22 @@ export default function EmploiDuTemps() {
                   </tr>
                 </thead>
                 <tbody>
-                  {JOURS.map(jour => {
+                  {JOURS.map((jour, jourIdx) => {
                     const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
                     if (!crs.length) return null;
                     return [
-                      <tr key={jour+'_h'}><td colSpan={planningGeneral.profs.length+1} style={styles.jourBande}>{jour}</td></tr>,
+                      jourIdx > 0 ? <tr key={jour+'_sep'}>
+                        <td colSpan={planningGeneral.profs.length+1} style={{background:'#f8fafc',padding:0,border:'none',borderLeft:'none',borderRight:'none',lineHeight:0}}>
+                          <div style={{height:20,background:'#f8fafc'}} />
+                        </td>
+                      </tr> : null,
+                      <tr key={jour+'_h'}>
+                        <td colSpan={planningGeneral.profs.length+1} style={{padding:0,border:'none',background:'transparent'}}>
+                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',borderTopLeftRadius:10,borderTopRightRadius:10}}>
+                            {jour}
+                          </div>
+                        </td>
+                      </tr>,
                       ...crs.map(cr => (
                         <tr key={cr.id} style={styles.tr}>
                           <td style={{...styles.td,background:'#f8f9fa',fontSize:11,fontWeight:600,whiteSpace:'nowrap',width:150,minWidth:150,maxWidth:150,padding:'9px 10px'}}>
