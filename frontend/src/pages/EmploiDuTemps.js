@@ -1760,14 +1760,8 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            {profSelectionne ? (
-              <button
-                style={styles.btnRetour}
-                onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
-                ← Retour
-              </button>
-            ) : (
+          {!profSelectionne && (
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
               <input
                 type="text"
                 style={styles.selAff}
@@ -1775,8 +1769,8 @@ export default function EmploiDuTemps() {
                 value={rechercheProfDispo}
                 onChange={e => setRechercheProfDispo(e.target.value)}
               />
-            )}
-          </div>
+            </div>
+          )}
 
           {!profSelectionne && (
             <div style={{overflowX:'auto',marginTop:8}}>
@@ -1852,12 +1846,19 @@ export default function EmploiDuTemps() {
           {profSelectionne && (
             <div style={styles.card}>
               <div style={styles.rowBetween}>
-                <h3 style={styles.cardTitre}>
-                  {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
-                  <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
-                    {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
-                  </span>
-                </h3>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  <button
+                    style={styles.btnRetour}
+                    onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
+                    ← Retour
+                  </button>
+                  <h3 style={{...styles.cardTitre,margin:0}}>
+                    {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
+                    <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
+                      {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
+                    </span>
+                  </h3>
+                </div>
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
                 <div style={{minWidth:860, width:'100%'}}>
