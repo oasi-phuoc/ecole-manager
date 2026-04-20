@@ -1761,6 +1761,15 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
+            {!profSelectionne && (
+              <input
+                type="text"
+                style={styles.selAff}
+                placeholder="Rechercher un professeur..."
+                value={rechercheProfDispo}
+                onChange={e => setRechercheProfDispo(e.target.value)}
+              />
+            )}
             {!showPoolsFiltresDispo ? (
               <button
                 onClick={() => setShowPoolsFiltresDispo(true)}
@@ -1787,13 +1796,6 @@ export default function EmploiDuTemps() {
                 })}
               </div>
             )}
-            <input
-              type="text"
-              style={styles.selAff}
-              placeholder="Rechercher un professeur..."
-              value={rechercheProfDispo}
-              onChange={e => setRechercheProfDispo(e.target.value)}
-            />
           </div>
 
           {!profSelectionne && (
@@ -2537,13 +2539,15 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}>
-                          <div style={{height: 30}} />
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0}}>
+                          <div style={{height: 30,background:'#f8fafc'}} />
                         </td>
                       </tr>,
                       <tr key={jour+'_h'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',border:'none'}}>
-                          {jour}
+                        <td colSpan={profsPool.length+1} style={{padding:0,border:'none',background:'transparent'}}>
+                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',borderTopLeftRadius:10,borderTopRightRadius:10}}>
+                            {jour}
+                          </div>
                         </td>
                       </tr>,
                       ...['Matin','Après-midi'].map(per => {
