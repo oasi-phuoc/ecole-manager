@@ -97,14 +97,16 @@ const ALL_MODULES = [
 ];
 
 const PinIcon = ({ pinned }) => (
-  <svg width={12} height={12} viewBox="0 0 24 24"
-    fill={pinned ? '#6366f1' : 'none'}
-    stroke={pinned ? '#6366f1' : '#cbd5e1'}
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+  <svg width={13} height={13} viewBox="0 0 256 256"
     style={{ display: 'block', flexShrink: 0 }}>
-    <line x1="12" y1="17" x2="12" y2="22"/>
-    <path d="M5 17H19V15C14 15 14 9 12 9C10 9 10 15 5 15V17Z"/>
-    <line x1="12" y1="9" x2="12" y2="3"/>
+    <path
+      d="M229.66,74.34l-48-48a8,8,0,0,0-11.32,11.32L178,45.31l-58.43,58.44a56.13,56.13,0,0,0-52.22,14.88,8,8,0,0,0,0,11.31l39,39L34.34,218.34a8,8,0,0,0,11.32,11.32l72-72,39,39a8,8,0,0,0,11.31,0,56.13,56.13,0,0,0,14.88-52.22L241,85.66l7.66,7.65a8,8,0,0,0,11.32-11.32Z"
+      fill={pinned ? '#6366f1' : '#cbd5e1'}
+    />
+    {!pinned && (
+      <line x1="34" y1="34" x2="222" y2="222"
+        stroke="#64748b" strokeWidth={20} strokeLinecap="round" />
+    )}
   </svg>
 );
 

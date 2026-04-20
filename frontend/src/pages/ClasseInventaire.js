@@ -224,6 +224,6 @@ const s = {
   btnOpen: { padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 12 },
   form: { display: 'grid', gridTemplateColumns: '140px 1.4fr 0.8fr 1fr auto', gap: 8, marginBottom: 12 },
   inp: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' },
-  btnAdd: { padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' },
+  btnAdd: { padding: '8px 16px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
   btnDel: { padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' },
 };

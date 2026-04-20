@@ -1459,7 +1459,7 @@ const styles = {
   formChamp: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
   label: { fontSize: '13px', fontWeight: '600', marginBottom: '5px', color: '#555' },
   input: { padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', background: 'white', fontFamily: 'inherit' },
-  btnSauver: { padding: '12px 24px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '15px', fontFamily: 'inherit' },
+  btnSauver: { padding: '8px 16px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit' },
   vide: { color: '#888', textAlign: 'center', padding: '30px' },
   profCard: { display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', background: '#f8f9fa', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer', border: '2px solid transparent' },
   profAvatar: { width: '44px', height: '44px', borderRadius: '50%', background: '#ff9800', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '15px' },

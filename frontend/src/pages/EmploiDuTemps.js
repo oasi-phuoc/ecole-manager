@@ -16,9 +16,10 @@ const SALLES_FIXES_PAR_LIEU = {
 };
 
 const COULEURS_CLASSES_DISPONIBLES = [
-  '#2563eb', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#dc2626', '#4f46e5', '#0f766e', '#7c2d12',
-  '#f59e0b', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#a855f7', '#d946ef', '#ec4899',
-  '#fecaca', '#fed7aa', '#fef3c7', '#d9f99d', '#bbf7d0', '#a7f3d0', '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8'
+  '#fee2e2', '#fed7aa', '#fde68a', '#fef08a', '#d9f99d', '#bbf7d0', '#a7f3d0', '#99f6e4', '#a5f3fc', '#bae6fd',
+  '#bfdbfe', '#c7d2fe', '#ddd6fe', '#e9d5ff', '#fbcfe8',
+  '#fca5a5', '#fdba74', '#fcd34d', '#fde047', '#bef264', '#86efac', '#6ee7b7', '#5eead4', '#67e8f9', '#7dd3fc',
+  '#93c5fd', '#a5b4fc', '#c4b5fd', '#d8b4fe', '#f9a8d4'
 ];
 const HORAIRES_DEFAUT = [
   {periode:'Matin',num:1,debut:'08:20',fin:'09:05'},
@@ -98,6 +99,7 @@ export default function EmploiDuTemps() {
   const [classeRapideId2, setClasseRapideId2] = useState('');
   const [remarquesDispo, setRemarquesDispo] = useState('');
   const [allDispos, setAllDispos] = useState([]);
+  const [rechercheProfDispo, setRechercheProfDispo] = useState('');
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
@@ -1676,15 +1678,23 @@ export default function EmploiDuTemps() {
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
               if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
               showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
-            }}>💾 Sauvegarder</button>
+            }}>Sauvegarder</button>
           </div>
         )}
       </div>
 
       {onglet === 'plannings' && (
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
+          <div style={styles.toggleGroup}>
+            {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
+              <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
+                onClick={() => { setSousOngletPlanning(o.id); if (o.id==='general') chargerPlanningGeneral(planningPoolId||''); }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
           {sousOngletPlanning === 'classes' && (
-            <select style={styles.selOnglet} value={classePlanningId || ''} onChange={e => {
+            <select style={styles.selAff} value={classePlanningId || ''} onChange={e => {
               const classeId = e.target.value;
               setClassePlanningId(classeId);
               if (classeId) {
@@ -1699,7 +1709,7 @@ export default function EmploiDuTemps() {
             </select>
           )}
           {sousOngletPlanning === 'professeurs' && (
-            <select style={styles.selOnglet} value={profPlanningId || ''} onChange={e => {
+            <select style={styles.selAff} value={profPlanningId || ''} onChange={e => {
               const id = e.target.value;
               setProfPlanningId(id);
               if (id) chargerPlanningProf(id); else setPlanningProf(null);
@@ -1709,31 +1719,23 @@ export default function EmploiDuTemps() {
             </select>
           )}
           {sousOngletPlanning === 'general' && (
-            <select style={styles.selOnglet} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
+            <select style={styles.selAff} value={planningPoolId} onChange={e => { setPlanningPoolId(e.target.value); chargerPlanningGeneral(e.target.value); }}>
               <option value="">Choisir un pool</option>
               {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
             </select>
           )}
           {sousOngletPlanning === 'salle' && (
             <>
-              <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+              <select style={styles.selAff} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
                 <option value="">Choisir un lieu de travail</option>
                 {lieuxTravailOptions.map(lieu => <option key={`planning-salle-${lieu}`} value={lieu}>{lieu}</option>)}
               </select>
-              <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+              <select style={styles.selAff} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
                 <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
                 {sallesDisponiblesLieu.map(salle => <option key={`planning-salle-room-${salle}`} value={salle}>{salle}</option>)}
               </select>
             </>
           )}
-          <div style={styles.toggleGroup}>
-            {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
-              <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
-                onClick={() => { setSousOngletPlanning(o.id); if (o.id==='general') chargerPlanningGeneral(planningPoolId||''); }}>
-                {o.label}
-              </button>
-            ))}
-          </div>
         </div>
       )}
       </div>
@@ -1742,24 +1744,6 @@ export default function EmploiDuTemps() {
       {onglet === 'disponibilites' && (
         <div>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            <select
-              style={styles.selOnglet}
-              value={profSelectionne || ''}
-              onChange={async e => {
-                const profId = e.target.value;
-                if (!profId) { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); return; }
-                await chargerDispos(profId);
-              }}
-            >
-              <option value="">Choisir un professeur</option>
-              {(() => {
-                const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
-                const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
-                return profsTriesPrenomNom.filter(p => !profIds || profIds.includes(p.id)).map(p => (
-                  <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>
-                ));
-              })()}
-            </select>
             <div style={styles.toggleGroup}>
               {[{id:'tous', label:'Tous'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => (
                 <button key={tab.id}
@@ -1769,6 +1753,13 @@ export default function EmploiDuTemps() {
                 </button>
               ))}
             </div>
+            <input
+              type="text"
+              style={styles.selAff}
+              placeholder="Rechercher un professeur..."
+              value={rechercheProfDispo}
+              onChange={e => setRechercheProfDispo(e.target.value)}
+            />
           </div>
 
           {!profSelectionne && (
@@ -1776,10 +1767,14 @@ export default function EmploiDuTemps() {
               {(() => {
                 const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
                 const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
-                const profsAffiches = profs.filter(p => !profIds || profIds.includes(p.id));
+                const q = rechercheProfDispo.trim().toLowerCase();
+                const profsAffiches = profs
+                  .filter(p => !profIds || profIds.includes(p.id))
+                  .filter(p => !q || `${p.prenom||''} ${p.nom||''}`.toLowerCase().includes(q) || `${p.nom||''} ${p.prenom||''}`.toLowerCase().includes(q));
                 return (
               <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
                 <colgroup>
+                  <col style={{width:70}} />
                   <col />
                   <col style={{width:70}} />
                   {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
@@ -1788,6 +1783,7 @@ export default function EmploiDuTemps() {
                 </colgroup>
                 <thead>
                   <tr>
+                    <th style={{...styles.th, textAlign:'center'}}></th>
                     <th style={styles.th}>Professeur</th>
                     <th style={{...styles.th, textAlign:'center'}}>Taux</th>
                     {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
@@ -1799,7 +1795,18 @@ export default function EmploiDuTemps() {
                   {profsAffiches.map(prof => {
                     const profDispos = allDispos.filter(d => String(d.prof_id) === String(prof.id));
                     return (
-                      <tr key={prof.id}>
+                      <tr key={prof.id} style={{borderBottom:'1px solid #e2e8f0'}}>
+                        <td style={{...styles.td, textAlign:'center'}}>
+                          <button
+                            title="Voir le détail des disponibilités"
+                            onClick={() => chargerDispos(prof.id)}
+                            style={{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#eef2ff',color:'#4338ca'}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                              <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                          </button>
+                        </td>
                         <td style={styles.td}>{prof.prenom} {prof.nom}</td>
                         <td style={{...styles.td, textAlign:'center'}}>{prof.taux_activite ? `${prof.taux_activite}%` : '—'}</td>
                         {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(jour => {
@@ -1866,15 +1873,15 @@ export default function EmploiDuTemps() {
                               </td>
                             )}
                             <td style={{...styles.tdPer, width:80, minWidth:80, maxWidth:80}}>
-                              <span style={styles.periodeNum}>P{idx+1}</span>
+                              <span style={styles.periodeNum}>P{periode==='Matin' ? idx+1 : idx+5}</span>
                             </td>
                             {JOURS.map(jour => {
                               const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
                               if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
                               const ok = dispos[cr.id] !== false;
                               return (
-                                <td key={jour} style={{...styles.tdDispo, cursor:'default'}}>
-                                  <span style={{fontSize:24, lineHeight:1, color:ok?'#16a34a':'#dc2626'}}>●</span>
+                                <td key={jour} style={{...styles.tdDispo, cursor:'default', textAlign:'center', verticalAlign:'middle'}}>
+                                  <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle'}} />
                                 </td>
                               );
                             })}
@@ -2083,12 +2090,12 @@ export default function EmploiDuTemps() {
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     <div style={{fontWeight:700,fontSize:16,color:'#0f172a'}}>{pool.nom}</div>
                     <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:2}}>
-                      {pool.niveau && <span style={{color:'#6366f1',fontSize:13,fontWeight:600}}>Niveau : {pool.niveau}</span>}
-                      {pool.site && <span style={{color:'#6366f1',fontSize:13}}>Lieu : {pool.site}</span>}
+                      {pool.niveau && <span style={{color:'#0f172a',fontSize:13,fontWeight:400}}>Niveau : {pool.niveau}</span>}
+                      {pool.site && <span style={{color:'#0f172a',fontSize:13,fontWeight:400}}>Lieu : {pool.site}</span>}
                     </div>
                   </div>
-                  {isAdmin() && <div>
-                    <button style={styles.btnIconEdit} onClick={() => {
+                  {isAdmin() && <div style={{display:'flex',gap:6}}>
+                    <button style={styles.btnIconEdit} title="Modifier" onClick={() => {
                       const {poolHoraires, pauses} = getHoraireForLieu(pool.site||'');
                       setPoolEdit(pool); setShowPoolForm(true);
                       setPoolForm({nom:pool.nom,site:pool.site||'',couleur:pool.couleur,
@@ -2097,38 +2104,45 @@ export default function EmploiDuTemps() {
                         branche_ids:pool.branches.map(b=>b.id),
                         horaires:poolHoraires});
                       setPausesParPeriodeForm(pauses);
-                    }}>✏️</button>
-                    <button style={styles.btnIconDel} onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>🗑️</button>
+                    }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button style={styles.btnIconDel} title="Supprimer" onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </div>}
                 </div>
                 <div style={{marginTop:10}}>
-                  <div style={styles.poolLabel}>PROFESSEURS</div>
+                  <div style={styles.poolLabel}>Professeurs</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:4}}>
                     {pool.profs.map(p => (
-                      <span key={p.id} style={{background:'#eef2ff',border:'1px solid #a5b4fc',color:'#4338ca',display:'flex',alignItems:'center',justifyContent:'center',padding:'3px 8px',borderRadius:999,fontSize:13,fontWeight:600,textAlign:'center'}}>
+                      <span key={p.id} style={{display:'inline-block',width:'100%',padding:'4px 10px',borderRadius:999,background:'#eef2ff',color:'#3730a3',fontSize:12,fontWeight:600,textAlign:'center',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',boxSizing:'border-box'}}>
                         {p.prenom} {nomSansSuffixe(p.nom)}
                       </span>
                     ))}
                   </div>
                   {pool.profs.length===0&&<span style={styles.aucun}>Aucun</span>}
                 </div>
-                <div style={{marginTop:8}}>
-                  <div style={styles.poolLabel}>CLASSES</div>
+                <div style={{marginTop:14}}>
+                  <div style={styles.poolLabel}>Classes</div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
                     {pool.classes.map(c => (
                       <span
                         key={c.id}
                         style={{
-                          ...styles.badge,
-                          display:'inline-flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          padding:'3px 8px',
-                          borderRadius:8,
-                          fontSize:13,
+                          display:'inline-block',
+                          width:80,
+                          padding:'3px 6px',
+                          borderRadius:999,
+                          background:'#eef2ff',
+                          color:'#3730a3',
+                          fontSize:11,
                           fontWeight:600,
-                          background:'#e8f0fe',
-                          color:'#1a73e8'
+                          textAlign:'center',
+                          whiteSpace:'nowrap',
+                          overflow:'hidden',
+                          textOverflow:'ellipsis',
+                          boxSizing:'border-box'
                         }}
                       >
                         {c.nom}
@@ -2146,52 +2160,8 @@ export default function EmploiDuTemps() {
       {/* ===== AFFECTATIONS ===== */}
       {onglet === 'affectations' && (
         <div>
-          {/* Dropdowns + toggles — une seule ligne */}
+          {/* Toggles + Dropdowns — une seule ligne */}
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
-              <select style={styles.selOnglet} value={poolAffId} onChange={e => {
-                if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
-                setPoolAffId(e.target.value);
-              }}>
-                <option value="">Choisir un pool</option>
-                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-              </select>
-            )}
-            {sousOngletAff === 'branches' && (
-              <>
-                <select style={styles.selOnglet} value={classePlanningPoolId} onChange={e => {
-                  if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                  if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
-                  setClassePlanningPoolId(e.target.value); setClassePlanningId(''); setPlanningClasse(null);
-                }}>
-                  <option value="">Choisir un pool</option>
-                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                </select>
-                <select style={styles.selOnglet} value={classePlanningId || ''} disabled={!classePlanningPoolId} onChange={e => {
-                  const classeId = e.target.value;
-                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
-                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
-                  setClassePlanningId(classeId);
-                  if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
-                }}>
-                  <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
-                  {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                </select>
-              </>
-            )}
-            {sousOngletAff === 'salles' && (
-              <>
-                <select style={styles.selOnglet} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
-                  <option value="">Choisir un lieu de travail</option>
-                  {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
-                </select>
-                <select style={styles.selOnglet} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
-                  <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
-                  {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
-                </select>
-              </>
-            )}
             <div style={styles.toggleGroup}>
               {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.toggleBtn,...(sousOngletAff===o.id?styles.toggleBtnActif:{})}}
@@ -2206,6 +2176,50 @@ export default function EmploiDuTemps() {
                 </button>
               ))}
             </div>
+            {(sousOngletAff === 'classes' || sousOngletAff === 'profs') && (
+              <select style={styles.selAff} value={poolAffId} onChange={e => {
+                if (sousOngletAff === 'classes' && hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                if (sousOngletAff === 'classes' && hasClassesUnsaved) abandonnerClassesNonSauvegardees();
+                setPoolAffId(e.target.value);
+              }}>
+                <option value="">Choisir un pool</option>
+                {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+              </select>
+            )}
+            {sousOngletAff === 'branches' && (
+              <>
+                <select style={styles.selAff} value={classePlanningPoolId} onChange={e => {
+                  if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                  if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
+                  setClassePlanningPoolId(e.target.value); setClassePlanningId(''); setPlanningClasse(null);
+                }}>
+                  <option value="">Choisir un pool</option>
+                  {pools.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                </select>
+                <select style={styles.selAff} value={classePlanningId || ''} disabled={!classePlanningPoolId} onChange={e => {
+                  const classeId = e.target.value;
+                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
+                  if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
+                  setClassePlanningId(classeId);
+                  if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
+                }}>
+                  <option value="">{classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}</option>
+                  {classesPoolP.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                </select>
+              </>
+            )}
+            {sousOngletAff === 'salles' && (
+              <>
+                <select style={styles.selAff} value={sallesLieuTravailId} onChange={e => setSallesLieuTravailId(e.target.value)}>
+                  <option value="">Choisir un lieu de travail</option>
+                  {lieuxTravailOptions.map(lieu => <option key={lieu} value={lieu}>{lieu}</option>)}
+                </select>
+                <select style={styles.selAff} value={salleSelectionnee} disabled={!sallesLieuTravailId} onChange={e => setSalleSelectionnee(e.target.value)}>
+                  <option value="">{sallesLieuTravailId ? 'Choisir une salle' : "Choisir d'abord un lieu"}</option>
+                  {sallesDisponiblesLieu.map(salle => <option key={salle} value={salle}>{salle}</option>)}
+                </select>
+              </>
+            )}
           </div>
 
           {/* AFFECTATION CLASSES - toggle cycle exclusif par jour */}
@@ -3363,7 +3377,7 @@ const styles = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
-  btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:700},
+  btnImprimer:{padding:'8px 16px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:600},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
   noticeBand:{padding:'10px 16px',borderRadius:8,marginBottom:12,fontSize:13,fontWeight:600},
   noticeBandSuccess:{background:'#ede9fe',color:'#4f46e5'},
@@ -3376,7 +3390,7 @@ const styles = {
   affActionsLeft:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',flex:'1 1 auto',minWidth:0},
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
-  btnSauvegarderAff:{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
+  btnSauvegarderAff:{padding:'8px 16px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   msgVide:{background:'white',borderRadius:12,padding:'20px 24px',marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',color:'#64748b',fontSize:12,fontStyle:'italic',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
@@ -3387,8 +3401,8 @@ const styles = {
   chipPrenom:{fontWeight:500,display:'block',lineHeight:1.15,marginTop:2},
   chipActif:{background:'#6366f1',color:'white',border:'2px solid #6366f1'},
   suiviGrandTitre:{fontSize:14,fontWeight:700,color:'#475569',margin:'0 0 8px',textTransform:'uppercase',letterSpacing:'0.05em'},
-  suiviJoursGrid:{display:'flex',flexWrap:'wrap',gap:8},
-  suiviJourChip:{width:190,minWidth:190,maxWidth:190,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
+  suiviJoursGrid:{display:'flex',gap:8,width:'100%'},
+  suiviJourChip:{flex:1,minWidth:0,padding:'8px 10px',borderRadius:10,border:'1px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'},
   suiviJourNom:{fontSize:13,fontWeight:800,color:'#334155',lineHeight:1.2},
   suiviJourLigne:{fontSize:12,fontWeight:700,color:'#475569',lineHeight:1.25,marginTop:2},
   suiviClassesGrid:{display:'flex',flexWrap:'wrap',gap:8},
@@ -3430,10 +3444,11 @@ const styles = {
   btnBleu:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnVert:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnAnnuler:{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
-  btnIconEdit:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6,color:'#6366f1'},
-  btnIconDel:{background:'none',border:'none',cursor:'pointer',fontSize:16,marginLeft:6,color:'#ef4444'},
+  btnIconEdit:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#e0e7ff',color:'#4338ca'},
+  btnIconDel:{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#dc2626'},
   sel:{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
   selOnglet:{padding:'9px 18px',borderRadius:10,border:'2px solid #4f46e5',background:'#e0e7ff',color:'#3730a3',fontWeight:700,fontSize:14,outline:'none',cursor:'pointer',textAlign:'center',width:220,minWidth:220},
+  selAff:{height:36,padding:'0 14px',boxSizing:'border-box',borderRadius:8,border:'1px solid #c7d2fe',background:'white',color:'#1e293b',fontWeight:400,fontSize:13,outline:'none',cursor:'pointer',width:240,fontFamily:'inherit'},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
   modal:{background:'white',padding:30,borderRadius:16,maxHeight:'85vh',overflowY:'auto'},
   modalTitre:{fontSize:20,fontWeight:700,marginBottom:20},
@@ -3445,7 +3460,7 @@ const styles = {
   checkBadge:{padding:'5px 10px',borderRadius:16,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center'},
   poolsGrid:{display:'flex',flexDirection:'column',gap:16,marginTop:16},
   poolCard:{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'},
-  poolLabel:{fontSize:13,fontWeight:700,color:'#aaa',marginBottom:4,letterSpacing:1},
+  poolLabel:{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:4},
   badge:{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:600,margin:'2px 3px 2px 0'},
   aucun:{color:'#ccc',fontSize:12},
   cellSel:{width:'100%',padding:'5px 6px',border:'1px solid #e0e0e0',borderRadius:6,fontSize:12,textAlign:'center',textAlignLast:'center'},

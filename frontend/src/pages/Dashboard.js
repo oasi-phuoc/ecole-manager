@@ -201,7 +201,7 @@ export default function Dashboard() {
             {toast.message && (
               <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{toast.message}</span>
             )}
-            <button onClick={sauvegarderMemo} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            <button onClick={sauvegarderMemo} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Sauvegarder
             </button>
           </div>

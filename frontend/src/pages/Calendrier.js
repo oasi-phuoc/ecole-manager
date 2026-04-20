@@ -558,7 +558,7 @@ export default function Calendrier() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>📋 Mon agenda personnel</h3>
           <button type="button" onClick={() => { resetProfEventForm(); setShowProfForm(true); }}
-            style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
             + Ajouter
           </button>
         </div>
@@ -592,9 +592,9 @@ export default function Calendrier() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={resetProfEventForm}
-                style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
               <button type="submit"
-                style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{profEventEditId ? 'Enregistrer' : 'Ajouter'}</button>
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{profEventEditId ? 'Enregistrer' : 'Ajouter'}</button>
             </div>
           </form>
         )}
@@ -651,7 +651,7 @@ const s = {
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   navBtn:{width:32,height:32,border:'1px solid #e2e8f0',borderRadius:8,background:'white',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'},
   btnCancel:{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'},
-  btnSave:{padding:'8px 18px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnSave:{padding:'8px 16px',background:'#f59e0b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnIconEdit:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.85,color:'#6366f1',padding:'2px'},
   btnIconDel:{background:'none',border:'none',cursor:'pointer',fontSize:13,opacity:0.85,color:'#ef4444',padding:'2px'},
   btnX:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'},

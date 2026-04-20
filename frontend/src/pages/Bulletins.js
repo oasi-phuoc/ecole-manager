@@ -239,7 +239,7 @@ export default function Bulletins() {
               const html = `<html><head><title>Bulletin de notes</title><style>@import url('https://fonts.googleapis.com/css2?family=Century+Gothic&display=swap');@page{size:A4;margin:15mm;}*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#111;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:11px;}th{background:#eef2ff;font-weight:700;}tr:nth-child(even){background:#f8fafc;}span[style*="border-radius: 50%"],span[style*="border-radius:50%"]{display:inline-block!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;}#bulletin-popup-pdf{min-height:calc(297mm - 30mm);display:flex;flex-direction:column;padding:0;}.bulletin-bas-page{margin-top:auto;padding-top:30px;}.bulletin-titre-eleve{margin-bottom:100px!important;}</style></head><body>${node.outerHTML}</body></html>`;
               const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '15mm');
               openPrintPopup(finalHtml, { title: 'Bulletin de notes', width: 1000, height: 800 });
-            }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
+            }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #6366f1', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Imprimer</button>
           </div>
           {!critValide ? (
             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '16px 20px', color: '#92400e', fontSize: 14, fontWeight: 600 }}>
@@ -409,7 +409,7 @@ export default function Bulletins() {
               {criteresValides ? 'Critères validés' : 'Valider les critères'}
             </button>
             <button onClick={sauvegarderTousCriteres}
-              style={{ padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#6366f1', color: 'white' }}>
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: '#6366f1', color: 'white' }}>
               💾 Sauvegarder
             </button>
           </div>
@@ -587,9 +587,9 @@ export default function Bulletins() {
                     {previewText ? <span style={{ color: '#1e293b' }}>{previewText}</span> : <span style={{ fontStyle: 'italic' }}>Aucune remarque sélectionnée</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    {selected.length > 0 && (<button onClick={() => setRemarqueModal(prev => ({ ...prev, selected: [], params: { transfertVerseClasse: '', transfertDepuisSuite: 'au TCF', transfertDepuisDate: '', suspensionDu: '', suspensionAu: '' } }))} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer tout</button>)}
-                    <button onClick={() => setRemarqueModal(null)} style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
-                    <button onClick={() => { mettreAJourCritereLocal(remarqueModal.eleveId, { remarques: previewText }); setRemarqueModal(null); }} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
+                    {selected.length > 0 && (<button onClick={() => setRemarqueModal(prev => ({ ...prev, selected: [], params: { transfertVerseClasse: '', transfertDepuisSuite: 'au TCF', transfertDepuisDate: '', suspensionDu: '', suspensionAu: '' } }))} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Effacer tout</button>)}
+                    <button onClick={() => setRemarqueModal(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Annuler</button>
+                    <button onClick={() => { mettreAJourCritereLocal(remarqueModal.eleveId, { remarques: previewText }); setRemarqueModal(null); }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Enregistrer</button>
                   </div>
                 </div>
               </div>
