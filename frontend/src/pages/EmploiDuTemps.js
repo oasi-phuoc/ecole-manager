@@ -1900,7 +1900,6 @@ export default function EmploiDuTemps() {
                   <table style={{...styles.tbl, tableLayout:'fixed', width:'100%'}}>
                     <thead>
                       <tr>
-                        <th style={{...styles.thA, width:36, minWidth:36, maxWidth:36}}></th>
                         <th style={{...styles.thA, width:80, minWidth:80, maxWidth:80}}>Période</th>
                         {JOURS.map(j => <th key={j} style={styles.thAJour}>{j}</th>)}
                       </tr>
@@ -1908,28 +1907,29 @@ export default function EmploiDuTemps() {
                     <tbody>
                       {['Matin','Après-midi'].map(periode => {
                         const crsLundi = creneaux.filter(c => c.jour==='Lundi' && c.periode===periode);
-                        return crsLundi.map((crBase, idx) => (
-                          <tr key={crBase.id}>
-                            {idx === 0 && (
-                              <td rowSpan={crsLundi.length} style={{...styles.tdPer, width:36, minWidth:36, maxWidth:36, textAlign:'center', verticalAlign:'middle', padding:'4px 2px'}}>
-                                <span style={{...styles.periodeTag, fontSize:12, writingMode:'vertical-rl', transform:'rotate(180deg)', display:'inline-block'}}>{periode}</span>
+                        if (!crsLundi.length) return null;
+                        return [
+                          <tr key={periode+'-banner'}>
+                            <td colSpan={JOURS.length+1} style={styles.periodeBande}>{periode}</td>
+                          </tr>,
+                          ...crsLundi.map((crBase, idx) => (
+                            <tr key={crBase.id}>
+                              <td style={{...styles.tdPer, width:80, minWidth:80, maxWidth:80}}>
+                                <span style={styles.periodeNum}>P{periode==='Matin' ? idx+1 : idx+5}</span>
                               </td>
-                            )}
-                            <td style={{...styles.tdPer, width:80, minWidth:80, maxWidth:80}}>
-                              <span style={styles.periodeNum}>P{periode==='Matin' ? idx+1 : idx+5}</span>
-                            </td>
-                            {JOURS.map(jour => {
-                              const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
-                              if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
-                              const ok = dispos[cr.id] !== false;
-                              return (
-                                <td key={jour} style={{...styles.tdDispo, cursor:'default', textAlign:'center', verticalAlign:'middle'}}>
-                                  <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle'}} />
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ));
+                              {JOURS.map(jour => {
+                                const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
+                                if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
+                                const ok = dispos[cr.id] !== false;
+                                return (
+                                  <td key={jour} style={{...styles.tdDispo, cursor:'default', textAlign:'center', verticalAlign:'middle'}}>
+                                    <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle'}} />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        ];
                       })}
                     </tbody>
                   </table>
@@ -2913,7 +2913,7 @@ export default function EmploiDuTemps() {
               {planningClasse && classePlanningId && (
                 <div>
                   <div style={{marginBottom:12}}>
-                    <h3 style={styles.suiviGrandTitre}>Couleurs des branches</h3>
+                    <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleurs</h3>
                     <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
                       {matieresPourPlanningClasse.map(m => {
                         const selected = String(brancheCouleurEditionId) === String(m.id);
@@ -2956,14 +2956,14 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
-                  <div style={{marginBottom:12}}>
-                    <h3 style={styles.suiviGrandTitre}>Suivi des préférences</h3>
+                  <div style={{marginTop:16,marginBottom:12}}>
+                    <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Préférences</h3>
                     {suiviPreferencesBranches.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
                     ) : (
                       <div style={styles.suiviPrefsGrid}>
                         {suiviPreferencesBranches.map((item) => (
-                          <div key={item.profId} style={styles.suiviPrefCard}>
+                          <div key={item.profId} style={{...styles.suiviPrefCard,background:'#ffffff',borderColor:'#e2e8f0'}}>
                             <div style={styles.suiviPrefHead}>
                               <div style={styles.suiviPrefNom}>{item.nom}</div>
                               <span style={styles.suiviPrefTagAutre}>Autre ({item.compteAutres})</span>
@@ -2987,16 +2987,25 @@ export default function EmploiDuTemps() {
                       </div>
                     )}
                   </div>
-                  <div style={{marginBottom:12}}>
-                    <h3 style={styles.suiviGrandTitre}>Suivi des branches</h3>
+                  <div style={{marginTop:16,marginBottom:12}}>
+                    <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
                     {suiviBranchesClasse.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
                     ) : (
-                      <div style={styles.suiviBranchesGrid}>
+                      <div style={{display:'flex',gap:8,width:'100%'}}>
                         {suiviBranchesClasse.map(b => {
                           const ok = b.affectees === b.requises;
                           return (
-                            <div key={b.id} style={{...styles.suiviBrancheChip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#166534' : '#991b1b'}}>
+                            <div key={b.id} style={{
+                              ...styles.suiviBrancheChip,
+                              flex:1,
+                              width:'auto',
+                              minWidth:0,
+                              maxWidth:'none',
+                              borderColor: ok ? '#c7d2fe' : '#e2e8f0',
+                              background: ok ? '#eef2ff' : '#ffffff',
+                              color: ok ? '#3730a3' : '#0f172a'
+                            }}>
                               <div style={styles.suiviBrancheNom}>{b.nom}</div>
                               <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
                             </div>
