@@ -1686,7 +1686,13 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
           </div>
         )}
-        {onglet === 'disponibilites' && null}
+        {onglet === 'disponibilites' && profSelectionne && (
+          <button
+            style={styles.btnRetour}
+            onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
+            ← Retour
+          </button>
+        )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
@@ -1846,19 +1852,12 @@ export default function EmploiDuTemps() {
           {profSelectionne && (
             <div style={styles.card}>
               <div style={styles.rowBetween}>
-                <div style={{display:'flex',alignItems:'center',gap:12}}>
-                  <button
-                    style={styles.btnRetour}
-                    onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
-                    ← Retour
-                  </button>
-                  <h3 style={{...styles.cardTitre,margin:0}}>
-                    {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
-                    <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
-                      {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
-                    </span>
-                  </h3>
-                </div>
+                <h3 style={styles.cardTitre}>
+                  {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
+                  <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
+                    {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
+                  </span>
+                </h3>
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
                 <div style={{minWidth:860, width:'100%'}}>
