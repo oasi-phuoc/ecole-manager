@@ -688,12 +688,12 @@ export default function EmploiDuTemps() {
   const handleAffectationRapideClasse = () => {
     if (!isAdmin()) return;
     if (!salleSelectionnee) {
-      alert("Sélectionnez d'abord une salle.");
+      showToast("Sélectionnez d'abord une salle.", 'error');
       return;
     }
     const classesIdsSelectionnees = [classeRapideId, classeRapideId2].filter(Boolean);
     if (classesIdsSelectionnees.length === 0) {
-      alert("Sélectionnez au moins une classe.");
+      showToast("Sélectionnez au moins une classe.", 'error');
       return;
     }
 
@@ -703,7 +703,7 @@ export default function EmploiDuTemps() {
       .filter(Boolean);
 
     if (classesSelectionnees.length !== classesIdsUniques.length) {
-      alert("Une des classes sélectionnées n'est pas disponible pour ce lieu de travail.");
+      showToast("Une des classes sélectionnées n'est pas disponible pour ce lieu de travail.", 'error');
       return;
     }
 
@@ -728,7 +728,7 @@ export default function EmploiDuTemps() {
       modifications += 1;
     }
     if (modifications === 0) {
-      alert("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).");
+      showToast("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).", 'error');
       return;
     }
     setSallesDraftMap(nextDraft);
@@ -1655,16 +1655,37 @@ export default function EmploiDuTemps() {
     }
   };
 
+  const toastBg = toast.type === 'error' ? '#fee2e2' : (toast.type === 'info' ? '#ede9fe' : '#dcfce7');
+  const toastColor = toast.type === 'error' ? '#991b1b' : (toast.type === 'info' ? '#4c1d95' : '#166534');
+  const toastBorder = toast.type === 'error' ? '#fecaca' : (toast.type === 'info' ? '#c7d2fe' : '#86efac');
+
   return (
     <div style={styles.page}>
+      {toast.message && (
+        <div style={{
+          position:'fixed',
+          top:20,
+          right:20,
+          zIndex:9999,
+          padding:'12px 18px',
+          borderRadius:10,
+          background:toastBg,
+          color:toastColor,
+          border:`1px solid ${toastBorder}`,
+          boxShadow:'0 8px 24px rgba(15,23,42,0.15)',
+          fontSize:13,
+          fontWeight:600,
+          maxWidth:420,
+          lineHeight:1.4
+        }}>
+          {toast.message}
+        </div>
+      )}
       <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.titre}>Emploi du temps</h2>
         {isAdmin() && onglet === 'pools' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
-            {toast.message && (
-              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{toast.message}</span>
-            )}
             <button style={styles.btnVert} onClick={() => { const {poolHoraires, pauses} = getHoraireForLieu(''); setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:poolHoraires}); setPausesParPeriodeForm(pauses); }}>+ Ajouter</button>
           </div>
         )}
@@ -1677,9 +1698,6 @@ export default function EmploiDuTemps() {
         {onglet === 'disponibilites' && null}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
-            {toast.message && (
-              <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{toast.message}</span>
-            )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
@@ -2371,7 +2389,7 @@ export default function EmploiDuTemps() {
               ) : (
               <>
               <div style={{marginBottom:12}}>
-                <h3 style={styles.suiviGrandTitre}>Couleurs des professeurs</h3>
+                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleurs</h3>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
                   {profsPool.map(p => {
                     const selected = String(profCouleurEditionId) === String(p.id);
@@ -2414,9 +2432,9 @@ export default function EmploiDuTemps() {
                   </div>
                 )}
               </div>
-              <div style={{marginBottom:10}}>
-                <h3 style={styles.suiviGrandTitre}>Suivi classes</h3>
-                <div style={styles.suiviClassesGrid}>
+              <div style={{marginTop:16,marginBottom:10}}>
+                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
+                <div style={{display:'flex',gap:8,width:'100%'}}>
                   {suiviClasses.map(cl => {
                     const classeOk = cl.niveauClasse === 'CSC'
                       ? (cl.periodesNormalesAffectees === cl.periodesNormalesRequises && cl.periodesSoutienAffectees === cl.periodesSoutienRequises)
@@ -2424,9 +2442,13 @@ export default function EmploiDuTemps() {
                     return (
                       <div key={cl.id} style={{
                         ...styles.suiviClasseChip,
-                        border: classeOk ? '1px solid #86efac' : '1px solid #fecaca',
-                        background: classeOk ? '#f0fdf4' : '#fef2f2',
-                        color: classeOk ? '#166534' : '#991b1b'
+                        flex:1,
+                        width:'auto',
+                        minWidth:0,
+                        maxWidth:'none',
+                        border: classeOk ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
+                        background: classeOk ? '#eef2ff' : '#ffffff',
+                        color: classeOk ? '#3730a3' : '#0f172a'
                       }}>
                         <div style={styles.suiviClasseNom}>{cl.nom}</div>
                         {cl.niveauClasse === 'CSC' && (
@@ -2515,7 +2537,13 @@ export default function EmploiDuTemps() {
                     const crs = creneaux.filter(c => c.jour===jour);
                     if (!crs.length) return null;
                     const lignesJour = [
-                      <tr key={jour+'_h'}><td colSpan={profsPool.length+1} style={styles.jourBande}>{jour}</td></tr>,
+                      <tr key={jour+'_h'} style={{background:'#f8fafc'}}>
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:'14px 0 8px 0',borderLeft:'none',borderRight:'none',borderTop:'none',borderBottom:'none'}}>
+                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:700,fontSize:12,padding:'8px 14px',borderRadius:10,textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                            {jour}
+                          </div>
+                        </td>
+                      </tr>,
                       ...['Matin','Après-midi'].map(per => {
                         const crsPer = crs.filter(c=>c.periode===per);
                         if (!crsPer.length) return null;
@@ -2716,33 +2744,6 @@ export default function EmploiDuTemps() {
               ) : (
                 <div>
                   <div style={{marginBottom:12}}>
-                    <h3 style={styles.suiviGrandTitre}>Suivi des salles</h3>
-                    {suiviSalles.length === 0 ? (
-                      <div style={styles.msgVide}>Aucune salle configurée pour ce lieu.</div>
-                    ) : (
-                      <div style={{display:'flex',gap:8,width:'100%'}}>
-                        {suiviSalles.map(salle => (
-                          <div
-                            key={salle.salle}
-                            style={{
-                              ...styles.suiviBrancheChip,
-                              flex:1,
-                              width:'auto',
-                              minWidth:0,
-                              maxWidth:'none',
-                              borderColor: salle.complet ? '#6366f1' : '#e2e8f0',
-                              background: salle.complet ? '#e0e7ff' : '#ffffff',
-                              color: salle.complet ? '#3730a3' : '#0f172a'
-                            }}
-                          >
-                            <div style={styles.suiviBrancheNom}>{salle.salle}</div>
-                            <div style={styles.suiviBrancheLigne}>{salle.complet ? 'Complet' : 'Non complet'}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{marginTop:16,marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Affectation rapide</h3>
                     <div style={{display:'flex',alignItems:'center',gap:8,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
                       <select
@@ -2780,6 +2781,33 @@ export default function EmploiDuTemps() {
                         Appliquer
                       </button>
                     </div>
+                  </div>
+                  <div style={{marginTop:16,marginBottom:12}}>
+                    <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
+                    {suiviSalles.length === 0 ? (
+                      <div style={styles.msgVide}>Aucune salle configurée pour ce lieu.</div>
+                    ) : (
+                      <div style={{display:'flex',gap:8,width:'100%'}}>
+                        {suiviSalles.map(salle => (
+                          <div
+                            key={salle.salle}
+                            style={{
+                              ...styles.suiviBrancheChip,
+                              flex:1,
+                              width:'auto',
+                              minWidth:0,
+                              maxWidth:'none',
+                              borderColor: salle.complet ? '#c7d2fe' : '#e2e8f0',
+                              background: salle.complet ? '#eef2ff' : '#ffffff',
+                              color: salle.complet ? '#3730a3' : '#0f172a'
+                            }}
+                          >
+                            <div style={styles.suiviBrancheNom}>{salle.salle}</div>
+                            <div style={styles.suiviBrancheLigne}>{salle.complet ? 'Complet' : 'Non complet'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {!salleSelectionnee ? (
                     <div style={styles.msgVide}>
@@ -3486,7 +3514,7 @@ const styles = {
   lbl:{fontSize:13,fontWeight:600,marginBottom:5,color:'#555'},
   inp:{padding:10,border:'1px solid #e2e8f0',borderRadius:8,fontSize:14},
   formActions:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:20},
-  checkBadge:{padding:'5px 10px',borderRadius:16,cursor:'pointer',fontSize:12,fontWeight:600,display:'flex',alignItems:'center'},
+  checkBadge:{padding:'5px 10px',borderRadius:16,cursor:'pointer',fontSize:12,fontWeight:400,display:'flex',alignItems:'center'},
   poolsGrid:{display:'flex',flexDirection:'column',gap:16,marginTop:16},
   poolCard:{background:'white',borderRadius:12,padding:20,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'},
   poolLabel:{fontSize:13,fontWeight:600,color:'#0f172a',marginBottom:4},

@@ -1742,7 +1742,11 @@ export default function Classes() {
                     <div style={{fontWeight:700,fontSize:13,color:'#1e293b'}}>{d.titre}</div>
                     <div style={{display:'flex',gap:8,alignItems:'center',marginTop:2}}>
                       {d.date_remise && <span style={{fontSize:11,color:'#94a3b8'}}>{new Date(d.date_remise).toLocaleDateString('fr-CH')}</span>}
-                      {d.matiere && <span style={{fontSize:11,color:'#64748b'}}>{d.matiere}</span>}
+                      {d.matiere && (() => {
+                        const br = (branches || []).find(b => b.code === d.matiere || b.nom === d.matiere || (b.designation_courte || '').trim() === d.matiere);
+                        const label = (br?.designation_courte || '').trim() || d.matiere;
+                        return <span style={{fontSize:11,color:'#64748b'}}>{label}</span>;
+                      })()}
                     </div>
                   </div>
                   <div style={{display:'flex',gap:4,alignItems:'center',flexShrink:0}}>
