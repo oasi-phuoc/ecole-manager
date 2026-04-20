@@ -535,7 +535,11 @@ export default function EmploiDuTemps() {
   )) : [];
   const suiviPreferencesBranches = profsAffectesClasse.map((profId) => {
     const prof = (profsPoolP || []).find(p => String(p.id) === String(profId)) || (profs || []).find(p => String(p.id) === String(profId));
-    const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites);
+    const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites)
+      .filter(id => {
+        const m = matieresParId.get(String(id));
+        return m && (!niveauPoolPlanning || String(m.niveau || '').toUpperCase() === niveauPoolPlanning);
+      });
     const affectationsProf = planningClasseAffectationsActives.filter(a => String(a.prof_id) === String(profId));
     const compteurParBranche = affectationsProf.reduce((acc, a) => {
       if (!a?.matiere_id) return acc;
@@ -687,25 +691,16 @@ export default function EmploiDuTemps() {
   };
   const handleAffectationRapideClasse = () => {
     if (!isAdmin()) return;
-    if (!salleSelectionnee) {
-      showToast("Sélectionnez d'abord une salle.", 'error');
-      return;
-    }
+    if (!salleSelectionnee) return;
     const classesIdsSelectionnees = [classeRapideId, classeRapideId2].filter(Boolean);
-    if (classesIdsSelectionnees.length === 0) {
-      showToast("Sélectionnez au moins une classe.", 'error');
-      return;
-    }
+    if (classesIdsSelectionnees.length === 0) return;
 
     const classesIdsUniques = Array.from(new Set(classesIdsSelectionnees.map(String)));
     const classesSelectionnees = classesIdsUniques
       .map(id => classesPourSalles.find(c => String(c.id) === String(id)))
       .filter(Boolean);
 
-    if (classesSelectionnees.length !== classesIdsUniques.length) {
-      showToast("Une des classes sélectionnées n'est pas disponible pour ce lieu de travail.", 'error');
-      return;
-    }
+    if (classesSelectionnees.length !== classesIdsUniques.length) return;
 
     const nextDraft = { ...sallesDraftMap };
     let modifications = 0;
@@ -727,13 +722,9 @@ export default function EmploiDuTemps() {
       }
       modifications += 1;
     }
-    if (modifications === 0) {
-      showToast("Aucun horaire à mettre à jour pour la/les classe(s) sélectionnée(s).", 'error');
-      return;
-    }
+    if (modifications === 0) return;
     setSallesDraftMap(nextDraft);
     setHasSallesUnsaved(Object.keys(nextDraft).length > 0);
-    showToast(`${modifications} changement(s) ajouté(s). Cliquez sur Sauvegarder pour les enregistrer.`, 'info');
   };
   const sauvegarderAffectationsSalles = async () => {
     if (!hasSallesUnsaved || Object.keys(sallesDraftMap).length === 0) {
@@ -2283,7 +2274,7 @@ export default function EmploiDuTemps() {
               ) : (
               <>
               <div style={{marginBottom:12}}>
-                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleur</h3>
+                <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleurs</h3>
                 <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
                   {classesPool.map(cl => {
                     const selected = String(classeCouleurEditionId) === String(cl.id);
@@ -2326,13 +2317,21 @@ export default function EmploiDuTemps() {
               <div style={{marginTop:16,marginBottom:12}}>
                 <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
                 <div style={styles.suiviJoursGrid}>
-                  {JOURS.map(j => (
-                    <div key={j} style={styles.suiviJourChip}>
-                      <div style={styles.suiviJourNom}>{j}</div>
-                      <div style={styles.suiviJourLigne}>Matin : {resumePeriodesParJour[j].matin}</div>
-                      <div style={styles.suiviJourLigne}>Après-midi : {resumePeriodesParJour[j].apresMidi}</div>
-                    </div>
-                  ))}
+                  {JOURS.map(j => {
+                    const aAffectations = (resumePeriodesParJour[j].matin > 0) || (resumePeriodesParJour[j].apresMidi > 0);
+                    return (
+                      <div key={j} style={{
+                        ...styles.suiviJourChip,
+                        background: aAffectations ? '#eef2ff' : '#ffffff',
+                        border: `1px solid ${aAffectations ? '#c7d2fe' : '#e2e8f0'}`,
+                        color: aAffectations ? '#3730a3' : '#0f172a'
+                      }}>
+                        <div style={{...styles.suiviJourNom,color: aAffectations ? '#3730a3' : '#0f172a'}}>{j}</div>
+                        <div style={{...styles.suiviJourLigne,color: aAffectations ? '#4338ca' : '#475569'}}>Matin : {resumePeriodesParJour[j].matin}</div>
+                        <div style={{...styles.suiviJourLigne,color: aAffectations ? '#4338ca' : '#475569'}}>Après-midi : {resumePeriodesParJour[j].apresMidi}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
@@ -2965,7 +2964,7 @@ export default function EmploiDuTemps() {
                         {suiviPreferencesBranches.map((item) => (
                           <div key={item.profId} style={{...styles.suiviPrefCard,background:'#ffffff',borderColor:'#e2e8f0'}}>
                             <div style={styles.suiviPrefHead}>
-                              <div style={styles.suiviPrefNom}>{item.nom}</div>
+                              <div style={{...styles.suiviPrefNom,color:'#0f172a'}}>{item.nom}</div>
                               <span style={styles.suiviPrefTagAutre}>Autre ({item.compteAutres})</span>
                             </div>
                             {item.branchesPrefs.length === 0 ? (
