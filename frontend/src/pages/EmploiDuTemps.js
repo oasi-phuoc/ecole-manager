@@ -1682,8 +1682,8 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'plannings' && (
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer sélection</button>
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
+            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
           </div>
         )}
         {onglet === 'disponibilites' && null}
@@ -1701,7 +1701,7 @@ export default function EmploiDuTemps() {
       </div>
 
       {onglet === 'plannings' && (
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
           <div style={styles.toggleGroup}>
             {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
               <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
@@ -2536,11 +2536,14 @@ export default function EmploiDuTemps() {
                     const crs = creneaux.filter(c => c.jour===jour);
                     if (!crs.length) return null;
                     const lignesJour = [
-                      <tr key={jour+'_h'} style={{background:'#f8fafc'}}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:'14px 0 8px 0',borderLeft:'none',borderRight:'none',borderTop:'none',borderBottom:'none'}}>
-                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:700,fontSize:12,padding:'8px 14px',borderRadius:10,textTransform:'uppercase',letterSpacing:'0.04em'}}>
-                            {jour}
-                          </div>
+                      <tr key={jour+'_sep_top'}>
+                        <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}>
+                          <div style={{height: 30}} />
+                        </td>
+                      </tr>,
+                      <tr key={jour+'_h'}>
+                        <td colSpan={profsPool.length+1} style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',border:'none'}}>
+                          {jour}
                         </td>
                       </tr>,
                       ...['Matin','Après-midi'].map(per => {
@@ -2715,15 +2718,6 @@ export default function EmploiDuTemps() {
                         ];
                       })
                     ];
-                    if (jour !== 'Vendredi') {
-                      lignesJour.push(
-                        <tr key={jour+'_sep'}>
-                          <td colSpan={profsPool.length+1} style={styles.separateurJourBlanc}>
-                            <div style={{height: 30}} />
-                          </td>
-                        </tr>
-                      );
-                    }
                     return lignesJour;
                   })}
                 </tbody>
@@ -3099,7 +3093,14 @@ export default function EmploiDuTemps() {
                   Sélectionnez d'abord une salle pour afficher son planning.
                 </div>
               ) : (
-                <div style={{overflowX:'auto'}}>
+                <div>
+                  <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
+                    <span style={{fontWeight:700}}>Site :</span>
+                    <span style={{fontWeight:400}}> {sallesLieuTravailId}</span>
+                    <span style={{fontWeight:700}}> - Salle :</span>
+                    <span style={{fontWeight:400}}> {salleSelectionnee}</span>
+                  </div>
+                  <div style={{overflowX:'auto'}}>
                   <table style={{...styles.tbl,minWidth:760,tableLayout:'fixed',width:'100%'}}>
                     <thead>
                       <tr style={styles.theadRow}>
@@ -3161,6 +3162,7 @@ export default function EmploiDuTemps() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -3176,7 +3178,15 @@ export default function EmploiDuTemps() {
           )}
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}{planningProf.classesTitulaire?.length>0 ? ` — Titulaire : ${planningProf.classesTitulaire.map(c=>c.nom).join(', ')}` : ''}</div>
+              <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
+                <span style={{fontWeight:700}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}</span>
+                {planningProf.classesTitulaire?.length > 0 && (
+                  <>
+                    <span style={{fontWeight:700}}> - Titulaire :</span>
+                    <span style={{fontWeight:400}}> {planningProf.classesTitulaire.map(c=>c.nom).join(', ')}</span>
+                  </>
+                )}
+              </div>
               <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
                 <thead>
                   <tr style={styles.theadRow}>
@@ -3249,7 +3259,16 @@ export default function EmploiDuTemps() {
           )}
           {planningClasse && classePlanningId && (
             <div>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
+              <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
+                <span style={{fontWeight:700}}>Classe :</span>
+                <span style={{fontWeight:400}}> {planningClasse.classe?.nom}</span>
+                {planningClasse.classe?.titulaire_nom && (
+                  <>
+                    <span style={{fontWeight:700}}> - Titulaire :</span>
+                    <span style={{fontWeight:400}}> {planningClasse.classe.titulaire_nom}</span>
+                  </>
+                )}
+              </div>
 
               <div style={{overflowX:'auto'}}>
                 <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
@@ -3355,26 +3374,24 @@ export default function EmploiDuTemps() {
           )}
 
           {planningPoolId && planningGeneral && (
-            <div>
-              {/* Tableau titulaires des classes */}
-              <div style={{...styles.card, marginBottom:16}}>
-                <h4 style={{margin:'0 0 12px',fontSize:14,fontWeight:700,color:'#555'}}>🏫 Classes et titulaires</h4>
-                <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
-                  {(planningGeneral.titulaires||[])
-                    .filter(t=>t.classe_nom)
-                    .filter(t => {
-                      if (!planningPoolId) return true;
-                      const poolSel = pools.find(p => String(p.id) === String(planningPoolId));
-                      const ids = new Set((poolSel?.classes || []).map(c => String(c.id)));
-                      return ids.has(String(t.classe_id));
-                    })
-                    .map((t,i) => (
-                    <div key={i} style={{background:'#f8f9fa',borderRadius:10,padding:'10px 16px',border:'1px solid #e0e0e0',minWidth:160}}>
-                      <div style={{fontWeight:700,fontSize:14,color:'#1a73e8'}}>{t.classe_nom}</div>
-                      <div style={{fontSize:12,color:'#555',marginTop:4}}>{t.prof_nom || <span style={{color:'#bbb'}}>Pas de titulaire</span>}</div>
-                    </div>
-                  ))}
-                </div>
+            <div style={{marginBottom:16}}>
+              <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Classes et titulaires</h3>
+              <div style={{display:'flex',gap:8,width:'100%'}}>
+                {(planningGeneral.titulaires||[])
+                  .filter(t=>t.classe_nom)
+                  .filter(t => {
+                    if (!planningPoolId) return true;
+                    const poolSel = pools.find(p => String(p.id) === String(planningPoolId));
+                    const ids = new Set((poolSel?.classes || []).map(c => String(c.id)));
+                    return ids.has(String(t.classe_id));
+                  })
+                  .sort((a,b) => String(a.classe_nom||'').localeCompare(String(b.classe_nom||''), 'fr', {numeric:true, sensitivity:'base'}))
+                  .map((t,i) => (
+                  <div key={i} style={{flex:1,minWidth:0,background:'#ffffff',borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
+                    <div style={{fontWeight:700,fontSize:14,color:'#0f172a'}}>{t.classe_nom}</div>
+                    <div style={{fontSize:12,color:'#475569',marginTop:4}}>{t.prof_nom || <span style={{color:'#94a3b8'}}>Pas de titulaire</span>}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
