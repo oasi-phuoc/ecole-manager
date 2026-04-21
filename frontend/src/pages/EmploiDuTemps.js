@@ -1230,6 +1230,12 @@ export default function EmploiDuTemps() {
     maxWidth: LARGEUR_COLONNE_CRENEAU
   };
   const LARGEUR_COLONNE_JOUR = `calc((100% - ${LARGEUR_COLONNE_CRENEAU}px) / ${JOURS.length})`;
+  const LARGEUR_COLONNE_PERIODE_UI = 46;
+  const HAUTEUR_LIGNE_COURS_UI = 56;
+  const HAUTEUR_LIGNE_PAUSE_UI = 42;
+  const STYLE_TD_HORAIRE_UI = {background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'};
+  const STYLE_TD_COURS_UI = {textAlign:'center',verticalAlign:'middle',fontSize:12};
+  const STYLE_TD_PAUSE_UI = {background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle'};
   const escapeHtml = (val) => String(val ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -3153,12 +3159,12 @@ export default function EmploiDuTemps() {
                     <span style={{fontWeight:400}}> {salleSelectionnee}</span>
                   </div>
                   <div style={{overflowX:'auto'}}>
-                  <table style={{...styles.tbl,minWidth:760,tableLayout:'fixed',width:'100%'}}>
+                  <table style={{...styles.tbl,minWidth:200+JOURS.length*140,tableLayout:'fixed',width:'100%'}}>
                     <thead>
                       <tr style={styles.theadRow}>
-                        <th style={{...styles.th,width:46,minWidth:46,maxWidth:46}}></th>
+                        <th style={{...styles.th,width:LARGEUR_COLONNE_PERIODE_UI,minWidth:LARGEUR_COLONNE_PERIODE_UI,maxWidth:LARGEUR_COLONNE_PERIODE_UI}}></th>
                         <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
-                        {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center'}}>{j}</th>)}
+                        {JOURS.map(j => <th key={`planning-only-${j}`} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -3175,15 +3181,15 @@ export default function EmploiDuTemps() {
                           const numRows = crsBase.length + 1;
                           return [
                             ...crsBase.flatMap((crBase, idx) => [
-                              <tr key={`planning-only-${crBase.id}`} style={styles.tr}>
+                              <tr key={`planning-only-${crBase.id}`} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
                                 {idx === 0 && (
-                                  <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
+                                  <td rowSpan={numRows} style={{width:LARGEUR_COLONNE_PERIODE_UI,minWidth:LARGEUR_COLONNE_PERIODE_UI,maxWidth:LARGEUR_COLONNE_PERIODE_UI,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
                                     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
                                       <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
                                     </div>
                                   </td>
                                 )}
-                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'}}>
+                                <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
                                   P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
@@ -3192,7 +3198,7 @@ export default function EmploiDuTemps() {
                                   const couleurClasse = classeAffectee ? getCouleurClasse(classeAffectee) : '#ffffff';
                                   const classeNom = classes.find(cl => String(cl.id) === String(classeAffectee))?.nom || '';
                                   return (
-                                    <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle'}}>
+                                    <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>
                                       <div style={{fontWeight:classeNom?700:500,color:classeNom?'#1f2937':'#94a3b8',background:couleurClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{classeNom||'—'}</div>
                                       {classeNom&&<div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
                                     </td>
@@ -3200,15 +3206,15 @@ export default function EmploiDuTemps() {
                                 })}
                               </tr>,
                               ...(idx === 1 ? [(
-                                <tr key={`planning-only-pause-${periode}`}>
-                                  <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle'}}>
+                                <tr key={`planning-only-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
+                                  <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
                                     {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                                   </td>
-                                  <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px'}}>PAUSE</td>
+                                  <td colSpan={5} style={{...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>PAUSE</td>
                                 </tr>
                               )] : [])
                             ]),
-                            periodeIdx === 0 ? <tr key={`sep-salle-${periode}`}><td colSpan={7} style={{height:56,background:'white',border:'none',padding:0}}></td></tr> : null
+                            periodeIdx === 0 ? <tr key={`sep-salle-${periode}`}><td colSpan={7} style={{height:HAUTEUR_LIGNE_COURS_UI,background:'white',border:'none',padding:0}}></td></tr> : null
                           ].filter(Boolean);
                         })
                       )}
@@ -3239,70 +3245,66 @@ export default function EmploiDuTemps() {
                   </>
                 )}
               </div>
-              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
+              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:200+JOURS.length*140}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:46,minWidth:46,maxWidth:46}}></th>
-                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU}}>Horaire</th>
+                    <th style={{...styles.th,width:LARGEUR_COLONNE_PERIODE_UI,minWidth:LARGEUR_COLONNE_PERIODE_UI,maxWidth:LARGEUR_COLONNE_PERIODE_UI}}></th>
+                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                     {JOURS.map(j => <th key={j} style={{...styles.th,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center'}}>{j}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {(() => {
-                    const HAUTEUR_LIGNE_COURS = 56;
-                    const HAUTEUR_LIGNE_PAUSE = 42;
-                    return ['Matin','Après-midi'].map((periode, periodeIdx) => {
-                      const crsBase = (planningProf.creneaux||[]).filter(c=>c.jour==='Lundi'&&c.periode===periode);
-                      if (!crsBase.length) return null;
-                      const numRows = crsBase.length + 1;
-                      return [
-                        ...crsBase.flatMap((crBase,idx) => [
-                          <tr key={crBase.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS}}>
-                            {idx === 0 && (
-                              <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
-                                <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
-                                  <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
-                                </div>
-                              </td>
-                            )}
-                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS}}>
-                              P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                  {['Matin','Après-midi'].map((periode, periodeIdx) => {
+                    const crsBase = (planningProf.creneaux||[]).filter(c=>c.jour==='Lundi'&&c.periode===periode);
+                    if (!crsBase.length) return null;
+                    const numRows = crsBase.length + 1;
+                    return [
+                      ...crsBase.flatMap((crBase,idx) => [
+                        <tr key={crBase.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
+                          {idx === 0 && (
+                            <td rowSpan={numRows} style={{width:LARGEUR_COLONNE_PERIODE_UI,minWidth:LARGEUR_COLONNE_PERIODE_UI,maxWidth:LARGEUR_COLONNE_PERIODE_UI,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
+                              <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
+                                <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
+                              </div>
                             </td>
-                            {JOURS.map(jour => {
-                              const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                              if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS}}></td>;
-                              const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
-                              const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
-                              const indispo = dispo && !dispo.disponible;
-                              const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
-                              const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
-                              const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
-                              return (
-                                <td key={jour} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,height:HAUTEUR_LIGNE_COURS,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                  background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
-                                  {classeAffectee ? (
-                                    <>
-                                      <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.classe_nom}</div>
-                                      {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
-                                    </>
-                                  ) : ''}
-                                </td>
-                              );
-                            })}
-                          </tr>,
-                          ...(idx === 1 ? [(
-                            <tr key={`prof-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE}}>
-                              <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_PAUSE}}>
-                                {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                          )}
+                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
+                            P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                          </td>
+                          {JOURS.map(jour => {
+                            const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
+                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS_UI}}></td>;
+                            const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
+                            const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
+                            const indispo = dispo && !dispo.disponible;
+                            const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
+                            const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
+                            const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
+                            return (
+                              <td key={jour} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
+                                background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
+                                {classeAffectee ? (
+                                  <>
+                                    <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.classe_nom}</div>
+                                    {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                  </>
+                                ) : ''}
                               </td>
-                              <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px',height:HAUTEUR_LIGNE_PAUSE}}>PAUSE</td>
-                            </tr>
-                          )] : [])
-                        ]),
-                        periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:HAUTEUR_LIGNE_COURS,background:'white',border:'none',padding:0}}></td></tr> : null
-                      ].filter(Boolean);
-                    });
-                  })()}
+                            );
+                          })}
+                        </tr>,
+                        ...(idx === 1 ? [(
+                          <tr key={`prof-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
+                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
+                              {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                            </td>
+                            <td colSpan={5} style={{...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>PAUSE</td>
+                          </tr>
+                        )] : [])
+                      ]),
+                      periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:HAUTEUR_LIGNE_COURS_UI,background:'white',border:'none',padding:0}}></td></tr> : null
+                    ].filter(Boolean);
+                  })}
                 </tbody>
               </table>
             </div>
@@ -3330,31 +3332,29 @@ export default function EmploiDuTemps() {
               </div>
 
               <div style={{overflowX:'auto'}}>
-                <table style={{...styles.tbl, width:'100%', tableLayout:'fixed'}}>
+                <table style={{...styles.tbl, width:'100%', tableLayout:'fixed',minWidth:200+JOURS.length*140}}>
                   <thead>
                     <tr style={styles.theadRow}>
-                      <th style={{...styles.th,width:46,minWidth:46,maxWidth:46,textAlign:'center'}}></th>
-                      <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
+                      <th style={{...styles.th,width:LARGEUR_COLONNE_PERIODE_UI,minWidth:LARGEUR_COLONNE_PERIODE_UI,maxWidth:LARGEUR_COLONNE_PERIODE_UI,textAlign:'center'}}></th>
+                      <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                       {JOURS.map(j => <th key={`classe-tab-${j}`} style={{...styles.th,textAlign:'center',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}>{j}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      const HAUTEUR_LIGNE_COURS = 56;
-                      const HAUTEUR_LIGNE_PAUSE = 42;
                       const renderPeriodeRows = (periode) => {
                         const crsBase = (planningClasse.creneaux || []).filter(c => c.jour === 'Lundi' && c.periode === periode);
                         if (!crsBase.length) return [];
                         return crsBase.flatMap((crBase, idx) => [
-                          <tr key={`classe-tab-${periode}-${crBase.id}`} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS}}>
+                          <tr key={`classe-tab-${periode}-${crBase.id}`} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
                             {idx === 0 && (
                               <td
                                 rowSpan={5}
                                 style={{
                                   ...styles.td,
-                                  width:46,
-                                  minWidth:46,
-                                  maxWidth:46,
+                                  width:LARGEUR_COLONNE_PERIODE_UI,
+                                  minWidth:LARGEUR_COLONNE_PERIODE_UI,
+                                  maxWidth:LARGEUR_COLONNE_PERIODE_UI,
                                   textAlign:'center',
                                   verticalAlign:'middle',
                                   background:'#f8fafc',
@@ -3370,18 +3370,18 @@ export default function EmploiDuTemps() {
                                 </div>
                               </td>
                             )}
-                            <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,height:HAUTEUR_LIGNE_COURS}}>
+                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
                               P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                             </td>
                             {JOURS.map(jour => {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                              if (!cr) return <td key={`classe-tab-${periode}-${jour}`} style={{...styles.td,background:'#f5f5f5',height:HAUTEUR_LIGNE_COURS,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
+                              if (!cr) return <td key={`classe-tab-${periode}-${jour}`} style={{...styles.td,background:'#f5f5f5',height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                               const aCours = classeAHorairePlanning(jour, periode);
                               const aff = aCours ? (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id) : null;
                               const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
-                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,height:HAUTEUR_LIGNE_COURS,
+                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                   background:aCours?'#fff':'#f5f5f5'}}>
                                   {aff ? (
@@ -3395,11 +3395,11 @@ export default function EmploiDuTemps() {
                             })}
                           </tr>,
                           ...(idx === 1 ? [(
-                            <tr key={`classe-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE}}>
-                              <td style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,whiteSpace:'nowrap',height:HAUTEUR_LIGNE_PAUSE,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                            <tr key={`classe-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
+                              <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI,whiteSpace:'nowrap'}}>
                                 {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
                               </td>
-                              <td colSpan={5} style={{...styles.td,background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',height:HAUTEUR_LIGNE_PAUSE}}>
+                              <td colSpan={5} style={{...styles.td,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
                                 PAUSE
                               </td>
                             </tr>
@@ -3409,7 +3409,7 @@ export default function EmploiDuTemps() {
                       return [
                         ...renderPeriodeRows('Matin'),
                         <tr key="classe-separation-matin-apresmidi">
-                          <td colSpan={7} style={{...styles.td,height:HAUTEUR_LIGNE_COURS,background:'#ffffff',border:'none'}}></td>
+                          <td colSpan={7} style={{...styles.td,height:HAUTEUR_LIGNE_COURS_UI,background:'#ffffff',border:'none'}}></td>
                         </tr>,
                         ...renderPeriodeRows('Après-midi'),
                       ];
@@ -3455,10 +3455,10 @@ export default function EmploiDuTemps() {
           )}
           {planningPoolId && planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
-              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:240+planningGeneral.profs.length*120}}>
+              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:LARGEUR_COLONNE_CRENEAU+planningGeneral.profs.length*120}}>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:150,minWidth:150,maxWidth:150,textAlign:'center'}}>Horaire</th>
+                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                     {planningGeneral.profs.map(p => {
                       const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
                       return <th key={p.id} style={{...styles.th,textAlign:'center'}}>
@@ -3475,9 +3475,9 @@ export default function EmploiDuTemps() {
                     return [
                       <tr key={jour+'_h'}><td colSpan={planningGeneral.profs.length+1} style={styles.jourBande}>{jour}</td></tr>,
                       ...crs.map(cr => (
-                        <tr key={cr.id} style={styles.tr}>
-                          <td style={{...styles.td,background:'#f8f9fa',fontSize:11,fontWeight:600,whiteSpace:'nowrap',width:150,minWidth:150,maxWidth:150,padding:'9px 10px'}}>
-                            {cr.heure_debut}–{cr.heure_fin}<br/><span style={{color:'#999'}}>{cr.periode}</span>
+                        <tr key={cr.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
+                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
+                            {cr.heure_debut}–{cr.heure_fin}<br/><span style={{color:'#999',fontWeight:500}}>{cr.periode}</span>
                           </td>
                           {planningGeneral.profs.map(p => {
                             const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
@@ -3491,10 +3491,10 @@ export default function EmploiDuTemps() {
                               ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
                               : '#111827';
                             return (
-                              <td key={p.id} style={{...styles.td,textAlign:'center',fontSize:11,
+                              <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                 background:couleurFond,color:couleurTexte}}>
-                                {aff?<><b style={{color:couleurTexte}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
-                                {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontSize:11}}>{aff.matiere_nom}</div> : null)}
+                                {aff?<><b style={{color:couleurTexte,fontSize:12}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
+                                {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null)}
                               </> : ''}
                               </td>
                             );
