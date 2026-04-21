@@ -271,13 +271,13 @@ export default function DocumentsAdministratifs() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 derniers documents modifiés/ajoutés</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Derniers documents ajoutés</div>
           {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
             <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
           ))}
         </div>
         <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>5 documents les plus utilisés</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Documents souvent utilisés</div>
           {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
             <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
           ))}
