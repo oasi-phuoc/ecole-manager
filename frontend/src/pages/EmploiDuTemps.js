@@ -2549,7 +2549,7 @@ export default function EmploiDuTemps() {
                         !classesDejaAttribueesAuxAutres.has(String(cl.id)) || String(cl.id) === selectedClasseId
                       );
                       return (
-                        <td key={`titulariat-${prof.id}`} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
+                        <td key={`titulariat-${prof.id}`} style={{...styles.td,padding:'8px 4px',background:'#fff',textAlign:'center'}}>
                           <select
                             style={styles.cellSel}
                             value={selectedClasseId}
@@ -2637,7 +2637,7 @@ export default function EmploiDuTemps() {
                                 const couleurTexteSelectProf = indispo ? '#6b7280' : (estSpecialSelectionne ? '#ffffff' : '#1f2937');
                                 const poidsTexteSelectProf = estSpecialSelectionne ? 700 : 500;
                                 return (
-                                  <td key={prof.id} style={{...styles.td,padding:4,background:'#fff',textAlign:'center'}}>
+                                  <td key={prof.id} style={{...styles.td,padding:'8px 4px',background:'#fff',textAlign:'center'}}>
                                     <select style={{...styles.cellSel,background:couleurSelectProf,color:couleurTexteSelectProf,fontWeight:poidsTexteSelectProf}}
                                       value={valeurSelect}
                                       onChange={e => {
