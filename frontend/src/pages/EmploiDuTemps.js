@@ -2509,7 +2509,7 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-              <table style={{...styles.tbl,overflow:'visible',minWidth:200+profsPool.length*140}}>
+              <table style={{...styles.tbl,overflow:'visible',tableLayout:'fixed',minWidth:200+profsPool.length*140}}>
                 <thead>
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Horaire</th>
