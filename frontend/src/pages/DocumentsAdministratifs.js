@@ -391,20 +391,20 @@ export default function DocumentsAdministratifs() {
               <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                 {activeTab === 'pedagogiques' ? (
                   <>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Date</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Nom</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Niveau</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>VISA</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Nom</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Niveau</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>VISA</th>
                   </>
                 ) : (
                   <>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Désignation</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Fichier</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Ajouté par</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Désignation</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Fichier</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Ajouté par</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
                   </>
                 )}
-                <th style={{ textAlign: 'right', padding: '8px 10px', fontWeight: 700, color: '#64748b', fontSize: 11 }}></th>
+                <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -414,20 +414,20 @@ export default function DocumentsAdministratifs() {
                 <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? 'white' : '#f8fafc' }}>
                   {activeTab === 'pedagogiques' ? (
                     <>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, whiteSpace: 'nowrap', width: 1 }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', width: '100%' }}>{doc.designation}</td>
-                      <td style={{ padding: '10px 10px', color: '#6366f1', fontSize: 12, whiteSpace: 'nowrap', width: 1 }}>{doc.sous_categorie || '—'}</td>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, width: 1, whiteSpace: 'nowrap' }}>{visa || '—'}</td>
+                      <td style={{ padding: '11px 14px', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', width: 1 }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                      <td style={{ padding: '11px 14px', color: '#0f172a', width: '100%' }}>{doc.designation}</td>
+                      <td style={{ padding: '11px 14px', color: '#6366f1', fontSize: 13, whiteSpace: 'nowrap', width: 1 }}>{doc.sous_categorie || '—'}</td>
+                      <td style={{ padding: '11px 14px', color: '#0f172a', fontSize: 13, width: 1, whiteSpace: 'nowrap' }}>{visa || '—'}</td>
                     </>
                   ) : (
                     <>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
-                      <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{doc.nom_fichier}{doc.taille ? ' · ' + Math.round(doc.taille / 1024) + ' KB' : ''}</td>
-                      <td style={{ padding: '10px 10px', color: '#64748b', fontSize: 12 }}>{(doc.auteur_nom || '')} {(doc.auteur_prenom || '')}</td>
-                      <td style={{ padding: '10px 10px', color: '#0f172a', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
+                      <td style={{ padding: '11px 14px', color: '#0f172a', fontWeight: 600 }}>{doc.designation}</td>
+                      <td style={{ padding: '11px 14px', color: '#64748b', fontSize: 13 }}>{doc.nom_fichier}{doc.taille ? ' · ' + Math.round(doc.taille / 1024) + ' KB' : ''}</td>
+                      <td style={{ padding: '11px 14px', color: '#64748b', fontSize: 13 }}>{(doc.auteur_nom || '')} {(doc.auteur_prenom || '')}</td>
+                      <td style={{ padding: '11px 14px', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap' }}>{new Date(doc.created_at).toLocaleDateString('fr-CH')}</td>
                     </>
                   )}
-                  <td style={{ padding: '10px 10px', textAlign: 'right' }}>
+                  <td style={{ padding: '11px 14px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                       <button onClick={() => visualiser(doc)} style={{ padding: 5, border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4338ca' }} title="Visualiser">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
