@@ -1258,7 +1258,7 @@ export default function EmploiDuTemps() {
         <meta charset="utf-8" />
         <title>${escapeHtml(titre)}</title>
         <style>
-          @page { size: ${pageSize}; margin: 20mm; }
+          @page { size: ${pageSize}; margin: 12mm 20mm; }
           body { font-family: Arial, sans-serif; margin: 16px; color: #111827; }
           @media print {
             * {
@@ -1266,7 +1266,7 @@ export default function EmploiDuTemps() {
               print-color-adjust: exact !important;
             }
           }
-          h1 { margin: 0 0 12px; font-size: 20px; }
+          h1 { margin: 0 0 24px; font-size: 40px; }
           h2 { margin: 18px 0 8px; font-size: 16px; }
           table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; table-layout: fixed; }
           th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
@@ -1280,7 +1280,7 @@ export default function EmploiDuTemps() {
           .section { break-inside: avoid; break-after: page; }
           .section:last-child { break-after: auto; }
           ${compactClasses ? `
-          h1 { margin-bottom: 8px; font-size: 18px; }
+          h1 { margin-bottom: 18px; font-size: 36px; }
           h2 { margin: 10px 0 6px; font-size: 14px; }
           table { margin: 4px 0 10px; }
           th, td { padding: 4px; font-size: 10px; line-height: 1.15; }
@@ -1314,26 +1314,31 @@ export default function EmploiDuTemps() {
       if (!base.length) return;
       const numRows = base.length + (showPauseRows ? 1 : 0);
       base.forEach((crBase, idx) => {
-        const cellules = JOURS.map((jour) => {
+        const isFirstRow = idx === 0;
+        const isLastRow = idx === base.length - 1;
+        const topEdge = isFirstRow ? 'border-top:2px solid #a5b4fc;' : '';
+        const bottomEdge = isLastRow ? 'border-bottom:2px solid #a5b4fc;' : '';
+        const cellules = JOURS.map((jour, jdx) => {
+          const isLastCol = jdx === JOURS.length - 1;
+          const rightEdge = isLastCol ? 'border-right:2px solid #a5b4fc;' : '';
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;"></td>`;
+          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}"></td>`;
           const raw = fetchCellData(cr, jour, periode) || { text: '' };
           const texte = escapeHtml(raw.text || '').replace(/\n/g, '<br/>');
           const bg = toPrintColor(raw.bg) || '#ffffff';
           const fg = toPrintColor(raw.color) || '#1e293b';
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;font-size:9pt;line-height:1.25;">${texte}</td>`;
+          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}font-size:9pt;line-height:1.25;">${texte}</td>`;
         }).join('');
         const periodeCell = idx === 0
-          ? `<td rowspan="${numRows}" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>`
+          ? `<td rowspan="${numRows}" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:2px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>`
           : '';
-        const periodeNum = periode === 'Matin' ? idx + 1 : idx + 5;
         lignes.push(
-          `<tr>${periodeCell}<td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;text-align:center;font-size:9pt;">P${periodeNum} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+          `<tr>${periodeCell}<td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;${topEdge}${bottomEdge}text-align:center;font-size:9pt;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
           const pause = pausesParPeriode[periode];
           lignes.push(
-            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">PAUSE</td></tr>`
+            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;border-right:2px solid #a5b4fc;">PAUSE</td></tr>`
           );
         }
       });
@@ -1343,12 +1348,7 @@ export default function EmploiDuTemps() {
     });
     const headerDaysCells = JOURS.map(j => {
       const eff = countParJour(j);
-      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0;">${eff}</span>
-          <span>${escapeHtml(j)}</span>
-        </div>
-      </th>`;
+      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap;"><span style="display:inline-block;min-width:18px;height:18px;line-height:16px;padding:0 4px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:5px;vertical-align:middle;">${eff}</span><span style="vertical-align:middle;">${escapeHtml(j)}</span></th>`;
     }).join('');
     return `
       <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
@@ -1359,8 +1359,7 @@ export default function EmploiDuTemps() {
         </colgroup>
         <thead>
           <tr>
-            <th style="width:28px;min-width:28px;max-width:28px;background:#f8fafc;border:1px solid #e2e8f0;"></th>
-            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
+            <th colspan="2" style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
             ${headerDaysCells}
           </tr>
         </thead>
@@ -1383,9 +1382,15 @@ export default function EmploiDuTemps() {
       if (!base.length) return '';
       const rows = [];
       base.forEach((crBase, idx) => {
-        const cellulesJours = JOURS.map((jour) => {
+        const isFirstRow = idx === 0;
+        const isLastRow = idx === base.length - 1;
+        const topEdge = isFirstRow ? 'border-top:2px solid #a5b4fc;' : '';
+        const bottomEdge = isLastRow ? 'border-bottom:2px solid #a5b4fc;' : '';
+        const cellulesJours = JOURS.map((jour, jdx) => {
+          const isLastCol = jdx === JOURS.length - 1;
+          const rightEdge = isLastCol ? 'border-right:2px solid #a5b4fc;' : '';
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;"></td>`;
+          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}"></td>`;
           const aCours = horairesSet.has(`${jour}|${periode}`);
           const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
           const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f8fafc');
@@ -1393,19 +1398,19 @@ export default function EmploiDuTemps() {
           const contenu = aff
             ? `<div style="font-weight:700;color:${fg};font-size:10pt;line-height:1.25;">${escapeHtml(aff.prof_nom || '')}</div>${aff.matiere_nom ? `<div style="color:${fg};font-size:9pt;margin-top:3px;line-height:1.2;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
             : (aCours ? '<span style="color:#dc2626;font-size:9pt;font-weight:700;">Aucun professeur affecté</span>' : '');
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;">${contenu}</td>`;
+          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}">${contenu}</td>`;
         }).join('');
         rows.push(
           `<tr>
-            ${idx === 0 ? `<td rowspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>` : ''}
-            <td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;text-align:center;font-size:9pt;">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
+            ${idx === 0 ? `<td rowspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:2px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>` : ''}
+            <td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;${topEdge}${bottomEdge}text-align:center;font-size:9pt;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
             ${cellulesJours}
           </tr>`
         );
         if (idx === 1) {
           const pause = pausesParPeriode[periode];
           rows.push(
-            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">PAUSE</td></tr>`
+            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;border-right:2px solid #a5b4fc;">PAUSE</td></tr>`
           );
         }
       });
@@ -1413,12 +1418,7 @@ export default function EmploiDuTemps() {
     };
     const headerDaysCells = JOURS.map(j => {
       const eff = countAffectationsParJour(j);
-      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0;">${eff}</span>
-          <span>${escapeHtml(j)}</span>
-        </div>
-      </th>`;
+      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap;"><span style="display:inline-block;min-width:18px;height:18px;line-height:16px;padding:0 4px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:5px;vertical-align:middle;">${eff}</span><span style="vertical-align:middle;">${escapeHtml(j)}</span></th>`;
     }).join('');
     return `
       <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
@@ -1429,8 +1429,7 @@ export default function EmploiDuTemps() {
         </colgroup>
         <thead>
           <tr>
-            <th style="width:28px;min-width:28px;max-width:28px;background:#f8fafc;border:1px solid #e2e8f0;"></th>
-            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
+            <th colspan="2" style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
             ${headerDaysCells}
           </tr>
         </thead>
@@ -1447,7 +1446,7 @@ export default function EmploiDuTemps() {
   const openPrintWindow = (titre, contenu, options = {}) => {
     const html = withPrintLayout(titre, contenu, options);
     const pageSize = options?.paysage ? 'A4 landscape' : 'A4 portrait';
-    const finalHtml = injectForcedPrintCss(html, pageSize, '20mm');
+    const finalHtml = injectForcedPrintCss(html, pageSize, '12mm 20mm');
     const popup = openPrintPopup(finalHtml, { title: titre, width: 1200, height: 820 });
     if (!popup) alert("Impossible d'ouvrir la fenêtre d'impression. Autorisez les popups.");
   };
@@ -2581,7 +2580,7 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0}}>
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,borderTop:'none',borderBottom:'none',borderLeft:'1px solid #f8fafc',borderRight:'1px solid #f8fafc',lineHeight:0}}>
                           <div style={{height: 30,background:'#f8fafc'}} />
                         </td>
                       </tr>,
@@ -3202,7 +3201,7 @@ export default function EmploiDuTemps() {
                                 </tr>
                               )] : [])
                             ]),
-                            periodeIdx === 0 ? <tr key={`sep-salle-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
+                            periodeIdx === 0 ? <tr key={`sep-salle-${periode}`}><td colSpan={7} style={{height:56,background:'white',border:'none',padding:0}}></td></tr> : null
                           ].filter(Boolean);
                         })
                       )}
@@ -3293,7 +3292,7 @@ export default function EmploiDuTemps() {
                             </tr>
                           )] : [])
                         ]),
-                        periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
+                        periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:HAUTEUR_LIGNE_COURS,background:'white',border:'none',padding:0}}></td></tr> : null
                       ].filter(Boolean);
                     });
                   })()}
@@ -3403,7 +3402,7 @@ export default function EmploiDuTemps() {
                       return [
                         ...renderPeriodeRows('Matin'),
                         <tr key="classe-separation-matin-apresmidi">
-                          <td colSpan={7} style={{...styles.td,height:HAUTEUR_LIGNE_PAUSE,background:'#ffffff'}}></td>
+                          <td colSpan={7} style={{...styles.td,height:HAUTEUR_LIGNE_COURS,background:'#ffffff',border:'none'}}></td>
                         </tr>,
                         ...renderPeriodeRows('Après-midi'),
                       ];

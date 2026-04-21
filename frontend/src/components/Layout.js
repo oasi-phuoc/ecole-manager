@@ -5,7 +5,7 @@ import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/ses
 import { ICONS_BY_PATH } from './DashboardIcons';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
-const W = 185;
+const W = 200;
 
 const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
 
@@ -475,7 +475,7 @@ const s = {
   moreBtn: { display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 99, background: '#ede9fe' },
   moreDot: { display: 'block', width: 5, height: 5, borderRadius: '50%', background: '#6366f1' },
   moreDropdown: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(99,102,241,0.15)', border: '1px solid #ede9fe', zIndex: 200, padding: '4px 4px 8px' },
-  navLabel: { fontSize: 12, lineHeight: 1.2, flex: 1 },
+  navLabel: { fontSize: 12, lineHeight: 1.2, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 },
   activeDot: { width: 5, height: 5, borderRadius: '50%', background: '#6366f1', flexShrink: 0 },
   subNav: { display: 'flex', flexDirection: 'column', gap: 1, paddingLeft: 8, marginTop: 1 },
   subNavItem: { display: 'block', padding: '7px 10px', border: 'none', borderRadius: 7, cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: 11, fontFamily: 'inherit', transition: 'background 0.1s' },
