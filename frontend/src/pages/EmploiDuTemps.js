@@ -383,7 +383,7 @@ export default function EmploiDuTemps() {
 
   // Planning branches
   const chargerPlanningBranches = async (pool_id) => {
-    const r = await axios.get(API + '/planning/planning-branches?pool_id=' + pool_id, { headers });
+    const r = await axios.get(API + '/planning-branches?pool_id=' + pool_id, { headers });
     setPlanningBranches(r.data);
   };
 
@@ -393,7 +393,7 @@ export default function EmploiDuTemps() {
   const handleBrancheChange = async (classe_id, matiere_id, pool_id, prof_id) => {
     if (!isAdmin()) return;
     if (!prof_id) {
-      await axios.delete(API + '/planning/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
+      await axios.delete(API + '/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
     } else {
       // Vérifier nombre de périodes
       const matiere = matieres.find(m => m.id==matiere_id);
@@ -406,7 +406,7 @@ export default function EmploiDuTemps() {
           return;
         }
       }
-      await axios.post(API + '/planning/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
+      await axios.post(API + '/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
     }
     chargerPlanningBranches(pool_id);
   };
@@ -1296,6 +1296,18 @@ export default function EmploiDuTemps() {
   `;
   };
   const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = false }) => {
+    const HAUTEUR_LIGNE_COURS = 56;
+    const HAUTEUR_LIGNE_PAUSE = 42;
+    const fetchCellData = (cr, jour, periode) => {
+      if (!cr) return { text: '' };
+      if (getCellData) return getCellData(cr, jour, periode) || { text: '' };
+      return { text: getCellText ? getCellText(cr, jour, periode) : '' };
+    };
+    const countParJour = (jour) => (creneauxListe || []).reduce((acc, cr) => {
+      if (cr.jour !== jour) return acc;
+      const data = fetchCellData(cr, jour, cr.periode);
+      return data && data.text ? acc + 1 : acc;
+    }, 0);
     const lignes = [];
     ['Matin', 'Après-midi'].forEach((periode, periodeIdx) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
@@ -1304,41 +1316,53 @@ export default function EmploiDuTemps() {
       base.forEach((crBase, idx) => {
         const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          const raw = cr
-            ? (getCellData ? getCellData(cr, jour, periode) : { text: getCellText(cr, jour, periode) })
-            : { text: '' };
-          const texte = escapeHtml(raw?.text || '').replace(/\n/g, '<br/>');
-          const bg = toPrintColor(raw?.bg);
-          const fg = toPrintColor(raw?.color);
-          const style = ` style="${bg ? `background:${bg};` : ''}${fg ? `color:${fg};` : ''}text-align:center;vertical-align:middle;"`;
-          return `<td${style}>${texte}</td>`;
+          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;"></td>`;
+          const raw = fetchCellData(cr, jour, periode) || { text: '' };
+          const texte = escapeHtml(raw.text || '').replace(/\n/g, '<br/>');
+          const bg = toPrintColor(raw.bg) || '#ffffff';
+          const fg = toPrintColor(raw.color) || '#1e293b';
+          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;font-size:9pt;line-height:1.25;">${texte}</td>`;
         }).join('');
         const periodeCell = idx === 0
-          ? `<td rowspan="${numRows}" style="width:46px;min-width:46px;max-width:46px;padding:0;overflow:hidden;border-right:1px solid #e5e7eb;background:#f8fafc;vertical-align:middle;text-align:center;"><div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;"><span style="display:inline-block;transform:rotate(-90deg);font-weight:700;color:#334155;white-space:nowrap;line-height:1;">${escapeHtml(periode)}</span></div></td>`
+          ? `<td rowspan="${numRows}" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>`
           : '';
+        const periodeNum = periode === 'Matin' ? idx + 1 : idx + 5;
         lignes.push(
-          `<tr>${periodeCell}<td class="creneau" style="text-align:center;vertical-align:middle;">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+          `<tr>${periodeCell}<td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;text-align:center;font-size:9pt;">P${periodeNum} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
           const pause = pausesParPeriode[periode];
           lignes.push(
-            `<tr><td class="creneau" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;">PAUSE</td></tr>`
+            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">PAUSE</td></tr>`
           );
         }
       });
       if (periodeIdx === 0) {
-        lignes.push(`<tr><td colspan="7" style="height:12px;background:white;border:none;padding:0;"></td></tr>`);
+        lignes.push(`<tr><td colspan="7" style="height:${HAUTEUR_LIGNE_PAUSE}px;background:#ffffff;border:none;padding:0;"></td></tr>`);
       }
     });
+    const headerDaysCells = JOURS.map(j => {
+      const eff = countParJour(j);
+      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0;">${eff}</span>
+          <span>${escapeHtml(j)}</span>
+        </div>
+      </th>`;
+    }).join('');
     return `
-      <table>
+      <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
         <colgroup>
-          <col style="width:46px;min-width:46px;max-width:46px;" />
+          <col style="width:28px;min-width:28px;max-width:28px;" />
           <col class="creneau-col" />
           ${JOURS.map(() => '<col class="day-col" />').join('')}
         </colgroup>
         <thead>
-          <tr><th style="width:46px;min-width:46px;max-width:46px;"></th><th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}</tr>
+          <tr>
+            <th style="width:28px;min-width:28px;max-width:28px;background:#f8fafc;border:1px solid #e2e8f0;"></th>
+            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
+            ${headerDaysCells}
+          </tr>
         </thead>
         <tbody>${lignes.join('')}</tbody>
       </table>
@@ -1348,6 +1372,12 @@ export default function EmploiDuTemps() {
     const HAUTEUR_LIGNE_COURS = 56;
     const HAUTEUR_LIGNE_PAUSE = 42;
     const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
+    const countAffectationsParJour = (jour) => (creneauxListe || []).reduce((acc, cr) => {
+      if (cr.jour !== jour) return acc;
+      const aCours = horairesSet.has(`${jour}|${cr.periode}`);
+      const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
+      return aff ? acc + 1 : acc;
+    }, 0);
     const renderPeriodeRows = (periode) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
       if (!base.length) return '';
@@ -1355,50 +1385,59 @@ export default function EmploiDuTemps() {
       base.forEach((crBase, idx) => {
         const cellulesJours = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f5f5f5;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;"></td>`;
+          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;"></td>`;
           const aCours = horairesSet.has(`${jour}|${periode}`);
           const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
-          const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f5f5f5');
-          const fg = aff ? toPrintColor(getCouleurTexteSurFond(bg)) : '#111827';
+          const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f8fafc');
+          const fg = aff ? toPrintColor(getCouleurTexteSurFond(bg)) : '#1e293b';
           const contenu = aff
-            ? `<b style="color:${fg};font-size:12px;">${escapeHtml(aff.prof_nom || '')}</b>${aff.matiere_nom ? `<div style="color:${fg};font-size:11px;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
-            : (aCours ? '<span style="color:#dc2626;font-size:11px;font-weight:700;">Aucun professeur affecté</span>' : '');
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;">${contenu}</td>`;
+            ? `<div style="font-weight:700;color:${fg};font-size:10pt;line-height:1.25;">${escapeHtml(aff.prof_nom || '')}</div>${aff.matiere_nom ? `<div style="color:${fg};font-size:9pt;margin-top:3px;line-height:1.2;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
+            : (aCours ? '<span style="color:#dc2626;font-size:9pt;font-weight:700;">Aucun professeur affecté</span>' : '');
+          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;">${contenu}</td>`;
         }).join('');
         rows.push(
           `<tr>
-            ${idx === 0 ? `<td rowspan="5" style="width:46px;min-width:46px;max-width:46px;padding:0;overflow:hidden;border-right:1px solid #e5e7eb;background:#f8fafc;vertical-align:middle;text-align:center;"><div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;"><span style="display:inline-block;transform:rotate(-90deg);font-weight:700;color:#334155;white-space:nowrap;line-height:1;">${escapeHtml(periode)}</span></div></td>` : ''}
-            <td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
+            ${idx === 0 ? `<td rowspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>` : ''}
+            <td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;text-align:center;font-size:9pt;">P${idx + 1} — ${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
             ${cellulesJours}
           </tr>`
         );
         if (idx === 1) {
           const pause = pausesParPeriode[periode];
           rows.push(
-            `<tr><td style="background:#000000;color:#ffffff;font-weight:700;white-space:nowrap;text-align:left;height:${HAUTEUR_LIGNE_PAUSE}px;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#000000;color:#ffffff;font-weight:700;text-align:center;height:${HAUTEUR_LIGNE_PAUSE}px;">PAUSE</td></tr>`
+            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;">PAUSE</td></tr>`
           );
         }
       });
       return rows.join('');
     };
+    const headerDaysCells = JOURS.map(j => {
+      const eff = countAffectationsParJour(j);
+      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0;">${eff}</span>
+          <span>${escapeHtml(j)}</span>
+        </div>
+      </th>`;
+    }).join('');
     return `
-      <table>
+      <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
         <colgroup>
-          <col style="width:46px;min-width:46px;max-width:46px;" />
+          <col style="width:28px;min-width:28px;max-width:28px;" />
           <col class="creneau-col" />
           ${JOURS.map(() => '<col class="day-col" />').join('')}
         </colgroup>
         <thead>
           <tr>
-            <th style="width:46px;min-width:46px;max-width:46px;"></th>
-            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;">Horaire</th>
-            ${JOURS.map(j => `<th>${escapeHtml(j)}</th>`).join('')}
+            <th style="width:28px;min-width:28px;max-width:28px;background:#f8fafc;border:1px solid #e2e8f0;"></th>
+            <th style="width:${LARGEUR_COLONNE_CRENEAU}px;min-width:${LARGEUR_COLONNE_CRENEAU}px;max-width:${LARGEUR_COLONNE_CRENEAU}px;background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
+            ${headerDaysCells}
           </tr>
         </thead>
         <tbody>
           ${renderPeriodeRows('Matin')}
           <tr>
-            <td colspan="7" style="height:${HAUTEUR_LIGNE_PAUSE}px;background:#ffffff;"></td>
+            <td colspan="7" style="height:${HAUTEUR_LIGNE_PAUSE}px;background:#ffffff;border:none;"></td>
           </tr>
           ${renderPeriodeRows('Après-midi')}
         </tbody>
@@ -1674,6 +1713,9 @@ export default function EmploiDuTemps() {
       )}
       <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
+        {onglet === 'disponibilites' && profSelectionne && (
+          <button style={styles.btnRetour} onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>← Retour</button>
+        )}
         <h2 style={styles.titre}>Emploi du temps</h2>
         {isAdmin() && onglet === 'pools' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
@@ -1686,13 +1728,7 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
           </div>
         )}
-        {onglet === 'disponibilites' && profSelectionne && (
-          <button
-            style={styles.btnRetour}
-            onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>
-            ← Retour
-          </button>
-        )}
+        {onglet === 'disponibilites' && null}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
@@ -1766,8 +1802,8 @@ export default function EmploiDuTemps() {
       {/* ===== DISPONIBILITÉS ===== */}
       {onglet === 'disponibilites' && (
         <div>
-          {!profSelectionne && (
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
+            {!profSelectionne && (
               <input
                 type="text"
                 style={styles.selAff}
@@ -1775,8 +1811,34 @@ export default function EmploiDuTemps() {
                 value={rechercheProfDispo}
                 onChange={e => setRechercheProfDispo(e.target.value)}
               />
-            </div>
-          )}
+            )}
+            {!showPoolsFiltresDispo ? (
+              <button
+                onClick={() => setShowPoolsFiltresDispo(true)}
+                style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                Trier
+              </button>
+            ) : (
+              <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+                {[{id:'tous', label:'Trier'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => {
+                  const actif = sousOngletDisp === tab.id;
+                  return (
+                    <button key={tab.id}
+                      style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                      onClick={() => {
+                        setSousOngletDisp(tab.id);
+                        setProfSelectionne(null);
+                        setDispos({});
+                        setRemarquesDispo('');
+                        if (tab.id === 'tous') setShowPoolsFiltresDispo(false);
+                      }}>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {!profSelectionne && (
             <div style={{overflowX:'auto',marginTop:8}}>
@@ -2434,8 +2496,8 @@ export default function EmploiDuTemps() {
                         <div style={styles.suiviClasseNom}>{cl.nom}</div>
                         {cl.niveauClasse === 'CSC' && (
                           <>
-                            <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
-                            <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                            <div style={styles.suiviClasseLigne}>Périodes normales : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                            <div style={styles.suiviClasseLigne}>Périodes de soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
                           </>
                         )}
                         {cl.niveauClasse !== 'CSC' && (
@@ -2519,7 +2581,7 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',borderLeft:'none',borderRight:'none',lineHeight:0}}>
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0}}>
                           <div style={{height: 30,background:'#f8fafc'}} />
                         </td>
                       </tr>,
@@ -2545,7 +2607,7 @@ export default function EmploiDuTemps() {
                           ...crsPer.map((cr, idx) => (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                P{idx+1} — {cr.heure_debut}–{cr.heure_fin}
+                                P{per==='Matin' ? idx+1 : idx+5} — {cr.heure_debut}–{cr.heure_fin}
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
@@ -2724,28 +2786,26 @@ export default function EmploiDuTemps() {
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Affectation rapide</h3>
                     <div style={{display:'flex',alignItems:'center',gap:8,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
                       <select
-                        style={{...styles.selAff, minWidth:220}}
+                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
                         value={classeRapideId}
                         onChange={e => setClasseRapideId(e.target.value)}
                         disabled={!sallesLieuTravailId}
                       >
                         <option value="">Choisir classe 1</option>
                         {classesPourSalles
-                        .filter(cl => classeHoraires.some(h => String(h.classe_id) === String(cl.id)))
                         .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
                         .map(cl => (
                           <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
                         ))}
                       </select>
                       <select
-                        style={{...styles.selAff, minWidth:220}}
+                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
                         value={classeRapideId2}
                         onChange={e => setClasseRapideId2(e.target.value)}
                         disabled={!sallesLieuTravailId}
                       >
                         <option value="">Choisir classe 2 (optionnel)</option>
                         {classesPourSalles
-                        .filter(cl => classeHoraires.some(h => String(h.classe_id) === String(cl.id)))
                         .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
                         .map(cl => (
                           <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
@@ -2817,7 +2877,7 @@ export default function EmploiDuTemps() {
                                 ...crsBase.map((crBase, idx) => (
                                   <tr key={crBase.id} style={styles.tr}>
                                     <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                      P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                      P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                                     </td>
                                     {JOURS.map(jour => {
                                       const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
@@ -2971,21 +3031,22 @@ export default function EmploiDuTemps() {
                     {suiviBranchesClasse.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
                     ) : (
-                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                      <div style={{display:'flex',gap:8,width:'100%'}}>
                         {suiviBranchesClasse.map(b => {
                           const ok = b.affectees === b.requises;
-                          const couleurBg = getCouleurBranche(b.id);
-                          const couleurText = getCouleurTexteSurFond(couleurBg);
-                          const abrev = b.nom.split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('');
                           return (
                             <div key={b.id} style={{
-                              display:'inline-flex', flexDirection:'column', alignItems:'center',
-                              padding:'5px 10px', borderRadius:8, background:couleurBg, color:couleurText,
-                              fontWeight:700, fontSize:12, gap:1,
-                              outline: ok ? 'none' : '2px solid #ef4444'
+                              ...styles.suiviBrancheChip,
+                              flex:1,
+                              width:'auto',
+                              minWidth:0,
+                              maxWidth:'none',
+                              borderColor: ok ? '#c7d2fe' : '#e2e8f0',
+                              background: ok ? '#eef2ff' : '#ffffff',
+                              color: ok ? '#3730a3' : '#0f172a'
                             }}>
-                              <span>{abrev}</span>
-                              <span style={{fontWeight:600, fontSize:10}}>{b.affectees}/{b.requises}</span>
+                              <div style={styles.suiviBrancheNom}>{b.nom}</div>
+                              <div style={styles.suiviBrancheLigne}>Périodes {b.affectees}/{b.requises}</div>
                             </div>
                           );
                         })}
@@ -3011,7 +3072,7 @@ export default function EmploiDuTemps() {
                             ...crsBase.map((crBase,idx) => (
                               <tr key={crBase.id} style={styles.tr}>
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
-                                  P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                  P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
                                   const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
@@ -3117,7 +3178,7 @@ export default function EmploiDuTemps() {
                                   </td>
                                 )}
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'}}>
-                                  P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                                  P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
                                   const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
@@ -3127,7 +3188,7 @@ export default function EmploiDuTemps() {
                                   return (
                                     <td key={`planning-only-${jour}-${crBase.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle'}}>
                                       <div style={{fontWeight:classeNom?700:500,color:classeNom?'#1f2937':'#94a3b8',background:couleurClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{classeNom||'—'}</div>
-                                      {classeNom&&<div style={{color:'#334155',fontWeight:400,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
+                                      {classeNom&&<div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{profAffecte||'Aucun professeur affecté'}</div>}
                                     </td>
                                   );
                                 })}
@@ -3181,58 +3242,61 @@ export default function EmploiDuTemps() {
                   </tr>
                 </thead>
                 <tbody>
-                  {['Matin','Après-midi'].map((periode, periodeIdx) => {
-                    const crsBase = (planningProf.creneaux||[]).filter(c=>c.jour==='Lundi'&&c.periode===periode);
-                    if (!crsBase.length) return null;
-                    const numRows = crsBase.length + 1;
-                    return [
-                      ...crsBase.flatMap((crBase,idx) => [
-                        <tr key={crBase.id} style={styles.tr}>
-                          {idx === 0 && (
-                            <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
-                              <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
-                                <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
-                              </div>
-                            </td>
-                          )}
-                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle'}}>
-                            P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
-                          </td>
-                          {JOURS.map(jour => {
-                            const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
-                            if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle'}}></td>;
-                            const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
-                            const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
-                            const indispo = dispo && !dispo.disponible;
-                            const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
-                            const affBranche = classeAffectee && hasBrancheAffectee(aff);
-                            const couleurFondClasse = aff?.classe_id ? getCouleurClasse(aff.classe_id) : '#e2e8f0';
-                            const couleurTexteClasse = getCouleurTexteSurFond(couleurFondClasse);
-                            return (
-                              <td key={jour} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
-                                {affBranche ? (
-                                  <div>
-                                    <span style={{display:'inline-block',padding:'2px 8px',borderRadius:6,background:couleurFondClasse,color:couleurTexteClasse,fontWeight:700,fontSize:12}}>{aff.classe_nom}</span>
-                                    <div style={{color:'#475569',fontSize:11,marginTop:2}}>{aff.matiere_nom}</div>
-                                  </div>
-                                ) : ''}
+                  {(() => {
+                    const HAUTEUR_LIGNE_COURS = 56;
+                    const HAUTEUR_LIGNE_PAUSE = 42;
+                    return ['Matin','Après-midi'].map((periode, periodeIdx) => {
+                      const crsBase = (planningProf.creneaux||[]).filter(c=>c.jour==='Lundi'&&c.periode===periode);
+                      if (!crsBase.length) return null;
+                      const numRows = crsBase.length + 1;
+                      return [
+                        ...crsBase.flatMap((crBase,idx) => [
+                          <tr key={crBase.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS}}>
+                            {idx === 0 && (
+                              <td rowSpan={numRows} style={{width:46,minWidth:46,maxWidth:46,padding:0,overflow:'hidden',borderRight:'1px solid #e5e7eb',background:'#f8fafc',verticalAlign:'middle',textAlign:'center'}}>
+                                <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',width:'100%'}}>
+                                  <span style={{display:'inline-block',transform:'rotate(-90deg)',fontWeight:700,color:'#334155',whiteSpace:'nowrap',lineHeight:1}}>{periode}</span>
+                                </div>
                               </td>
-                            );
-                          })}
-                        </tr>,
-                        ...(idx === 1 ? [(
-                          <tr key={`prof-pause-${periode}`}>
-                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle'}}>
-                              {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                            )}
+                            <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS}}>
+                              P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                             </td>
-                            <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px'}}>PAUSE</td>
-                          </tr>
-                        )] : [])
-                      ]),
-                      periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
-                    ].filter(Boolean);
-                  })}
+                            {JOURS.map(jour => {
+                              const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
+                              if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS}}></td>;
+                              const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
+                              const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
+                              const indispo = dispo && !dispo.disponible;
+                              const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
+                              const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
+                              const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
+                              return (
+                                <td key={jour} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,height:HAUTEUR_LIGNE_COURS,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
+                                  background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
+                                  {classeAffectee ? (
+                                    <>
+                                      <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.classe_nom}</div>
+                                      {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                    </>
+                                  ) : ''}
+                                </td>
+                              );
+                            })}
+                          </tr>,
+                          ...(idx === 1 ? [(
+                            <tr key={`prof-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE}}>
+                              <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#000000',color:'#ffffff',fontWeight:700,fontSize:12,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_PAUSE}}>
+                                {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                              </td>
+                              <td colSpan={5} style={{background:'#000000',color:'#ffffff',fontWeight:700,textAlign:'center',verticalAlign:'middle',padding:'6px 10px',height:HAUTEUR_LIGNE_PAUSE}}>PAUSE</td>
+                            </tr>
+                          )] : [])
+                        ]),
+                        periodeIdx === 0 ? <tr key={`sep-prof-${periode}`}><td colSpan={7} style={{height:12,background:'white',border:'none',padding:0}}></td></tr> : null
+                      ].filter(Boolean);
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -3301,7 +3365,7 @@ export default function EmploiDuTemps() {
                               </td>
                             )}
                             <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,height:HAUTEUR_LIGNE_COURS}}>
-                              P{idx+1} — {crBase.heure_debut}–{crBase.heure_fin}
+                              P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                             </td>
                             {JOURS.map(jour => {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
@@ -3311,14 +3375,14 @@ export default function EmploiDuTemps() {
                               const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
-                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',fontSize:12,height:HAUTEUR_LIGNE_COURS,
+                                <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,textAlign:'center',verticalAlign:'middle',fontSize:12,height:HAUTEUR_LIGNE_COURS,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                   background:aCours?'#fff':'#f5f5f5'}}>
                                   {aff ? (
-                                    <div>
-                                      <span style={{display:'inline-block',padding:'2px 8px',borderRadius:6,background:couleurFondProf,color:couleurTexteProf,fontWeight:700,fontSize:12}}>{aff.prof_nom}</span>
-                                      {aff.matiere_nom && <div style={{color:'#475569',fontSize:11,marginTop:2}}>{aff.matiere_nom}</div>}
-                                    </div>
+                                    <>
+                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.prof_nom}</div>
+                                      {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                    </>
                                   ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>Aucun professeur affecté</span> : ''}
                                 </td>
                               );
@@ -3399,22 +3463,11 @@ export default function EmploiDuTemps() {
                   </tr>
                 </thead>
                 <tbody>
-                  {JOURS.map((jour, jourIdx) => {
+                  {JOURS.map(jour => {
                     const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
                     if (!crs.length) return null;
                     return [
-                      jourIdx > 0 ? <tr key={jour+'_sep'}>
-                        <td colSpan={planningGeneral.profs.length+1} style={{background:'#f8fafc',padding:0,border:'none',borderLeft:'none',borderRight:'none',lineHeight:0}}>
-                          <div style={{height:20,background:'#f8fafc'}} />
-                        </td>
-                      </tr> : null,
-                      <tr key={jour+'_h'}>
-                        <td colSpan={planningGeneral.profs.length+1} style={{padding:0,border:'none',background:'transparent'}}>
-                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',borderTopLeftRadius:10,borderTopRightRadius:10}}>
-                            {jour}
-                          </div>
-                        </td>
-                      </tr>,
+                      <tr key={jour+'_h'}><td colSpan={planningGeneral.profs.length+1} style={styles.jourBande}>{jour}</td></tr>,
                       ...crs.map(cr => (
                         <tr key={cr.id} style={styles.tr}>
                           <td style={{...styles.td,background:'#f8f9fa',fontSize:11,fontWeight:600,whiteSpace:'nowrap',width:150,minWidth:150,maxWidth:150,padding:'9px 10px'}}>
