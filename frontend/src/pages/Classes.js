@@ -1729,7 +1729,9 @@ export default function Classes() {
             );
           })()}
           <div style={{display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap',marginTop: devoirActif ? 0 : 15}}>
-            <div style={{flex:'0 0 220px',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
+            <div style={{flex:'0 0 220px',position:'sticky',top:16,alignSelf:'flex-start',background:'white',borderRadius:10,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden'}}>
+              <div style={{padding:'10px 14px',borderBottom:'1px solid #e2e8f0',fontWeight:700,fontSize:13,color:'#1e293b',background:'#f8fafc'}}>Devoirs</div>
+              <div style={{maxHeight:'calc(100vh - 250px)',overflowY:'auto'}}>
               {devoirsLoading ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
               ) : devoirsFiltres.length === 0 ? (
@@ -1759,6 +1761,7 @@ export default function Classes() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
 
             {/* Tableau suivi */}
