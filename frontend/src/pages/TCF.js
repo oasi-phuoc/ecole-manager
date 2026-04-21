@@ -165,7 +165,6 @@ export default function TCF() {
   const normalizeTCFTab = (tabValue) => {
     const tab = String(tabValue || '').trim().toLowerCase();
     if (!tab) return 'pool';
-    if (tab === 'affectation') return 'classes';
     if (tab === 'resultats') return 'resultat';
     return tab;
   };
@@ -193,6 +192,7 @@ export default function TCF() {
   const [siteCounter, setSiteCounter] = useState(2);
   const [siteActif, setSiteActif] = useState('site1');
   const [showAutresProfsBySite, setShowAutresProfsBySite] = useState({});
+  const [affectationSousOnglet, setAffectationSousOnglet] = useState('classes');
   const [planningsSite, setPlanningsSite] = useState(null);
   const [planningsType, setPlanningsType] = useState('classes');
   const [planningsProfId, setPlanningsProfId] = useState('');
@@ -407,6 +407,12 @@ export default function TCF() {
       setSiteActif(siteOrder[0]);
     }
   }, [siteOrder, siteActif]);
+
+  useEffect(() => {
+    if (onglet === 'classes') setAffectationSousOnglet('classes');
+    else if (onglet === 'roles') setAffectationSousOnglet('roles');
+    else if (onglet === 'affectation') setAffectationSousOnglet(prev => (prev === 'roles' ? 'roles' : 'classes'));
+  }, [onglet]);
 
   useEffect(() => {
     if (statSens === 'fort' && String(statSeuil) !== '80') setStatSeuil('80');
@@ -909,29 +915,29 @@ export default function TCF() {
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires élève</div>
               <label style={styles.inlineLabel}>
-                <span style={{fontWeight:400}}>Matin :</span>
-                <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
-                <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.inputField} />
+                <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.timePastille} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.timePastille} />
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
-                <span style={{fontWeight:400}}>Après-midi :</span>
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.inputField} />
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.inputField} />
+                <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.timePastille} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.timePastille} />
               </label>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires professeurs</div>
               <label style={styles.inlineLabel}>
-                <span style={{fontWeight:400}}>Matin :</span>
-                <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
-                <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.inputField} />
+                <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.timePastille} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.timePastille} />
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
-                <span style={{fontWeight:400}}>Après-midi :</span>
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.inputField} />
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.inputField} />
+                <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.timePastille} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.timePastille} />
               </label>
             </div>
           </div>
@@ -1646,7 +1652,7 @@ export default function TCF() {
     });
   };
 
-  const renderRoles = () => {
+  const renderRoles = ({ hideSiteTabs = false, extraHeader = null } = {}) => {
     const siteKey = String(siteActif || '');
     const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
     const selectedProfIds = siteKey ? (selectedBySite[siteKey] || []) : [];
@@ -1725,19 +1731,23 @@ export default function TCF() {
 
     return (
       <div>
-        {/* Site sub-tabs */}
-        <div style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
-          {siteOrder.map((sKey, idx) => (
-            <button
-              key={`roles-site-tab-${sKey}`}
-              type="button"
-              onClick={() => { if (sKey !== siteActif) { setSiteActif(sKey); setRolesDemiJourneeSelect(''); } }}
-              style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
-            >
-              {siteNames[sKey] || `Site ${idx + 1}`}
-            </button>
-          ))}
-        </div>
+        {!hideSiteTabs && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ ...styles.pillGroup, display: 'inline-flex' }}>
+              {siteOrder.map((sKey, idx) => (
+                <button
+                  key={`roles-site-tab-${sKey}`}
+                  type="button"
+                  onClick={() => { if (sKey !== siteActif) { setSiteActif(sKey); setRolesDemiJourneeSelect(''); } }}
+                  style={{ ...styles.subTabBtn, ...(siteActif === sKey ? styles.subTabBtnActif : {}) }}
+                >
+                  {siteNames[sKey] || `Site ${idx + 1}`}
+                </button>
+              ))}
+            </div>
+            {extraHeader}
+          </div>
+        )}
 
         {/* Demi-journée + groupes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1789,9 +1799,13 @@ export default function TCF() {
           <><div style={styles.rolesGrid}>
             <div style={styles.tableWrap}>
               <table style={styles.tableRolesLeft}>
+                <colgroup>
+                  <col />
+                  <col style={{ width: 155 }} />
+                </colgroup>
                 <thead>
                   <tr style={styles.thead}>
-                    <th style={styles.thLeftFixed}>Professeurs</th>
+                    <th style={{ ...styles.thLeftFixed, width: 'auto', minWidth: 0, maxWidth: 'none' }}>Professeurs</th>
                     <th style={{ ...styles.thLeftFixed, width: 155, minWidth: 155, maxWidth: 155 }}>Rôle</th>
                   </tr>
                 </thead>
@@ -1900,7 +1914,7 @@ export default function TCF() {
                           <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
                             <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
                               <input
-                                style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
+                                style={{ ...styles.select, width: 48, minWidth: 0, maxWidth: 48, boxSizing: 'border-box', padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
                                 value={startValue}
                                 readOnly={lg.row > 1}
                                 onChange={(e) => {
@@ -1913,7 +1927,7 @@ export default function TCF() {
                                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, fontSize: 12, color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: 4, background: '#f8fafc' }}>...</span>
                               ) : (
                                 <input
-                                  style={{ ...styles.select, width: 48, padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
+                                  style={{ ...styles.select, width: 48, minWidth: 0, maxWidth: 48, boxSizing: 'border-box', padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
                                   value={lignesHoraire[lg.row]?.end || ''}
                                   onChange={(e) => setHoraireLigne(siteKey, rolesDemiJourneeSelect, lg.row, startValue, e.target.value)}
                                   placeholder="Fin"
@@ -3349,7 +3363,7 @@ export default function TCF() {
 
   const tabHasUnsaved = (tab) => {
     if (tab === 'pool') return poolDirty;
-    if (tab === 'classes' || tab === 'roles') return affectationDirty;
+    if (tab === 'affectation' || tab === 'classes' || tab === 'roles') return affectationDirty;
     if (tab === 'resultat') return resultatDirty && JSON.stringify(scores) !== JSON.stringify(savedScoresRef.current || {});
     return false;
   };
@@ -3359,7 +3373,7 @@ export default function TCF() {
     if (tabHasUnsaved(onglet)) {
       const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cet onglet sans sauvegarder ?');
       if (!ok) return;
-      if (onglet === 'classes' || onglet === 'roles') resetAffectationToSaved();
+      if (onglet === 'affectation' || onglet === 'classes' || onglet === 'roles') resetAffectationToSaved();
     }
     setOnglet(nextTab);
   };
@@ -3367,7 +3381,7 @@ export default function TCF() {
   const handleSaveCurrentTab = async () => {
     if (!tabHasUnsaved(onglet)) { afficherSaveMsg(onglet, 'Aucun changement à sauvegarder.'); return; }
     if (onglet === 'pool') await handleSavePool();
-    else if (onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
+    else if (onglet === 'affectation' || onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
     else if (onglet === 'resultat') await handleSaveResultat();
   };
 
@@ -3377,7 +3391,7 @@ export default function TCF() {
       <div style={styles.header}>
         <h2 style={styles.title}>Test de connaissances</h2>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {(onglet === 'pool' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
+          {(onglet === 'pool' || onglet === 'affectation' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
             <>
               {saveToast && (
                 <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4f46e5' }}>
@@ -3475,6 +3489,49 @@ export default function TCF() {
             </div>
           </div>
         )}
+
+        {onglet === 'affectation' && (() => {
+          const affectationToggle = (
+            <div style={{ ...styles.pillGroup, display: 'inline-flex' }}>
+              {[{ id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
+                <button
+                  key={`affectation-tab-${t.id}`}
+                  type="button"
+                  onClick={() => setAffectationSousOnglet(t.id)}
+                  style={{ ...styles.subTabBtn, ...(affectationSousOnglet === t.id ? styles.subTabBtnActif : {}) }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          );
+          return (
+            <div>
+              {affectationSousOnglet === 'classes' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+                    <div style={{ ...styles.pillGroup, display: 'inline-flex' }}>
+                      {siteOrder.map((siteKey, idx) => (
+                        <button
+                          key={`affectation-classes-site-tab-${siteKey}`}
+                          type="button"
+                          onClick={() => setSiteActif(siteKey)}
+                          style={{ ...styles.subTabBtn, ...(siteActif === siteKey ? styles.subTabBtnActif : {}) }}
+                        >
+                          {siteNames[siteKey] || `Site ${idx + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                    {affectationToggle}
+                  </div>
+                  {siteActif ? renderTableAffectationSite(siteActif) : <div style={styles.empty}>Aucun site disponible.</div>}
+                </div>
+              )}
+
+              {affectationSousOnglet === 'roles' && renderRoles({ extraHeader: affectationToggle })}
+            </div>
+          );
+        })()}
 
         {onglet === 'classes' && (
         <div>
@@ -3811,7 +3868,7 @@ const styles = {
   siteCardPlain: { border: 'none', borderRadius: 0, padding: 0, background: 'transparent' },
   siteHeader: { display: 'flex', alignItems: 'stretch', gap: 10, marginBottom: 10, flexWrap: 'wrap' },
   siteTitle: { fontSize: 13, fontWeight: 700, color: '#334155' },
-  siteNameField: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6, minWidth: 300, flex: '1 1 420px' },
+  siteNameField: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6, width: 280, flex: '0 0 280px' },
   siteInputLabel: { fontSize: 12, fontWeight: 700, color: '#334155' },
   siteInput: { width: '100%', maxWidth: '100%', padding: '9px 14px', borderRadius: 8, border: '1px solid #c7d2fe', fontSize: 14, color: '#1e293b', background: 'white', fontFamily: 'inherit', boxSizing: 'border-box' },
   niveauSection: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6, minWidth: 290, flex: '0 1 420px' },
@@ -3913,6 +3970,9 @@ const styles = {
   select: { height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:190 },
   selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit' },
   inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
+  timePastille: { padding: '5px 14px', borderRadius: 999, border: '1px solid #c7d2fe', background: '#eef2ff', outline: 'none', fontSize: 13, color: '#3730a3', fontWeight: 700, fontFamily: 'inherit', width: 76, textAlign: 'center', cursor: 'pointer' },
+  momentLabelFix: { display: 'inline-flex', alignItems: 'center', fontWeight: 400 },
+  momentLabelText: { display: 'inline-block', width: 76, textAlign: 'left' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },
   tableTitleBig: { margin: '10px 0', fontSize: 16, color: '#0f172a' },
   scoreInput: { width: 62, padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, textAlign: 'center' },
@@ -3933,7 +3993,7 @@ const styles = {
   classChipDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   tdSpacer: { padding: 0, height: 22, background: '#ffffff', borderBottom: '1px solid #f1f5f9' },
   rolesGrid: { display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 },
-  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 360 },
+  tableRolesLeft: { width: '100%', borderCollapse: 'collapse', tableLayout: 'auto', minWidth: 360 },
   tableRolesRight: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 },
   thLeftFixed: { borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '8px 10px', fontSize: 12, color: '#64748b', textAlign: 'left', width: 160, minWidth: 160, maxWidth: 160 },
   tdReserve: { background: '#fee2e2', color: '#7f1d1d', fontWeight: 700 },
