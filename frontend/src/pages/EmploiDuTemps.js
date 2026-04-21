@@ -2580,8 +2580,8 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,borderTop:'none',borderBottom:'none',borderLeft:'1px solid #f8fafc',borderRight:'1px solid #f8fafc',lineHeight:0}}>
-                          <div style={{height: 30,background:'#f8fafc'}} />
+                        <td colSpan={profsPool.length+1} style={{background:'#e2e8f0',padding:0,border:'none',lineHeight:0,boxShadow:'inset 1px 0 0 #e2e8f0, inset -1px 0 0 #e2e8f0'}}>
+                          <div style={{height: 30,background:'#e2e8f0',marginLeft:-1,marginRight:-1}} />
                         </td>
                       </tr>,
                       <tr key={jour+'_h'}>
