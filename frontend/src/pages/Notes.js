@@ -1752,7 +1752,7 @@ export default function Notes() {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
             {bulletinMode === 'eleve' && (
               <div className="no-print" style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e2e8f0', fontWeight: 700, fontSize: 13, color: '#1e293b', background: '#f8fafc' }}>Élèves</div>
+                <div style={{ padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>Élèves</div>
                 <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                   {bulletins.map((b, idx) => {
                     const isSelected = eleveSelectionne && String(eleveSelectionne) === String(b.eleve.id);
