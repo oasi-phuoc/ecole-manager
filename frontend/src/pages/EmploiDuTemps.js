@@ -37,6 +37,7 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
 };
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
+const formaterNomComplet = (s) => String(s || '').replace(/(^|\s)(\S*?)-\S+$/, '$1$2').trim();
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
 const normaliserIdsPrefBranches = (valeur) => {
   if (!valeur) return [];
@@ -563,7 +564,7 @@ export default function EmploiDuTemps() {
     }, 0);
     return {
       profId: String(profId),
-      nom: prof ? `${prof.prenom} ${prof.nom}` : `Prof ${profId}`,
+      nom: prof ? `${prof.prenom} ${nomSansSuffixe(prof.nom)}` : `Prof ${profId}`,
       branchesPrefs,
       compteAutres
     };
@@ -660,7 +661,7 @@ export default function EmploiDuTemps() {
       String(a.classe_id) === String(classeId) &&
       String(a.creneau_id) === String(creneau.id)
     );
-    return aff?.prof_nom || '';
+    return formaterNomComplet(aff?.prof_nom || '');
   };
   const updateCoursSalle = async (cours, nouvelleSalle) => {
     await axios.put(API + '/emploi-du-temps/' + cours.id, {
@@ -1396,7 +1397,7 @@ export default function EmploiDuTemps() {
           const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f8fafc');
           const fg = aff ? toPrintColor(getCouleurTexteSurFond(bg)) : '#1e293b';
           const contenu = aff
-            ? `<div style="font-weight:700;color:${fg};font-size:10pt;line-height:1.25;">${escapeHtml(aff.prof_nom || '')}</div>${aff.matiere_nom ? `<div style="color:${fg};font-size:9pt;margin-top:3px;line-height:1.2;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
+            ? `<div style="font-weight:700;color:${fg};font-size:10pt;line-height:1.25;">${escapeHtml(formaterNomComplet(aff.prof_nom || ''))}</div>${aff.matiere_nom ? `<div style="color:${fg};font-size:9pt;margin-top:3px;line-height:1.2;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
             : (aCours ? '<span style="color:#dc2626;font-size:9pt;font-weight:700;">Aucun professeur affecté</span>' : '');
           return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}">${contenu}</td>`;
         }).join('');
@@ -1466,7 +1467,7 @@ export default function EmploiDuTemps() {
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert("Sélectionnez d'abord un professeur.");
-        const titre = `Plannings professeur — ${planningProf?.prof?.prenom || ''} ${planningProf?.prof?.nom || ''}`.trim();
+        const titre = `Plannings professeur — ${planningProf?.prof?.prenom || ''} ${nomSansSuffixe(planningProf?.prof?.nom || '')}`.trim();
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
           repeatPeriodeOnDays: true,
@@ -1513,7 +1514,7 @@ export default function EmploiDuTemps() {
             );
             const bg = getCouleurClasse(cl.id);
             return {
-              text: `${cl.nom}\n${aff?.prof_nom || 'Aucun professeur affecté'}`,
+              text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
               bg,
               color: getCouleurTexteSurFond(bg)
             };
@@ -1536,21 +1537,21 @@ export default function EmploiDuTemps() {
             const a = affectes[0];
             if (a.type_special) {
               return {
-                text: `${a.prof_nom}\n${getLibelleTypeSpecial(a.type_special)}`,
+                text: `${formaterNomComplet(a.prof_nom)}\n${getLibelleTypeSpecial(a.type_special)}`,
                 bg: '#000000',
                 color: '#ffffff'
               };
             }
             const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
             return {
-              text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
+              text: `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
               bg,
               color: getCouleurTexteSurFond(bg)
             };
           }
           return {
             text: affectes
-              .map(a => `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
+              .map(a => `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
               .join('\n\n')
           };
         }
@@ -1587,7 +1588,7 @@ export default function EmploiDuTemps() {
         );
         const sections = reps.map((rep) => {
           const data = rep.data;
-          const nom = `${data?.prof?.prenom || ''} ${data?.prof?.nom || ''}`.trim();
+          const nom = `${data?.prof?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || '')}`.trim();
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
             repeatPeriodeOnDays: true,
@@ -1637,7 +1638,7 @@ export default function EmploiDuTemps() {
               );
               const bg = getCouleurClasse(cl.id);
               return {
-                text: `${cl.nom}\n${aff?.prof_nom || 'Aucun professeur affecté'}`,
+                text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
                 bg,
                 color: getCouleurTexteSurFond(bg)
               };
@@ -1659,21 +1660,21 @@ export default function EmploiDuTemps() {
             const a = affectes[0];
             if (a.type_special) {
               return {
-                text: `${a.prof_nom}\n${getLibelleTypeSpecial(a.type_special)}`,
+                text: `${formaterNomComplet(a.prof_nom)}\n${getLibelleTypeSpecial(a.type_special)}`,
                 bg: '#000000',
                 color: '#ffffff'
               };
             }
             const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
             return {
-              text: `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
+              text: `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
               bg,
               color: getCouleurTexteSurFond(bg)
             };
           }
           return {
             text: affectes
-              .map(a => `${a.prof_nom}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
+              .map(a => `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
               .join('\n\n')
           };
         }
@@ -1773,7 +1774,7 @@ export default function EmploiDuTemps() {
               if (id) chargerPlanningProf(id); else setPlanningProf(null);
             }}>
               <option value="">Choisir un professeur</option>
-              {profsTriesPrenomNom.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
+              {profsTriesPrenomNom.map(p => <option key={p.id} value={p.id}>{p.prenom} {nomSansSuffixe(p.nom)}</option>)}
             </select>
           )}
           {sousOngletPlanning === 'general' && (
@@ -1914,7 +1915,7 @@ export default function EmploiDuTemps() {
             <div style={styles.card}>
               <div style={styles.rowBetween}>
                 <h3 style={styles.cardTitre}>
-                  {profDispoSelectionne?.prenom} {profDispoSelectionne?.nom}
+                  {profDispoSelectionne?.prenom} {nomSansSuffixe(profDispoSelectionne?.nom)}
                   <span style={{marginLeft:10,fontSize:14,fontWeight:800,color:couleurCompteurDispo}}>
                     {periodesSelectionneesDispo} / {periodesRequisesDispo} périodes
                   </span>
@@ -2450,7 +2451,7 @@ export default function EmploiDuTemps() {
                           boxShadow: selected ? '0 0 0 2px #cbd5e1' : 'none'
                         }}
                       >
-                        {p.prenom} {p.nom}
+                        {p.prenom} {nomSansSuffixe(p.nom)}
                       </button>
                     );
                   })}
@@ -2508,7 +2509,7 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-              <table style={{...styles.tbl,minWidth:200+profsPool.length*140}}>
+              <table style={{...styles.tbl,overflow:'visible',minWidth:200+profsPool.length*140}}>
                 <thead>
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Horaire</th>
@@ -2519,7 +2520,7 @@ export default function EmploiDuTemps() {
                       const couleurTexteProf = getCouleurTexteSurFond(couleurProf);
                       return (
                         <th key={p.id} style={{...styles.th, textAlign:'center', background: couleurProf, color: couleurTexteProf}}>
-                          {p.nom}<br/><span style={{fontWeight:400,fontSize:11}}>{formaterPrenomEntete(p.prenom)}</span>
+                          {nomSansSuffixe(p.nom)}<br/><span style={{fontWeight:400,fontSize:11}}>{formaterPrenomEntete(p.prenom)}</span>
                           <div style={{fontWeight:700,fontSize:11,marginTop:4,color: couleurTexteProf}}>
                             {totalAffecte} / {totalProf}
                           </div>
@@ -2580,8 +2581,8 @@ export default function EmploiDuTemps() {
                     if (!crs.length) return null;
                     const lignesJour = [
                       <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#e2e8f0',padding:0,border:'none',lineHeight:0,boxShadow:'inset 1px 0 0 #e2e8f0, inset -1px 0 0 #e2e8f0'}}>
-                          <div style={{height: 30,background:'#e2e8f0',marginLeft:-1,marginRight:-1}} />
+                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0,boxShadow:'-1px 0 0 0 #f8fafc, 1px 0 0 0 #f8fafc'}}>
+                          <div style={{height: 30,background:'#f8fafc'}} />
                         </td>
                       </tr>,
                       <tr key={jour+'_h'}>
@@ -2658,7 +2659,7 @@ export default function EmploiDuTemps() {
                                             : null;
                                           if (conflit) {
                                             const profConflit = profsPool.find(p => p.id === conflit.prof_id);
-                                            const nomProfConflit = profConflit ? `${profConflit.prenom} ${profConflit.nom}` : 'un autre professeur';
+                                            const nomProfConflit = profConflit ? `${profConflit.prenom} ${nomSansSuffixe(profConflit.nom)}` : 'un autre professeur';
                                             const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
                                             const confirmer = window.confirm(
                                               `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur cet horaire.\n\nVoulez-vous échanger ces périodes ?`
@@ -3086,7 +3087,7 @@ export default function EmploiDuTemps() {
                                       color: aff ? couleurTexteProf : undefined}}>
                                       {aff ? (
                                         <div>
-                                          <b style={{color:couleurTexteProf,fontSize:12}}>{aff.prof_nom}</b>
+                                          <b style={{color:couleurTexteProf,fontSize:12}}>{formaterNomComplet(aff.prof_nom)}</b>
                                           {isAdmin() ? (
                                             <select style={{...styles.cellSel,marginTop:4,fontSize:11,textAlign:'center',textAlignLast:'center'}}
                                               value={Object.prototype.hasOwnProperty.call(branchesMatiereDraftMap, String(aff.id))
@@ -3224,7 +3225,7 @@ export default function EmploiDuTemps() {
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
               <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
-                <span style={{fontWeight:700}}>{planningProf.prof?.prenom} {planningProf.prof?.nom}</span>
+                <span style={{fontWeight:700}}>{planningProf.prof?.prenom} {nomSansSuffixe(planningProf.prof?.nom)}</span>
                 {planningProf.classesTitulaire?.length > 0 && (
                   <>
                     <span style={{fontWeight:700}}> - Titulaire :</span>
@@ -3379,7 +3380,7 @@ export default function EmploiDuTemps() {
                                   background:aCours?'#fff':'#f5f5f5'}}>
                                   {aff ? (
                                     <>
-                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.prof_nom}</div>
+                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{formaterNomComplet(aff.prof_nom)}</div>
                                       {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
                                     </>
                                   ) : aCours ? <span style={{color:'#dc2626',fontSize:11,fontWeight:700}}>Aucun professeur affecté</span> : ''}
@@ -3440,7 +3441,7 @@ export default function EmploiDuTemps() {
                   .map((t,i) => (
                   <div key={i} style={{flex:1,minWidth:0,background:'#ffffff',borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
                     <div style={{fontWeight:700,fontSize:14,color:'#0f172a'}}>{t.classe_nom}</div>
-                    <div style={{fontSize:12,color:'#475569',marginTop:4}}>{t.prof_nom || <span style={{color:'#94a3b8'}}>Pas de titulaire</span>}</div>
+                    <div style={{fontSize:12,color:'#475569',marginTop:4}}>{t.prof_nom ? formaterNomComplet(t.prof_nom) : <span style={{color:'#94a3b8'}}>Pas de titulaire</span>}</div>
                   </div>
                 ))}
               </div>
@@ -3455,7 +3456,7 @@ export default function EmploiDuTemps() {
                     {planningGeneral.profs.map(p => {
                       const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
                       return <th key={p.id} style={{...styles.th,textAlign:'center'}}>
-                        {formaterPrenomEntete(p.prenom)} {p.nom}
+                        {formaterPrenomEntete(p.prenom)} {nomSansSuffixe(p.nom)}
                         {tits.length>0 && <div style={{fontSize:10,fontWeight:400,color:'#c8e6c9',marginTop:2}}>{tits.map(t=>t.classe_nom).join(', ')}</div>}
                       </th>;
                     })}
