@@ -2509,7 +2509,11 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-              <table style={{...styles.tbl,overflow:'visible',tableLayout:'fixed',minWidth:200+profsPool.length*140}}>
+              <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140}}>
+                <colgroup>
+                  <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
+                  {profsPool.map(p => <col key={`col-main-${p.id}`} />)}
+                </colgroup>
                 <thead>
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Horaire</th>
@@ -2576,23 +2580,26 @@ export default function EmploiDuTemps() {
                       );
                     })}
                   </tr>
-                  {JOURS.map(jour => {
-                    const crs = creneaux.filter(c => c.jour===jour);
-                    if (!crs.length) return null;
-                    const lignesJour = [
-                      <tr key={jour+'_sep_top'}>
-                        <td colSpan={profsPool.length+1} style={{background:'#f8fafc',padding:0,border:'none',lineHeight:0,boxShadow:'-1px 0 0 0 #f8fafc, 1px 0 0 0 #f8fafc'}}>
-                          <div style={{height: 30,background:'#f8fafc'}} />
-                        </td>
-                      </tr>,
-                      <tr key={jour+'_h'}>
+                </tbody>
+              </table>
+              {JOURS.map(jour => {
+                const crs = creneaux.filter(c => c.jour===jour);
+                if (!crs.length) return null;
+                return (
+                  <table key={`jour-${jour}`} style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,marginTop:30}}>
+                    <colgroup>
+                      <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
+                      {profsPool.map(p => <col key={`col-${jour}-${p.id}`} />)}
+                    </colgroup>
+                    <tbody>
+                      <tr>
                         <td colSpan={profsPool.length+1} style={{padding:0,border:'none',background:'transparent'}}>
-                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',borderTopLeftRadius:10,borderTopRightRadius:10}}>
+                          <div style={{background:'#6366f1',color:'#ffffff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em'}}>
                             {jour}
                           </div>
                         </td>
-                      </tr>,
-                      ...['Matin','Après-midi'].map(per => {
+                      </tr>
+                      {['Matin','Après-midi'].map(per => {
                         const crsPer = crs.filter(c=>c.periode===per);
                         if (!crsPer.length) return null;
                         // Trouver classes qui ont cours ce jour/periode
@@ -2762,12 +2769,11 @@ export default function EmploiDuTemps() {
                             </tr>
                           ))
                         ];
-                      })
-                    ];
-                    return lignesJour;
-                  })}
-                </tbody>
-              </table>
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })}
             </div>
             </>
             )}
