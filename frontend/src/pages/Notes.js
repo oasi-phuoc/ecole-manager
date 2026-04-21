@@ -1506,9 +1506,12 @@ export default function Notes() {
             </div>
           )}
           {bulletinOnglet === 'notes' && (
-            <button style={s.btnImprimer} onClick={handleImprimer}>
-              Imprimer
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
+              <button style={s.btnImprimer} onClick={handleImprimer}>
+                Imprimer
+              </button>
+            </div>
           )}
         </div>
         {/* Sous-onglets semestre + mode */}
@@ -1524,7 +1527,6 @@ export default function Notes() {
               );
             })}
           </div>
-          {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
           {bulletinOnglet === 'notes' && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
@@ -1539,12 +1541,6 @@ export default function Notes() {
                 style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAppreciations ? '#6366f1' : '#e2e8f0'), background: showAppreciations ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showAppreciations ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', minWidth: 170 }}>
                 {showAppreciations ? 'Afficher notes' : 'Afficher appréciations'}
               </button>
-              {bulletinMode === 'eleve' && (
-                <select className="no-print" style={{ padding:'0 14px', height:36, boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', width:240, fontFamily:'inherit' }} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-                  <option value="">Choisir un élève</option>
-                  {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{nomSansSuffixe(b.eleve.nom)} {b.eleve.prenom}</option>)}
-                </select>
-              )}
             </div>
           )}
           {bulletinOnglet === 'criteres' && (
@@ -1749,7 +1745,24 @@ export default function Notes() {
         )}
 
         {bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
-          <div ref={printRef}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+            {bulletinMode === 'eleve' && (
+              <div className="no-print" style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e2e8f0', fontWeight: 700, fontSize: 13, color: '#1e293b', background: '#f8fafc' }}>Élèves</div>
+                <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                  {bulletins.map((b, idx) => {
+                    const isSelected = eleveSelectionne && String(eleveSelectionne) === String(b.eleve.id);
+                    return (
+                      <div key={b.eleve.id} onClick={() => setEleveSelectionne(String(b.eleve.id))}
+                        style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSelected ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSelected ? '#4338ca' : '#1e293b', fontWeight: isSelected ? 700 : 400, borderLeft: `3px solid ${isSelected ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}>
+                        {nomSansSuffixe(b.eleve.nom)} {b.eleve.prenom}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          <div ref={printRef} style={{ flex: 1, minWidth: 0 }}>
             <style>{`
               @media print {
                 @page { size: A4; margin: 2cm; }
@@ -1951,6 +1964,7 @@ export default function Notes() {
                 );
               });
             })()}
+          </div>
           </div>
         )}
       </div>
