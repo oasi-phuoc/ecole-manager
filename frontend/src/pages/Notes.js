@@ -819,7 +819,10 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Notes de l'élève — {classeNom}</h2>
-          <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
+            <button type="button" style={{ ...s.btnImprimer, ...(!canPrintVueGenerale ? { opacity: 0.45, cursor: 'not-allowed' } : {}) }} disabled={!canPrintVueGenerale} onClick={handlePrintVueGenerale}>Imprimer</button>
+          </div>
         </div>
         {/* Sous-onglets Vue générale */}
         <div className="no-print" style={{ background: '#f8fafc', paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
@@ -1497,6 +1500,7 @@ export default function Notes() {
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
               {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
               <button
                 onClick={sauvegarderTousCriteres}
@@ -1978,7 +1982,10 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={async () => { await chargerEvaluationsId(classeSelectionnee, null); setVue('matieres'); }}>← Retour</button>
           <h2 style={s.titre}>{matiereObj?.nom} — {classeNom}</h2>
-          {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Ajouter</button>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
+            {peutModifierNotes() && !(sem1Bloque && evalSemestre === '1' && !isAdmin()) && <button style={s.btnAjouter} onClick={() => setShowForm(!showForm)}>+ Ajouter</button>}
+          </div>
         </div>
 
         {showForm && (
@@ -2140,6 +2147,7 @@ export default function Notes() {
         <div style={s.header}>
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>Évaluations — {classeNom}</h2>
+          {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
@@ -2154,7 +2162,6 @@ export default function Notes() {
               );
             })}
           </div>
-          {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
         <div style={{ ...s.tblWrap, marginTop: 4 }}>
         <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
