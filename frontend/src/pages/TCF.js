@@ -55,9 +55,9 @@ const nb = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 const couleurTotale = (total) => {
-  if (total < 40) return { bg: '#fee2e2', text: '#b91c1c' };
-  if (total <= 80) return { bg: '#ffedd5', text: '#c2410c' };
-  return { bg: '#dcfce7', text: '#166534' };
+  if (total <= 30) return { color: '#b91c1c' };
+  if (total >= 85) return { color: '#166534' };
+  return { color: '#0f172a' };
 };
 const cycleStatut = (statut) => {
   if (statut === 'vert') return 'orange';
@@ -214,6 +214,7 @@ export default function TCF() {
   const [resultatEleveId, setResultatEleveId] = useState('');
   const [resultatEleveSearch, setResultatEleveSearch] = useState('');
   const [resultatRecherche, setResultatRecherche] = useState('');
+  const [resultatSortDir, setResultatSortDir] = useState('asc');
   const [scores, setScores] = useState({});
   const [absences, setAbsences] = useState({});
   const [responsablesTCF, setResponsablesTCF] = useState([]);
@@ -237,13 +238,19 @@ export default function TCF() {
   const savedAffectationRef = useRef({});
   const [ongletGraphiqueMatiere, setOngletGraphiqueMatiere] = useState('francais');
   const [graphPoolId, setGraphPoolId] = useState('');
-  const [graphSession, setGraphSession] = useState('');
+  const [graphSession, setGraphSession] = useState(() => {
+    const m = new Date().getMonth() + 1;
+    if (m >= 8 && m <= 11) return "Test d'août";
+    if (m === 12 || (m >= 1 && m <= 4)) return '1e semestre';
+    return '2e semestre';
+  });
   const [graphEleveId, setGraphEleveId] = useState('');
   const [graphVue, setGraphVue] = useState('individuelle');
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
   const [graphRecherche, setGraphRecherche] = useState('');
+  const [graphSortDir, setGraphSortDir] = useState('asc');
   const [anneeScolaire, setAnneeScolaire] = useState('');
   const savedScoresRef = useRef({});
 
@@ -886,7 +893,7 @@ export default function TCF() {
     return (
       <>
         <div style={styles.affectationMetaWrap}>
-          <label style={styles.inlineLabel}>
+          <label style={{...styles.inlineLabel, color:'#0f172a'}}>
             Date de début :
             <input
               type="date"
@@ -900,27 +907,29 @@ export default function TCF() {
           </label>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#000000', marginBottom: 6 }}>Horaire élèves</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires élève</div>
               <label style={styles.inlineLabel}>
-                Matin :
+                <span style={{fontWeight:400}}>Matin :</span>
                 <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.inputField} />
                 <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.inputField} />
               </label>
+              <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
-                Après-midi :
+                <span style={{fontWeight:400}}>Après-midi :</span>
                 <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.inputField} />
                 <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.inputField} />
               </label>
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#000000', marginBottom: 6 }}>Horaire professeurs</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires professeurs</div>
               <label style={styles.inlineLabel}>
-                Matin :
+                <span style={{fontWeight:400}}>Matin :</span>
                 <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.inputField} />
                 <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.inputField} />
               </label>
+              <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
-                Après-midi :
+                <span style={{fontWeight:400}}>Après-midi :</span>
                 <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.inputField} />
                 <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.inputField} />
               </label>
@@ -1017,9 +1026,8 @@ export default function TCF() {
 
   const renderSelectionSite = (siteKey, siteLabel, sansCadre = false) => (
     <div key={siteKey} style={sansCadre ? styles.siteCardPlain : styles.siteCard}>
-      <div style={styles.siteHeader}>
-        <div style={styles.siteNameField}>
-          <label style={styles.siteInputLabel}>{siteLabel}</label>
+      <div style={{...styles.siteHeader, alignItems:'center'}}>
+        <div style={{...styles.siteNameField, justifyContent:'center'}}>
           <input
             value={siteNames[siteKey] ?? ''}
             onChange={e => {
@@ -1030,8 +1038,7 @@ export default function TCF() {
             placeholder="Nom du site"
           />
         </div>
-        <div style={styles.niveauSection}>
-          <div style={styles.niveauSectionTitle}>Niveau</div>
+        <div style={{...styles.niveauSection, flexDirection:'row', alignItems:'center', gap:6}}>
           <div style={styles.siteLevelsWrap}>
             {niveauxTabs.map(level => {
               const actif = (siteLevels[siteKey] || []).includes(level);
@@ -1039,44 +1046,38 @@ export default function TCF() {
                 <button
                   key={`${siteKey}-${level}`}
                   type="button"
-                  onClick={() => {
-                    toggleSiteLevel(siteKey, level);
-                    setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: false }));
-                  }}
-                  style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}) }}
+                  onClick={() => toggleSiteLevel(siteKey, level)}
+                  style={{ ...styles.levelBtn, ...(actif ? styles.levelBtnActif : {}), height:38, boxSizing:'border-box' }}
                 >
                   {level}
                 </button>
               );
             })}
           </div>
+          {(() => {
+            const niveauxSelectionnes = siteLevels[siteKey] || [];
+            const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
+            const afficherAutres = showAutresProfsBySite[siteKey] !== false;
+            if (niveauxSet.size === 0) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !(prev[siteKey] !== false) }))}
+                style={{
+                  ...styles.autresProfsToggleBtn,
+                  ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
+                }}
+              >
+                {afficherAutres ? 'Masquer les autres professeurs' : 'Afficher les autres professeurs'}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
-      <div style={styles.profsHeaderRow}>
-        <div style={{ ...styles.sectionTitle, margin: 0 }}>Liste des professeurs</div>
-        {(() => {
-          const niveauxSelectionnes = siteLevels[siteKey] || [];
-          const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
-          const afficherAutres = !!showAutresProfsBySite[siteKey];
-          if (niveauxSet.size === 0) return null;
-          return (
-            <button
-              type="button"
-              onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !prev[siteKey] }))}
-              style={{
-                ...styles.autresProfsToggleBtn,
-                ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
-              }}
-            >
-              {afficherAutres ? 'Masquer les autres professeurs' : 'Afficher les autres professeurs'}
-            </button>
-          );
-        })()}
-      </div>
       {(() => {
         const niveauxSelectionnes = siteLevels[siteKey] || [];
-        const afficherAutres = !!showAutresProfsBySite[siteKey];
+        const afficherAutres = showAutresProfsBySite[siteKey] !== false;
         const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
         const profsParNiveauFiltres = Object.entries(profsParNiveauPool).filter(([niveau]) => {
           if (niveauxSet.size === 0) return true;
@@ -1393,27 +1394,149 @@ export default function TCF() {
       return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
     });
 
+    const sessionsAAfficher = resultatSession ? [resultatSession] : SESSIONS;
+    const elevesResultatSorted = [...elevesResultat].sort((a, b) => {
+      const nomA = toDisplayNom(a.nom).toLowerCase();
+      const nomB = toDisplayNom(b.nom).toLowerCase();
+      return resultatSortDir === 'asc' ? nomA.localeCompare(nomB, 'fr') : nomB.localeCompare(nomA, 'fr');
+    });
+
+    const renderTableSession = (session) => {
+      const absSuffix = (id) => `${resultatMatiere}_${session}_${id}`;
+      const elevesSession = elevesResultatSorted;
+      return (
+        <>
+          <h3 style={styles.tableTitleBig}>
+            {isFr ? 'Test de connaissance de français' : 'Test de connaissance de mathématiques'} - {SESSION_LABEL[session] || session}
+          </h3>
+          <div style={styles.tableWrap}>
+            <table style={styles.tableLarge}>
+              <thead>
+                <tr style={styles.thead}>
+                  <th style={styles.thCenter}>N°</th>
+                  <th style={styles.thClasseFixe}>Classe</th>
+                  <th style={styles.thLeft}>Nom</th>
+                  <th style={styles.thLeft}>Prénom</th>
+                  <th style={styles.thCenter}>Absence</th>
+                  {isFr ? (
+                    <>
+                      <th style={styles.thCenter}>CO</th>
+                      <th style={styles.thCenter}>PO</th>
+                      <th style={styles.thCenter}>CE</th>
+                      <th style={styles.thCenter}>PE</th>
+                      <th style={styles.thCenter}>Oral</th>
+                      <th style={styles.thCenter}>Écrit</th>
+                      <th style={styles.thCenter}>Total</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={styles.thCenter}>P1</th>
+                      <th style={styles.thCenter}>P2</th>
+                      <th style={styles.thCenter}>P3</th>
+                      <th style={styles.thCenter}>P4</th>
+                      <th style={styles.thCenter}>Base</th>
+                      <th style={styles.thCenter}>Avancé</th>
+                      <th style={styles.thCenter}>Total</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {elevesSession.map((e, idx) => {
+                  const row = getScore(resultatMatiere, session, e.id);
+                  const computed = isFr ? calculFr(row) : calculMath(row);
+                  const total = computed.total === '' ? null : Number(computed.total);
+                  const totalStyle = total == null ? {} : couleurTotale(total);
+                  return (
+                    <tr key={e.id}>
+                      <td style={styles.tdCenter}>{idx + 1}</td>
+                      <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
+                      <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
+                      <td style={styles.tdLeft}>{e.prenom || ''}</td>
+                      <td style={styles.tdCenter}>
+                        <input type="checkbox"
+                          checked={!!absences[absSuffix(e.id)]}
+                          onChange={ev => setAbsences(prev => ({ ...prev, [absSuffix(e.id)]: ev.target.checked }))}
+                          style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#6366f1' }} />
+                      </td>
+                      {isFr ? (
+                        <>
+                          {['co', 'po', 'ce', 'pe'].map(f => (
+                            <td key={f} style={styles.tdCenter}>
+                              <input style={{ ...styles.scoreInput, opacity: absences[absSuffix(e.id)] ? 0.3 : 1 }}
+                                type="number" min="0" max="25"
+                                value={row[f] ?? ''}
+                                disabled={!!absences[absSuffix(e.id)]}
+                                onChange={ev => setScore('francais', session, e.id, f, ev.target.value)} />
+                            </td>
+                          ))}
+                          <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
+                          <td style={styles.tdCenterRead}>{computed.ecrit === '' ? '' : computed.ecrit}</td>
+                          <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                        </>
+                      ) : (
+                        <>
+                          {['p1', 'p2', 'p3', 'p4'].map(f => (
+                            <td key={f} style={styles.tdCenter}>
+                              <input style={{ ...styles.scoreInput, opacity: absences[absSuffix(e.id)] ? 0.3 : 1 }}
+                                type="number" min="0" max="25"
+                                value={row[f] ?? ''}
+                                disabled={!!absences[absSuffix(e.id)]}
+                                onChange={ev => setScore('math', session, e.id, f, ev.target.value)} />
+                            </td>
+                          ))}
+                          <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
+                          <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
+                          <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+                {elevesSession.length === 0 && (
+                  <tr><td colSpan={12} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      );
+    };
+
     return (
       <div>
-        <div style={styles.filtersStack}>
+        <div style={{...styles.filtersStack, justifyContent:'space-between'}}>
+          <div style={styles.pillGroup}>
+            {SESSIONS.map(s => (
+              <button key={s} onClick={() => setResultatSession(prev => prev === s ? '' : s)}
+                style={{ ...styles.pillBtn, ...(resultatSession === s ? styles.pillBtnActif : {}) }}>
+                {SESSION_LABEL[s] || s}
+              </button>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <div style={styles.pillGroup}>
+              {[['francais','Français'],['math','Math']].map(([val,label]) => (
+                <button key={val} onClick={() => setResultatMatiere(val)}
+                  style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
+              ))}
+            </div>
+            <div style={styles.pillGroup}>
+              {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
+                <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
+                  style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.filtersRow}>
           <input
             value={resultatRecherche}
             onChange={(e) => setResultatRecherche(e.target.value)}
             placeholder="Rechercher un élève, une classe..."
-            style={styles.searchInput}
+            style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
           />
-          <div style={styles.pillGroup}>
-            {[['francais','Français'],['math','Math']].map(([val,label]) => (
-              <button key={val} onClick={() => setResultatMatiere(val)}
-                style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
-            ))}
-          </div>
-          <div style={styles.pillGroup}>
-            {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
-              <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
-                style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
-            ))}
-          </div>
           <FiltreDropdown
             value={resultatNiveau}
             options={niveauxTabs.map(n => ({ value: n, label: n }))}
@@ -1425,37 +1548,10 @@ export default function TCF() {
             }}
             allLabel="Tous niveaux"
           />
-        </div>
-
-        <div style={styles.filtersRow}>
-          <select value={resultatSession} onChange={e => setResultatSession(e.target.value)} style={styles.select}>
-            <option value="">Choisir une session</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
-          </select>
-          {resultatVue === 'individuelle' && (
-            <>
-              <input
-                type="number" min="1" max={elevesNiveau.length}
-                value={resultatEleveSearch}
-                onChange={e => setResultatEleveSearch(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    const n = parseInt(resultatEleveSearch, 10);
-                    const found = elevesNiveau[n - 1];
-                    if (found) setResultatEleveId(String(found.id));
-                  }
-                }}
-                placeholder="N° élève"
-                style={{ ...styles.select, width: 150 }}
-              />
-              <select value={resultatEleveId} onChange={e => setResultatEleveId(e.target.value)} style={styles.select}>
-                <option value="">Choisir un élève</option>
-                {elevesOptions.map((e, idx) => (
-                  <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>
-                ))}
-              </select>
-            </>
-          )}
+          <button onClick={() => setResultatSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+            style={{ ...styles.pillBtn, ...(true ? {} : {}), whiteSpace:'nowrap' }}>
+            Trier {resultatSortDir === 'asc' ? '↑' : '↓'}
+          </button>
           {resultatVue === 'classe' && (
             <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.select}>
               <option value="">- Sélectionner la classe -</option>
@@ -1464,106 +1560,14 @@ export default function TCF() {
           )}
         </div>
 
-        {!resultatSession ? (
-          <div style={styles.msgVide}>Sélectionnez une session pour afficher les résultats.</div>
-        ) : resultatVue === 'classe' && !resultatClasseId ? (
+        {resultatVue === 'classe' && !resultatClasseId ? (
           <div style={styles.msgVide}>Sélectionnez une classe pour afficher les résultats.</div>
         ) : (
-          <>
-            <h3 style={styles.tableTitleBig}>
-              {isFr ? 'Test de connaissance de français' : 'Test de connaissance de mathématiques'} - {titreSession}
-            </h3>
-            <div style={styles.tableWrap}>
-              <table style={styles.tableLarge}>
-                <thead>
-                  <tr style={styles.thead}>
-                    <th style={styles.thCenter}>N°</th>
-                    <th style={styles.thClasseFixe}>Classe</th>
-                    <th style={styles.thLeft}>Nom</th>
-                    <th style={styles.thLeft}>Prénom</th>
-                    <th style={styles.thCenter}>Absence</th>
-                    {isFr ? (
-                      <>
-                        <th style={styles.thCenter}>CO</th>
-                        <th style={styles.thCenter}>PO</th>
-                        <th style={styles.thCenter}>CE</th>
-                        <th style={styles.thCenter}>PE</th>
-                        <th style={styles.thCenter}>Oral</th>
-                        <th style={styles.thCenter}>Écrit</th>
-                        <th style={styles.thCenter}>Total</th>
-                      </>
-                    ) : (
-                      <>
-                        <th style={styles.thCenter}>P1</th>
-                        <th style={styles.thCenter}>P2</th>
-                        <th style={styles.thCenter}>P3</th>
-                        <th style={styles.thCenter}>P4</th>
-                        <th style={styles.thCenter}>Base</th>
-                        <th style={styles.thCenter}>Avancé</th>
-                        <th style={styles.thCenter}>Total</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {elevesResultat.map((e, idx) => {
-                    const row = getScore(resultatMatiere, resultatSession, e.id);
-                    const computed = isFr ? calculFr(row) : calculMath(row);
-                    const total = computed.total === '' ? null : Number(computed.total);
-                    const totalStyle = total == null ? {} : couleurTotale(total);
-                    return (
-                      <tr key={e.id}>
-                        <td style={styles.tdCenter}>{idx + 1}</td>
-                        <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
-                        <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
-                        <td style={styles.tdLeft}>{e.prenom || ''}</td>
-                        <td style={styles.tdCenter}>
-                          <input type="checkbox"
-                            checked={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
-                            onChange={ev => setAbsences(prev => ({ ...prev, [`${resultatMatiere}_${resultatSession}_${e.id}`]: ev.target.checked }))}
-                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#6366f1' }} />
-                        </td>
-                        {isFr ? (
-                          <>
-                            {['co', 'po', 'ce', 'pe'].map(f => (
-                              <td key={f} style={styles.tdCenter}>
-                                <input style={{ ...styles.scoreInput, opacity: absences[`${resultatMatiere}_${resultatSession}_${e.id}`] ? 0.3 : 1 }}
-                                  type="number" min="0" max="25"
-                                  value={row[f] ?? ''}
-                                  disabled={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
-                                  onChange={ev => setScore('francais', resultatSession, e.id, f, ev.target.value)} />
-                              </td>
-                            ))}
-                            <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
-                            <td style={styles.tdCenterRead}>{computed.ecrit === '' ? '' : computed.ecrit}</td>
-                            <td style={{ ...styles.tdCenterRead, background: totalStyle.bg, color: totalStyle.text }}>{computed.total === '' ? '' : computed.total}</td>
-                          </>
-                        ) : (
-                          <>
-                            {['p1', 'p2', 'p3', 'p4'].map(f => (
-                              <td key={f} style={styles.tdCenter}>
-                                <input style={{ ...styles.scoreInput, opacity: absences[`${resultatMatiere}_${resultatSession}_${e.id}`] ? 0.3 : 1 }}
-                                  type="number" min="0" max="25"
-                                  value={row[f] ?? ''}
-                                  disabled={!!absences[`${resultatMatiere}_${resultatSession}_${e.id}`]}
-                                  onChange={ev => setScore('math', resultatSession, e.id, f, ev.target.value)} />
-                              </td>
-                            ))}
-                            <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
-                            <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
-                            <td style={{ ...styles.tdCenterRead, background: totalStyle.bg, color: totalStyle.text }}>{computed.total === '' ? '' : computed.total}</td>
-                          </>
-                        )}
-                      </tr>
-                    );
-                  })}
-                  {elevesResultat.length === 0 && (
-                    <tr><td colSpan={12} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
-                  )}
-                </tbody>
-              </table>
+          sessionsAAfficher.map(session => (
+            <div key={session} style={{marginBottom:24}}>
+              {renderTableSession(session)}
             </div>
-          </>
+          ))
         )}
       </div>
     );
@@ -2765,13 +2769,13 @@ export default function TCF() {
     const label2 = isFr ? 'Écrit' : 'Partie 3-4';
 
     // Sessions cumulatives selon la sélection
-    const sessionsToShowIds = graphSession === "2e semestre"
+    const sessionsToShowIds = !graphSession
       ? ["Test d'août", '1e semestre', '2e semestre']
-      : graphSession === '1e semestre'
-        ? ["Test d'août", '1e semestre']
-        : graphSession === "Test d'août"
-          ? ["Test d'août"]
-          : [];
+      : graphSession === "2e semestre"
+        ? ["Test d'août", '1e semestre', '2e semestre']
+        : graphSession === '1e semestre'
+          ? ["Test d'août", '1e semestre']
+          : ["Test d'août"];
 
     const sessionsIndiv = sessionsToShowIds.map(session => {
       const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
@@ -2983,22 +2987,34 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={styles.filtersStack}>
+        <div style={{...styles.filtersStack, justifyContent:'space-between'}}>
+          <div style={styles.pillGroup}>
+            {SESSIONS.map(s => (
+              <button key={s} type="button" onClick={() => setGraphSession(prev => prev === s ? '' : s)}
+                style={{ ...styles.pillBtn, ...(graphSession === s ? styles.pillBtnActif : {}) }}>
+                {SESSION_LABEL[s] || s}
+              </button>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <div style={styles.pillGroup}>
+              <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
+              <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
+            </div>
+            <div style={styles.pillGroup}>
+              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
+              <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
+              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Moyenne globale</button>
+            </div>
+          </div>
+        </div>
+        <div style={styles.filtersRow}>
           <input
             value={graphRecherche}
             onChange={(e) => setGraphRecherche(e.target.value)}
             placeholder="Rechercher un élève, une classe..."
-            style={styles.searchInput}
+            style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
           />
-          <div style={styles.pillGroup}>
-            <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
-            <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
-          </div>
-          <div style={styles.pillGroup}>
-            <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
-            <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
-            <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Moyenne globale</button>
-          </div>
           <FiltreDropdown
             value={graphNiveau}
             options={niveauxTabs.map(n => ({ value: n, label: n }))}
@@ -3010,39 +3026,15 @@ export default function TCF() {
             }}
             allLabel="Tous niveaux"
           />
-        </div>
-        <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
-          <select value={graphSession} onChange={e => setGraphSession(e.target.value)} style={styles.select}>
-            <option value="">Choisir une session</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
-          </select>
+          <button onClick={() => setGraphSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+            style={{ ...styles.pillBtn, whiteSpace:'nowrap' }}>
+            Trier {graphSortDir === 'asc' ? '↑' : '↓'}
+          </button>
           {graphVue === 'classe' && (
             <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
               <option value="">Choisir une classe</option>
               {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
             </select>
-          )}
-          {graphVue === 'individuelle' && (
-            <>
-              <input
-                type="number" min="1" max={elevesNiveauGraph.length}
-                value={graphEleveSearch}
-                onChange={e => setGraphEleveSearch(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    const n = parseInt(graphEleveSearch, 10);
-                    const found = elevesNiveauGraph[n - 1];
-                    if (found) setGraphEleveId(String(found.id));
-                  }
-                }}
-                placeholder="N° élève"
-                style={{ ...styles.select, width: 150 }}
-              />
-              <select value={graphEleveId} onChange={e => setGraphEleveId(e.target.value)} style={styles.select}>
-                <option value="">Choisir un élève</option>
-                {elevesFiltered.map((e, idx) => <option key={e.id} value={String(e.id)}>{idx + 1}. {toDisplayNom(e.nom)} {e.prenom}</option>)}
-              </select>
-            </>
           )}
         </div>
         {/* Graphique */}
@@ -3258,7 +3250,7 @@ export default function TCF() {
                         const v = r.totalsBySession[s];
                         const c = v == null ? {} : couleurTotale(v);
                         return (
-                          <td key={`td-stat-${r.id}-${s}`} style={{ ...styles.tdCenterRead, background: c.bg, color: c.text }}>
+                          <td key={`td-stat-${r.id}-${s}`} style={{ ...styles.tdCenterRead, color: c.color }}>
                             {v == null ? '—' : v}
                           </td>
                         );
@@ -3527,25 +3519,21 @@ export default function TCF() {
                   </button>
                 ))}
               </div>
-            </div>
-            {planningsType === 'classes' && (
-              <div className="tcf-no-print" style={{ margin: '15px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+              {planningsType === 'classes' && (
                 <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
                   <option value="">Choisir une classe</option>
                   {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
                     <option key={cl.id} value={cl.id}>{cl.nom}</option>
                   ))}
                 </select>
-              </div>
-            )}
-            {planningsType === 'roles' && (
-              <div className="tcf-no-print" style={{ margin: '15px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+              )}
+              {planningsType === 'roles' && (
                 <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
                   <option value="">Choisir une demi-journée</option>
                   {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
                 </select>
-              </div>
-            )}
+              )}
+            </div>
             <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <style>{`@media print { .tcf-no-print { display: none !important; } .tcf-print-page { padding: 0 !important; border: none !important; box-shadow: none !important; } }`}</style>
               {/* En-tête */}
@@ -3835,7 +3823,7 @@ const styles = {
   siteFooterActions: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 },
   sectionTitle: { fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8, marginTop: 8 },
   niveauBlock: { marginBottom: 8 },
-  niveauTitle: { fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 },
+  niveauTitle: { fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   profsHeaderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, marginBottom: 8, flexWrap: 'wrap' },
   autresProfsToggleBtn: { padding: '7px 14px', minWidth: 230, borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', textAlign: 'center', lineHeight: 1 },
   autresProfsToggleBtnActif: { background: '#6366f1', color: 'white', borderColor: '#6366f1', fontWeight: 700 },

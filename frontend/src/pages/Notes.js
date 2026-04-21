@@ -2305,8 +2305,8 @@ export default function Notes() {
                           {autresProfs.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', columnGap: 14, rowGap: 6 }}>
                               {autresProfs.map(r => (
-                                <div key={r.prof_id} style={{ fontSize: 12, color: '#475569', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 }}>
-                                  <b style={{ whiteSpace: 'nowrap' }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</b>
+                                <div key={r.prof_id} style={{ fontSize: 12, color: '#1e293b', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 }}>
+                                  <span style={{ whiteSpace: 'nowrap' }}>{r.prof_prenom} {nomSansSuffixe(r.prof_nom)}</span>
                                   {parseMatieresDetailDedup(r).length ? pastillesBranche(r) : null}
                                 </div>
                               ))}

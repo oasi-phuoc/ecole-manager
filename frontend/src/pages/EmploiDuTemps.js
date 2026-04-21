@@ -1450,6 +1450,64 @@ export default function EmploiDuTemps() {
       </table>
     `;
   };
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos }) => {
+    const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
+    const ROW_H = 52;
+    const parts = [];
+    JOURS.forEach(jour => {
+      const crs = (allCrs || []).filter(c => c.jour === jour);
+      if (!crs.length) return;
+      const nCols = (profs || []).length + 1;
+      const profHeaders = (profs || []).map(p => {
+        const nom = nomSansSuffixe(p.nom || '');
+        const prenom = formaterPrenomEntete(p.prenom || '');
+        return `<th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">${escapeHtml(nom)}<br/><span style="font-weight:400;font-size:8pt;">${escapeHtml(prenom)}</span></th>`;
+      }).join('');
+      const rows = [];
+      ['Matin', 'Après-midi'].forEach(per => {
+        const crsPer = crs.filter(c => c.periode === per).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+        if (!crsPer.length) return;
+        rows.push(`<tr><td colspan="${nCols}" style="background:#000;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:left;border:none;">${escapeHtml(per)}</td></tr>`);
+        crsPer.forEach(cr => {
+          const cells = (profs || []).map(p => {
+            const aff = (affectations || []).find(a => a.prof_id === p.id && a.creneau_id === cr.id);
+            const dispo = (dispos || []).find(d => d.prof_id === p.id && d.creneau_id === cr.id);
+            const indispo = dispo && !dispo.disponible;
+            let bg = '#fff', content = '';
+            if (aff) {
+              const estSpecial = !!aff.type_special;
+              bg = estSpecial ? '#000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+              const fg = estSpecial ? '#fff' : getCouleurTexteSurFond(bg);
+              const ligne1 = estSpecial ? getLibelleTypeSpecial(aff.type_special) : escapeHtml(aff.classe_nom || '');
+              const ligne2 = estSpecial ? '' : (aff.matiere_nom ? `<div style="font-size:8pt;margin-top:2px;">${escapeHtml(aff.matiere_nom)}</div>` : '');
+              content = `<div style="font-weight:700;color:${fg};font-size:9pt;">${ligne1}</div>${ligne2}`;
+            } else if (indispo) {
+              bg = '#eee';
+              content = '<span style="color:#9ca3af;font-size:8pt;">Indispo</span>';
+            }
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 4px;">${content}</td>`;
+          }).join('');
+          rows.push(`<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(cr.heure_debut)}–${escapeHtml(cr.heure_fin)}</td>${cells}</tr>`);
+        });
+      });
+      const colgroup = `<colgroup><col style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>${(profs || []).map(() => '<col/>').join('')}</colgroup>`;
+      parts.push(`
+        <div class="section">
+          <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:20px;">
+            ${colgroup}
+            <tbody>
+              <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;">
+                <div style="background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:11pt;padding:5px 14px;text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;">${escapeHtml(jour)}</div>
+              </td></tr>
+              <tr><th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Horaire</th>${profHeaders}</tr>
+              ${rows.join('')}
+            </tbody>
+          </table>
+        </div>
+      `);
+    });
+    return parts.join('');
+  };
   const openPrintWindow = (titre, contenu, options = {}) => {
     const html = withPrintLayout(titre, contenu, options);
     const pageSize = options?.paysage ? 'A4 landscape' : 'A4 portrait';
@@ -1533,36 +1591,13 @@ export default function EmploiDuTemps() {
       const rep = await axios.get(url, { headers });
       const data = rep.data;
       const titre = `Plannings général${poolId ? ' — pool sélectionné' : ''}`;
-      const table = buildPlanningTableHtml({
-        creneauxListe: data?.creneaux || [],
-        repeatPeriodeOnDays: true,
-        getCellData: (cr) => {
-          const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
-          if (!affectes.length) return { text: '' };
-          if (affectes.length === 1) {
-            const a = affectes[0];
-            if (a.type_special) {
-              return {
-                text: `${formaterNomComplet(a.prof_nom)}\n${getLibelleTypeSpecial(a.type_special)}`,
-                bg: '#000000',
-                color: '#ffffff'
-              };
-            }
-            const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
-            return {
-              text: `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
-              bg,
-              color: getCouleurTexteSurFond(bg)
-            };
-          }
-          return {
-            text: affectes
-              .map(a => `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
-              .join('\n\n')
-          };
-        }
+      const contenu = buildPlanningGeneralPrintHtml({
+        creneaux: data?.creneaux || [],
+        profs: data?.profs || [],
+        affectations: data?.affectations || [],
+        dispos: data?.dispos || [],
       });
-      return openPrintWindow(titre, `<div class="section">${table}</div>`);
+      return openPrintWindow(titre, contenu, { paysage: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression.");
     }
@@ -2515,14 +2550,14 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-              <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140}}>
+              <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,border:'none',boxShadow:'none'}}>
                 <colgroup>
                   <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
                   {profsPool.map(p => <col key={`col-main-${p.id}`} />)}
                 </colgroup>
                 <thead>
                   <tr style={styles.theadRow}>
-                    <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>Horaire</th>
+                    <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                     {profsPool.map(p => {
                       const totalProf = parseInt(p.periodes_semaine) || 0;
                       const totalAffecte = periodesAffecteesParProf[p.id] || 0;
@@ -2541,7 +2576,7 @@ export default function EmploiDuTemps() {
                 </thead>
                 <tbody>
                   <tr style={styles.tr}>
-                    <td style={{...styles.td,background:'#f8f9fa',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
+                    <td style={{...styles.td,background:'#f8f9fa',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>
                       Titulariat
                     </td>
                     {profsPool.map(prof => {
@@ -2592,7 +2627,7 @@ export default function EmploiDuTemps() {
                 const crs = creneaux.filter(c => c.jour===jour);
                 if (!crs.length) return null;
                 return (
-                  <table key={`jour-${jour}`} style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,marginTop:30}}>
+                  <table key={`jour-${jour}`} style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,marginTop:30,border:'none',boxShadow:'none'}}>
                     <colgroup>
                       <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
                       {profsPool.map(p => <col key={`col-${jour}-${p.id}`} />)}
@@ -3455,56 +3490,74 @@ export default function EmploiDuTemps() {
           )}
           {planningPoolId && planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
-              <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:LARGEUR_COLONNE_CRENEAU+planningGeneral.profs.length*120}}>
-                <thead>
-                  <tr style={styles.theadRow}>
-                    <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
-                    {planningGeneral.profs.map(p => {
-                      const tits = (planningGeneral.titulaires||[]).filter(t => t.prof_nom && t.prof_nom.includes(p.nom));
-                      return <th key={p.id} style={{...styles.th,textAlign:'center'}}>
-                        {formaterPrenomEntete(p.prenom)} {nomSansSuffixe(p.nom)}
-                        {tits.length>0 && <div style={{fontSize:10,fontWeight:400,color:'#c8e6c9',marginTop:2}}>{tits.map(t=>t.classe_nom).join(', ')}</div>}
-                      </th>;
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {JOURS.map(jour => {
-                    const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
-                    if (!crs.length) return null;
-                    return [
-                      <tr key={jour+'_h'}><td colSpan={planningGeneral.profs.length+1} style={styles.jourBande}>{jour}</td></tr>,
-                      ...crs.map(cr => (
-                        <tr key={cr.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
-                          <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
-                            {cr.heure_debut}–{cr.heure_fin}<br/><span style={{color:'#999',fontWeight:500}}>{cr.periode}</span>
-                          </td>
-                          {planningGeneral.profs.map(p => {
-                            const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
-                            const dispo = planningGeneral.dispos.find(d=>d.prof_id===p.id&&d.creneau_id===cr.id);
-                            const indispo = dispo&&!dispo.disponible;
-                            const estSpecial = !!aff?.type_special;
-                            const couleurFond = aff
-                              ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
-                              : (indispo ? '#eeeeee' : '#fff');
-                            const couleurTexte = aff
-                              ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
-                              : '#111827';
-                            return (
-                              <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
-                                background:couleurFond,color:couleurTexte}}>
-                                {aff?<><b style={{color:couleurTexte,fontSize:12}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
-                                {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null)}
-                              </> : ''}
+              {JOURS.map(jour => {
+                const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
+                if (!crs.length) return null;
+                const nCols = planningGeneral.profs.length + 1;
+                return (
+                  <table key={`gen-${jour}`} style={{...styles.tbl,tableLayout:'fixed',width:'100%',minWidth:LARGEUR_COLONNE_CRENEAU+planningGeneral.profs.length*120,marginBottom:20,border:'none',boxShadow:'none'}}>
+                    <colgroup>
+                      <col style={{width:LARGEUR_COLONNE_CRENEAU}} />
+                      {planningGeneral.profs.map(p => <col key={`col-gen-${jour}-${p.id}`} />)}
+                    </colgroup>
+                    <tbody>
+                      <tr>
+                        <td colSpan={nCols} style={{padding:0,border:'none',background:'transparent'}}>
+                          <div style={{background:'#6366f1',color:'#fff',textAlign:'center',fontWeight:800,fontSize:12,padding:'6px 14px',textTransform:'uppercase',letterSpacing:'0.04em',borderTopLeftRadius:10,borderTopRightRadius:10}}>
+                            {jour}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style={styles.theadRow}>
+                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
+                        {planningGeneral.profs.map(p => (
+                          <th key={p.id} style={{...styles.th,textAlign:'center'}}>
+                            {nomSansSuffixe(p.nom)}<br/>
+                            <span style={{fontWeight:400,fontSize:11}}>{formaterPrenomEntete(p.prenom)}</span>
+                          </th>
+                        ))}
+                      </tr>
+                      {['Matin','Après-midi'].flatMap(per => {
+                        const crsPer = crs.filter(c=>c.periode===per);
+                        if (!crsPer.length) return [];
+                        return [
+                          <tr key={jour+per+'_ph'}>
+                            <td colSpan={nCols} style={styles.periodeBande}>{per}</td>
+                          </tr>,
+                          ...crsPer.map(cr => (
+                            <tr key={cr.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
+                              <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
+                                {cr.heure_debut}–{cr.heure_fin}
                               </td>
-                            );
-                          })}
-                        </tr>
-                      ))
-                    ];
-                  })}
-                </tbody>
-              </table>
+                              {planningGeneral.profs.map(p => {
+                                const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
+                                const dispo = planningGeneral.dispos.find(d=>d.prof_id===p.id&&d.creneau_id===cr.id);
+                                const indispo = dispo&&!dispo.disponible;
+                                const estSpecial = !!aff?.type_special;
+                                const couleurFond = aff
+                                  ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
+                                  : (indispo ? '#eeeeee' : '#fff');
+                                const couleurTexte = aff
+                                  ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
+                                  : '#111827';
+                                return (
+                                  <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
+                                    background:couleurFond,color:couleurTexte}}>
+                                    {aff ? <>
+                                      <b style={{color:couleurTexte,fontSize:12}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
+                                      {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null)}
+                                    </> : ''}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        ];
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })}
             </div>
           )}
         </div>
