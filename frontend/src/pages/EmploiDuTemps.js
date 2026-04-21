@@ -384,7 +384,7 @@ export default function EmploiDuTemps() {
 
   // Planning branches
   const chargerPlanningBranches = async (pool_id) => {
-    const r = await axios.get(API + '/planning-branches?pool_id=' + pool_id, { headers });
+    const r = await axios.get(API + '/planning/planning-branches?pool_id=' + pool_id, { headers });
     setPlanningBranches(r.data);
   };
 
@@ -394,7 +394,7 @@ export default function EmploiDuTemps() {
   const handleBrancheChange = async (classe_id, matiere_id, pool_id, prof_id) => {
     if (!isAdmin()) return;
     if (!prof_id) {
-      await axios.delete(API + '/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
+      await axios.delete(API + '/planning/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
     } else {
       // Vérifier nombre de périodes
       const matiere = matieres.find(m => m.id==matiere_id);
@@ -407,7 +407,7 @@ export default function EmploiDuTemps() {
           return;
         }
       }
-      await axios.post(API + '/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
+      await axios.post(API + '/planning/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
     }
     chargerPlanningBranches(pool_id);
   };
