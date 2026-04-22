@@ -1559,17 +1559,14 @@ export default function TCF() {
             }}
             allLabel="Tous niveaux"
           />
-          <button onClick={() => setResultatSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-            style={{ ...styles.pillBtn, ...(true ? {} : {}), whiteSpace:'nowrap' }}>
-            Trier {resultatSortDir === 'asc' ? '↑' : '↓'}
-          </button>
           {resultatVue === 'classe' && (
-            <CustomSelect
+            <FiltreDropdown
+              label="Classe"
               value={resultatClasseId}
-              onChange={(v) => setResultatClasseId(v)}
               options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
-              placeholder="- Sélectionner la classe -"
-              style={styles.select}
+              onSelect={(v) => setResultatClasseId(v)}
+              allLabel="Toutes les classes"
+              width={200}
             />
           )}
         </div>
