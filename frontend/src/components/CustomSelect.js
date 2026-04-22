@@ -192,23 +192,59 @@ const CustomSelect = ({
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         id={id}
-        tabIndex={disabled ? -1 : 0}
-        onClick={() => { if (!disabled) setOpen(o => !o); }}
-        onKeyDown={handleKeyDown}
+        onMouseDown={(e) => {
+          if (disabled) return;
+          // Toggle à l'ouverture ; si déjà ouvert et clic sur une autre zone que l'input, fermer
+          if (e.target !== inputRef.current) {
+            e.preventDefault();
+            if (open) {
+              closeAll();
+            } else {
+              setOpen(true);
+              setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
+            }
+          }
+        }}
         style={triggerStyle}
       >
-        <span style={{
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          role="searchbox"
+          autoComplete="off"
+          disabled={disabled}
+          readOnly={!searchable}
+          value={open ? query : (selectedOption ? selectedOption.label : '')}
+          placeholder={selectedOption ? selectedOption.label : placeholder}
+          onFocus={() => { if (!disabled && !open) setOpen(true); }}
+          onChange={(e) => {
+            if (!searchable) return;
+            if (!open) setOpen(true);
+            setQuery(e.target.value);
+            setHoverIdx(0);
+          }}
+          onKeyDown={handleKeyDown}
+          tabIndex={disabled ? -1 : 0}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            padding: 0,
+            margin: 0,
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: open ? 500 : (hasValue ? 600 : 500),
+            color: open ? GREY_TEXT : (hasValue ? GREY_TEXT : GREY_PLACEHOLDER),
+            cursor: disabled ? 'not-allowed' : (searchable ? 'text' : 'pointer'),
+            textOverflow: 'ellipsis',
+          }}
+        />
         {allowClear && hasValue && !disabled && (
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onClick={handleClear}
             aria-label="Effacer la sélection"
             style={{
@@ -229,7 +265,7 @@ const CustomSelect = ({
             <ClearIcon />
           </button>
         )}
-        <span style={{ display: 'inline-flex', alignItems: 'center', color: open ? VIOLET : GREY_PLACEHOLDER }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', color: open ? VIOLET : GREY_PLACEHOLDER, pointerEvents: 'none' }}>
           <ChevronIcon open={open} />
         </span>
       </div>
@@ -257,30 +293,7 @@ const CustomSelect = ({
             flexDirection: 'column',
           }}
         >
-          {searchable && (
-            <div style={{ padding: 10, borderBottom: `1px solid ${VIOLET_SOFT}` }}>
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setHoverIdx(0); }}
-                onKeyDown={handleKeyDown}
-                placeholder="Rechercher…"
-                style={{
-                  width: '100%',
-                  padding: '7px 14px',
-                  borderRadius: 17,
-                  border: `1px solid ${GREY_BORDER}`,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                  color: GREY_TEXT,
-                  background: '#f8fafc',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          )}
-          <div style={{ overflowY: 'auto', maxHeight: 220, padding: 6 }}>
+          <div style={{ overflowY: 'auto', maxHeight: 288, padding: 6 }}>
             {filtered.length === 0 && (
               <div style={{ padding: '10px 12px', fontSize: 13, color: GREY_PLACEHOLDER, textAlign: 'center' }}>
                 Aucun résultat
