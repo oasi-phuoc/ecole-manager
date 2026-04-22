@@ -3482,25 +3482,6 @@ export default function TCF() {
         </div>
       </div>
 
-      <div style={styles.tabsBar}>
-        <div style={styles.tabsRow}>
-          {[
-            { id: 'pool', label: 'Pool' },
-            { id: 'classes', label: 'Affectation' },
-            { id: 'roles', label: 'Rôles' },
-            { id: 'plannings', label: 'Plannings' },
-            { id: 'resultat', label: 'Résultat' },
-            { id: 'statistique', label: 'Statistique' },
-            { id: 'graphique', label: 'Graphique' },
-          ].map(t => (
-            <button key={t.id} type="button" onClick={() => handleTabChange(t.id)}
-              style={{ ...styles.tabBtn, ...(onglet === t.id ? styles.tabBtnActif : {}) }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       </div>
 
       <div style={styles.tabContent}>
