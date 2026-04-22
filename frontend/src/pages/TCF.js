@@ -1064,12 +1064,12 @@ export default function TCF() {
           {(() => {
             const niveauxSelectionnes = siteLevels[siteKey] || [];
             const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
-            const afficherAutres = showAutresProfsBySite[siteKey] !== false;
+            const afficherAutres = showAutresProfsBySite[siteKey] === true;
             if (niveauxSet.size === 0) return null;
             return (
               <button
                 type="button"
-                onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !(prev[siteKey] !== false) }))}
+                onClick={() => setShowAutresProfsBySite(prev => ({ ...prev, [siteKey]: !(prev[siteKey] === true) }))}
                 style={{
                   ...styles.autresProfsToggleBtn,
                   ...(afficherAutres ? styles.autresProfsToggleBtnActif : {}),
@@ -1084,7 +1084,7 @@ export default function TCF() {
 
       {(() => {
         const niveauxSelectionnes = siteLevels[siteKey] || [];
-        const afficherAutres = showAutresProfsBySite[siteKey] !== false;
+        const afficherAutres = showAutresProfsBySite[siteKey] === true;
         const niveauxSet = new Set(niveauxSelectionnes.map(normaliserNiveau));
         const profsParNiveauFiltres = Object.entries(profsParNiveauPool).filter(([niveau]) => {
           if (niveauxSet.size === 0) return true;
