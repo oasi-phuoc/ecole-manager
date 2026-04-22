@@ -7,7 +7,9 @@ const getEleves = async (req, res) => {
         COALESCE(u.nom, e.nom) as nom,
         COALESCE(u.prenom, e.prenom) as prenom,
         u.email,
-        c.nom as classe_nom
+        c.nom as classe_nom,
+        (SELECT COUNT(*)::int FROM observations o WHERE o.eleve_id = e.id) AS nb_observations,
+        (SELECT COUNT(*)::int FROM sanctions_eleves s WHERE s.eleve_id = e.id) AS nb_sanctions
       FROM eleves e
       LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id

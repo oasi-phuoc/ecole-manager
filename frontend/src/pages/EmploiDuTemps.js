@@ -805,16 +805,30 @@ export default function EmploiDuTemps() {
   const sauverCouleurClasse = async (classeId, couleur) => {
     if (!isAdmin()) return;
     try {
-      const rep = await axios.post(API + '/planning/classe-couleurs', {
-        classe_id: classeId,
-        couleur
-      }, { headers });
+      const idCible = String(classeId);
+      const couleurCibleNorm = String(couleur).toLowerCase();
+      const couleurActuelleCible = getCouleurClasse(idCible);
+      if (String(couleurActuelleCible).toLowerCase() === couleurCibleNorm) return;
+
+      // Trouver une autre classe qui utilise déjà cette couleur pour l'intervertir
+      const autreId = classes
+        .map(c => String(c.id))
+        .find(id => id !== idCible && String(getCouleurClasse(id)).toLowerCase() === couleurCibleNorm);
+
+      const requetes = [
+        axios.post(API + '/planning/classe-couleurs', { classe_id: classeId, couleur }, { headers })
+      ];
+      if (autreId) {
+        requetes.push(
+          axios.post(API + '/planning/classe-couleurs', { classe_id: autreId, couleur: couleurActuelleCible }, { headers })
+        );
+      }
+      await Promise.all(requetes);
 
       setCouleursClassesMap(prev => {
         const next = { ...prev };
-        const id = String(rep?.data?.classe_id || classeId);
-        const couleurVal = rep?.data?.couleur || couleur;
-        if (id && couleurVal) next[id] = couleurVal;
+        next[idCible] = couleur;
+        if (autreId) next[autreId] = couleurActuelleCible;
         return next;
       });
     } catch (err) {
@@ -832,16 +846,30 @@ export default function EmploiDuTemps() {
   const sauverCouleurProf = async (profId, couleur) => {
     if (!isAdmin()) return;
     try {
-      const rep = await axios.post(API + '/planning/prof-couleurs', {
-        prof_id: profId,
-        couleur
-      }, { headers });
+      const idCible = String(profId);
+      const couleurCibleNorm = String(couleur).toLowerCase();
+      const couleurActuelleCible = getCouleurProf(idCible);
+      if (String(couleurActuelleCible).toLowerCase() === couleurCibleNorm) return;
+
+      // Trouver un autre prof qui utilise déjà cette couleur pour l'intervertir
+      const autreId = profs
+        .map(p => String(p.id))
+        .find(id => id !== idCible && String(getCouleurProf(id)).toLowerCase() === couleurCibleNorm);
+
+      const requetes = [
+        axios.post(API + '/planning/prof-couleurs', { prof_id: profId, couleur }, { headers })
+      ];
+      if (autreId) {
+        requetes.push(
+          axios.post(API + '/planning/prof-couleurs', { prof_id: autreId, couleur: couleurActuelleCible }, { headers })
+        );
+      }
+      await Promise.all(requetes);
 
       setCouleursProfsMap(prev => {
         const next = { ...prev };
-        const id = String(rep?.data?.prof_id || profId);
-        const couleurVal = rep?.data?.couleur || couleur;
-        if (id && couleurVal) next[id] = couleurVal;
+        next[idCible] = couleur;
+        if (autreId) next[autreId] = couleurActuelleCible;
         return next;
       });
     } catch (err) {
@@ -882,16 +910,30 @@ export default function EmploiDuTemps() {
   const sauverCouleurBranche = async (matiereId, couleur) => {
     if (!isAdmin()) return;
     try {
-      const rep = await axios.post(API + '/planning/branche-couleurs', {
-        matiere_id: matiereId,
-        couleur
-      }, { headers });
+      const idCible = String(matiereId);
+      const couleurCibleNorm = String(couleur).toLowerCase();
+      const couleurActuelleCible = getCouleurBranche(idCible);
+      if (String(couleurActuelleCible).toLowerCase() === couleurCibleNorm) return;
+
+      // Trouver une autre branche qui utilise déjà cette couleur pour l'intervertir
+      const autreId = matieres
+        .map(m => String(m.id))
+        .find(id => id !== idCible && String(getCouleurBranche(id)).toLowerCase() === couleurCibleNorm);
+
+      const requetes = [
+        axios.post(API + '/planning/branche-couleurs', { matiere_id: matiereId, couleur }, { headers })
+      ];
+      if (autreId) {
+        requetes.push(
+          axios.post(API + '/planning/branche-couleurs', { matiere_id: autreId, couleur: couleurActuelleCible }, { headers })
+        );
+      }
+      await Promise.all(requetes);
 
       setCouleursBranchesMap(prev => {
         const next = { ...prev };
-        const id = String(rep?.data?.matiere_id || matiereId);
-        const couleurVal = rep?.data?.couleur || couleur;
-        if (id && couleurVal) next[id] = couleurVal;
+        next[idCible] = couleur;
+        if (autreId) next[autreId] = couleurActuelleCible;
         return next;
       });
     } catch (err) {

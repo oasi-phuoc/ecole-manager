@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const VIOLET = '#6366f1';
 const VIOLET_SOFT = '#ede9fe';
@@ -58,7 +59,9 @@ const CustomSelect = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [hoverIdx, setHoverIdx] = useState(-1);
+  const [panelPos, setPanelPos] = useState({ top: 0, left: 0, width: 0, openUp: false });
   const wrapRef = useRef(null);
+  const triggerRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
@@ -78,15 +81,40 @@ const CustomSelect = ({
     setHoverIdx(-1);
   }, []);
 
+  const recalcPanelPos = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const panelMaxHeight = 300;
+    const openUp = spaceBelow < panelMaxHeight + 12 && rect.top > spaceBelow;
+    setPanelPos({
+      top: openUp ? rect.top - 6 : rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+      openUp,
+    });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+    recalcPanelPos();
     const handler = (e) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target)) closeAll();
+      const t = e.target;
+      if (wrapRef.current && wrapRef.current.contains(t)) return;
+      if (listRef.current && listRef.current.contains(t)) return;
+      closeAll();
     };
+    const onScrollOrResize = () => recalcPanelPos();
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open, closeAll]);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open, closeAll, recalcPanelPos]);
 
   useEffect(() => {
     if (open && searchable && inputRef.current) {
@@ -158,6 +186,7 @@ const CustomSelect = ({
       style={{ position: 'relative', display: 'inline-block', width: style?.width || 'auto', minWidth: style?.minWidth || 160 }}
     >
       <div
+        ref={triggerRef}
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -207,28 +236,29 @@ const CustomSelect = ({
       {name && (
         <input type="hidden" name={name} value={currentValue} />
       )}
-      {open && !disabled && (
+      {open && !disabled && createPortal(
         <div
           ref={listRef}
           role="listbox"
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            zIndex: 2000,
+            position: 'fixed',
+            top: panelPos.openUp ? undefined : panelPos.top,
+            bottom: panelPos.openUp ? (window.innerHeight - panelPos.top) : undefined,
+            left: panelPos.left,
+            width: panelPos.width,
+            zIndex: 10000,
             background: 'white',
             border: `1.5px solid ${VIOLET_SOFT}`,
-            borderRadius: 14,
-            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.12)',
+            borderRadius: 24,
+            boxShadow: '0 12px 32px rgba(99, 102, 241, 0.18)',
             overflow: 'hidden',
-            maxHeight: 280,
+            maxHeight: 300,
             display: 'flex',
             flexDirection: 'column',
           }}
         >
           {searchable && (
-            <div style={{ padding: 8, borderBottom: `1px solid ${VIOLET_SOFT}` }}>
+            <div style={{ padding: 10, borderBottom: `1px solid ${VIOLET_SOFT}` }}>
               <input
                 ref={inputRef}
                 value={query}
@@ -237,8 +267,8 @@ const CustomSelect = ({
                 placeholder="Rechercher…"
                 style={{
                   width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: 12,
+                  padding: '7px 14px',
+                  borderRadius: 17,
                   border: `1px solid ${GREY_BORDER}`,
                   fontSize: 13,
                   fontFamily: 'inherit',
@@ -250,7 +280,7 @@ const CustomSelect = ({
               />
             </div>
           )}
-          <div style={{ overflowY: 'auto', maxHeight: 220, padding: 4 }}>
+          <div style={{ overflowY: 'auto', maxHeight: 220, padding: 6 }}>
             {filtered.length === 0 && (
               <div style={{ padding: '10px 12px', fontSize: 13, color: GREY_PLACEHOLDER, textAlign: 'center' }}>
                 Aucun résultat
@@ -268,8 +298,8 @@ const CustomSelect = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(opt)}
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: 10,
+                    padding: '8px 14px',
+                    borderRadius: 14,
                     fontSize: 13,
                     cursor: opt.disabled ? 'not-allowed' : 'pointer',
                     color: opt.disabled ? GREY_PLACEHOLDER : (actif ? VIOLET_DARK : GREY_TEXT),
@@ -285,7 +315,8 @@ const CustomSelect = ({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

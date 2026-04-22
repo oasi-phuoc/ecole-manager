@@ -146,6 +146,18 @@ export default function Classes() {
     chargerTout();
   };
 
+  // Synchroniser les compteurs d'observations/sanctions sur l'élève ouvert pour refléter l'état immédiatement
+  useEffect(() => {
+    if (!obsEleve) return;
+    const id = obsEleve.id;
+    setElevesClasse(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_observations: observations.length } : el));
+  }, [observations, obsEleve]);
+  useEffect(() => {
+    if (!sanctionsEleve) return;
+    const id = sanctionsEleve.id;
+    setElevesClasse(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_sanctions: eleveSanctions.length } : el));
+  }, [eleveSanctions, sanctionsEleve]);
+
   const ouvrirDetail = async (c, tab = 'eleves') => {
     setDetailClasse(c);
     setSearchParams({ detail: c.id, tab });
@@ -1155,7 +1167,7 @@ export default function Classes() {
 
       {showDocsEleve && docsEleve && (
         <div style={s.overlay}>
-          <div style={{...s.modal, maxWidth:600, width:'100%'}}>
+          <div style={{...s.modal, maxWidth:600, width:'100%', minHeight:'75vh', maxHeight:'90vh'}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
               <button style={s.btnClose} onClick={() => setShowDocsEleve(false)}>✕</button>
@@ -1656,12 +1668,16 @@ export default function Classes() {
                       <button title="Documents" onClick={() => ouvrirDocumentsEleve(el)} style={{padding:6,background:'#dbeafe',color:'#1e40af',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/></svg>
                       </button>
-                      <button title="Observations" onClick={() => ouvrirObservationsClasse(el)} style={{padding:6,background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      {(() => { const aObs = Number(el.nb_observations || 0) > 0; return (
+                      <button title={aObs ? 'Observations' : 'Aucune observation'} onClick={() => ouvrirObservationsClasse(el)} style={{padding:6,background:aObs?'#eef2ff':'#f1f5f9',color:aObs?'#4338ca':'#94a3b8',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/></svg>
                       </button>
-                      <button title="Sanctions" onClick={() => ouvrirSanctions(el)} style={{padding:6,background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      ); })()}
+                      {(() => { const aSan = Number(el.nb_sanctions || 0) > 0; return (
+                      <button title={aSan ? 'Sanctions' : 'Aucune sanction'} onClick={() => ouvrirSanctions(el)} style={{padding:6,background:aSan?'#fff7ed':'#f1f5f9',color:aSan?'#c2410c':'#94a3b8',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/></svg>
                       </button>
+                      ); })()}
                     </div>
                   </td>
                 </tr>

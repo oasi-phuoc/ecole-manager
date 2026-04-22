@@ -122,6 +122,18 @@ export default function Eleves() {
     } catch(err) { console.error(err); }
   };
 
+  // Synchroniser les compteurs d'observations/sanctions sur l'élève ouvert pour refléter l'état immédiatement
+  useEffect(() => {
+    if (!obsEleve) return;
+    const id = obsEleve.id;
+    setEleves(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_observations: observations.length } : el));
+  }, [observations, obsEleve]);
+  useEffect(() => {
+    if (!sanctionsEleve) return;
+    const id = sanctionsEleve.id;
+    setEleves(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_sanctions: eleveSanctions.length } : el));
+  }, [eleveSanctions, sanctionsEleve]);
+
   const resetForm = () => {
     setNom(''); setPrenom(''); setEmail(''); setClasseId('');
     setDateNaissance(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
@@ -697,7 +709,7 @@ export default function Eleves() {
 
       {showDocsEleve && docsEleve && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
-          <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+          <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,minHeight:'75vh',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
@@ -1143,16 +1155,20 @@ export default function Eleves() {
                         <path fillRule="evenodd" d="M2 8a2 2 0 012-2h4.5l2 2H20a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M6 13h12v1.5H6z M6 16h9v1.5H6z"/>
                       </svg>
                     </button>
-                    <button title="Observations" onClick={() => ouvrirObservations(el)} style={{padding:6,background:'#eef2ff',color:'#4338ca',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    {(() => { const aObs = Number(el.nb_observations || 0) > 0; return (
+                    <button title={aObs ? 'Observations' : 'Aucune observation'} onClick={() => ouvrirObservations(el)} style={{padding:6,background:aObs?'#eef2ff':'#f1f5f9',color:aObs?'#4338ca':'#94a3b8',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
                         <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h2.5L9 19.5 11.5 17H20a2 2 0 002-2V5a2 2 0 00-2-2H4z M7 8h10v2H7z M7 12h7v2H7z"/>
                       </svg>
                     </button>
-                    <button title="Sanctions" onClick={() => ouvrirSanctions(el)} style={{padding:6,background:'#fff7ed',color:'#c2410c',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    ); })()}
+                    {(() => { const aSan = Number(el.nb_sanctions || 0) > 0; return (
+                    <button title={aSan ? 'Sanctions' : 'Aucune sanction'} onClick={() => ouvrirSanctions(el)} style={{padding:6,background:aSan?'#fff7ed':'#f1f5f9',color:aSan?'#c2410c':'#94a3b8',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
                         <path fillRule="evenodd" d="M12 2L4 6.5v5c0 4.8 3.5 9.2 8 10.5 4.5-1.3 8-5.7 8-10.5v-5L12 2z M11 8h2v5h-2z M11 14.5h2v2h-2z"/>
                       </svg>
                     </button>
+                    ); })()}
                   </div>
                 </td>
                 <td style={{padding:'10px 8px',width:130,minWidth:130,maxWidth:130,textAlign:'center'}}>
