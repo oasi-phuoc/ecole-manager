@@ -1166,11 +1166,11 @@ export default function Classes() {
       <ModalZoom />
 
       {showDocsEleve && docsEleve && (
-        <div style={s.overlay}>
-          <div style={{...s.modal, maxWidth:600, width:'100%', minHeight:'75vh', maxHeight:'90vh'}}>
-            <div style={s.modalHeader}>
-              <h3 style={s.modalTitle}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
-              <button style={s.btnClose} onClick={() => setShowDocsEleve(false)}>✕</button>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+          <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
+              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
             </div>
             {isAdmin() && (
               <div style={{marginBottom:16}}>
@@ -1180,7 +1180,6 @@ export default function Classes() {
                     style={{...s.inp,width:'auto',padding:'7px 10px'}}
                     value={uploadEleveForm.type}
                     onChange={(v) => setUploadEleveForm({type:v})}
-                    placeholder="Type de document"
                     options={['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => ({value:t, label:t}))}
                   />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
@@ -1216,7 +1215,7 @@ export default function Classes() {
                     <button onClick={() => telechargerDocumentEleve(doc)} style={{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#e0e7ff',color:'#4338ca'}} title="Télécharger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
                     </button>
-                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{padding:5,border:'none',borderRadius:8,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#fee2e2',color:'#ef4444'}} title="Supprimer">
+                    {isAdmin() && <button onClick={() => supprimerDocumentEleve(doc.id)} style={{background:'#fee2e2',border:'none',cursor:'pointer',color:'#dc2626',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:5,borderRadius:8}} title="Supprimer">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>}
                   </div>

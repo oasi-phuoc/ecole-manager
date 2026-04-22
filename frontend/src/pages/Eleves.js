@@ -709,7 +709,7 @@ export default function Eleves() {
 
       {showDocsEleve && docsEleve && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
-          <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,minHeight:'75vh',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
+          <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
               <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
