@@ -2,6 +2,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import { stickyPageChrome } from '../styles/pageShell';
 import axios from 'axios';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -116,9 +117,12 @@ export default function Branches() {
                 </div>
                 <div style={s.field}>
                   <label style={s.lbl}>Niveau *</label>
-                  <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
-                    {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={s.inp}
+                    value={form.niveau}
+                    onChange={v => setForm({...form,niveau:v})}
+                    options={niveauxDB.map(n => ({ value: n.nom, label: n.nom }))}
+                  />
                 </div>
                 <div style={s.field}>
                   <label style={s.lbl}>Périodes / semaine *</label>

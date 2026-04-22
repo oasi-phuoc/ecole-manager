@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -1163,9 +1164,13 @@ export default function Classes() {
               <div style={{marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                  <select style={{...s.inp,width:'auto',padding:'7px 10px'}} value={uploadEleveForm.type} onChange={e => setUploadEleveForm({type:e.target.value})}>
-                    {['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={{...s.inp,width:'auto',padding:'7px 10px'}}
+                    value={uploadEleveForm.type}
+                    onChange={(v) => setUploadEleveForm({type:v})}
+                    placeholder="Type de document"
+                    options={['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => ({value:t, label:t}))}
+                  />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
                     📎 Choisir un fichier
                     <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />
@@ -1831,13 +1836,13 @@ export default function Classes() {
                     </div>
                     <div>
                       <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière *</label>
-                      <select required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box',background:'white'}}
-                        value={devoirForm.matiere} onChange={e => setDevoirForm({...devoirForm, matiere: e.target.value})}>
-                        <option value="">Sélectionner une branche</option>
-                        {branchesInventaire.map(b => (
-                          <option key={b.id} value={b.code || b.nom}>{b.code ? `${b.code} ${b.nom}` : b.nom}</option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        style={{width:'100%'}}
+                        value={devoirForm.matiere}
+                        onChange={(v) => setDevoirForm({...devoirForm, matiere: v})}
+                        placeholder="Sélectionner une branche"
+                        options={branchesInventaire.map(b => ({value: b.code || b.nom, label: b.code ? `${b.code} ${b.nom}` : b.nom}))}
+                      />
                     </div>
                     <div>
                       <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise *</label>
@@ -1870,13 +1875,13 @@ export default function Classes() {
                     </div>
                     <div>
                       <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Matière *</label>
-                      <select required style={{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:7,fontSize:13,boxSizing:'border-box',background:'white'}}
-                        value={devoirEditForm.matiere} onChange={e => setDevoirEditForm({...devoirEditForm, matiere: e.target.value})}>
-                        <option value="">Sélectionner une branche</option>
-                        {branchesInventaire.map(b => (
-                          <option key={b.id} value={b.code || b.nom}>{b.code ? `${b.code} ${b.nom}` : b.nom}</option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        style={{width:'100%'}}
+                        value={devoirEditForm.matiere}
+                        onChange={(v) => setDevoirEditForm({...devoirEditForm, matiere: v})}
+                        placeholder="Sélectionner une branche"
+                        options={branchesInventaire.map(b => ({value: b.code || b.nom, label: b.code ? `${b.code} ${b.nom}` : b.nom}))}
+                      />
                     </div>
                     <div>
                       <label style={{fontSize:12,fontWeight:600,color:'#64748b',display:'block',marginBottom:4}}>Date de remise *</label>
@@ -2146,18 +2151,24 @@ export default function Classes() {
                 <div style={s.field}><label style={s.lbl}>Nom de la classe *</label><input style={s.inp} type="text" required value={form.nom} onChange={e => setForm({...form,nom:e.target.value})} placeholder="Ex: CSC 03, CFR 10, EPL 05..." /></div>
                 <div style={s.field}>
                   <label style={s.lbl}>Niveau *</label>
-                  <select style={s.inp} required value={form.niveau} onChange={e => setForm({...form,niveau:e.target.value})}>
-                    <option value="">-- Choisir --</option>
-                    {niveauxDB.map(n => <option key={n.id} value={n.nom}>{n.nom}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={{...s.inp, width:'100%'}}
+                    value={form.niveau}
+                    onChange={(v) => setForm({...form, niveau: v})}
+                    placeholder="-- Choisir --"
+                    options={niveauxDB.map(n => ({value: n.nom, label: n.nom}))}
+                  />
                 </div>
                 
                 <div style={s.field}>
                   <label style={s.lbl}>Titulaire</label>
-                  <select style={s.inp} value={form.prof_principal_id} onChange={e => setForm({...form,prof_principal_id:e.target.value})}>
-                    <option value="">-- Choisir --</option>
-                    {profs.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={{...s.inp, width:'100%'}}
+                    value={form.prof_principal_id}
+                    onChange={(v) => setForm({...form, prof_principal_id: v})}
+                    placeholder="-- Choisir --"
+                    options={profs.map(p => ({value: p.id, label: `${p.prenom} ${p.nom}`}))}
+                  />
                 </div>
               </div>
               <div style={s.formActions}>

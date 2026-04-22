@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -527,10 +528,13 @@ export default function Presences() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
               </button>
             </div>
-            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-              <option value="">Sélectionner une classe</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              style={s.selClasse}
+              value={classeSelectionnee}
+              placeholder="Sélectionner une classe"
+              options={classes.map(c => ({value: c.id, label: c.nom}))}
+              onChange={(v) => setClasseSelectionnee(v)}
+            />
             {classeSelectionnee && (
               <button
                 onClick={handleToggleValide}
@@ -560,34 +564,37 @@ export default function Presences() {
               <button onClick={allerMoisPrecedent} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 5l-9 7 9 7V5z"/></svg>
               </button>
-              <select
+              <CustomSelect
                 style={{...s.inp, minWidth:170, textTransform:'capitalize', cursor:'pointer'}}
                 value={date.substring(0, 7)}
-                onChange={e => {
-                  const v = e.target.value;
+                allowClear={false}
+                options={optionsMois}
+                onChange={(v) => {
                   if (!v) return;
                   setDate(v + '-01');
                 }}
-              >
-                {optionsMois.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              />
               <button onClick={allerMoisSuivant} style={{width:20,height:36,padding:0,boxSizing:'border-box',background:'#e0e7ff',border:'none',borderRadius:10,cursor:'pointer',fontSize:14,color:'#4338ca',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 19l9-7-9-7v14z"/></svg>
               </button>
             </div>
-            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-              <option value="">Sélectionner une classe</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              style={s.selClasse}
+              value={classeSelectionnee}
+              placeholder="Sélectionner une classe"
+              options={classes.map(c => ({value: c.id, label: c.nom}))}
+              onChange={(v) => setClasseSelectionnee(v)}
+            />
           </div>
         ) : onglet === 'stats' ? (
           <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-              <option value="">Sélectionner une classe</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              style={s.selClasse}
+              value={classeSelectionnee}
+              placeholder="Sélectionner une classe"
+              options={classes.map(c => ({value: c.id, label: c.nom}))}
+              onChange={(v) => setClasseSelectionnee(v)}
+            />
             <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
               {[
                 { id: '1sem', label: '1er semestre' },
@@ -621,10 +628,13 @@ export default function Presences() {
           </div>
         ) : (
           <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-            <select style={s.selClasse} value={classeSelectionnee} onChange={e => setClasseSelectionnee(e.target.value)}>
-              <option value="">Sélectionner une classe</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              style={s.selClasse}
+              value={classeSelectionnee}
+              placeholder="Sélectionner une classe"
+              options={classes.map(c => ({value: c.id, label: c.nom}))}
+              onChange={(v) => setClasseSelectionnee(v)}
+            />
           </div>
         )}
       </div>

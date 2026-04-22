@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -601,20 +602,28 @@ export default function Eleves() {
                     <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
                     <Champ lbl="Classe">
-                      <select style={inp} value={classeId} onChange={e => setClasseId(e.target.value)}>
-                        <option value="">-- Choisir --</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                      </select>
+                      <CustomSelect
+                        style={inp}
+                        placeholder="-- Choisir --"
+                        value={classeId}
+                        onChange={(v) => setClasseId(v)}
+                        options={classes.map(c => ({ value: c.id, label: c.nom }))}
+                      />
                     </Champ>
                     <Champ lbl="A commencé l'école le *">
                       <input style={inp} required type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
                     </Champ>
                     <Champ lbl="Catégorie *">
-                      <select style={inp} required value={categorie} onChange={e => setCategorie(e.target.value)}>
-                        <option value="">-- Choisir --</option>
-                        <option value="OASI">OASI</option>
-                        <option value="EUCMS">EUCMS</option>
-                      </select>
+                      <CustomSelect
+                        style={inp}
+                        placeholder="-- Choisir --"
+                        value={categorie}
+                        onChange={(v) => setCategorie(v)}
+                        options={[
+                          { value: 'OASI', label: 'OASI' },
+                          { value: 'EUCMS', label: 'EUCMS' },
+                        ]}
+                      />
                     </Champ>
                     <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} /></Champ>
                     <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} /></Champ>
@@ -664,10 +673,15 @@ export default function Eleves() {
                   <div style={{marginTop:'auto',paddingTop:16}}>
                     <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
                       <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Statut</label>
-                      <select style={inp} value={statut} onChange={e => setStatut(e.target.value)}>
-                        <option value="actif">✅ Actif</option>
-                        <option value="inactif">❌ Inactif</option>
-                      </select>
+                      <CustomSelect
+                        style={inp}
+                        value={statut}
+                        onChange={(v) => setStatut(v)}
+                        options={[
+                          { value: 'actif', label: '✅ Actif' },
+                          { value: 'inactif', label: '❌ Inactif' },
+                        ]}
+                      />
                     </div>
                     <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
                       <button type="button" style={{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
@@ -692,9 +706,12 @@ export default function Eleves() {
               <div style={{marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                  <select style={{...inp,width:'auto',padding:'7px 10px'}} value={uploadEleveForm.type} onChange={e => setUploadEleveForm({type:e.target.value})}>
-                  {['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={{...inp,width:'auto',padding:'7px 10px'}}
+                    value={uploadEleveForm.type}
+                    onChange={(v) => setUploadEleveForm({type:v})}
+                    options={['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => ({ value: t, label: t }))}
+                  />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
                     📎 Choisir un fichier
                     <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />

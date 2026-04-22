@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
@@ -861,16 +862,24 @@ export default function Notes() {
                 ))}
               </div>
               {vueGeneraleMode === 'branche' && (
-                <select className="no-print" style={{ height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:240 }} value={rapportMatiereId} onChange={e => setRapportMatiereId(e.target.value)}>
-                  <option value="">Choisir une branche</option>
-                  {modeMatieres.map(m => <option key={m.matiere_id} value={m.matiere_id}>{m.matiere_nom}</option>)}
-                </select>
+                <CustomSelect
+                  className="no-print"
+                  style={{ minWidth: 240 }}
+                  placeholder="Choisir une branche"
+                  value={rapportMatiereId}
+                  onChange={(v) => setRapportMatiereId(v)}
+                  options={modeMatieres.map(m => ({ value: m.matiere_id, label: m.matiere_nom }))}
+                />
               )}
               {vueGeneraleMode === 'eleve' && (
-                <select className="no-print" style={{ height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:240 }} value={rapportEleveId} onChange={e => setRapportEleveId(e.target.value)}>
-                  <option value="">Choisir un élève</option>
-                  {rapport?.eleves.map(e => <option key={e.id} value={e.id}>{nomSansSuffixe(e.nom)} {e.prenom}</option>)}
-                </select>
+                <CustomSelect
+                  className="no-print"
+                  style={{ minWidth: 240 }}
+                  placeholder="Choisir un élève"
+                  value={rapportEleveId}
+                  onChange={(v) => setRapportEleveId(v)}
+                  options={(rapport?.eleves || []).map(e => ({ value: e.id, label: `${nomSansSuffixe(e.nom)} ${e.prenom}` }))}
+                />
               )}
             </div>
           )}
@@ -1300,10 +1309,13 @@ export default function Notes() {
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>👤 Notes par élève — {classeNom}</h2>
-          <select style={s.select} value={eleveSelectionne || ''} onChange={e => setEleveSelectionne(e.target.value)}>
-            <option value="">-- Choisir un élève --</option>
-            {bulletins.map(b => <option key={b.eleve.id} value={b.eleve.id}>{b.eleve.nom} {b.eleve.prenom}</option>)}
-          </select>
+          <CustomSelect
+            style={{ minWidth: 240 }}
+            placeholder="-- Choisir un élève --"
+            value={eleveSelectionne || ''}
+            onChange={(v) => setEleveSelectionne(v)}
+            options={bulletins.map(b => ({ value: b.eleve.id, label: `${b.eleve.nom} ${b.eleve.prenom}` }))}
+          />
           <button style={s.btnImprimer} onClick={handleImprimer}>Imprimer</button>
         </div>
         {bulletin ? (
@@ -1707,11 +1719,16 @@ export default function Notes() {
                             )}
                             {isSel && cfg.hasSuiteSelect && (
                               <div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <select value={params.transfertDepuisSuite} onChange={e => setParam('transfertDepuisSuite', e.target.value)} style={inStyle}>
-                                  <option value="au TCF">au TCF</option>
-                                  <option value="au conseil de classe">au conseil de classe</option>
-                                  <option value="à la demande du titulaire">à la demande du titulaire</option>
-                                </select>
+                                <CustomSelect
+                                  style={inStyle}
+                                  value={params.transfertDepuisSuite}
+                                  onChange={(v) => setParam('transfertDepuisSuite', v)}
+                                  options={[
+                                    { value: 'au TCF', label: 'au TCF' },
+                                    { value: 'au conseil de classe', label: 'au conseil de classe' },
+                                    { value: 'à la demande du titulaire', label: 'à la demande du titulaire' },
+                                  ]}
+                                />
                                 <span style={{ fontSize: 13, color: '#475569' }}>le</span>
                                 <input type="date" value={params.transfertDepuisDate} onChange={e => setParam('transfertDepuisDate', e.target.value)} style={inStyle} />
                               </div>
@@ -2015,9 +2032,12 @@ export default function Notes() {
                   </div>
                   <div style={s.formChamp}>
                     <label style={s.label}>Type</label>
-                    <select style={s.input} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <CustomSelect
+                      style={s.input}
+                      value={form.type}
+                      onChange={(v) => setForm({ ...form, type: v })}
+                      options={TYPES.map(t => ({ value: t, label: t }))}
+                    />
                   </div>
                   <div style={s.formChamp}>
                     <label style={s.label}>Points maximum</label>

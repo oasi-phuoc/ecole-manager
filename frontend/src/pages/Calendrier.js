@@ -2,6 +2,7 @@ import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { stickyPageChrome } from '../styles/pageShell';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -342,14 +343,20 @@ export default function Calendrier() {
                 <div>
                   <label style={s.lbl}>Professeurs</label>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                    <select style={s.inp} value={formRetenue.prof1_id} onChange={e => setFormRetenue({...formRetenue,prof1_id:e.target.value,prof2_id:e.target.value===formRetenue.prof2_id?'':formRetenue.prof2_id})}>
-                      <option value="">-- Prof 1 --</option>
-                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof2_id)}>{p.prenom} {p.nom}</option>)}
-                    </select>
-                    <select style={s.inp} value={formRetenue.prof2_id} onChange={e => setFormRetenue({...formRetenue,prof2_id:e.target.value})}>
-                      <option value="">-- Prof 2 --</option>
-                      {profs.map(p => <option key={p.id} value={p.id} disabled={String(p.id)===String(formRetenue.prof1_id)}>{p.prenom} {p.nom}</option>)}
-                    </select>
+                    <CustomSelect
+                      style={s.inp}
+                      placeholder="-- Prof 1 --"
+                      value={formRetenue.prof1_id}
+                      onChange={v => setFormRetenue({...formRetenue,prof1_id:v,prof2_id:v===formRetenue.prof2_id?'':formRetenue.prof2_id})}
+                      options={profs.map(p => ({ value: p.id, label: `${p.prenom} ${p.nom}`, disabled: String(p.id)===String(formRetenue.prof2_id) }))}
+                    />
+                    <CustomSelect
+                      style={s.inp}
+                      placeholder="-- Prof 2 --"
+                      value={formRetenue.prof2_id}
+                      onChange={v => setFormRetenue({...formRetenue,prof2_id:v})}
+                      options={profs.map(p => ({ value: p.id, label: `${p.prenom} ${p.nom}`, disabled: String(p.id)===String(formRetenue.prof1_id) }))}
+                    />
                   </div>
                 </div>
                 <div><label style={s.lbl}>Date *</label><input style={s.inp} type="date" required value={formRetenue.date_debut} onChange={e => setFormRetenue({...formRetenue,date_debut:e.target.value})} /></div>
@@ -576,14 +583,18 @@ export default function Calendrier() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Type</label>
-              <select value={profEventForm.type} onChange={e => setProfEventForm({...profEventForm, type: e.target.value})}
-                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13, background: 'white' }}>
-                <option>Devoir</option>
-                <option>Examen</option>
-                <option>Administratif</option>
-                <option>Réunion</option>
-                <option>Autre</option>
-              </select>
+              <CustomSelect
+                value={profEventForm.type}
+                onChange={v => setProfEventForm({...profEventForm, type: v})}
+                options={[
+                  { value: 'Devoir', label: 'Devoir' },
+                  { value: 'Examen', label: 'Examen' },
+                  { value: 'Administratif', label: 'Administratif' },
+                  { value: 'Réunion', label: 'Réunion' },
+                  { value: 'Autre', label: 'Autre' },
+                ]}
+                style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 13, background: 'white' }}
+              />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 2, minWidth: 160 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Description</label>

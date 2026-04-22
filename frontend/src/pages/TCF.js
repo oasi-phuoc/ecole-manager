@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
+import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
@@ -1559,10 +1560,13 @@ export default function TCF() {
             Trier {resultatSortDir === 'asc' ? '↑' : '↓'}
           </button>
           {resultatVue === 'classe' && (
-            <select value={resultatClasseId} onChange={e => setResultatClasseId(e.target.value)} style={styles.select}>
-              <option value="">- Sélectionner la classe -</option>
-              {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              value={resultatClasseId}
+              onChange={(v) => setResultatClasseId(v)}
+              options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
+              placeholder="- Sélectionner la classe -"
+              style={styles.select}
+            />
           )}
         </div>
 
@@ -1751,10 +1755,13 @@ export default function TCF() {
 
         {/* Demi-journée + groupes */}
         <div style={{ marginTop: 15, marginBottom: 15, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <select value={rolesDemiJourneeSelect} onChange={(e) => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-            <option value="">Choisir une demi-journée</option>
-            {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
+          <CustomSelect
+            value={rolesDemiJourneeSelect}
+            onChange={(v) => setRolesDemiJourneeSelect(v)}
+            options={DEMI_JOURNEES.map(d => ({ value: d.id, label: d.label }))}
+            placeholder="Choisir une demi-journée"
+            style={styles.select}
+          />
           {rolesDemiJourneeSelect && (() => {
             const ROLE_MIN = { 'Appel': 1, 'Surveillance': 2, 'Accompagnement': 1, 'Oral Groupe 1': 2, 'Oral Groupe 2': 2, 'Correction': 2 };
             const counts = {};
@@ -1826,10 +1833,13 @@ export default function TCF() {
                           </div>
                         </td>
                         <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
-                          <select value={selectedRole} onChange={(e) => setRoleProf(siteKey, rolesDemiJourneeSelect, resp.id, e.target.value)} style={{ ...styles.selectRole, width: '100%' }}>
-                            <option value="">—</option>
-                            {ROLES_COLONNE.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
+                          <CustomSelect
+                            value={selectedRole}
+                            onChange={(v) => setRoleProf(siteKey, rolesDemiJourneeSelect, resp.id, v)}
+                            options={ROLES_COLONNE.map(r => ({ value: r, label: r }))}
+                            placeholder="—"
+                            style={{ ...styles.selectRole, width: '100%' }}
+                          />
                         </td>
                       </tr>
                     );
@@ -1846,26 +1856,25 @@ export default function TCF() {
                           </div>
                         </td>
                         <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
-                          <select
+                          <CustomSelect
                             value={selectedRole}
-                            onChange={(e) => {
-                              const nextRole = e.target.value;
+                            onChange={(v) => {
+                              const nextRole = v;
                               if (nextRole) {
                                 const deja = Object.entries(rolesMap).filter(([pid, r]) => String(pid) !== String(p.id) && r === nextRole).length;
                                 if (deja >= (ROLE_CAP[nextRole] ?? Infinity)) return;
                               }
                               setRoleProf(siteKey, rolesDemiJourneeSelect, p.id, nextRole);
                             }}
-                            style={{ ...styles.selectRole, width: '100%' }}
-                          >
-                            <option value="">—</option>
-                            {ROLES_COLONNE.map((r) => {
+                            options={ROLES_COLONNE.map((r) => {
                               const nb = Object.entries(rolesMap).filter(([pid, role]) => String(pid) !== String(p.id) && role === r).length;
                               const max = ROLE_CAP[r] ?? Infinity;
                               const disabled = nb >= max;
-                              return <option key={r} value={r} disabled={disabled}>{r}</option>;
+                              return { value: r, label: r, disabled };
                             })}
-                          </select>
+                            placeholder="—"
+                            style={{ ...styles.selectRole, width: '100%' }}
+                          />
                         </td>
                       </tr>
                     );
@@ -3045,10 +3054,13 @@ export default function TCF() {
             Trier {graphSortDir === 'asc' ? '↑' : '↓'}
           </button>
           {graphVue === 'classe' && (
-            <select value={graphClasseId} onChange={e => setGraphClasseId(e.target.value)} style={styles.select}>
-              <option value="">Choisir une classe</option>
-              {classesNiveau.map(c => <option key={c.id} value={String(c.id)}>{c.nom}</option>)}
-            </select>
+            <CustomSelect
+              value={graphClasseId}
+              onChange={(v) => setGraphClasseId(v)}
+              options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
+              placeholder="Choisir une classe"
+              style={styles.select}
+            />
           )}
         </div>
         {/* Graphique */}
@@ -3220,10 +3232,13 @@ export default function TCF() {
         </div>
 
         <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
-          <select value={statSession} onChange={e => setStatSession(e.target.value)} style={styles.select}>
-            <option value="">Choisir une session</option>
-            {SESSIONS.map(s => <option key={s} value={s}>{SESSION_LABEL[s] || s}</option>)}
-          </select>
+          <CustomSelect
+            value={statSession}
+            onChange={(v) => setStatSession(v)}
+            options={SESSIONS.map(s => ({ value: s, label: SESSION_LABEL[s] || s }))}
+            placeholder="Choisir une session"
+            style={styles.select}
+          />
           <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Points :</span>
           <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)}
             style={{ ...styles.select, width: 90 }} placeholder="Seuil" />
@@ -3577,18 +3592,22 @@ export default function TCF() {
                 ))}
               </div>
               {planningsType === 'classes' && (
-                <select value={classeConvocation} onChange={e => setClasseConvocation(e.target.value)} style={{ ...styles.select, minWidth: 220 }}>
-                  <option value="">Choisir une classe</option>
-                  {(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => (
-                    <option key={cl.id} value={cl.id}>{cl.nom}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={classeConvocation}
+                  onChange={(v) => setClasseConvocation(v)}
+                  options={(classesEligiblesSite[planningsSite || siteOrder[0]] || []).map(cl => ({ value: cl.id, label: cl.nom }))}
+                  placeholder="Choisir une classe"
+                  style={{ ...styles.select, minWidth: 220 }}
+                />
               )}
               {planningsType === 'roles' && (
-                <select value={rolesDemiJourneeSelect} onChange={e => setRolesDemiJourneeSelect(e.target.value)} style={styles.select}>
-                  <option value="">Choisir une demi-journée</option>
-                  {DEMI_JOURNEES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-                </select>
+                <CustomSelect
+                  value={rolesDemiJourneeSelect}
+                  onChange={(v) => setRolesDemiJourneeSelect(v)}
+                  options={DEMI_JOURNEES.map(d => ({ value: d.id, label: d.label }))}
+                  placeholder="Choisir une demi-journée"
+                  style={styles.select}
+                />
               )}
             </div>
             <div ref={convocationRef} style={{ background: 'white', borderRadius: 12, padding: '24px 28px', marginTop: 15, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>

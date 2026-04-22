@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
+import CustomSelect from '../components/CustomSelect';
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
@@ -375,12 +376,17 @@ export default function Professeurs({
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Sexe</label>
-                      <select style={s.inp} value={form.sexe} onChange={e=>setForm({...form,sexe:e.target.value})}>
-                        <option value="">Choisir</option>
-                        <option value="M">Masculin</option>
-                        <option value="F">Féminin</option>
-                        <option value="Autre">Autre</option>
-                      </select>
+                      <CustomSelect
+                        style={s.inp}
+                        value={form.sexe}
+                        onChange={(v)=>setForm({...form,sexe:v})}
+                        placeholder="Choisir"
+                        options={[
+                          {value:'M',label:'Masculin'},
+                          {value:'F',label:'Féminin'},
+                          {value:'Autre',label:'Autre'},
+                        ]}
+                      />
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Téléphone</label>
@@ -429,17 +435,23 @@ export default function Professeurs({
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
-                          <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
-                            <option value="">Choisir</option>
-                            {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={s.inp}
+                            value={form.type_contrat}
+                            onChange={(v)=>setForm({...form,type_contrat:v})}
+                            placeholder="Choisir"
+                            options={CONTRATS.map(c=>({value:c,label:c}))}
+                          />
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
-                          <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
-                            <option value="">Choisir</option>
-                            {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={s.inp}
+                            value={form.type_permis}
+                            onChange={(v)=>setForm({...form,type_permis:v})}
+                            placeholder="Choisir"
+                            options={PERMIS.map(p=>({value:p,label:p}))}
+                          />
                         </div>
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -456,9 +468,12 @@ export default function Professeurs({
                           })}
                         </div>
                         {form.type_prof && form.type_prof !== 'Interne' && (
-                          <select style={s.inp} value={form.type_prof} onChange={e=>setForm({...form,type_prof:e.target.value})}>
-                            {TYPES_EXTERN.map(t=><option key={t} value={t}>{t}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={s.inp}
+                            value={form.type_prof}
+                            onChange={(v)=>setForm({...form,type_prof:v})}
+                            options={TYPES_EXTERN.map(t=>({value:t,label:t}))}
+                          />
                         )}
                       </div>
                     </div>
@@ -476,17 +491,23 @@ export default function Professeurs({
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de contrat</label>
-                          <select style={s.inp} value={form.type_contrat} onChange={e=>setForm({...form,type_contrat:e.target.value})}>
-                            <option value="">Choisir</option>
-                            {CONTRATS.map(c=><option key={c} value={c}>{c}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={s.inp}
+                            value={form.type_contrat}
+                            onChange={(v)=>setForm({...form,type_contrat:v})}
+                            placeholder="Choisir"
+                            options={CONTRATS.map(c=>({value:c,label:c}))}
+                          />
                         </div>
                         <div style={{display:'flex',flexDirection:'column'}}>
                           <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Type de permis</label>
-                          <select style={s.inp} value={form.type_permis} onChange={e=>setForm({...form,type_permis:e.target.value})}>
-                            <option value="">Choisir</option>
-                            {PERMIS.map(p=><option key={p} value={p}>{p}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={s.inp}
+                            value={form.type_permis}
+                            onChange={(v)=>setForm({...form,type_permis:v})}
+                            placeholder="Choisir"
+                            options={PERMIS.map(p=>({value:p,label:p}))}
+                          />
                         </div>
                       </div>
                     </div>
@@ -682,9 +703,12 @@ export default function Professeurs({
               <div style={{marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:8,textTransform:'uppercase'}}>Ajouter un document</div>
                 <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-                  <select style={{...s.inp, width:'auto', padding:'7px 10px'}} value={uploadForm.type} onChange={e => setUploadForm({type:e.target.value})}>
-                    {['CV','Diplôme','Contrat','Certificat','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={{...s.inp, width:'auto', padding:'7px 10px'}}
+                    value={uploadForm.type}
+                    onChange={(v) => setUploadForm({type:v})}
+                    options={['CV','Diplôme','Contrat','Certificat','Autre'].map(t => ({value:t,label:t}))}
+                  />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
                     📎 Choisir un fichier
                     <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"

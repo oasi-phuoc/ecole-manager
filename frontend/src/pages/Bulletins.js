@@ -3,6 +3,7 @@ import axios from 'axios';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -576,7 +577,7 @@ export default function Bulletins() {
                             {cfg.label}
                           </button>
                           {isSel && cfg.hasClassInput && (<div style={{ padding: '6px 12px 4px 36px' }}><input type="text" placeholder="Nom de la classe..." value={params.transfertVerseClasse} onChange={e => setParam('transfertVerseClasse', e.target.value)} style={{ ...inStyle, width: '100%', boxSizing: 'border-box' }} /></div>)}
-                          {isSel && cfg.hasSuiteSelect && (<div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><select value={params.transfertDepuisSuite} onChange={e => setParam('transfertDepuisSuite', e.target.value)} style={inStyle}><option value="au TCF">au TCF</option><option value="au conseil de classe">au conseil de classe</option><option value="à la demande du titulaire">à la demande du titulaire</option></select><span style={{ fontSize: 13, color: '#475569' }}>le</span><input type="date" value={params.transfertDepuisDate} onChange={e => setParam('transfertDepuisDate', e.target.value)} style={inStyle} /></div>)}
+                          {isSel && cfg.hasSuiteSelect && (<div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><CustomSelect value={params.transfertDepuisSuite} onChange={v => setParam('transfertDepuisSuite', v)} options={[{ value: 'au TCF', label: 'au TCF' }, { value: 'au conseil de classe', label: 'au conseil de classe' }, { value: 'à la demande du titulaire', label: 'à la demande du titulaire' }]} style={inStyle} /><span style={{ fontSize: 13, color: '#475569' }}>le</span><input type="date" value={params.transfertDepuisDate} onChange={e => setParam('transfertDepuisDate', e.target.value)} style={inStyle} /></div>)}
                           {isSel && cfg.hasDateDu && (<div style={{ padding: '6px 12px 4px 36px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><span style={{ fontSize: 13, color: '#475569' }}>Du</span><input type="date" value={params.suspensionDu} onChange={e => setParam('suspensionDu', e.target.value)} style={inStyle} /><span style={{ fontSize: 13, color: '#475569' }}>au</span><input type="date" value={params.suspensionAu} onChange={e => setParam('suspensionAu', e.target.value)} style={inStyle} /></div>)}
                         </div>
                       );

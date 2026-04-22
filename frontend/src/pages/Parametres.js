@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import NpaAutocomplete from '../components/NpaAutocomplete';
+import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -591,12 +592,17 @@ export default function Parametres() {
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Sexe</label>
-                        <select style={styles.input} value={profil.sexe||''} onChange={e => setProfil({ ...profil, sexe: e.target.value })}>
-                          <option value="">--</option>
-                          <option value="M">Masculin</option>
-                          <option value="F">Féminin</option>
-                          <option value="Autre">Autre</option>
-                        </select>
+                        <CustomSelect
+                          style={styles.input}
+                          value={profil.sexe||''}
+                          placeholder="--"
+                          options={[
+                            {value: 'M', label: 'Masculin'},
+                            {value: 'F', label: 'Féminin'},
+                            {value: 'Autre', label: 'Autre'},
+                          ]}
+                          onChange={(v) => setProfil({ ...profil, sexe: v })}
+                        />
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Téléphone</label>
@@ -947,13 +953,16 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_langues_jeunes === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <select style={styles.input} value={ecole.responsable_langues_jeunes || ''} onChange={e => setEcole({ ...ecole, responsable_langues_jeunes: e.target.value })}>
-                      <option value="">— Choisir —</option>
-                      {employesResponsablesListe.map(emp => {
+                    <CustomSelect
+                      style={styles.input}
+                      value={ecole.responsable_langues_jeunes || ''}
+                      placeholder="— Choisir —"
+                      options={employesResponsablesListe.map(emp => {
                         const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return <option key={emp.id} value={label}>{label}</option>;
+                        return {value: label, label: label};
                       })}
-                    </select>
+                      onChange={(v) => setEcole({ ...ecole, responsable_langues_jeunes: v })}
+                    />
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -965,13 +974,16 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <select style={styles.input} value={ecole.responsable_niveau_csc || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_csc: e.target.value })}>
-                      <option value="">— Choisir —</option>
-                      {employesResponsablesListe.map(emp => {
+                    <CustomSelect
+                      style={styles.input}
+                      value={ecole.responsable_niveau_csc || ''}
+                      placeholder="— Choisir —"
+                      options={employesResponsablesListe.map(emp => {
                         const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return <option key={'csc-'+emp.id} value={label}>{label}</option>;
+                        return {value: label, label: label};
                       })}
-                    </select>
+                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_csc: v })}
+                    />
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -983,13 +995,16 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <select style={styles.input} value={ecole.responsable_niveau_cfr || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_cfr: e.target.value })}>
-                      <option value="">— Choisir —</option>
-                      {employesResponsablesListe.map(emp => {
+                    <CustomSelect
+                      style={styles.input}
+                      value={ecole.responsable_niveau_cfr || ''}
+                      placeholder="— Choisir —"
+                      options={employesResponsablesListe.map(emp => {
                         const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return <option key={'cfr-'+emp.id} value={label}>{label}</option>;
+                        return {value: label, label: label};
                       })}
-                    </select>
+                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_cfr: v })}
+                    />
                   </div>
                   <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -1001,13 +1016,16 @@ export default function Parametres() {
                           style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
                       </span>
                     </label>
-                    <select style={styles.input} value={ecole.responsable_niveau_epl || ''} onChange={e => setEcole({ ...ecole, responsable_niveau_epl: e.target.value })}>
-                      <option value="">— Choisir —</option>
-                      {employesResponsablesListe.map(emp => {
+                    <CustomSelect
+                      style={styles.input}
+                      value={ecole.responsable_niveau_epl || ''}
+                      placeholder="— Choisir —"
+                      options={employesResponsablesListe.map(emp => {
                         const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return <option key={'epl-'+emp.id} value={label}>{label}</option>;
+                        return {value: label, label: label};
                       })}
-                    </select>
+                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_epl: v })}
+                    />
                   </div>
                 </div>
                 </div>}

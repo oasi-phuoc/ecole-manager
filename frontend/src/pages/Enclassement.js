@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const SESSION_LABEL = { "Test d'août": 'Test de placement' };
@@ -597,9 +598,12 @@ export default function Enclassement() {
           <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16, marginTop: 0 }}>Paramètres</h2>
 
           <label style={s.label}>Session TCF source</label>
-          <select value={session} onChange={e => setSession(e.target.value)} style={s.select}>
-            {SESSIONS.map(sess => <option key={sess} value={sess}>{SESSION_LABEL[sess] || sess}</option>)}
-          </select>
+          <CustomSelect
+            value={session}
+            onChange={v => setSession(v)}
+            options={SESSIONS.map(sess => ({ value: sess, label: SESSION_LABEL[sess] || sess }))}
+            style={s.select}
+          />
 
           <label style={s.label}>Seuil plancher français</label>
           <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Si score français &lt; seuil → CSC forcé</div>

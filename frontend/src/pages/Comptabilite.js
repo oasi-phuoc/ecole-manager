@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
+import CustomSelect from '../components/CustomSelect';
 import { isAdmin } from '../utils/permissions';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -1565,16 +1566,22 @@ export default function Comptabilite() {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 18 }}>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Élève *</label>
-                  <select style={styles.input} required value={factureEleveId} onChange={e => setFactureEleveId(e.target.value)}>
-                    <option value="">-- Choisir un élève --</option>
-                    {eleves.map(e => <option key={e.id} value={e.id}>{e.prenom} {e.nom}{e.classe ? ' (' + e.classe + ')' : ''}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={styles.input}
+                    value={factureEleveId}
+                    placeholder="-- Choisir un élève --"
+                    options={eleves.map(e => ({ value: e.id, label: `${e.prenom} ${e.nom}${e.classe ? ' (' + e.classe + ')' : ''}` }))}
+                    onChange={(v) => setFactureEleveId(v)}
+                  />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Statut</label>
-                  <select style={styles.input} value={factureStatut} onChange={e => setFactureStatut(e.target.value)}>
-                    {STATUTS.map(s => <option key={s.val} value={s.val}>{s.label}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={styles.input}
+                    value={factureStatut}
+                    options={STATUTS.map(s => ({ value: s.val, label: s.label }))}
+                    onChange={(v) => setFactureStatut(v)}
+                  />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Date</label>
@@ -1602,9 +1609,12 @@ export default function Comptabilite() {
                     {ecolageRows.map((row, i) => (
                       <tr key={i}>
                         <td style={styles.tdPopup}>
-                          <select style={{ ...styles.input, padding: '6px 8px' }} value={row.type} onChange={e => { const u = [...ecolageRows]; u[i] = { ...u[i], type: e.target.value }; setEcolageRows(u); }}>
-                            {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
+                          <CustomSelect
+                            style={{ ...styles.input, padding: '6px 8px' }}
+                            value={row.type}
+                            options={TYPES.map(t => ({ value: t, label: t }))}
+                            onChange={(v) => { const u = [...ecolageRows]; u[i] = { ...u[i], type: v }; setEcolageRows(u); }}
+                          />
                         </td>
                         <td style={{ ...styles.tdPopup, textAlign: 'right' }}>
                           <input type="number" step="0.05" min="0" placeholder="0.00"
@@ -1764,15 +1774,21 @@ export default function Comptabilite() {
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Type</label>
-                  <select style={styles.input} value={editForm.type} onChange={e => setEditForm({ ...editForm, type: e.target.value })}>
-                    {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={styles.input}
+                    value={editForm.type}
+                    options={TYPES.map(t => ({ value: t, label: t }))}
+                    onChange={(v) => setEditForm({ ...editForm, type: v })}
+                  />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Statut</label>
-                  <select style={styles.input} value={editForm.statut} onChange={e => setEditForm({ ...editForm, statut: e.target.value })}>
-                    {STATUTS.map(s => <option key={s.val} value={s.val}>{s.label}</option>)}
-                  </select>
+                  <CustomSelect
+                    style={styles.input}
+                    value={editForm.statut}
+                    options={STATUTS.map(s => ({ value: s.val, label: s.label }))}
+                    onChange={(v) => setEditForm({ ...editForm, statut: v })}
+                  />
                 </div>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Date paiement</label>
@@ -1814,11 +1830,16 @@ export default function Comptabilite() {
                       {materielForm.section === 'ecolage' ? 'Écolage' : materielForm.section === 'scolaire' ? 'Matériel scolaire' : 'Autres fournitures'}
                     </div>
                   ) : (
-                    <select style={styles.input} value={materielForm.section} onChange={e => setMaterielForm({ ...materielForm, section: e.target.value })}>
-                      <option value="ecolage">Écolage</option>
-                      <option value="scolaire">Matériel scolaire</option>
-                      <option value="fournitures">Autres fournitures</option>
-                    </select>
+                    <CustomSelect
+                      style={styles.input}
+                      value={materielForm.section}
+                      options={[
+                        { value: 'ecolage', label: 'Écolage' },
+                        { value: 'scolaire', label: 'Matériel scolaire' },
+                        { value: 'fournitures', label: 'Autres fournitures' },
+                      ]}
+                      onChange={(v) => setMaterielForm({ ...materielForm, section: v })}
+                    />
                   )}
                 </div>
                 <div style={styles.formChamp}>
