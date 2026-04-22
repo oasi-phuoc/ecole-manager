@@ -1408,6 +1408,100 @@ export default function TCF() {
       return resultatSortDir === 'asc' ? nomA.localeCompare(nomB, 'fr') : nomB.localeCompare(nomA, 'fr');
     });
 
+    const renderTableTousSessions = () => {
+      const thFix = { ...styles.thCenter, background: '#6366f1', color: 'white', verticalAlign: 'middle' };
+      const thSess = { ...styles.thCenter, background: '#ede9fe', color: '#5b21b6', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderLeft: '2px solid #c4b5fd' };
+      const thCol = { ...styles.thCenter, borderLeft: '1px solid #e5e7eb' };
+      const thColFirst = { ...styles.thCenter, borderLeft: '2px solid #c4b5fd' };
+      const tdSep = { borderLeft: '2px solid #e5e7eb' };
+      const scoreCols = isFr
+        ? [['co','CO'],['po','PO'],['ce','CE'],['pe','PE']]
+        : [['p1','P1'],['p2','P2'],['p3','P3'],['p4','P4']];
+      const computedCols = isFr
+        ? [['oral','Oral'],['ecrit','Écrit']]
+        : [['cscCfr','Base'],['cafCap','Avancé']];
+      return (
+        <div style={styles.tableWrap}>
+          <table style={styles.tableLarge}>
+            <thead>
+              <tr>
+                <th rowSpan={2} style={thFix}>N°</th>
+                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:60}}>Classe</th>
+                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:100}}>Nom</th>
+                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:80}}>Prénom</th>
+                {SESSIONS.map(s => (
+                  <th key={s} colSpan={scoreCols.length + computedCols.length + 2} style={thSess}>
+                    {SESSION_LABEL[s] || s}
+                  </th>
+                ))}
+              </tr>
+              <tr style={{background:'#6366f1'}}>
+                {SESSIONS.map(s => (
+                  <React.Fragment key={s}>
+                    <th style={thColFirst}>Abs</th>
+                    {scoreCols.map(([,lbl], i) => <th key={lbl} style={i === 0 ? {} : thCol}>{lbl}</th>)}
+                    {computedCols.map(([,lbl]) => <th key={lbl} style={thCol}>{lbl}</th>)}
+                    <th style={thCol}>Total</th>
+                  </React.Fragment>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {elevesResultatSorted.map((e, idx) => (
+                <tr key={e.id}>
+                  <td style={styles.tdCenter}>{idx + 1}</td>
+                  <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
+                  <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
+                  <td style={styles.tdLeft}>{e.prenom || ''}</td>
+                  {SESSIONS.map(session => {
+                    const absSuf = `${resultatMatiere}_${session}_${e.id}`;
+                    const row = getScore(resultatMatiere, session, e.id);
+                    const computed = isFr ? calculFr(row) : calculMath(row);
+                    const total = computed.total === '' ? null : Number(computed.total);
+                    const totalStyle = total == null ? {} : couleurTotale(total);
+                    const abs = !!absences[absSuf];
+                    return (
+                      <React.Fragment key={session}>
+                        <td style={{...styles.tdCenter, ...tdSep}}>
+                          <input type="checkbox" checked={abs}
+                            onChange={ev => setAbsences(prev => ({ ...prev, [absSuf]: ev.target.checked }))}
+                            style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#6366f1' }} />
+                        </td>
+                        {scoreCols.map(([f]) => (
+                          <td key={f} style={styles.tdCenter}>
+                            <input style={{ ...styles.scoreInput, opacity: abs ? 0.3 : 1 }}
+                              type="number" min="0" max="25"
+                              value={row[f] ?? ''}
+                              disabled={abs}
+                              onChange={ev => setScore(resultatMatiere, session, e.id, f, ev.target.value)} />
+                          </td>
+                        ))}
+                        {isFr ? (
+                          <>
+                            <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
+                            <td style={styles.tdCenterRead}>{computed.ecrit === '' ? '' : computed.ecrit}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
+                            <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
+                          </>
+                        )}
+                        <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                      </React.Fragment>
+                    );
+                  })}
+                </tr>
+              ))}
+              {elevesResultatSorted.length === 0 && (
+                <tr><td colSpan={4 + SESSIONS.length * (scoreCols.length + computedCols.length + 2)} style={styles.empty}>Aucun élève trouvé.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      );
+    };
+
     const renderTableSession = (session) => {
       const absSuffix = (id) => `${resultatMatiere}_${session}_${id}`;
       const elevesSession = elevesResultatSorted;
@@ -1573,6 +1667,8 @@ export default function TCF() {
 
         {resultatVue === 'classe' && !resultatClasseId ? (
           <div style={styles.msgVide}>Sélectionnez une classe pour afficher les résultats.</div>
+        ) : resultatSession === '' ? (
+          renderTableTousSessions()
         ) : (
           sessionsAAfficher.map(session => (
             <div key={session} style={{marginBottom:24}}>
