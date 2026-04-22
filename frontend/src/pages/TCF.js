@@ -1515,11 +1515,15 @@ export default function TCF() {
         <div style={{...styles.filtersStack, justifyContent:'space-between'}}>
           <div style={styles.pillGroup}>
             {SESSIONS.map(s => (
-              <button key={s} onClick={() => setResultatSession(prev => prev === s ? '' : s)}
+              <button key={s} onClick={() => setResultatSession(s)}
                 style={{ ...styles.pillBtn, ...(resultatSession === s ? styles.pillBtnActif : {}) }}>
                 {SESSION_LABEL[s] || s}
               </button>
             ))}
+            <button onClick={() => setResultatSession('')}
+              style={{ ...styles.pillBtn, ...(resultatSession === '' ? styles.pillBtnActif : {}) }}>
+              Tous
+            </button>
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <div style={styles.pillGroup}>
