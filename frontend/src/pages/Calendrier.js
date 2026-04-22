@@ -212,7 +212,7 @@ export default function Calendrier() {
 
       {/* Popup jour */}
       {jourPopup && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setJourPopup(null)}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setJourPopup(null)}>
           <div style={{background:'white',borderRadius:14,width:320,boxShadow:'0 20px 40px rgba(0,0,0,0.15)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
               <span style={{fontWeight:800,fontSize:14}}>{jourPopup} {MOIS[moisActuel]} {anneeActuelle}</span>
@@ -236,7 +236,7 @@ export default function Calendrier() {
 
       {/* Popup jour */}
       {jourPopup && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setJourPopup(null)}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setJourPopup(null)}>
           <div style={{background:'white',borderRadius:14,width:320,boxShadow:'0 20px 40px rgba(0,0,0,0.15)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
               <span style={{fontWeight:800,fontSize:14}}>{jourPopup} {MOIS[moisActuel]} {anneeActuelle}</span>
@@ -260,7 +260,7 @@ export default function Calendrier() {
 
       {/* Modal vacance */}
       {showFormVacance && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une vacance</h3>
@@ -282,7 +282,7 @@ export default function Calendrier() {
       )}
       {/* Modal evaluation */}
       {showFormEval && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une évaluation</h3>
@@ -305,7 +305,7 @@ export default function Calendrier() {
 
       {/* Modal séance */}
       {showFormSeance && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{seanceEdit?'Modifier':'Ajouter'} une séance</h3>
@@ -331,7 +331,7 @@ export default function Calendrier() {
 
       {/* Modal retenue */}
       {showFormRetenue && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:440,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{retenueEdit?'Modifier':'Ajouter'} une retenue</h3>
@@ -376,7 +376,7 @@ export default function Calendrier() {
 
       {/* Modal événement particulier */}
       {showFormParticulier && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{particulierEdit?'Modifier':'Ajouter'} un événement</h3>

@@ -2016,7 +2016,7 @@ export default function EmploiDuTemps() {
       {onglet === 'pools' && (
         <div>
           {showPoolForm && (
-            <div style={styles.overlay}>
+            <div className="modal-overlay" style={styles.overlay}>
               <div style={{...styles.modal, width:1000}}>
                 <h3 style={styles.modalTitre}>{poolEdit?'Modifier':'Créer'} un pool</h3>
                 <div style={{display:'grid',gridTemplateColumns:'minmax(0, 1fr) 250px',gap:18,alignItems:'start'}}>
@@ -3569,10 +3569,10 @@ export default function EmploiDuTemps() {
                           </div>
                         </td>
                       </tr>
-                      <tr style={styles.theadRow}>
-                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
+                      <tr style={{...styles.theadRow, background:'#ede9fe'}}>
+                        <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center',color:'#5b21b6'}}>Horaire</th>
                         {planningGeneral.profs.map(p => (
-                          <th key={p.id} style={{...styles.th,textAlign:'center'}}>
+                          <th key={p.id} style={{...styles.th,textAlign:'center',color:'#5b21b6'}}>
                             {nomSansSuffixe(p.nom)}<br/>
                             <span style={{fontWeight:400,fontSize:11}}>{formaterPrenomEntete(p.prenom)}</span>
                           </th>

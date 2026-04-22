@@ -1021,7 +1021,7 @@ export default function Notes() {
           const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
           const respCoursSexe = ecoleParams.sexe_responsable_langues_jeunes;
           return (
-            <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
+            <div className="modal-overlay" style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
               <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto', fontFamily: font }} onClick={e => e.stopPropagation()}>
                 <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -2006,7 +2006,7 @@ export default function Notes() {
         </div>
 
         {showForm && (
-          <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
+          <div className="modal-overlay" style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
             <div style={s.modal}>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{form.editId ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}</h3>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>

@@ -967,7 +967,7 @@ export default function Classes() {
 
   // Modal zoom photo
   const ModalZoom = () => photoZoom ? (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
+    <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
       <div style={{position:'relative'}} onClick={e => e.stopPropagation()}>
         <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}} />
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
@@ -1166,7 +1166,7 @@ export default function Classes() {
       <ModalZoom />
 
       {showDocsEleve && docsEleve && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
@@ -1227,7 +1227,7 @@ export default function Classes() {
       )}
 
       {docPreview && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setDocPreview(null)}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setDocPreview(null)}>
           <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
@@ -1243,7 +1243,7 @@ export default function Classes() {
       )}
 
       {showSanctions && sanctionsEleve && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={{...s.modal, width:'90vw', maxWidth:1050, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
               <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -1391,7 +1391,7 @@ export default function Classes() {
         </div>
       )}
       {showObs && obsEleve && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={{...s.modal, width:'71vw', maxWidth:825, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>
@@ -1498,7 +1498,7 @@ export default function Classes() {
       )}
 
       {showEleveReadOnly && eleveReadOnly && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={{...s.modal, width:'95vw', maxWidth:960, maxHeight:'90vh', overflowY:'auto', padding:32}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Fiche élève</h3>
@@ -1837,7 +1837,7 @@ export default function Classes() {
 
           {/* Popup créer devoir */}
           {showDevoirForm && (
-            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+            <div className="modal-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
               onClick={() => setShowDevoirForm(false)}>
               <div style={{background:'white',borderRadius:14,padding:24,width:400,maxWidth:'95vw',boxShadow:'0 8px 32px rgba(0,0,0,0.15)'}}
                 onClick={e => e.stopPropagation()}>
@@ -1876,7 +1876,7 @@ export default function Classes() {
 
           {/* Modal édition devoir */}
           {devoirEditId && (
-            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center'}}
+            <div className="modal-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center'}}
               onClick={() => setDevoirEditId(null)}>
               <div style={{background:'white',borderRadius:14,padding:24,width:400,maxWidth:'95vw',boxShadow:'0 8px 32px rgba(0,0,0,0.15)'}}
                 onClick={e => e.stopPropagation()}>
@@ -2155,7 +2155,7 @@ export default function Classes() {
       </div>
 
       {showForm && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>{classeEdit?'Modifier':'Ajouter'} une classe</h3>

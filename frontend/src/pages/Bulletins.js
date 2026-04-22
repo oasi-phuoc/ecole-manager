@@ -230,7 +230,7 @@ export default function Bulletins() {
     const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
 
     return (
-      <div style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
+      <div className="modal-overlay" style={s.overlay} onClick={() => setBulletinPopupEleve(null)}>
         <div style={{ ...s.modal, maxWidth: 900, width: '95vw', maxHeight: '90vh', overflowY: 'auto', fontFamily: font }} onClick={e => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
             <button onClick={() => setBulletinPopupEleve(null)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Fermer</button>

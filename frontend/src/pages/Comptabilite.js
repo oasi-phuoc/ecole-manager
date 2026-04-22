@@ -1149,7 +1149,7 @@ export default function Comptabilite() {
             const allMateriels = materiels.filter(m => m.section === 'scolaire' || m.section === 'fournitures');
             const readOnly = !!commandeEdit.valide;
             return (
-              <div style={styles.overlay} onClick={fermerCommandePopup}>
+              <div className="modal-overlay" style={styles.overlay} onClick={fermerCommandePopup}>
                 <div style={{ ...styles.modal, maxWidth: 1100, width: '95vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1558,7 +1558,7 @@ export default function Comptabilite() {
 
       {/* ===== POPUP NOUVELLE FACTURE (3 tables) ===== */}
       {showFacturePopup && (
-        <div style={styles.overlay}>
+        <div className="modal-overlay" style={styles.overlay}>
           <div style={{ ...styles.modal, width: 720, maxWidth: '96vw' }}>
             <h3 style={styles.modalTitre}>Nouvelle facture</h3>
             <form onSubmit={sauvegarderFacture}>
@@ -1757,7 +1757,7 @@ export default function Comptabilite() {
 
       {/* ===== POPUP EDIT PAIEMENT ===== */}
       {showEditPopup && editForm && (
-        <div style={styles.overlay}>
+        <div className="modal-overlay" style={styles.overlay}>
           <div style={styles.modal}>
             <h3 style={styles.modalTitre}>Modifier le paiement</h3>
             <form onSubmit={sauvegarderEdit}>
@@ -1814,7 +1814,7 @@ export default function Comptabilite() {
 
       {/* ===== POPUP FORM MATERIEL ===== */}
       {showMaterielForm && (
-        <div style={styles.overlay}>
+        <div className="modal-overlay" style={styles.overlay}>
           <div style={styles.modal}>
             <h3 style={styles.modalTitre}>{materielEdit ? 'Modifier' : 'Ajouter'} un matériel</h3>
             <form onSubmit={handleSaveMateriel}>
@@ -1901,7 +1901,7 @@ export default function Comptabilite() {
 
       {/* ===== POPUP FACTURE IMPRESSION ===== */}
       {factureImprime && (
-        <div style={styles.overlay}>
+        <div className="modal-overlay" style={styles.overlay}>
           <div style={{ background: 'white', width: 900, maxWidth: '95vw', maxHeight: '90vh', overflow: 'auto', borderRadius: 14, padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 12 }}>
               <button style={styles.btnAnnuler} onClick={() => setFactureImprime(null)}>Fermer</button>

@@ -45,6 +45,8 @@ export default function DocumentsAdministratifs() {
   const [msg, setMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [docPreview, setDocPreview] = useState(null);
+  const [showMoreLast, setShowMoreLast] = useState(false);
+  const [showMorePopular, setShowMorePopular] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -269,20 +271,52 @@ export default function DocumentsAdministratifs() {
       </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Derniers documents ajoutés</div>
-          {(documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 5).map(d => (
-            <div key={`last-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
-          ))}
-        </div>
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: 'white' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8 }}>Documents souvent utilisés</div>
-          {(documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 5).map(d => (
-            <div key={`popular-${d.id}`} style={{ fontSize: 12, color: '#334155', marginBottom: 4 }}>{d.designation}</div>
-          ))}
-        </div>
-      </div>
+      {(() => {
+        const docsLast = (documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 10);
+        const docsPopular = (documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 10);
+        const btnAction = { padding: 4, border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
+        const renderTable = (title, docs, showMore, setShowMore) => (
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, background: 'white', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr><th colSpan={3} style={{ padding: '9px 14px', background: '#6366f1', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>{title}</th></tr>
+              </thead>
+              <tbody>
+                {docs.slice(0, showMore ? 10 : 5).map((d, idx) => (
+                  <tr key={d.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc', borderTop: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '8px 14px', fontSize: 13, color: '#334155' }}>{d.designation}</td>
+                    <td style={{ padding: '8px 4px', width: 28, textAlign: 'center' }}>
+                      <button onClick={() => visualiser(d)} title="Visualiser" style={{ ...btnAction, background: '#ede9fe', color: '#6d28d9' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                      </button>
+                    </td>
+                    <td style={{ padding: '8px 10px 8px 4px', width: 28, textAlign: 'center' }}>
+                      <button onClick={() => telecharger(d)} title="Télécharger" style={{ ...btnAction, background: '#e0e7ff', color: '#4338ca' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {docs.length > 5 && (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '6px 14px', borderTop: '1px solid #e2e8f0' }}>
+                      <button onClick={() => setShowMore(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600, fontFamily: 'inherit' }}>
+                        {showMore ? '▲ Réduire' : `··· Voir plus (${Math.min(docs.length, 10) - 5} de plus)`}
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            {renderTable('Derniers documents ajoutés', docsLast, showMoreLast, setShowMoreLast)}
+            {renderTable('Documents souvent utilisés', docsPopular, showMorePopular, setShowMorePopular)}
+          </div>
+        );
+      })()}
 
       {(!isAccueil || rechercheDocs.trim()) && (
       <div>
@@ -456,7 +490,7 @@ export default function DocumentsAdministratifs() {
       </div>
       )}
       {docPreview && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }} onClick={() => setDocPreview(null)}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }} onClick={() => setDocPreview(null)}>
           <div style={{ position: 'relative', width: '90vw', height: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>{docPreview.nom}</span>

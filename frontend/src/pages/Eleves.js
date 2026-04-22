@@ -501,7 +501,7 @@ export default function Eleves() {
 
       {/* Zoom photo */}
       {photoZoom && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}} onClick={() => setPhotoZoom(null)}>
           <div onClick={e => e.stopPropagation()}>
             <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12}} />
             <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
@@ -564,7 +564,7 @@ export default function Eleves() {
 
       {/* Modal Import */}
       {showImport && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
           <div style={{background:'white',padding:32,borderRadius:16,width:480,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{fontSize:18,fontWeight:800,margin:0}}>📥 Importer depuis LORA</h3>
@@ -596,7 +596,7 @@ export default function Eleves() {
 
       {/* Modal Formulaire */}
       {showForm && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'}}>
           <div style={{background:'white',padding:32,borderRadius:16,width:'95vw',maxWidth:1100,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{fontSize:18,fontWeight:800,margin:0}}>{eleveEdit?'Modifier':'Ajouter'} un élève</h3>
@@ -708,7 +708,7 @@ export default function Eleves() {
       )}
 
       {showDocsEleve && docsEleve && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
@@ -769,7 +769,7 @@ export default function Eleves() {
       )}
 
       {docPreview && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:1300}} onClick={() => setDocPreview(null)}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:1300}} onClick={() => setDocPreview(null)}>
           <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
@@ -785,7 +785,7 @@ export default function Eleves() {
       )}
 
       {showSanctions && sanctionsEleve && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'90vw',maxWidth:1050,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -956,7 +956,7 @@ export default function Eleves() {
       )}
 
       {showObs && obsEleve && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
+        <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'71vw',maxWidth:825,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>

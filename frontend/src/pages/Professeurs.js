@@ -334,7 +334,7 @@ export default function Professeurs({
       </div>
 
       {showForm && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={s.modal}>
             <div style={{ ...s.modalHeader, gap: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
@@ -693,7 +693,7 @@ export default function Professeurs({
       )}
 
       {showDocs && docsProf && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={{...s.modal, maxWidth:600}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {nomSansSuffixe(docsProf.nom)}</h3>

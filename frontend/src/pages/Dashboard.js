@@ -209,7 +209,7 @@ export default function Dashboard() {
       </div>
 
       {observationDetail && (
-        <div style={styles.overlay} onClick={() => setObservationDetail(null)}>
+        <div className="modal-overlay" style={styles.overlay} onClick={() => setObservationDetail(null)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>👁 Détail de l'observation</h3>

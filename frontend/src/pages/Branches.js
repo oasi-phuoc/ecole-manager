@@ -98,7 +98,7 @@ export default function Branches() {
       </div>
 
       {showForm && (
-        <div style={s.overlay}>
+        <div className="modal-overlay" style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>{brancheEdit?'Modifier':'Ajouter'} une branche</h3>

@@ -83,3 +83,7 @@ table thead th * {
     clip-path: inset(0 round var(--table-radius));
   }
 }
+
+body:has(.modal-overlay) {
+  overflow: hidden;
+}
