@@ -161,7 +161,6 @@ const CustomSelect = ({
     alignItems: 'center',
     gap: 8,
     padding: '7px 12px 7px 14px',
-    borderRadius: 17,
     border: `1.5px solid ${open ? VIOLET : GREY_BORDER}`,
     background: disabled ? '#f8fafc' : 'white',
     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -177,6 +176,7 @@ const CustomSelect = ({
     userSelect: 'none',
     width: '100%',
     ...style,
+    borderRadius: 999,
   };
 
   return (
@@ -293,7 +293,7 @@ const CustomSelect = ({
             flexDirection: 'column',
           }}
         >
-          <div style={{ overflowY: 'auto', maxHeight: 288, padding: 6 }}>
+          <div className="custom-select-list" style={{ overflowY: 'auto', maxHeight: 190, padding: 6 }}>
             {filtered.length === 0 && (
               <div style={{ padding: '10px 12px', fontSize: 13, color: GREY_PLACEHOLDER, textAlign: 'center' }}>
                 Aucun résultat

@@ -70,6 +70,26 @@ table thead th * {
   color: #ffffff !important;
 }
 
+table thead tr.session-tab-row,
+table thead tr.session-tab-row th {
+  background: #f8fafc !important;
+  color: inherit !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+table thead tr.session-tab-row th * {
+  color: #6d28d9 !important;
+}
+
+table thead tr.session-tab-row + tr th {
+  border-top-width: 0 !important;
+  border-top-style: none !important;
+  border-top-color: transparent !important;
+}
+
 /* Arrondi de tableaux cross-browser (Firefox / Edge / Chrome) */
 :root {
   --table-radius: 10px;
@@ -86,4 +106,12 @@ table thead th * {
 
 body:has(.modal-overlay) {
   overflow: hidden;
+}
+
+.custom-select-list {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.custom-select-list::-webkit-scrollbar {
+  display: none;
 }
