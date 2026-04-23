@@ -110,17 +110,57 @@ export default function VisiteClasses() {
           </div>
           <div style={s.tableWrap}>
             <table style={s.tableList}>
-              <thead><tr><th style={s.thC}>Détail</th><th style={s.thC}>Date</th><th style={s.thL}>Nom</th><th style={s.thL}>Prénom</th><th style={s.thC}>Niveau</th><th style={s.thC}></th><th style={s.thC}></th></tr></thead>
+              <thead><tr><th style={s.thIcon}></th><th style={s.thC}>Date</th><th style={s.thL}>Nom</th><th style={s.thL}>Prénom</th><th style={s.thC}>Niveau</th><th style={s.thIcon}></th><th style={s.thActions}></th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td style={s.tdC}><button style={s.eyeBtn}>👁</button></td>
+                    <td style={s.tdIcon}>
+                      <button style={s.eyeBtn} title="Détail">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                          <path fillRule="evenodd" d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
+                        </svg>
+                      </button>
+                    </td>
                     <td style={s.tdC}>{r.date}</td>
                     <td style={s.tdL}>{r.nom}</td>
                     <td style={s.tdL}>{r.prenom}</td>
                     <td style={s.tdC}>{r.niveau}</td>
-                    <td style={s.tdC}><button onClick={() => setShowFeedback(true)} style={{ ...s.obsBtn, background: r.hasFeedback ? '#ede9fe' : '#e2e8f0', color: r.hasFeedback ? '#7c3aed' : '#64748b' }}>🗒</button></td>
-                    <td style={s.tdC}><div style={{ display: 'inline-flex', gap: 6 }}><button style={s.editBtn}>✏️</button><button style={s.delBtn}>🗑</button><button style={{ ...s.validBtn, background: r.validated ? '#dcfce7' : '#e2e8f0', color: r.validated ? '#16a34a' : '#64748b' }}>✔</button></div></td>
+                    <td style={s.tdIcon}>
+                      <button
+                        onClick={() => setShowFeedback(true)}
+                        title="Observation"
+                        style={{ ...s.obsBtn, background: r.hasFeedback ? '#ede9fe' : '#e2e8f0', color: r.hasFeedback ? '#7c3aed' : '#64748b' }}
+                      >
+                        🗒
+                      </button>
+                    </td>
+                    <td style={s.tdActions}>
+                      <div style={{ display: 'inline-flex', gap: 6 }}>
+                        <button style={s.editBtn} title="Modifier">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button style={s.delBtn} title="Supprimer">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
+                          </svg>
+                        </button>
+                        <button
+                          style={{ ...s.validBtn, background: r.validated ? '#dcfce7' : '#e2e8f0', color: r.validated ? '#16a34a' : '#64748b' }}
+                          title={r.validated ? 'Désactiver' : 'Activer'}
+                        >
+                          <svg width={15} height={15} viewBox="0 0 24 24">
+                            <path fillRule="evenodd" fill="currentColor" d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+                            <path fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" d="M7 12l3 3 7-7"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -160,11 +200,15 @@ const s = {
   tableList: { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'white', border: '1px solid #e8eaf6', borderRadius: 10 },
   thL: { textAlign: 'left', padding: '10px', fontWeight: 700 },
   thC: { textAlign: 'center', padding: '10px', fontWeight: 700 },
+  thIcon: { textAlign: 'center', padding: '10px', fontWeight: 700, width: 96, minWidth: 96, maxWidth: 96, whiteSpace: 'nowrap' },
+  thActions: { textAlign: 'center', padding: '10px', fontWeight: 700, width: 130, minWidth: 130, maxWidth: 130, whiteSpace: 'nowrap' },
   tdL: { padding: '9px 10px', borderBottom: '1px solid #f1f5f9' },
   tdC: { padding: '9px 10px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' },
-  eyeBtn: { border: 'none', background: '#e0e7ff', color: '#4338ca', borderRadius: 8, padding: '4px 7px', cursor: 'pointer' },
+  tdIcon: { padding: '9px 10px', borderBottom: '1px solid #f1f5f9', textAlign: 'center', width: 96, minWidth: 96, maxWidth: 96, whiteSpace: 'nowrap' },
+  tdActions: { padding: '9px 10px', borderBottom: '1px solid #f1f5f9', textAlign: 'center', width: 130, minWidth: 130, maxWidth: 130, whiteSpace: 'nowrap' },
+  eyeBtn: { border: 'none', background: '#e0e7ff', color: '#4338ca', borderRadius: 8, padding: 5, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
   obsBtn: { border: 'none', borderRadius: 8, padding: '4px 7px', cursor: 'pointer' },
-  editBtn: { border: 'none', background: '#e0e7ff', color: '#4338ca', borderRadius: 8, padding: '4px 7px', cursor: 'pointer' },
-  delBtn: { border: 'none', background: '#fee2e2', color: '#dc2626', borderRadius: 8, padding: '4px 7px', cursor: 'pointer' },
-  validBtn: { border: 'none', borderRadius: 8, padding: '4px 7px', cursor: 'pointer' },
+  editBtn: { border: 'none', background: '#e0e7ff', color: '#4338ca', borderRadius: 8, padding: 5, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+  delBtn: { border: 'none', background: '#fee2e2', color: '#dc2626', borderRadius: 8, padding: 5, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+  validBtn: { border: 'none', borderRadius: 8, padding: 5, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
 };
