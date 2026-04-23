@@ -208,6 +208,7 @@ export default function TCF() {
   const [niveauxDB, setNiveauxDB] = useState([]);
 
   const [resultatNiveau, setResultatNiveau] = useState('');
+  const [showTrierNiveaux, setShowTrierNiveaux] = useState(false);
   const [resultatMatiere, setResultatMatiere] = useState('francais');
   const [resultatSession, setResultatSession] = useState('');
   const [resultatVue, setResultatVue] = useState('individuelle');
@@ -246,7 +247,7 @@ export default function TCF() {
     return '2e semestre';
   });
   const [graphEleveId, setGraphEleveId] = useState('');
-  const [graphVue, setGraphVue] = useState('individuelle');
+  const [graphVue, setGraphVue] = useState('moyenne');
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
@@ -788,16 +789,16 @@ export default function TCF() {
     });
   };
   const getHoraireSite = (siteKey, champ) => {
+    if (champ === 'matinDebutProf') return getHoraireSite(siteKey, 'matinDebut');
+    if (champ === 'matinFinProf') return getHoraireSite(siteKey, 'matinFin');
+    if (champ === 'apresMidiDebutProf') return getHoraireSite(siteKey, 'apresMidiDebut');
+    if (champ === 'apresMidiFinProf') return getHoraireSite(siteKey, 'apresMidiFin');
     const val = affectationHorairesBySite?.[siteKey]?.[champ];
     if (val !== undefined && val !== null && String(val).trim() !== '') return val;
     if (champ === 'matinDebut') return '08:20';
     if (champ === 'matinFin') return '11:15';
     if (champ === 'apresMidiDebut') return '13:30';
     if (champ === 'apresMidiFin') return '16:15';
-    if (champ === 'matinDebutProf') return getHoraireSite(siteKey, 'matinDebut');
-    if (champ === 'matinFinProf') return getHoraireSite(siteKey, 'matinFin');
-    if (champ === 'apresMidiDebutProf') return getHoraireSite(siteKey, 'apresMidiDebut');
-    if (champ === 'apresMidiFinProf') return getHoraireSite(siteKey, 'apresMidiFin');
     return '';
   };
   const setHoraireSite = (siteKey, champ, value) => {
@@ -917,34 +918,34 @@ export default function TCF() {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires élève</div>
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
-                <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={(e) => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.timePastille} />
-                <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={(e) => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.timePastille} />
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinDebut')}</span>
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinFin')}</span>
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.timePastille} />
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.timePastille} />
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiDebut')}</span>
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiFin')}</span>
               </label>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires professeurs</div>
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
-                <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.timePastille} />
-                <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={(e) => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.timePastille} />
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinDebutProf')}</span>
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinFinProf')}</span>
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.timePastille} />
-                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={(e) => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.timePastille} />
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiDebutProf')}</span>
+                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiFinProf')}</span>
               </label>
             </div>
           </div>
         </div>
         {MOMENTS.map((moment, mi) => {
-          const thStyle = { ...styles.thCenter, fontSize: 14, padding: '5px 8px', background: '#6366f1', color: 'white', border: '1px solid #4338ca' };
+          const thStyle = { ...styles.thCenter, fontSize: 14, padding: '5px 8px', background: '#6366f1', color: 'white', borderBottom: 'none', borderRight: 'none' };
           return (
             <div key={moment.id} style={{ ...styles.tableWrap, marginTop: mi === 1 ? 20 : 0 }}>
               <table style={{ ...styles.tablePool, width: '100%' }}>
@@ -954,7 +955,7 @@ export default function TCF() {
                 </colgroup>
                 <tbody>
                   <tr>
-                    <td rowSpan={2} style={{ background: '#eef2ff', color: '#4338ca', fontWeight: 700, fontSize: 13, padding: '4px 2px', border: '1px solid #a5b4fc', textAlign: 'center', verticalAlign: 'middle', width: 36 }}>
+                    <td rowSpan={2} style={{ background: '#eef2ff', color: '#4338ca', fontWeight: 700, fontSize: 13, padding: '4px 2px', borderRight: '1px solid #e2e8f0', borderBottom: 'none', textAlign: 'center', verticalAlign: 'middle', width: 36 }}>
                       <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block' }}>{moment.label}</span>
                     </td>
                     {JOURS.map(j => {
@@ -1409,7 +1410,7 @@ export default function TCF() {
     });
 
     const renderTableTousSessions = () => {
-      const thFix = { ...styles.thCenter, background: '#6366f1', color: 'white', verticalAlign: 'middle' };
+      const thFix = { ...styles.thCenter, background: '#eef2ff', color: '#4338ca', verticalAlign: 'middle' };
       const thSess = { ...styles.thCenter, background: '#ede9fe', color: '#5b21b6', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderLeft: '2px solid #c4b5fd' };
       const thCol = { ...styles.thCenter, borderLeft: '1px solid #e5e7eb' };
       const thColFirst = { ...styles.thCenter, borderLeft: '2px solid #c4b5fd' };
@@ -1420,28 +1421,36 @@ export default function TCF() {
       const computedCols = isFr
         ? [['oral','Oral'],['ecrit','Écrit']]
         : [['cscCfr','Base'],['cafCap','Avancé']];
+      const ROW1_H = 29;
+      const stickyTh = (left, extra = {}) => ({ ...thFix, position: 'sticky', left, top: ROW1_H, zIndex: 5, ...extra });
+      const stickyThCorner = (left, extra = {}) => ({ ...thFix, position: 'sticky', left, top: ROW1_H, zIndex: 6, ...extra });
+      const stickyTd = (left, extra = {}) => ({ position: 'sticky', left, zIndex: 1, background: 'white', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', padding: '8px 10px', fontSize: 13, color: '#1e293b', ...extra });
       return (
-        <div style={styles.tableWrap}>
-          <table style={styles.tableLarge}>
+        <div style={{overflow: 'auto', maxHeight: 'calc(100vh - 260px)'}}>
+        <div style={{...styles.tableWrap, background: '#f8fafc'}}>
+          <table style={{...styles.tableLarge, background: '#f8fafc', overflow: 'visible', clipPath: 'none', borderCollapse: 'separate', borderSpacing: 0}}>
             <thead>
-              <tr>
-                <th rowSpan={2} style={thFix}>N°</th>
-                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:60}}>Classe</th>
-                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:100}}>Nom</th>
-                <th rowSpan={2} style={{...thFix, textAlign:'left', minWidth:80}}>Prénom</th>
+              <tr className="session-tab-row">
+                <td colSpan={4} style={{padding:0, background:'#f8fafc', border:'none', position:'sticky', top:0, zIndex:4}} />
                 {SESSIONS.map(s => (
-                  <th key={s} colSpan={scoreCols.length + computedCols.length + 2} style={thSess}>
-                    {SESSION_LABEL[s] || s}
-                  </th>
+                  <td key={s} colSpan={scoreCols.length + computedCols.length + 2} style={{padding:0, background:'#f8fafc', border:'none', verticalAlign:'bottom', position:'sticky', top:0, zIndex:4}}>
+                    <div style={{display:'block', background:'#ede9fe', color:'#6d28d9', borderRadius:'8px 8px 0 0', padding:'5px 0 0', fontSize:11, fontWeight:700, letterSpacing:'0.04em', textTransform:'uppercase', textAlign:'center', lineHeight:'24px'}}>
+                      {SESSION_LABEL[s] || s}
+                    </div>
+                  </td>
                 ))}
               </tr>
-              <tr style={{background:'#6366f1'}}>
+              <tr>
+                <th style={stickyThCorner(0, {minWidth:36,width:36,textAlign:'center',borderRadius:'8px 0 0 0',borderTop:'none'})}>N°</th>
+                <th style={stickyThCorner(36, {textAlign:'left', minWidth:88, width:88, borderTop:'none'})}>Classe</th>
+                <th style={stickyThCorner(124, {textAlign:'left', minWidth:100, borderTop:'none'})}>Nom</th>
+                <th style={stickyThCorner(224, {textAlign:'left', minWidth:80, borderTop:'none'})}>Prénom</th>
                 {SESSIONS.map(s => (
                   <React.Fragment key={s}>
-                    <th style={thColFirst}>Abs</th>
-                    {scoreCols.map(([,lbl], i) => <th key={lbl} style={i === 0 ? {} : thCol}>{lbl}</th>)}
-                    {computedCols.map(([,lbl]) => <th key={lbl} style={thCol}>{lbl}</th>)}
-                    <th style={thCol}>Total</th>
+                    <th style={{...thColFirst, borderTop:'none', position:'sticky', top:ROW1_H, zIndex:3}}>Abs</th>
+                    {scoreCols.map(([,lbl]) => <th key={lbl} style={{...thCol, borderTop:'none', position:'sticky', top:ROW1_H, zIndex:3}}>{lbl}</th>)}
+                    {computedCols.map(([,lbl]) => <th key={lbl} style={{...thCol, borderTop:'none', position:'sticky', top:ROW1_H, zIndex:3}}>{lbl}</th>)}
+                    <th style={{...thCol, borderTop:'none', position:'sticky', top:ROW1_H, zIndex:3}}>Total</th>
                   </React.Fragment>
                 ))}
               </tr>
@@ -1449,10 +1458,10 @@ export default function TCF() {
             <tbody>
               {elevesResultatSorted.map((e, idx) => (
                 <tr key={e.id}>
-                  <td style={styles.tdCenter}>{idx + 1}</td>
-                  <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
-                  <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
-                  <td style={styles.tdLeft}>{e.prenom || ''}</td>
+                  <td style={stickyTd(0, {textAlign:'center', minWidth:36, width:36})}>{idx + 1}</td>
+                  <td style={stickyTd(36, {minWidth:88, width:88, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'})}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
+                  <td style={stickyTd(124, {minWidth:100})}>{toDisplayNom(e.nom) || ''}</td>
+                  <td style={stickyTd(224, {minWidth:80})}>{e.prenom || ''}</td>
                   {SESSIONS.map(session => {
                     const absSuf = `${resultatMatiere}_${session}_${e.id}`;
                     const row = getScore(resultatMatiere, session, e.id);
@@ -1499,6 +1508,7 @@ export default function TCF() {
             </tbody>
           </table>
         </div>
+        </div>
       );
     };
 
@@ -1507,37 +1517,35 @@ export default function TCF() {
       const elevesSession = elevesResultatSorted;
       return (
         <>
-          <h3 style={styles.tableTitleBig}>
-            {isFr ? 'Test de connaissance de français' : 'Test de connaissance de mathématiques'} - {SESSION_LABEL[session] || session}
-          </h3>
-          <div style={styles.tableWrap}>
-            <table style={styles.tableLarge}>
+          <div style={{overflow:'auto', maxHeight:'calc(100vh - 260px)'}}>
+          <div style={{...styles.tableWrap}}>
+            <table style={{...styles.tableLarge, overflow:'visible', clipPath:'none', borderCollapse:'separate', borderSpacing:0}}>
               <thead>
                 <tr style={styles.thead}>
-                  <th style={styles.thCenter}>N°</th>
-                  <th style={styles.thClasseFixe}>Classe</th>
-                  <th style={styles.thLeft}>Nom</th>
-                  <th style={styles.thLeft}>Prénom</th>
-                  <th style={styles.thCenter}>Absence</th>
+                  <th style={{...styles.thCenter, position:'sticky', left:0, top:0, zIndex:5, minWidth:36, width:36, borderTopLeftRadius:10}}>N°</th>
+                  <th style={{...styles.thClasseFixe, position:'sticky', left:36, top:0, zIndex:5}}>Classe</th>
+                  <th style={{...styles.thLeft, position:'sticky', left:124, top:0, zIndex:5, minWidth:100}}>Nom</th>
+                  <th style={{...styles.thLeft, position:'sticky', left:224, top:0, zIndex:5, minWidth:80}}>Prénom</th>
+                  <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Absence</th>
                   {isFr ? (
                     <>
-                      <th style={styles.thCenter}>CO</th>
-                      <th style={styles.thCenter}>PO</th>
-                      <th style={styles.thCenter}>CE</th>
-                      <th style={styles.thCenter}>PE</th>
-                      <th style={styles.thCenter}>Oral</th>
-                      <th style={styles.thCenter}>Écrit</th>
-                      <th style={styles.thCenter}>Total</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>CO</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>PO</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>CE</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>PE</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Oral</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Écrit</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3, borderTopRightRadius:10}}>Total</th>
                     </>
                   ) : (
                     <>
-                      <th style={styles.thCenter}>P1</th>
-                      <th style={styles.thCenter}>P2</th>
-                      <th style={styles.thCenter}>P3</th>
-                      <th style={styles.thCenter}>P4</th>
-                      <th style={styles.thCenter}>Base</th>
-                      <th style={styles.thCenter}>Avancé</th>
-                      <th style={styles.thCenter}>Total</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P1</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P2</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P3</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P4</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Base</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Avancé</th>
+                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3, borderTopRightRadius:10}}>Total</th>
                     </>
                   )}
                 </tr>
@@ -1550,10 +1558,10 @@ export default function TCF() {
                   const totalStyle = total == null ? {} : couleurTotale(total);
                   return (
                     <tr key={e.id}>
-                      <td style={styles.tdCenter}>{idx + 1}</td>
-                      <td style={styles.tdClasseFixe}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
-                      <td style={styles.tdLeft}>{toDisplayNom(e.nom) || ''}</td>
-                      <td style={styles.tdLeft}>{e.prenom || ''}</td>
+                      <td style={{...styles.tdCenter, position:'sticky', left:0, zIndex:1, background:'white', minWidth:36, width:36}}>{idx + 1}</td>
+                      <td style={{...styles.tdClasseFixe, position:'sticky', left:36, zIndex:1, background:'white'}}>{classesMap[String(e.classe_id)]?.nom || '—'}</td>
+                      <td style={{...styles.tdLeft, position:'sticky', left:124, zIndex:1, background:'white', minWidth:100}}>{toDisplayNom(e.nom) || ''}</td>
+                      <td style={{...styles.tdLeft, position:'sticky', left:224, zIndex:1, background:'white', minWidth:80}}>{e.prenom || ''}</td>
                       <td style={styles.tdCenter}>
                         <input type="checkbox"
                           checked={!!absences[absSuffix(e.id)]}
@@ -1600,49 +1608,22 @@ export default function TCF() {
               </tbody>
             </table>
           </div>
+          </div>
         </>
       );
     };
 
     return (
       <div>
-        <div style={{...styles.filtersStack, justifyContent:'space-between'}}>
-          <div style={styles.pillGroup}>
-            {SESSIONS.map(s => (
-              <button key={s} onClick={() => setResultatSession(s)}
-                style={{ ...styles.pillBtn, ...(resultatSession === s ? styles.pillBtnActif : {}) }}>
-                {SESSION_LABEL[s] || s}
-              </button>
-            ))}
-            <button onClick={() => setResultatSession('')}
-              style={{ ...styles.pillBtn, ...(resultatSession === '' ? styles.pillBtnActif : {}) }}>
-              Tous
-            </button>
-          </div>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <div style={styles.pillGroup}>
-              {[['francais','Français'],['math','Math']].map(([val,label]) => (
-                <button key={val} onClick={() => setResultatMatiere(val)}
-                  style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
-              ))}
-            </div>
-            <div style={styles.pillGroup}>
-              {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
-                <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
-                  style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div style={styles.filtersRow}>
           <input
             value={resultatRecherche}
             onChange={(e) => setResultatRecherche(e.target.value)}
             placeholder="Rechercher un élève, une classe..."
-            style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
+            style={{ ...styles.searchInput, width: 280, flex: 'none' }}
           />
           <FiltreDropdown
+            label="Trier niveau"
             value={resultatNiveau}
             options={niveauxTabs.map(n => ({ value: n, label: n }))}
             onSelect={(value) => {
@@ -1654,15 +1635,42 @@ export default function TCF() {
             allLabel="Tous niveaux"
           />
           {resultatVue === 'classe' && (
-            <FiltreDropdown
-              label="Classe"
+            <CustomSelect
               value={resultatClasseId}
+              onChange={(v) => setResultatClasseId(v)}
               options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
-              onSelect={(v) => setResultatClasseId(v)}
-              allLabel="Toutes les classes"
-              width={200}
+              placeholder="Classe"
+              allowClear={true}
+              style={{ ...styles.select, width: 200 }}
             />
           )}
+        </div>
+
+        <div style={{...styles.filtersStack}}>
+          <div style={styles.pillGroup}>
+            <button onClick={() => setResultatSession('')}
+              style={{ ...styles.pillBtn, ...(resultatSession === '' ? styles.pillBtnActif : {}) }}>
+              Tous
+            </button>
+            {SESSIONS.map(s => (
+              <button key={s} onClick={() => setResultatSession(s)}
+                style={{ ...styles.pillBtn, ...(resultatSession === s ? styles.pillBtnActif : {}) }}>
+                {SESSION_LABEL[s] || s}
+              </button>
+            ))}
+          </div>
+          <div style={styles.pillGroup}>
+            {[['francais','Français'],['math','Math']].map(([val,label]) => (
+              <button key={val} onClick={() => setResultatMatiere(val)}
+                style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
+            ))}
+          </div>
+          <div style={styles.pillGroup}>
+            {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
+              <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
+                style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
+            ))}
+          </div>
         </div>
 
         {resultatVue === 'classe' && !resultatClasseId ? (
@@ -1905,12 +1913,12 @@ export default function TCF() {
               <table style={styles.tableRolesLeft}>
                 <colgroup>
                   <col />
-                  <col style={{ width: 155 }} />
+                  <col style={{ width: 190 }} />
                 </colgroup>
                 <thead>
                   <tr style={styles.thead}>
                     <th style={{ ...styles.thLeftFixed, width: 'auto', minWidth: 0, maxWidth: 'none' }}>Professeurs</th>
-                    <th style={{ ...styles.thLeftFixed, width: 155, minWidth: 155, maxWidth: 155 }}>Rôle</th>
+                    <th style={{ ...styles.thLeftFixed, width: 190, minWidth: 190, maxWidth: 190 }}>Rôle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1929,7 +1937,7 @@ export default function TCF() {
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca' }}>Resp.</span>
                           </div>
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
+                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190 }}>
                           <CustomSelect
                             value={selectedRole}
                             onChange={(v) => setRoleProf(siteKey, rolesDemiJourneeSelect, resp.id, v)}
@@ -1952,7 +1960,7 @@ export default function TCF() {
                             {isReserve ? <span style={styles.reserveBadge}>Réserve</span> : null}
                           </div>
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 155, minWidth: 155, maxWidth: 155 }}>
+                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190 }}>
                           <CustomSelect
                             value={selectedRole}
                             onChange={(v) => {
@@ -2399,7 +2407,7 @@ export default function TCF() {
         <div class="conv-date" style="text-align:right;margin-bottom:40px;">Vétroz, le ${dateVetroz}</div>
         <div>
           <p>Madame, Monsieur,</p>
-          <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.</p>
+          <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>.</p>
           ${classeId
             ? `<p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>`
             : `<div style="margin-top:20px;margin-bottom:20px">${buildGeneralTableHtml(siteKey)}</div>`
@@ -2553,7 +2561,6 @@ export default function TCF() {
       <div style="margin-top:40px">
         <p style="font-weight:700;font-size:11pt;margin:0 0 12px">Information importante</p>
         <p style="margin:0 0 10px;text-align:justify;font-size:10pt;line-height:1.6">Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>. À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
-        <p style="margin:0 0 10px;text-align:justify;font-size:10pt;line-height:1.6">Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables afin que des dispositions alternatives puissent être prises dans les meilleurs délais.</p>
         <p style="margin:0 0 30px;text-align:justify;font-size:10pt;line-height:1.6">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
         <p style="font-size:10pt;margin:0 0 4px">Cordialement,</p>
         <p style="font-weight:700;font-size:10pt;margin:0;margin-top:60px;text-align:right;padding-right:2cm">La direction</p>
@@ -3107,7 +3114,27 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{...styles.filtersStack, justifyContent:'space-between'}}>
+        <div style={styles.filtersStack}>
+          <div style={styles.filtersRow}>
+            <input
+              value={graphRecherche}
+              onChange={(e) => setGraphRecherche(e.target.value)}
+              placeholder="Rechercher un élève, une classe..."
+              style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
+            />
+            <FiltreDropdown
+              value={graphNiveau}
+              options={niveauxTabs.map(n => ({ value: n, label: n }))}
+              onSelect={(value) => {
+                setGraphNiveau(value);
+                setGraphClasseId('');
+                setGraphEleveId('');
+                setGraphEleveSearch('');
+              }}
+              allLabel="Tous niveaux"
+            />
+          </div>
+          <div style={styles.filtersRow}>
           <div style={styles.pillGroup}>
             {SESSIONS.map(s => (
               <button key={s} type="button" onClick={() => setGraphSession(prev => prev === s ? '' : s)}
@@ -3118,38 +3145,18 @@ export default function TCF() {
           </div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <div style={styles.pillGroup}>
+              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
+              <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
+              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Tous</button>
+            </div>
+            <div style={styles.pillGroup}>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
             </div>
-            <div style={styles.pillGroup}>
-              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
-              <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
-              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Moyenne globale</button>
-            </div>
           </div>
         </div>
+        </div>
         <div style={styles.filtersRow}>
-          <input
-            value={graphRecherche}
-            onChange={(e) => setGraphRecherche(e.target.value)}
-            placeholder="Rechercher un élève, une classe..."
-            style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
-          />
-          <FiltreDropdown
-            value={graphNiveau}
-            options={niveauxTabs.map(n => ({ value: n, label: n }))}
-            onSelect={(value) => {
-              setGraphNiveau(value);
-              setGraphClasseId('');
-              setGraphEleveId('');
-              setGraphEleveSearch('');
-            }}
-            allLabel="Tous niveaux"
-          />
-          <button onClick={() => setGraphSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-            style={{ ...styles.pillBtn, whiteSpace:'nowrap' }}>
-            Trier {graphSortDir === 'asc' ? '↑' : '↓'}
-          </button>
           {graphVue === 'classe' && (
             <CustomSelect
               value={graphClasseId}
@@ -3757,7 +3764,7 @@ export default function TCF() {
                     <p style={p}>Madame, Monsieur,</p>
                     <p style={p}>
                       Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>.
-                      Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>, en adéquation avec le niveau de votre classe.
+                      Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>.
                     </p>
                     {classeConvocation ? (() => {
                       const cl = classes.find(c => String(c.id) === String(classeConvocation));
@@ -3880,11 +3887,6 @@ export default function TCF() {
                         Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>.
                         À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve,
                         afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.
-                      </div>
-                      <div style={{ ...pStyle, marginTop: 10 }}>
-                        Il est donc indispensable que chaque professeur de réserve <strong>organise son agenda en conséquence</strong> et s'assure de sa disponibilité effective
-                        pour la ou les demi-journées concernées. En cas d'empêchement prévisible, nous vous remercions d'en informer <strong>sans délai</strong> les responsables
-                        afin que des dispositions alternatives puissent être prises dans les meilleurs délais.
                       </div>
                       <div style={{ ...pStyle, marginTop: 10 }}>
                         Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.
@@ -4084,9 +4086,10 @@ const styles = {
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:190 },
-  selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit' },
+  selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit', minWidth: 180 },
   inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
   timePastille: { padding: '5px 14px', borderRadius: 999, border: '1px solid #c7d2fe', background: '#eef2ff', outline: 'none', fontSize: 13, color: '#3730a3', fontWeight: 700, fontFamily: 'inherit', width: 76, textAlign: 'center', cursor: 'pointer' },
+  timePastilleFixe: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '5px 14px', borderRadius: 999, border: '1px solid #c7d2fe', background: '#eef2ff', fontSize: 13, color: '#3730a3', fontWeight: 700, fontFamily: 'inherit', width: 76, textAlign: 'center' },
   momentLabelFix: { display: 'inline-flex', alignItems: 'center', fontWeight: 400 },
   momentLabelText: { display: 'inline-block', width: 76, textAlign: 'left' },
   selectOnglet: { padding: '8px 12px', borderRadius: '10px 10px 0 0', border: 'none', fontSize: 13, fontWeight: 700, color: '#5b21b6', background: '#ede9fe', lineHeight: '1', outline: 'none', boxShadow: 'none' },

@@ -47,6 +47,9 @@ export default function Classes() {
   const [showEleveReadOnly, setShowEleveReadOnly] = useState(false);
   const [eleveReadOnly, setEleveReadOnly] = useState(null);
   const [derniereActuClasse, setDerniereActuClasse] = useState(null);
+  const [showSanctions, setShowSanctions] = useState(false);
+  const [sanctionsEleve, setSanctionsEleve] = useState(null);
+  const [eleveSanctions, setEleveSanctions] = useState([]);
   const headers = {};
   const currentUser = getSessionUser() || null;
 
@@ -146,18 +149,6 @@ export default function Classes() {
     chargerTout();
   };
 
-  // Synchroniser les compteurs d'observations/sanctions sur l'élève ouvert pour refléter l'état immédiatement
-  useEffect(() => {
-    if (!obsEleve) return;
-    const id = obsEleve.id;
-    setElevesClasse(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_observations: observations.length } : el));
-  }, [observations, obsEleve]);
-  useEffect(() => {
-    if (!sanctionsEleve) return;
-    const id = sanctionsEleve.id;
-    setElevesClasse(prev => prev.map(el => String(el.id) === String(id) ? { ...el, nb_sanctions: eleveSanctions.length } : el));
-  }, [eleveSanctions, sanctionsEleve]);
-
   const ouvrirDetail = async (c, tab = 'eleves') => {
     setDetailClasse(c);
     setSearchParams({ detail: c.id, tab });
@@ -241,9 +232,6 @@ export default function Classes() {
   const [docPreview, setDocPreview] = useState(null);
   const [uploadEleveForm, setUploadEleveForm] = useState({ type: 'CV' });
 
-  const [showSanctions, setShowSanctions] = useState(false);
-  const [sanctionsEleve, setSanctionsEleve] = useState(null);
-  const [eleveSanctions, setEleveSanctions] = useState([]);
   const [sanctionsLoading, setSanctionsLoading] = useState(false);
   const [sanctionsObservations, setSanctionsObservations] = useState([]);
   const [editSanction, setEditSanction] = useState(null);

@@ -21,7 +21,7 @@ const FORM_VIDE = {
   type: 'juin', classes_ids: [], classes_noms: '', titulaires: '', autres_accompagnants: '', autres_acc_arr: [],
   date_sortie: '', destination: '', activites: '',
   lieu_depart: '', lieu_depart_autre: '',
-  heure_depart: '', lieu_retour: '', heure_retour: '',
+  heure_depart: '', lieu_retour: '', lieu_retour_autre: '', heure_retour: '',
   budget: '', commentaires: '',
 };
 
@@ -114,7 +114,8 @@ export default function SortieScolaire() {
       lieu_depart: lieuDepart,
       lieu_depart_autre: lieuDepart === 'autre' ? (s.lieu_depart || '') : '',
       heure_depart: fmtHeure(s.heure_depart),
-      lieu_retour: s.lieu_retour || '',
+      lieu_retour: LIEUX_PREDEFINIS.includes(s.lieu_retour) ? s.lieu_retour : (s.lieu_retour ? 'autre' : ''),
+      lieu_retour_autre: LIEUX_PREDEFINIS.includes(s.lieu_retour) ? '' : (s.lieu_retour || ''),
       heure_retour: fmtHeure(s.heure_retour),
       budget: s.budget || '',
       commentaires: s.commentaires || '',
@@ -138,7 +139,8 @@ export default function SortieScolaire() {
       alert("L'heure de départ est obligatoire.");
       return;
     }
-    if (!String(form.lieu_retour || '').trim()) {
+    const lieuRetour = form.lieu_retour === 'autre' ? form.lieu_retour_autre : form.lieu_retour;
+    if (!String(lieuRetour || '').trim()) {
       alert('Le lieu de retour est obligatoire.');
       return;
     }
@@ -150,6 +152,7 @@ export default function SortieScolaire() {
       ...form,
       classes_ids: (form.classes_ids || []).join(','),
       lieu_depart: lieuDepart,
+      lieu_retour: lieuRetour,
     };
     try {
       if (editId) {
@@ -476,7 +479,25 @@ export default function SortieScolaire() {
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={st.lbl}>Lieu de retour *</label>
-                  <input style={{ ...st.inp, width: '100%', boxSizing: 'border-box' }} value={form.lieu_retour} onChange={e => setForm({...form, lieu_retour: e.target.value})} placeholder="Ex: Gare de Sion" />
+                  <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                      <button key={`retour-${lieu}`} type="button"
+                        onClick={() => setForm({...form, lieu_retour: lieu, ...(lieu !== 'autre' ? { lieu_retour_autre: '' } : {})})}
+                        style={{
+                          padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
+                          background: form.lieu_retour === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
+                          color: form.lieu_retour === lieu ? 'white' : '#475569',
+                          borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
+                        }}>
+                        {lieu === 'autre' ? 'Autre' : lieu}
+                      </button>
+                    ))}
+                  </div>
+                  {form.lieu_retour === 'autre' && (
+                    <input style={{ ...st.inp, marginTop: 6, width: '100%', boxSizing: 'border-box' }} value={form.lieu_retour_autre}
+                      onChange={e => setForm({...form, lieu_retour_autre: e.target.value})}
+                      placeholder="Saisir le lieu de retour..." />
+                  )}
                 </div>
                 <div style={{ width: 170 }}>
                   <label style={st.lbl}>Heure de retour *</label>

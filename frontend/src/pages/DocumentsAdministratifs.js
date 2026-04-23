@@ -282,6 +282,13 @@ export default function DocumentsAdministratifs() {
                 <tr><th colSpan={3} style={{ padding: '9px 14px', background: '#6366f1', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>{title}</th></tr>
               </thead>
               <tbody>
+                {docs.length === 0 && (
+                  <tr>
+                    <td colSpan={3} style={{ padding: '12px 14px', fontSize: 13, color: '#94a3b8', background: 'white' }}>
+                      Aucun document
+                    </td>
+                  </tr>
+                )}
                 {docs.slice(0, showMore ? 10 : 5).map((d, idx) => (
                   <tr key={d.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc', borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '8px 14px', fontSize: 13, color: '#334155' }}>{d.designation}</td>
@@ -417,8 +424,6 @@ export default function DocumentsAdministratifs() {
 
         {loading ? (
           <div style={{ color: '#94a3b8', padding: 12 }}>Chargement...</div>
-        ) : documentsTries.length === 0 ? (
-          <div style={{ color: '#94a3b8', padding: 12 }}>Aucun document</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
@@ -442,6 +447,13 @@ export default function DocumentsAdministratifs() {
               </tr>
             </thead>
             <tbody>
+              {documentsTries.length === 0 && (
+                <tr style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
+                  <td colSpan={activeTab === 'pedagogiques' ? 5 : 5} style={{ padding: '11px 14px', color: '#94a3b8' }}>
+                    Aucun document
+                  </td>
+                </tr>
+              )}
               {documentsTries.map((doc, i) => {
                 const visa = [doc.auteur_prenom, doc.auteur_nom].filter(Boolean).map(s => s.charAt(0).toUpperCase()).join('');
                 return (
