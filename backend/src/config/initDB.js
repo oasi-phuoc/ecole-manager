@@ -499,6 +499,26 @@ const initDB = async () => {
       )
     `);
 
+    // Table visites de classes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS visites_classes (
+        id SERIAL PRIMARY KEY,
+        formateur_id INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+        branche_id INTEGER REFERENCES matieres(id) ON DELETE SET NULL,
+        date_visite DATE,
+        duree INTEGER DEFAULT 1,
+        scores JSONB DEFAULT '{}'::jsonb,
+        organisation JSONB DEFAULT '{}'::jsonb,
+        observation TEXT,
+        feedback TEXT,
+        valide BOOLEAN DEFAULT false,
+        created_by INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     // Colonne permissions (utilisée par le middleware auth)
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb`);
 

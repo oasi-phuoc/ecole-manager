@@ -449,16 +449,11 @@ export default function SortieScolaire() {
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={st.lbl}>Lieu de départ *</label>
-                  <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                  <div style={st.toggleGroup}>
+                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu) => (
                       <button key={lieu} type="button"
                         onClick={() => setForm({...form, lieu_depart: lieu, ...(lieu !== 'autre' ? { lieu_depart_autre: '' } : {})})}
-                        style={{
-                          padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
-                          background: form.lieu_depart === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
-                          color: form.lieu_depart === lieu ? 'white' : '#475569',
-                          borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
-                        }}>
+                        style={{ ...st.toggleBtn, ...(form.lieu_depart === lieu ? st.toggleBtnActif : {}) }}>
                         {lieu === 'autre' ? 'Autre' : lieu}
                       </button>
                     ))}
@@ -479,16 +474,11 @@ export default function SortieScolaire() {
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={st.lbl}>Lieu de retour *</label>
-                  <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu, i) => (
+                  <div style={st.toggleGroup}>
+                    {[...LIEUX_PREDEFINIS, 'autre'].map((lieu) => (
                       <button key={`retour-${lieu}`} type="button"
                         onClick={() => setForm({...form, lieu_retour: lieu, ...(lieu !== 'autre' ? { lieu_retour_autre: '' } : {})})}
-                        style={{
-                          padding: '9px 0', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flex: 1,
-                          background: form.lieu_retour === lieu ? '#6366f1' : (i % 2 === 0 ? '#f8fafc' : '#f1f5f9'),
-                          color: form.lieu_retour === lieu ? 'white' : '#475569',
-                          borderRight: i < 2 ? '1px solid #e2e8f0' : 'none',
-                        }}>
+                        style={{ ...st.toggleBtn, ...(form.lieu_retour === lieu ? st.toggleBtnActif : {}) }}>
                         {lieu === 'autre' ? 'Autre' : lieu}
                       </button>
                     ))}

@@ -249,6 +249,7 @@ export default function TCF() {
   const [graphEleveId, setGraphEleveId] = useState('');
   const [graphVue, setGraphVue] = useState('moyenne');
   const [graphNiveau, setGraphNiveau] = useState('');
+  const [graphShowNiveaux, setGraphShowNiveaux] = useState(false);
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphEleveSearch, setGraphEleveSearch] = useState('');
   const [graphRecherche, setGraphRecherche] = useState('');
@@ -2555,17 +2556,6 @@ export default function TCF() {
       ${buildTable('matin')}
       ${buildTable('apresMidi')}
       ${footerHtml}
-    </div>
-    <div class="page">
-      ${headerHtml}
-      <div style="margin-top:40px">
-        <p style="font-weight:700;font-size:11pt;margin:0 0 12px">Information importante</p>
-        <p style="margin:0 0 10px;text-align:justify;font-size:10pt;line-height:1.6">Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>. À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
-        <p style="margin:0 0 30px;text-align:justify;font-size:10pt;line-height:1.6">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
-        <p style="font-size:10pt;margin:0 0 4px">Cordialement,</p>
-        <p style="font-weight:700;font-size:10pt;margin:0;margin-top:60px;text-align:right;padding-right:2cm">La direction</p>
-      </div>
-      ${footerHtml}
     </div>`;
   };
 
@@ -3122,17 +3112,35 @@ export default function TCF() {
               placeholder="Rechercher un élève, une classe..."
               style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
             />
-            <FiltreDropdown
-              value={graphNiveau}
-              options={niveauxTabs.map(n => ({ value: n, label: n }))}
-              onSelect={(value) => {
-                setGraphNiveau(value);
-                setGraphClasseId('');
-                setGraphEleveId('');
-                setGraphEleveSearch('');
-              }}
-              allLabel="Tous niveaux"
-            />
+            {!graphShowNiveaux ? (
+              <button
+                type="button"
+                onClick={() => setGraphShowNiveaux(true)}
+                style={{ ...styles.levelBtn, height: 34, boxSizing: 'border-box' }}
+              >
+                Trier
+              </button>
+            ) : (
+              <div style={styles.pillGroup}>
+                <button
+                  type="button"
+                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                  style={{ ...styles.pillBtn, ...(!graphNiveau ? styles.pillBtnActif : {}) }}
+                >
+                  Trier
+                </button>
+                {niveauxTabs.map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                    style={{ ...styles.pillBtn, ...(graphNiveau === n ? styles.pillBtnActif : {}) }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div style={styles.filtersRow}>
           <div style={styles.pillGroup}>
@@ -3882,15 +3890,6 @@ export default function TCF() {
                       </div>
                     ))}
                     <div style={{ marginTop: 28 }}>
-                      <div style={{ ...pStyle, fontWeight: 700, marginBottom: 8 }}>Information importante</div>
-                      <div style={pStyle}>
-                        Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme <strong>professeurs de réserve</strong>.
-                        À ce titre, ils sont tenus de se <strong>libérer impérativement</strong> lors de la demi-journée pour laquelle ils sont inscrits en réserve,
-                        afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.
-                      </div>
-                      <div style={{ ...pStyle, marginTop: 10 }}>
-                        Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.
-                      </div>
                       <div style={{ ...pStyle, marginTop: 24 }}>Cordialement,</div>
                       <div style={{ ...pStyle, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</div>
                     </div>

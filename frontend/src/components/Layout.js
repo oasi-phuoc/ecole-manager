@@ -200,8 +200,6 @@ export default function Layout() {
                       navigate('/comptabilite?tab=classes');
                     } else if (m.path === '/documents-administratifs') {
                       navigate('/documents-administratifs?tab=administratifs');
-                    } else if (m.path === '/visite-classes') {
-                      navigate('/visite-classes?tab=visite');
                     } else {
                       navigate(m.path);
                     }
@@ -384,8 +382,6 @@ export default function Layout() {
                             navigate('/comptabilite?tab=classes');
                           } else if (m.path === '/documents-administratifs') {
                             navigate('/documents-administratifs?tab=administratifs');
-                          } else if (m.path === '/visite-classes') {
-                            navigate('/visite-classes?tab=visite');
                           } else {
                             navigate(m.path);
                           }
