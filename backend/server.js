@@ -127,6 +127,7 @@ app.use('/api/enclassements', require('./src/routes/enclassements'));
 app.use('/api/devoirs', require('./src/routes/devoirs'));
 app.use('/api/sorties', require('./src/routes/sorties'));
 app.use('/api/visites-classes', require('./src/routes/visiteClasses'));
+app.use('/api/sondages', require('./src/routes/sondages'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Ecole Manager operationnel !' });

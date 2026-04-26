@@ -7,7 +7,10 @@ import { ICONS_BY_PATH } from './DashboardIcons';
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const W = 200;
 
-const ACCES_DEFAUT_PROF = { eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false };
+const ACCES_DEFAUT_PROF = {
+  eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false,
+  visite_classes: true, sondage: true,
+};
 
 const CLASSES_DETAIL_TABS = [
   { key: 'eleves',        label: 'Liste des élèves' },
@@ -44,6 +47,7 @@ const NOTES_ONGLETS = [
   { key: 'generale',      label: 'Vue générale',      adminOnly: false },
   { key: 'comportements', label: 'Comportements',     adminOnly: false },
   { key: 'bulletin',      label: 'Bulletin de notes', adminOnly: false },
+  { key: 'attestation',   label: 'Attestations',      adminOnly: false },
 ];
 
 const PARAMS_ONGLETS = [
@@ -70,6 +74,13 @@ const COMPTA_ONGLETS = [
   { key: 'prix',      label: 'Liste de prix', adminOnly: false },
 ];
 
+const CONTROLE_QUALITE_ONGLETS = [
+  { key: 'visites', label: 'Visite de classe', accentKey: 'visite_classes' },
+  { key: 'feedback', label: 'Feedback', accentKey: 'visite_classes' },
+  { key: 'sondage', label: 'Sondage', accentKey: 'sondage' },
+  { key: 'statistiques', label: 'Statistiques', accentKey: 'statistiques' },
+];
+
 const ALL_MODULES = [
   { label: 'Employés',          path: '/employes-administratifs', adminOnly: true },
   { label: 'Professeurs',       path: '/professeurs',             accentKey: 'professeurs' },
@@ -84,10 +95,8 @@ const ALL_MODULES = [
   { label: 'Documents',         path: '/documents-administratifs',accentKey: 'documents' },
   { label: 'Emploi du temps',   path: '/emploi-du-temps',         accentKey: 'emploi_du_temps' },
   { label: 'TCF',               path: '/tcf',                     accentKey: 'tcf' },
-  { label: 'Statistiques',      path: '/statistiques',            accentKey: 'statistiques' },
-  { label: 'Sondage',           path: '/sondage',                 accentKey: 'sondage' },
   { label: 'Enclassement',      path: '/enclassement',            accentKey: 'enclassement' },
-  { label: 'Visite de classes', path: '/visite-classes',          accentKey: 'visite_classes' },
+  { label: 'Contrôle qualité', path: '/controle-qualite' },
   { label: 'Paramètres',        path: '/parametres' },
 ];
 
@@ -120,6 +129,19 @@ export default function Layout() {
     } catch {}
     return ALL_MODULES.map(m => m.path);
   });
+
+  useEffect(() => {
+    setPinnedPaths((prev) => {
+      const next = prev.map((p) => (
+        (p === '/visite-classes' || p === '/sondage' || p === '/statistiques') ? '/controle-qualite' : p
+      ));
+      const dedup = [...new Set(next)];
+      if (JSON.stringify(dedup) !== JSON.stringify(prev)) {
+        try { localStorage.setItem('sidebar_pinned', JSON.stringify(dedup)); } catch {}
+      }
+      return dedup;
+    });
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -156,13 +178,21 @@ export default function Layout() {
                 : user?.role === 'responsable'    ? 'responsables'
                 : null;
 
+  const profAccesCle = (cle) => {
+    if (isAdmin) return true;
+    const roleAcces = roleKey ? (accesProfs[roleKey] || {}) : {};
+    const val = roleAcces[cle];
+    return val !== undefined ? val : (ACCES_DEFAUT_PROF[cle] !== false);
+  };
+
   const modules = ALL_MODULES.filter(m => {
     if (isAdmin) return true;
     if (m.adminOnly) return false;
+    if (m.path === '/controle-qualite') {
+      return profAccesCle('visite_classes') || profAccesCle('sondage') || profAccesCle('statistiques');
+    }
     if (!m.accentKey) return true;
-    const roleAcces = roleKey ? (accesProfs[roleKey] || {}) : {};
-    const val = roleAcces[m.accentKey];
-    return val !== undefined ? val : (ACCES_DEFAUT_PROF[m.accentKey] !== false);
+    return profAccesCle(m.accentKey);
   });
 
   const togglePin = (path, e) => {
@@ -189,7 +219,10 @@ export default function Layout() {
         <nav style={s.nav}>
           {pinnedModules.map(m => {
             const IconComp = ICONS_BY_PATH[m.path];
-            const isActive = location.pathname === m.path || location.pathname.startsWith(m.path + '/');
+            const isActive =
+              location.pathname === m.path ||
+              location.pathname.startsWith(m.path + '/') ||
+              (m.path === '/controle-qualite' && location.pathname === '/statistiques');
             const isHov = hoveredPath === m.path;
             return (
               <React.Fragment key={m.path}>
@@ -200,6 +233,9 @@ export default function Layout() {
                       navigate('/comptabilite?tab=classes');
                     } else if (m.path === '/documents-administratifs') {
                       navigate('/documents-administratifs?tab=administratifs');
+                    } else if (m.path === '/controle-qualite') {
+                      const premier = CONTROLE_QUALITE_ONGLETS.find((o) => profAccesCle(o.accentKey))?.key || 'visites';
+                      navigate(`/controle-qualite?tab=${premier}`);
                     } else {
                       navigate(m.path);
                     }
@@ -257,6 +293,24 @@ export default function Layout() {
                         <button key={o.key}
                           style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
                           onClick={e => { e.stopPropagation(); navigate(`/tcf?tab=${o.key}`); }}>
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {m.path === '/controle-qualite' && isActive && (
+                  <div style={s.subNav}>
+                    {CONTROLE_QUALITE_ONGLETS.filter((o) => profAccesCle(o.accentKey)).map((o) => {
+                      const activeTab = new URLSearchParams(location.search).get('tab') || 'visites';
+                      const isTabActive = activeTab === o.key;
+                      return (
+                        <button
+                          key={o.key}
+                          type="button"
+                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/controle-qualite?tab=${o.key}`); }}
+                        >
                           {o.label}
                         </button>
                       );
@@ -372,7 +426,10 @@ export default function Layout() {
                   </div>
                   {unpinnedModules.map(m => {
                     const IconComp = ICONS_BY_PATH[m.path];
-                    const isActive = location.pathname === m.path || location.pathname.startsWith(m.path + '/');
+                    const isActive =
+                      location.pathname === m.path ||
+                      location.pathname.startsWith(m.path + '/') ||
+                      (m.path === '/controle-qualite' && location.pathname === '/statistiques');
                     return (
                       <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
                         onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
@@ -382,6 +439,9 @@ export default function Layout() {
                             navigate('/comptabilite?tab=classes');
                           } else if (m.path === '/documents-administratifs') {
                             navigate('/documents-administratifs?tab=administratifs');
+                          } else if (m.path === '/controle-qualite') {
+                            const premier = CONTROLE_QUALITE_ONGLETS.find((o) => profAccesCle(o.accentKey))?.key || 'visites';
+                            navigate(`/controle-qualite?tab=${premier}`);
                           } else {
                             navigate(m.path);
                           }

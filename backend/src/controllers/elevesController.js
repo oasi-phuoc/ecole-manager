@@ -24,7 +24,7 @@ const getEleves = async (req, res) => {
 const getEleve = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT e.id, u.nom, u.prenom, u.email, c.nom as classe, e.classe_id, e.date_naissance, e.date_debut_cours, e.categorie, e.telephone, e.adresse, e.nom_parent, e.telephone_parent, e.statut
+      SELECT e.id, u.nom, u.prenom, u.email, c.nom as classe, e.classe_id, e.date_naissance, e.nationalite, e.date_debut_cours, e.categorie, e.telephone, e.adresse, e.nom_parent, e.telephone_parent, e.statut
       FROM eleves e
       JOIN utilisateurs u ON e.utilisateur_id = u.id
       LEFT JOIN classes c ON e.classe_id = c.id
@@ -38,7 +38,7 @@ const getEleve = async (req, res) => {
 };
 
 const creerEleve = async (req, res) => {
-  const { nom, prenom, email, mot_de_passe, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent } = req.body;
+  const { nom, prenom, email, mot_de_passe, classe_id, date_naissance, nationalite, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent } = req.body;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -51,8 +51,8 @@ const creerEleve = async (req, res) => {
     );
     const userId = userResult.rows[0].id;
     const eleveResult = await client.query(
-      'INSERT INTO eleves (utilisateur_id, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [userId, classe_id || null, date_naissance || null, date_debut_cours || null, categorie || null, telephone || null, adresse || null, nom_parent || null, telephone_parent || null]
+      'INSERT INTO eleves (utilisateur_id, classe_id, date_naissance, nationalite, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+      [userId, classe_id || null, date_naissance || null, nationalite || null, date_debut_cours || null, categorie || null, telephone || null, adresse || null, nom_parent || null, telephone_parent || null]
     );
     await client.query('COMMIT');
     res.status(201).json({ message: 'Eleve cree', id: eleveResult.rows[0].id });
@@ -67,7 +67,7 @@ const creerEleve = async (req, res) => {
 const modifierEleve = async (req, res) => {
   const b = req.body;
   const {
-    nom, prenom, email, classe_id, date_naissance, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent, statut,
+    nom, prenom, email, classe_id, date_naissance, nationalite, date_debut_cours, categorie, telephone, adresse, nom_parent, telephone_parent, statut,
     oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
     oasi_nom, oasi_nais, oasi_nationalite,
     oasi_presence_date, oasi_jour_semaine, oasi_presence_periode, oasi_presence_type,
@@ -131,8 +131,9 @@ const modifierEleve = async (req, res) => {
         oasi_presence_date=$18, oasi_jour_semaine=$19, oasi_presence_periode=$20,
         oasi_presence_type=$21, oasi_remarque=$22, oasi_controle_du=$23, oasi_controle_au=$24,
         oasi_prog_presences=$25, oasi_prog_admin=$26, oasi_as=$27,
-        oasi_prg_id=$28, oasi_prg_occupation_id=$29, oasi_ra_id=$30, oasi_temps_reparti_id=$31
-      WHERE id=$32
+        oasi_prg_id=$28, oasi_prg_occupation_id=$29, oasi_ra_id=$30, oasi_temps_reparti_id=$31,
+        nationalite=$32
+      WHERE id=$33
     `, [
       c_id ?? null, d_naiss || null, d_debut || null, cat || null,
       tel || null, adr || null, n_par || null, t_par || null, st,
@@ -143,6 +144,7 @@ const modifierEleve = async (req, res) => {
       pickStr('oasi_presence_type'), pickStr('oasi_remarque'), pickStr('oasi_controle_du'), pickStr('oasi_controle_au'),
       pickStr('oasi_prog_presences'), pickStr('oasi_prog_admin'), pickStr('oasi_as'),
       pickInt('oasi_prg_id'), pickInt('oasi_prg_occupation_id'), pickInt('oasi_ra_id'), pickInt('oasi_temps_reparti_id'),
+      pickStr('nationalite'),
       req.params.id
     ]);
 

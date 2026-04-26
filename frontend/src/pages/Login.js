@@ -168,15 +168,15 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.champ}>
-            <label style={styles.label}>Email</label>
+            <label style={styles.label}>Email ou identifiant</label>
             <input
               style={styles.input}
-              type="email"
+              type="text"
               required
               value={email}
               disabled={mfaRequired}
               onChange={e => setEmail(e.target.value)}
-              placeholder="Saisir votre email"
+              placeholder="Email ou identifiant"
             />
           </div>
           <div style={styles.champ}>

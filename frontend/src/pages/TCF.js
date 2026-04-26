@@ -1622,18 +1622,35 @@ export default function TCF() {
             placeholder="Rechercher un élève, une classe..."
             style={{ ...styles.searchInput, width: 280, flex: 'none' }}
           />
-          <FiltreDropdown
-            label="Trier niveau"
-            value={resultatNiveau}
-            options={niveauxTabs.map(n => ({ value: n, label: n }))}
-            onSelect={(value) => {
-              setResultatNiveau(value);
-              setResultatClasseId('');
-              setResultatEleveId('');
-              setResultatEleveSearch('');
-            }}
-            allLabel="Tous niveaux"
-          />
+          {!showTrierNiveaux ? (
+            <button
+              type="button"
+              onClick={() => setShowTrierNiveaux(true)}
+              style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            >
+              Trier
+            </button>
+          ) : (
+            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              <button
+                type="button"
+                onClick={() => { setResultatNiveau(''); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); setShowTrierNiveaux(false); }}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !resultatNiveau ? '#6366f1' : 'transparent', color: !resultatNiveau ? 'white' : '#6d28d9', fontWeight: !resultatNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+              >
+                Trier
+              </button>
+              {niveauxTabs.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: resultatNiveau === n ? '#6366f1' : 'transparent', color: resultatNiveau === n ? 'white' : '#6d28d9', fontWeight: resultatNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
           {resultatVue === 'classe' && (
             <CustomSelect
               value={resultatClasseId}
@@ -3108,7 +3125,7 @@ export default function TCF() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={styles.filtersStack}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 0 }}>
           <div style={styles.filtersRow}>
             <input
               value={graphRecherche}
@@ -3120,16 +3137,16 @@ export default function TCF() {
               <button
                 type="button"
                 onClick={() => setGraphShowNiveaux(true)}
-                style={{ ...styles.levelBtn, height: 34, boxSizing: 'border-box' }}
+                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
               >
                 Trier
               </button>
             ) : (
-              <div style={styles.pillGroup}>
+              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
                 <button
                   type="button"
                   onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                  style={{ ...styles.pillBtn, ...(!graphNiveau ? styles.pillBtnActif : {}) }}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                 >
                   Trier
                 </button>
@@ -3138,7 +3155,7 @@ export default function TCF() {
                     key={n}
                     type="button"
                     onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                    style={{ ...styles.pillBtn, ...(graphNiveau === n ? styles.pillBtnActif : {}) }}
+                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                   >
                     {n}
                   </button>
@@ -3146,20 +3163,19 @@ export default function TCF() {
               </div>
             )}
           </div>
-          <div style={styles.filtersRow}>
-          <div style={styles.pillGroup}>
-            {SESSIONS.map(s => (
-              <button key={s} type="button" onClick={() => setGraphSession(prev => prev === s ? '' : s)}
-                style={{ ...styles.pillBtn, ...(graphSession === s ? styles.pillBtnActif : {}) }}>
-                {SESSION_LABEL[s] || s}
-              </button>
-            ))}
-          </div>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={styles.pillGroup}>
+              {SESSIONS.map(s => (
+                <button key={s} type="button" onClick={() => setGraphSession(prev => prev === s ? '' : s)}
+                  style={{ ...styles.pillBtn, ...(graphSession === s ? styles.pillBtnActif : {}) }}>
+                  {SESSION_LABEL[s] || s}
+                </button>
+              ))}
+            </div>
+            <div style={styles.pillGroup}>
+              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Tous</button>
               <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
               <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
-              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Tous</button>
             </div>
             <div style={styles.pillGroup}>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
@@ -3167,9 +3183,8 @@ export default function TCF() {
             </div>
           </div>
         </div>
-        </div>
-        <div style={styles.filtersRow}>
-          {graphVue === 'classe' && (
+        {graphVue === 'classe' && (
+          <div style={styles.filtersRow}>
             <CustomSelect
               value={graphClasseId}
               onChange={(v) => setGraphClasseId(v)}
@@ -3177,24 +3192,24 @@ export default function TCF() {
               placeholder="Choisir une classe"
               style={styles.select}
             />
-          )}
-        </div>
+          </div>
+        )}
         {/* Graphique */}
         {graphVue === 'moyenne' && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
         {graphVue === 'moyenne' && graphSession && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 12 }}>
             <div style={styles.tableWrap}>
-              <table style={{ ...styles.tableRolesLeft, minWidth: 0, tableLayout: 'fixed' }}>
+              <table style={{ ...styles.tableRolesLeft, width: 'min-content', tableLayout: 'fixed' }}>
                 <colgroup>
-                  <col style={{ width: 96, minWidth: 96, maxWidth: 96 }} />
-                  <col style={{ width: 86, minWidth: 86, maxWidth: 86 }} />
-                  <col style={{ width: 86, minWidth: 86, maxWidth: 86 }} />
+                  <col style={{ width: '33%' }} />
+                  <col style={{ width: '33%' }} />
+                  <col style={{ width: '34%' }} />
                 </colgroup>
                 <thead>
                   <tr style={styles.thead}>
-                    <th style={styles.thLeftFixed}>Classe</th>
-                    <th style={{ ...styles.thCenter, width: 86, minWidth: 86, maxWidth: 86 }}>Français</th>
-                    <th style={{ ...styles.thCenter, width: 86, minWidth: 86, maxWidth: 86 }}>Mathématiques</th>
+                    <th style={{ ...styles.thLeftFixed, whiteSpace: 'nowrap' }}>Classe</th>
+                    <th style={{ ...styles.thCenter, whiteSpace: 'nowrap' }}>FR</th>
+                    <th style={{ ...styles.thCenter, whiteSpace: 'nowrap' }}>MATH</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3964,7 +3979,7 @@ const styles = {
     boxSizing: 'border-box',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, minHeight: 40 },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   pillGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },
@@ -3975,8 +3990,8 @@ const styles = {
   tabContent: { paddingTop: 0 },
   tabBtn: { padding: '9px 14px', borderRadius: '10px 10px 0 0', border: 'none', background: '#ede9fe', cursor: 'pointer', fontWeight: 700, color: '#5b21b6', outline: 'none', lineHeight: '1', position: 'relative', zIndex: 1, fontSize: 14, width: 140, minWidth: 140, textAlign: 'center' },
   tabBtnActif: { background: '#6366f1', color: 'white', border: 'none', marginBottom: -2, zIndex: 2, boxShadow: '0 -1px 6px rgba(99,102,241,0.28)' },
-  btnAjouter: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
-  btnSauver: { padding: '8px 16px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
+  btnAjouter: { padding: '8px 14px', border: '1px solid #6366f1', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
+  btnSauver: { padding: '8px 14px', border: '1px solid #6366f1', borderRadius: 8, background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
   card: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18 },
   poolPanel: { background: 'transparent', border: 'none', borderRadius: 0, padding: 0 },
   panelTopWhite: { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, marginBottom: 10 },
@@ -4039,7 +4054,7 @@ const styles = {
     fontWeight: 800,
   },
 
-  tableWrap: { border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+  tableWrap: { border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflowX: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
   tablePool: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 1180 },
   tableLarge: { width: '100%', borderCollapse: 'collapse', minWidth: 1100 },

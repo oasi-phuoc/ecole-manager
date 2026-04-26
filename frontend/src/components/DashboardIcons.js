@@ -397,7 +397,7 @@ export const IconSondage = ({ size, active }) => (
   }/>
 );
 
-// ── Visite de classes — maison avec loupe ────────────────────────────────────
+// ── Contrôle qualité (visites de classe) — maison avec loupe ─────────────────
 export const IconVisiteClasses = ({ size, active }) => (
   <I size={size} active={active} ch={<>
     <path fillRule="evenodd" d="M12 2L1 10.5h2.5V21a1 1 0 001 1H9v-6h3v3.5a5 5 0 006.5-7.1V10.5H21L12 2z"/>
@@ -420,10 +420,8 @@ export const ICONS_BY_PATH = {
   '/calendrier':              IconCalendrier,
   '/comptabilite':            IconComptabilite,
   '/documents-administratifs':IconDocuments,
-  '/statistiques':            IconStatistiques,
-  '/sondage':                 IconSondage,
   '/enclassement':            IconEnclassement,
-  '/visite-classes':          IconVisiteClasses,
+  '/controle-qualite':        IconVisiteClasses,
   '/sorties-scolaires':       IconSorties,
   '/parametres':              IconParametres,
 };

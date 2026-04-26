@@ -47,7 +47,7 @@ export default function Professeurs({
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [showInactif, setShowInactif] = useState(false);
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'' });
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'' });
   const [roleAccesErreur, setRoleAccesErreur] = useState(false);
   const [formToast, setFormToast] = useState({ message: '', type: 'success' });
   const formToastTimeoutRef = useRef(null);
@@ -180,6 +180,14 @@ export default function Professeurs({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- déclenché par préférences formulaire
   }, [form.niveau_prefere, showForm, hidePreferences]);
 
+  useEffect(() => {
+    if (profEdit) return;
+    if (!showForm) return;
+    const auto = (String(form.prenom||'').slice(0,3) + String(form.nom||'').slice(0,3)).toLowerCase();
+    setForm(prev => ({ ...prev, identifiant: auto }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-génération identifiant
+  }, [form.prenom, form.nom, showForm, profEdit]);
+
   const chargerProfs = async () => {
     try { const res = await axios.get(apiUrl,{headers}); setProfs(res.data); }
     catch(err) { console.error(err); }
@@ -235,7 +243,7 @@ export default function Professeurs({
       formToastTimeoutRef.current = null;
     }
     setFormToast({ message: '', type: 'success' });
-    setForm({nom:'',prenom:'',email:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''});
+    setForm({nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''});
     setRoleAccesErreur(false);
   };
 
@@ -255,7 +263,7 @@ export default function Professeurs({
     }
     setFormToast({ message: '', type: 'success' });
     setProfEdit(p);
-    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
+    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',identifiant:p.identifiant||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
     setShowForm(true);
   };
 
@@ -350,9 +358,15 @@ export default function Professeurs({
                 <div>
                   <div style={{fontSize:11,fontWeight:700,color:'#92400e',background:'#fef3c7',padding:'5px 12px',borderRadius:6,marginBottom:12,textTransform:'uppercase'}}>🔐 Informations de connexion</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
-                    <div style={{display:'flex',flexDirection:'column'}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Email *</label>
-                      <input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                      <div style={{display:'flex',flexDirection:'column'}}>
+                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Email *</label>
+                        <input style={s.inp} type="email" required autoComplete="off" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column'}}>
+                        <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>Identifiant</label>
+                        <input style={s.inp} autoComplete="off" value={form.identifiant} onChange={e=>setForm({...form,identifiant:e.target.value.toLowerCase().replace(/\s/g,'')})} placeholder="ex: thodup" />
+                      </div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:11,fontWeight:600,marginBottom:4,color:'#475569'}}>{profEdit?'Nouveau mot de passe':'Mot de passe *'}</label>
@@ -826,7 +840,7 @@ export default function Professeurs({
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:24,flexWrap:'wrap',minHeight:40},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
@@ -836,7 +850,7 @@ const s = {
   filtres:{display:'flex',gap:4},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
   filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},
-  btnAdd:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnAdd:{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   statsBar:{display:'flex',gap:10,marginBottom:16},
   statChip:{padding:'5px 12px',background:'#e0e7ff',color:'#3730a3',borderRadius:99,fontSize:12,fontWeight:500},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},

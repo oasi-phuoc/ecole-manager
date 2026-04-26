@@ -39,6 +39,7 @@ export default function Eleves() {
   const [email, setEmail] = useState('');
   const [classeId, setClasseId] = useState('');
   const [dateNaissance, setDateNaissance] = useState('');
+  const [nationalite, setNationalite] = useState('');
   const [dateDebutCours, setDateDebutCours] = useState('');
   const [categorie, setCategorie] = useState('');
   const [adresse, setAdresse] = useState('');
@@ -136,7 +137,7 @@ export default function Eleves() {
 
   const resetForm = () => {
     setNom(''); setPrenom(''); setEmail(''); setClasseId('');
-    setDateNaissance(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
+    setDateNaissance(''); setNationalite(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
     setNomParent(''); setTelephoneParent(''); setStatut('actif');
     setOasiProgNom(''); setOasiProgEncadrant(''); setOasiN(''); setOasiRef(''); setOasiPos('');
     setOasiNom(''); setOasiNais(''); setOasiNationalite('');
@@ -151,6 +152,7 @@ export default function Eleves() {
     setNom(el.nom||''); setPrenom(el.prenom||''); setEmail(el.email||'');
     setClasseId(el.classe_id||'');
     setDateNaissance(el.date_naissance?el.date_naissance.substring(0,10):'');
+    setNationalite(el.nationalite||'');
     setDateDebutCours(el.date_debut_cours?el.date_debut_cours.substring(0,10):'');
     setCategorie(el.categorie||'');
     setAdresse(el.adresse||''); setTelephone(el.telephone||'');
@@ -177,7 +179,7 @@ export default function Eleves() {
     try {
       const data = {
         nom, prenom, email, classe_id: classeId||null,
-        date_naissance: dateNaissance||null, date_debut_cours: dateDebutCours||null, categorie: categorie||null, adresse, telephone,
+        date_naissance: dateNaissance||null, nationalite: nationalite||null, date_debut_cours: dateDebutCours||null, categorie: categorie||null, adresse, telephone,
         nom_parent: nomParent, telephone_parent: telephoneParent, statut,
         oasi_prog_nom: oasiProgNom, oasi_prog_encadrant: oasiProgEncadrant,
         oasi_n: oasiN?parseInt(oasiN):null, oasi_ref: oasiRef?parseInt(oasiRef):null,
@@ -514,15 +516,15 @@ export default function Eleves() {
 
       {/* Header + filtres — restent visibles au défilement */}
       <div style={{position:'relative',background:'#f8fafc',paddingBottom:12,marginBottom:0,boxShadow:'none'}}>
-      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap',minHeight:40}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-          {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
-          {isAdmin() && <label style={{padding:'8px 16px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
+          {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
+          {isAdmin() && <label style={{padding:'8px 14px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
             {loraUpdateLoading ? 'Mise à jour...' : 'Mise à jour LORA'}
             <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
           </label>}
-          {isAdmin() && <button style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>Importer LORA</button>}
+          {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>Importer LORA</button>}
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0}}>
@@ -613,6 +615,7 @@ export default function Eleves() {
                     <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} /></Champ>
                     <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
+                    <Champ lbl="Nationalité"><input style={inp} value={nationalite} onChange={e => setNationalite(e.target.value)} /></Champ>
                     <Champ lbl="Classe">
                       <CustomSelect
                         style={inp}
@@ -1090,8 +1093,8 @@ export default function Eleves() {
               <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62,background:'#6366f1',borderTopLeftRadius:12})}>Photo</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',width:170,minWidth:170})}>Nom</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',width:170,minWidth:170})}>Prénom</th>
-              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nationalité</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Classe</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nationalité</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Naissance</th>
               <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:96,minWidth:96,maxWidth:96,background:'#6366f1'})}></th>
               <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:130,minWidth:130,maxWidth:130,background:'#6366f1',borderTopRightRadius:12})}></th>
@@ -1138,7 +1141,6 @@ export default function Eleves() {
                 </td>
                 <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13,width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.nom||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151',width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.prenom||'—'}</td>
-                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.oasi_nationalite||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <select value={el.classe_id||''} onChange={e => handleClasseChange(el.id, e.target.value)}
                     style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,background:'white',cursor:'pointer',maxWidth:120}}>
@@ -1146,6 +1148,7 @@ export default function Eleves() {
                     {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                 </td>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.nationalite||el.oasi_nationalite||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>
                 <td style={{padding:'8px 6px',textAlign:'center',width:96,minWidth:96,maxWidth:96}}>
                   <div style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'0 auto'}}>

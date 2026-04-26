@@ -81,16 +81,19 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   const { email, mot_de_passe } = req.body;
-  const emailNormalise = normaliserEmail(email);
+  const identifiant = String(email || '').trim().toLowerCase();
   try {
-    if (!emailNormalise || !mot_de_passe || !emailValide(emailNormalise)) {
+    if (!identifiant || !mot_de_passe) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({ message: 'Configuration de securite manquante' });
     }
 
-    const result = await pool.query('SELECT * FROM utilisateurs WHERE email = $1 AND actif = true', [emailNormalise]);
+    const result = await pool.query(
+      'SELECT * FROM utilisateurs WHERE (LOWER(email) = $1 OR LOWER(identifiant) = $1) AND actif = true',
+      [identifiant]
+    );
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }

@@ -1525,7 +1525,7 @@ export default function Classes() {
                     <div style={ro}>{eleveReadOnly.adresse||'—'}</div>
                   </div>
                   <Lbl l="Téléphone" v={eleveReadOnly.telephone} />
-                  <Lbl l="Nationalité" v={eleveReadOnly.oasi_nationalite} />
+                  <Lbl l="Nationalité" v={eleveReadOnly.nationalite || eleveReadOnly.oasi_nationalite} />
                   {secTitle('Contact / responsable légal','#166534','#dcfce7')}
                   <Lbl l="Nom parent / contact" v={eleveReadOnly.nom_parent || eleveReadOnly.personne_contact} />
                   <Lbl l="Téléphone parent" v={eleveReadOnly.telephone_parent} />
@@ -1646,7 +1646,7 @@ export default function Classes() {
                   </td>
                   <td style={{...s.td,fontWeight:700,color:'#1e293b',width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.nom || '—'}</td>
                   <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.prenom || '—'}</td>
-                  <td style={s.td}>{el.oasi_nationalite || '—'}</td>
+                  <td style={s.td}>{el.nationalite || el.oasi_nationalite || '—'}</td>
                   <td style={s.td}>{el.date_naissance ? new Date(el.date_naissance).toLocaleDateString('fr-CH') : el.oasi_nais ? new Date(el.oasi_nais).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{...s.td, textAlign:'center'}}>{el.categorie || '—'}</td>
                   <td style={{...s.td,width:110,minWidth:110,maxWidth:110,padding:'8px 6px',textAlign:'center'}}>
@@ -2288,7 +2288,7 @@ export default function Classes() {
 
 const s = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap'},
+  header:{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap',minHeight:40},
   btnBack:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:500,color:'#475569'},
   title:{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0},
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
@@ -2307,7 +2307,7 @@ const s = {
   filtres:{display:'flex',gap:4},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
   filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},
-  btnAdd:{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
+  btnAdd:{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13},
   btnGhost:{background:'white',color:'#475569',border:'1px solid #e2e8f0'},
   statsBar:{display:'flex',gap:10,marginBottom:12},
   statChip:{padding:'5px 12px',background:'#e0e7ff',color:'#3730a3',borderRadius:99,fontSize:12,fontWeight:500},

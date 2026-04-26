@@ -3608,9 +3608,9 @@ export default function EmploiDuTemps() {
 
 const styles = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%'},
+  header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%',minHeight:40},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
-  btnImprimer:{padding:'8px 16px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:600},
+  btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:600},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},
   noticeBand:{padding:'10px 16px',borderRadius:8,marginBottom:12,fontSize:13,fontWeight:600},
   noticeBandSuccess:{background:'#ede9fe',color:'#4f46e5'},

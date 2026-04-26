@@ -40,6 +40,8 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS role_acces VARCHAR(20) DEFAULT 'employe'`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS identifiant VARCHAR(50)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS utilisateurs_identifiant_uq ON utilisateurs (LOWER(identifiant)) WHERE identifiant IS NOT NULL`);
     await pool.query(`ALTER TABLE paiements ADD COLUMN IF NOT EXISTS valide BOOLEAN DEFAULT false`);
     await pool.query(`ALTER TABLE paiements ADD COLUMN IF NOT EXISTS reference VARCHAR(100)`);
 
@@ -205,6 +207,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS sexe_responsable_niveau_epl VARCHAR(1)`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS horaires JSONB DEFAULT '{}'::jsonb`);
     await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS date_debut_annee DATE`);
+    await pool.query(`ALTER TABLE parametres_ecole ADD COLUMN IF NOT EXISTS date_fin_annee DATE`);
 
     // Table configuration email (admin)
     await pool.query(`
@@ -266,6 +269,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nom VARCHAR(200)`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nais VARCHAR(100)`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_nationalite VARCHAR(100)`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS nationalite VARCHAR(100)`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_presence_date DATE`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_jour_semaine VARCHAR(50)`);
     await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS oasi_presence_periode VARCHAR(100)`);
@@ -521,6 +525,42 @@ const initDB = async () => {
 
     // Colonne permissions (utilisée par le middleware auth)
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb`);
+
+    // Sondages (formulaires type Forms) + questions + réponses publiques (lien / QR)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sondages (
+        id SERIAL PRIMARY KEY,
+        titre VARCHAR(500) NOT NULL,
+        description TEXT,
+        public_token VARCHAR(64) NOT NULL UNIQUE,
+        actif BOOLEAN DEFAULT true,
+        accepte_reponses BOOLEAN DEFAULT true,
+        created_by INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sondage_questions (
+        id SERIAL PRIMARY KEY,
+        sondage_id INTEGER NOT NULL REFERENCES sondages(id) ON DELETE CASCADE,
+        ordre INTEGER NOT NULL DEFAULT 0,
+        type VARCHAR(30) NOT NULL CHECK (type IN ('texte','paragraphe','choix_unique','choix_multiple')),
+        libelle TEXT NOT NULL,
+        options JSONB NOT NULL DEFAULT '[]'::jsonb,
+        obligatoire BOOLEAN DEFAULT false
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sondage_questions_sondage ON sondage_questions(sondage_id)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sondage_reponses (
+        id SERIAL PRIMARY KEY,
+        sondage_id INTEGER NOT NULL REFERENCES sondages(id) ON DELETE CASCADE,
+        reponses JSONB NOT NULL DEFAULT '{}'::jsonb,
+        submitted_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sondage_reponses_sondage ON sondage_reponses(sondage_id)`);
 
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {

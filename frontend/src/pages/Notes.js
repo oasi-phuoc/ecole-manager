@@ -141,6 +141,8 @@ export default function Notes() {
   const [criteresSem2, setCriteresSem2] = useState([]);
   const [remarqueModal, setRemarqueModal] = useState(null);
   const [bulletinPopupEleve, setBulletinPopupEleve] = useState(null);
+  const [attestationPopupEleve, setAttestationPopupEleve] = useState(null);
+  const [attestationMode, setAttestationMode] = useState('eleve');
   const [evalSemestre, setEvalSemestre] = useState('1');
   const [sem1Bloque, setSem1Bloque] = useState(false);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
@@ -189,6 +191,7 @@ export default function Notes() {
       else if (tab === 'evaluations') { setVue('matieres'); setVueClasseAction('evaluations'); setVueContexte('detail'); }
       else if (tab === 'comportements') { setVue('bulletin'); setVueClasseAction('comportements'); setVueContexte('bulletin'); setBulletinOnglet('criteres'); }
       else if (tab === 'bulletin') { setVue('bulletin'); setVueClasseAction('bulletin'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
+      else if (tab === 'attestation') { setVue('bulletin'); setVueClasseAction('attestation'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
     }
   }, [searchParams, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -584,11 +587,21 @@ export default function Notes() {
       await chargerBulletinId(cl.id);
       setVue('bulletin');
     }
+    if (mode === 'attestation') {
+      setClasseObj(cl);
+      setClasseSelectionnee(cl.id);
+      setBulletinOnglet('notes');
+      setBulletinMode('eleve');
+      setEleveSelectionne('');
+      setVueClasseAction('attestation');
+      await chargerBulletinId(cl.id);
+      setVue('bulletin');
+    }
   };
 
   const renderActionsBar = (className = '') => {
     const tabsDetail = [['evaluations', 'Évaluations'], ['generale', 'Vue générale']];
-    const tabsBulletin = [['comportements', 'Comportements'], ['bulletin', 'Bulletin de notes']];
+    const tabsBulletin = [['comportements', 'Comportements'], ['bulletin', 'Bulletin de notes'], ['attestation', 'Attestations']];
     const tabs = vueContexte === 'bulletin' ? tabsBulletin : tabsDetail;
     return (
       <div className={className}>
@@ -609,6 +622,7 @@ export default function Notes() {
                 setVueClasseAction(k);
                 if (k === 'comportements') setBulletinOnglet('criteres');
                 else if (k === 'bulletin') { setBulletinOnglet('notes'); setBulletinMode('eleve'); setEleveSelectionne(''); }
+                else if (k === 'attestation') { setBulletinOnglet('notes'); setBulletinMode('eleve'); setEleveSelectionne(''); }
                 if (classeSelectionnee) {
                   ouvrirVueDepuisSelectionClasse(k);
                 } else {
@@ -616,6 +630,7 @@ export default function Notes() {
                   else if (k === 'generale') setVue('generale');
                   else if (k === 'comportements') setVue('bulletin');
                   else if (k === 'bulletin') setVue('bulletin');
+                  else if (k === 'attestation') setVue('bulletin');
                 }
               }}>
               {l}
@@ -1152,6 +1167,7 @@ export default function Notes() {
           );
         })()}
 
+
         {/* ---- VUE PAR BRANCHE ---- */}
         {vueGeneraleMode === 'branche' && rapport && matiereRapport && (() => {
           const thTCFB = {
@@ -1509,7 +1525,7 @@ export default function Notes() {
         <style>{`@media print { .no-print { display: none !important; } body { margin: 0; } }`}</style>
         <div style={s.header} className="no-print">
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
-          <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : 'Bulletin de notes'} — {classeNom}</h2>
+          <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : vueClasseAction === 'attestation' ? 'Attestations' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
@@ -1521,17 +1537,36 @@ export default function Notes() {
               </button>
             </div>
           )}
-          {bulletinOnglet === 'notes' && (
+          {bulletinOnglet === 'notes' && vueClasseAction !== 'attestation' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
+              <button style={s.btnImprimer} onClick={() => { setBulletinMode('tous'); setTimeout(() => { handleImprimer(); setBulletinMode('eleve'); }, 80); }}>Tout imprimer</button>
               <button style={s.btnImprimer} onClick={handleImprimer}>
                 Imprimer
               </button>
             </div>
           )}
+          {bulletinOnglet === 'notes' && vueClasseAction === 'attestation' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button style={s.btnImprimer} onClick={() => {
+                const nodes = document.querySelectorAll('[id^="attest-print-"]');
+                const body = Array.from(nodes).map(n => n.outerHTML).join('');
+                const html = `<html><head><title>Attestations</title><style>@page{size:A4 landscape;margin:12mm 15mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;page-break-after:always;}</style></head><body>${body}</body></html>`;
+                openPrintPopup(injectForcedPrintCss(html, 'A4 landscape', '12mm 15mm'), { title: 'Attestations', width: 1200, height: 820 });
+              }}>Tout imprimer</button>
+              {attestationPopupEleve && attestationMode === 'eleve' && (
+                <button style={s.btnImprimer} onClick={() => {
+                  const node = document.getElementById(`attest-print-${attestationPopupEleve}`);
+                  if (!node) return;
+                  const html = `<html><head><title>Attestation</title><style>@page{size:A4 landscape;margin:12mm 15mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;}</style></head><body>${node.outerHTML}</body></html>`;
+                  openPrintPopup(injectForcedPrintCss(html, 'A4 landscape', '12mm 15mm'), { title: 'Attestation', width: 1200, height: 820 });
+                }}>Imprimer</button>
+              )}
+            </div>
+          )}
         </div>
         {/* Sous-onglets semestre + mode */}
-        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        {vueClasseAction !== 'attestation' && <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
               const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
@@ -1544,20 +1579,10 @@ export default function Notes() {
             })}
           </div>
           {bulletinOnglet === 'notes' && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
-                {[{ id: 'eleve', label: 'Par élève' }, { id: 'tous', label: 'Tous' }].map(m => (
-                  <button key={m.id} onClick={() => setBulletinMode(m.id)}
-                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: bulletinMode === m.id ? '#6366f1' : 'transparent', color: bulletinMode === m.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: bulletinMode === m.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <button type="button" onClick={() => setShowAppreciations(v => !v)}
-                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAppreciations ? '#6366f1' : '#e2e8f0'), background: showAppreciations ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showAppreciations ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', minWidth: 170 }}>
-                {showAppreciations ? 'Afficher notes' : 'Afficher appréciations'}
-              </button>
-            </div>
+            <button type="button" onClick={() => setShowAppreciations(v => !v)}
+              style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAppreciations ? '#6366f1' : '#e2e8f0'), background: showAppreciations ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showAppreciations ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', minWidth: 170 }}>
+              {showAppreciations ? 'Afficher notes' : 'Afficher appréciations'}
+            </button>
           )}
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1573,8 +1598,20 @@ export default function Notes() {
             </button>
             </div>
           )}
-        </div>
+        </div>}
 
+        {vueClasseAction === 'attestation' && (
+          <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              {[{ id: 'eleve', label: 'Par élève' }, { id: 'tous', label: 'Tous' }].map(m => (
+                <button key={m.id} onClick={() => setAttestationMode(m.id)}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: attestationMode === m.id ? '#6366f1' : 'transparent', color: attestationMode === m.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: attestationMode === m.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {bulletinOnglet === 'criteres' && (
           <>
@@ -1765,7 +1802,112 @@ export default function Notes() {
           </>
         )}
 
-        {bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
+        {vueClasseAction === 'attestation' && bulletinOnglet === 'notes' && (() => {
+          const seen = new Set(); const elevsAtt = [];
+          for (const b of [...bulletinsSem1, ...bulletinsSem2]) { if (!seen.has(b.eleve.id)) { seen.add(b.eleve.id); elevsAtt.push(b.eleve); } }
+          const renderAttestationDoc = (eleveId) => {
+            const bdS1 = bulletinsSem1.find(b => b.eleve.id === eleveId);
+            const bdS2 = bulletinsSem2.find(b => b.eleve.id === eleveId);
+            const eleveInfo = bdS1?.eleve || bdS2?.eleve;
+            if (!eleveInfo) return null;
+            const stS1 = bulletinStatsS1.find(s => Number(s.eleve_id) === Number(eleveId));
+            const stS2 = bulletinStatsS2.find(s => Number(s.eleve_id) === Number(eleveId));
+            const anneeStats = Number(stS1?.presents||0)+Number(stS1?.absents||0)+Number(stS1?.excuses||0)+Number(stS2?.presents||0)+Number(stS2?.absents||0)+Number(stS2?.excuses||0);
+            const presS1S2 = Number(stS1?.presents||0)+Number(stS2?.presents||0);
+            const taux = anneeStats > 0 ? Math.round((presS1S2/anneeStats)*100) : null;
+            const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
+            const dateDebutCours = eleveInfo.date_debut_cours ? new Date(eleveInfo.date_debut_cours).toLocaleDateString('fr-CH') : (ecoleParams.date_debut_annee ? new Date(ecoleParams.date_debut_annee).toLocaleDateString('fr-CH') : '—');
+            const dateFinCours = ecoleParams.date_fin_annee ? new Date(ecoleParams.date_fin_annee).toLocaleDateString('fr-CH') : '—';
+            const rawNaissance = eleveInfo.date_naissance || eleveInfo.oasi_nais;
+            const dateNaissance = rawNaissance ? new Date(rawNaissance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+            const nationalite = eleveInfo.nationalite || eleveInfo.oasi_nationalite || '';
+            const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
+            const now = new Date();
+            const as = now.getMonth() >= 7 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
+            const printId = `attest-print-${eleveId}`;
+            return (
+              <div key={eleveId} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div id={printId} style={{ border: '2px solid #6366f1', borderRadius: 12, padding: '32px 40px', fontFamily: font, minHeight: 420, position: 'relative', background: 'white' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <img src="/logo-etat-du-valais.png" alt="" style={{ width: 36, height: 'auto', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                      <div style={{ fontSize: 10, lineHeight: 1.6, color: '#334155' }}>
+                        <div>Département de la santé, des affaires sociales et de la culture</div>
+                        <div>Service de l'action sociale</div>
+                        <div>Office de l'asile</div>
+                        <div>Centre de formation "Le Botza"</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>SCAI</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{as}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#0f172a' }}>CLASSES D'ACCUEIL</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 22, letterSpacing: 6, textTransform: 'uppercase', color: '#1e293b', marginBottom: 8 }}>Attestation</div>
+                  {(() => {
+                    const cn = classeNom.toUpperCase();
+                    const sub = cn.includes('CFR') ? 'Cours de français' : cn.includes('CSC') ? 'Cours de scolarisation' : cn.includes('EPL') ? 'Encouragement précoce de la langue' : cn.includes('CPR') ? 'Cours préparatoires' : null;
+                    return sub ? <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 600, color: '#0f172a', marginBottom: 28 }}>{sub}</div> : <div style={{ marginBottom: 28 }} />;
+                  })()}
+                  <div style={{ fontSize: 14, lineHeight: 2, color: '#1e293b', textAlign: 'center' }}>
+                    <div>Le Service de l'action sociale du canton du Valais atteste que</div>
+                    <div style={{ fontWeight: 800, fontSize: 18, margin: '8px 0', color: '#0f172a' }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
+                    {(dateNaissance || nationalite) && (
+                      <div style={{ fontSize: 13, color: '#1e293b', marginBottom: 4 }}>
+                        {dateNaissance && nationalite ? `né(e) le ${dateNaissance}, ${nationalite}` : dateNaissance ? `né(e) le ${dateNaissance}` : nationalite}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 12 }}>a suivi les cours de langue française du <strong>{dateDebutCours}</strong> au <strong>{dateFinCours}</strong>,</div>
+                    <div>à raison de <strong>4 heures</strong> par jour.</div>
+                    <div style={{ marginTop: 12 }}>Niveau atteint : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong></div>
+                    {taux !== null && <div>Taux de présence : <strong>{taux} %</strong></div>}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 50 }}>
+                    <div style={{ fontSize: 13, color: '#475569', marginTop: 40 }}>Vétroz, le {now.toLocaleDateString('fr-CH')}</div>
+                    <div style={{ textAlign: 'center', minWidth: 220 }}>
+                      <div style={{ marginTop: 40 }}></div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{respCoursNom || 'Responsable des cours'}</div>
+                      <div style={{ fontSize: 12, color: '#475569' }}>Responsable des cours de langues</div>
+                      <div style={{ fontSize: 12, color: '#475569' }}>Office de l'asile</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 30, fontSize: 11, color: '#64748b' }}>
+                    <img src="/logo-pied-page.png" alt="" style={{ height: 18, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+                    <span>Zone Industrielle 4, 1963 Vétroz — Tél. 027 606 18 60</span>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+          return (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+              {attestationMode === 'eleve' && (
+                <div className="no-print" style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                  <div style={{ padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>Élèves</div>
+                  <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                    {elevsAtt.map((elv, idx) => {
+                      const isSel = Number(attestationPopupEleve) === Number(elv.id);
+                      return (
+                        <div key={elv.id} onClick={() => setAttestationPopupEleve(isSel ? null : elv.id)}
+                          style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSel ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSel ? '#4338ca' : '#1e293b', fontWeight: isSel ? 700 : 400, borderLeft: `3px solid ${isSel ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}>
+                          {nomSansSuffixe(elv.nom)} {elv.prenom}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {attestationMode === 'eleve' && !attestationPopupEleve && <div style={s.vide}>Sélectionnez un élève</div>}
+                {attestationMode === 'eleve' && attestationPopupEleve && renderAttestationDoc(attestationPopupEleve)}
+                {attestationMode === 'tous' && elevsAtt.map(elv => renderAttestationDoc(elv.id))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {vueClasseAction !== 'attestation' && bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
             {bulletinMode === 'eleve' && (
               <div className="no-print" style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
@@ -2368,6 +2510,11 @@ export default function Notes() {
                           title="Bulletin de notes">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         </button>
+                        <button style={{ padding: 6, background: '#ede9fe', color: '#6366f1', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => { setSearchParams({tab:'attestation', classeId: cl.id}); setVueContexte('bulletin'); setVueClasseAction('attestation'); ouvrirVueDepuisSelectionClasse('attestation', cl.id); }}
+                          title="Attestations">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -2389,8 +2536,8 @@ const s = {
   subTabsBar: {display:'flex',gap:0,marginTop:0},
   subTabBtn: {padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:140,minWidth:140,textAlign:'center',border:'none',cursor:'pointer',outline:'none',position:'relative',zIndex:1,lineHeight:1},
   subTabBtnActif: {background:'#4f46e5',color:'white',zIndex:2,boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
-  btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap', minHeight: 40 },
+  btnRetour: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   btnTopAction: { padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   titre: { fontSize: 22, fontWeight: 800, flex: 1, color: '#0f172a', margin: 0, lineHeight: 1, minHeight: 36, display: 'flex', alignItems: 'center' },
   evalInfo: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
@@ -2398,12 +2545,12 @@ const s = {
   moyenneBox: { background: 'white', padding: '10px 18px', borderRadius: 10, textAlign: 'center', border: '1px solid #e2e8f0' },
   moyenneLabel: { fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' },
   moyenneValeur: { fontSize: 22, fontWeight: 700, color: '#6366f1' },
-  btnSauver: { padding: '8px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  btnImprimer: { padding: '8px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  btnSauver: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  btnImprimer: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
   tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
-  btnAjouter: { padding: '8px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  btnAjouter: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },
   th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },

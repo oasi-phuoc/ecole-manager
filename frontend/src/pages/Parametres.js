@@ -47,9 +47,11 @@ const MODULES_ACCES_PROFS = [
   { key: 'calendrier',      label: 'Calendrier',       defaut: true,  onglets: [{ key: 'calendrier_scolaire', label: 'Calendrier scolaire' }, { key: 'calendrier_agenda', label: 'Agenda personnel' }] },
   { key: 'comptabilite',    label: 'Comptabilité',     defaut: false, onglets: [{ key: 'comptabilite_factures', label: 'Factures' }, { key: 'comptabilite_paiements', label: 'Paiements' }, { key: 'comptabilite_prix', label: 'Liste de prix' }] },
   { key: 'documents',       label: 'Documents',        defaut: false, onglets: [{ key: 'documents_administratifs', label: 'Administratifs' }, { key: 'documents_pedagogiques', label: 'Pédagogiques' }, { key: 'documents_seances', label: 'Séances' }, { key: 'documents_formulaires', label: 'Formulaires' }, { key: 'documents_divers', label: 'Divers' }] },
-  { key: 'statistiques',       label: 'Statistiques',        defaut: false, onglets: [{ key: 'statistiques_dashboard', label: 'Tableau de bord' }] },
   { key: 'enclassement',      label: 'Enclassement',        defaut: false, onglets: [] },
   { key: 'sorties_scolaires', label: 'Sorties scolaires',   defaut: false, onglets: [{ key: 'sorties_automne', label: 'Automne' }, { key: 'sorties_juin', label: 'Juin' }, { key: 'sorties_autres', label: 'Autres' }, { key: 'sorties_suivi', label: 'Tableau de suivi' }] },
+  { key: 'visite_classes', label: 'Contrôle qualité — Visites & feedback', defaut: true, onglets: [] },
+  { key: 'sondage', label: 'Contrôle qualité — Sondage', defaut: true, onglets: [] },
+  { key: 'statistiques', label: 'Contrôle qualité — Statistiques', defaut: false, onglets: [{ key: 'statistiques_dashboard', label: 'Tableau de bord' }] },
 ];
 
 export default function Parametres() {
@@ -57,7 +59,7 @@ export default function Parametres() {
   const onglet = searchParams.get('tab') || 'profil';
   const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '', telephone: '', adresse: '', npa: '', lieu: '', sexe: '', date_naissance: '', avs: '', taux_activite: '', periodes_semaine: '', type_contrat: '', type_permis: '', niveau_prefere: '', lieu_travail_prefere: '', remarque_lieu_travail: '', priorite_pref: 'niveau', specialite: '' });
   const [ecole, setEcole] = useState({
-    nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', date_debut_annee: '',
+    nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', date_debut_annee: '', date_fin_annee: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
     responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: '',
     sexe_responsable_langues_jeunes: 'M', sexe_responsable_niveau_csc: 'M', sexe_responsable_niveau_cfr: 'M', sexe_responsable_niveau_epl: 'M'
@@ -343,7 +345,7 @@ export default function Parametres() {
       setMfaSecret('');
       setMfaOtpAuthUrl('');
       setMfaCode('');
-      setMsgMfa('✅ Double authentification activée. Conservez les codes de secours dans un endroit sûr.');
+      setMsgMfa('Double authentification activée. Conservez les codes de secours dans un endroit sûr.');
     } catch (err) {
       setMsgMfa(err.response?.data?.message || "Erreur d'activation MFA");
     }
@@ -363,7 +365,7 @@ export default function Parametres() {
       setMfaSetupToken('');
       setMfaSecret('');
       setMfaOtpAuthUrl('');
-      setMsgMfa('✅ Double authentification désactivée.');
+      setMsgMfa('Double authentification désactivée.');
     } catch (err) {
       setMsgMfa(err.response?.data?.message || 'Erreur désactivation MFA');
     }
@@ -379,7 +381,7 @@ export default function Parametres() {
       setMfaBackupCodes(res.data?.backup_codes || []);
       setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || (res.data?.backup_codes || []).length));
       setMfaCode('');
-      setMsgMfa('✅ Nouveaux codes de secours générés.');
+      setMsgMfa('Nouveaux codes de secours générés.');
     } catch (err) {
       setMsgMfa(err.response?.data?.message || 'Erreur génération des codes de secours');
     }
@@ -440,15 +442,15 @@ export default function Parametres() {
     setTestMailLoading(true);
     try {
       await axios.post(API + '/parametres/mail/test', { email: mailTestTo }, { headers, timeout: 35000 });
-      setMsgMailTest('✅ Email de test envoyé');
+      setMsgMailTest('Email de test envoyé');
     } catch (err) {
       const timeout = err?.code === 'ECONNABORTED';
       if (timeout) {
-        setMsgMailTest("❌ Délai dépassé. Vérifiez SMTP/port/mot de passe d'application puis réessayez.");
+        setMsgMailTest("Délai dépassé. Vérifiez SMTP/port/mot de passe d'application puis réessayez.");
       } else {
         const data = err?.response?.data || {};
         const parts = [];
-        parts.push(`❌ ${data.message || err.message || 'Echec envoi test'}`);
+        parts.push(data.message || err.message || 'Échec envoi test');
         if (data.code) parts.push(`Code: ${data.code}`);
         if (data.reponse) parts.push(`Réponse SMTP: ${data.reponse}`);
         if (data.erreur) parts.push(`Détail: ${data.erreur}`);
@@ -472,10 +474,10 @@ export default function Parametres() {
     try {
       await axios.delete(API + '/parametres/reset-tout', { headers });
       setResetEtape(4);
-      setResetMsg('✅ Toutes les données ont été supprimées.');
+      setResetMsg('Toutes les données ont été supprimées.');
     } catch (err) {
       setResetEtape(0);
-      setResetMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
+      setResetMsg('Erreur : ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -484,10 +486,10 @@ export default function Parametres() {
     try {
       await axios.delete(API + '/parametres/reset-rentree', { headers });
       setResetRentreeEtape(4);
-      setResetRentreeMsg('✅ Reset de rentrée scolaire effectué.');
+      setResetRentreeMsg('Reset de rentrée scolaire effectué.');
     } catch (err) {
       setResetRentreeEtape(0);
-      setResetRentreeMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
+      setResetRentreeMsg('Erreur : ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -501,13 +503,13 @@ export default function Parametres() {
           <h1 style={styles.titre}>Paramètres</h1>
           <div style={styles.topBarRight}>
             {onglet === 'profil' && (<>
-              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>✅ Profil mis à jour !</span>}
-              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>❌ Erreur</span>}
+              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Profil mis à jour.</span>}
+              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
               <button type="submit" form="form-profil" style={styles.btnSauverHeader}>Sauvegarder</button>
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
-              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>✅ Paramètres mis à jour !</span>}
-              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>❌ Erreur</span>}
+              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Paramètres mis à jour.</span>}
+              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
               <button type="submit" form="form-ecole" style={styles.btnSauverHeader}>Sauvegarder</button>
             </>)}
           </div>
@@ -531,8 +533,8 @@ export default function Parametres() {
                 ))}
               </div>
               <div style={{ paddingTop: 20 }}>
-                {msgProfil === 'success' && <div style={styles.msgSuccess}>✅ Profil mis à jour !</div>}
-                {msgProfil === 'error' && <div style={styles.msgError}>❌ Erreur lors de la mise à jour</div>}
+                {msgProfil === 'success' && <div style={styles.msgSuccess}>Profil mis à jour.</div>}
+                {msgProfil === 'error' && <div style={styles.msgError}>Erreur lors de la mise à jour</div>}
 
                 <form id="form-profil" onSubmit={handleSauverProfil}>
 
@@ -553,9 +555,9 @@ export default function Parametres() {
                         </div>
                         {mdpOuvert && (
                           <div style={{ padding: '16px', background: 'white', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {msgMdp === 'success' && <div style={styles.msgSuccess}>✅ Mot de passe modifié !</div>}
-                            {msgMdp === 'error' && <div style={styles.msgError}>❌ Ancien mot de passe incorrect</div>}
-                            {msgMdp === 'mismatch' && <div style={styles.msgError}>❌ Les mots de passe ne correspondent pas</div>}
+                            {msgMdp === 'success' && <div style={styles.msgSuccess}>Mot de passe modifié.</div>}
+                            {msgMdp === 'error' && <div style={styles.msgError}>Ancien mot de passe incorrect</div>}
+                            {msgMdp === 'mismatch' && <div style={styles.msgError}>Les mots de passe ne correspondent pas</div>}
                             <div style={styles.formChamp}>
                               <label style={styles.label}>Ancien mot de passe *</label>
                               <input style={styles.input} type="password" value={mdp.ancien} onChange={e => setMdp({ ...mdp, ancien: e.target.value })} />
@@ -756,9 +758,9 @@ export default function Parametres() {
           {onglet === 'mdp' && (
             <div style={styles.card}>
               <h3 style={styles.cardTitre}>Changer le mot de passe</h3>
-              {msgMdp === 'success' && <div style={styles.msgSuccess}>✅ Mot de passe modifié !</div>}
-              {msgMdp === 'error' && <div style={styles.msgError}>❌ Ancien mot de passe incorrect</div>}
-              {msgMdp === 'mismatch' && <div style={styles.msgError}>❌ Les mots de passe ne correspondent pas</div>}
+              {msgMdp === 'success' && <div style={styles.msgSuccess}>Mot de passe modifié.</div>}
+              {msgMdp === 'error' && <div style={styles.msgError}>Ancien mot de passe incorrect</div>}
+              {msgMdp === 'mismatch' && <div style={styles.msgError}>Les mots de passe ne correspondent pas</div>}
               <form onSubmit={handleSauverMdp}>
                 <div style={styles.formChamp}>
                   <label style={styles.label}>Ancien mot de passe *</label>
@@ -791,13 +793,13 @@ export default function Parametres() {
                 background: mfaEnabled ? '#dcfce7' : '#fef3c7',
                 color: mfaEnabled ? '#166534' : '#92400e'
               }}>
-                {mfaEnabled ? '✅ 2FA active' : '⚠️ 2FA désactivée'}
+                {mfaEnabled ? '2FA active' : '2FA désactivée'}
               </div>
               {msgMfa && (
                 <div style={{
                   ...styles.msgInfo,
-                  background: msgMfa.startsWith('✅') ? '#dcfce7' : '#eff6ff',
-                  color: msgMfa.startsWith('✅') ? '#166534' : '#1e40af'
+                  background: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#dcfce7' : '#eff6ff',
+                  color: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#166534' : '#1e40af'
                 }}>
                   {msgMfa}
                 </div>
@@ -929,13 +931,19 @@ export default function Parametres() {
                     <label style={styles.label}>Email</label>
                     <input style={styles.input} type="email" value={ecole.email || ''} onChange={e => setEcole({ ...ecole, email: e.target.value })} />
                   </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Année scolaire</label>
-                    <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={styles.label}>Date début de l'année scolaire</label>
-                    <input style={styles.input} type="date" value={ecole.date_debut_annee ? ecole.date_debut_annee.substring(0,10) : ''} onChange={e => setEcole({ ...ecole, date_debut_annee: e.target.value })} />
+                  <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '15px' }}>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Année scolaire</label>
+                      <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Date début de l'année scolaire</label>
+                      <input style={styles.input} type="date" value={ecole.date_debut_annee ? ecole.date_debut_annee.substring(0,10) : ''} onChange={e => setEcole({ ...ecole, date_debut_annee: e.target.value })} />
+                    </div>
+                    <div style={styles.formChamp}>
+                      <label style={styles.label}>Date fin de l'année scolaire</label>
+                      <input style={styles.input} type="date" value={ecole.date_fin_annee ? ecole.date_fin_annee.substring(0,10) : ''} onChange={e => setEcole({ ...ecole, date_fin_annee: e.target.value })} />
+                    </div>
                   </div>
                 </div>
                 </div>}
@@ -1218,8 +1226,8 @@ export default function Parametres() {
                 Pour un compte Outlook avec double authentification, utilisez un <b>mot de passe d'application</b>
                 (et non votre mot de passe normal).
               </p>
-              {msgMail === 'success' && <div style={styles.msgSuccess}>✅ Configuration email enregistrée</div>}
-              {msgMail && msgMail !== 'success' && <div style={styles.msgError}>❌ {msgMail === 'error' ? "Erreur lors de l'enregistrement" : msgMail}</div>}
+              {msgMail === 'success' && <div style={styles.msgSuccess}>Configuration email enregistrée</div>}
+              {msgMail && msgMail !== 'success' && <div style={styles.msgError}>{msgMail === 'error' ? "Erreur lors de l'enregistrement" : msgMail}</div>}
 
               <form onSubmit={handleSauverMail}>
                 <div style={styles.formGrid}>
@@ -1304,7 +1312,7 @@ export default function Parametres() {
                   </button>
                 </div>
                 {msgMailTest && (
-                  <div style={{ marginTop: 12, fontWeight: 600, color: msgMailTest.startsWith('✅') ? '#166534' : '#b91c1c', whiteSpace: 'pre-line' }}>
+                  <div style={{ marginTop: 12, fontWeight: 600, color: msgMailTest.startsWith('Email de test envoyé') ? '#166534' : '#b91c1c', whiteSpace: 'pre-line' }}>
                     {msgMailTest}
                   </div>
                 )}
@@ -1331,8 +1339,8 @@ export default function Parametres() {
                 ))}
               </div>
 
-              {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>✅ Accès mis à jour !</div>}
-              {msgAccesProfs === 'error' && <div style={styles.msgError}>❌ Erreur</div>}
+              {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>Accès mis à jour.</div>}
+              {msgAccesProfs === 'error' && <div style={styles.msgError}>Erreur</div>}
               <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 14px' }}>
                 {accesRoleOnglet === 'professeurs'    && 'Ces paramètres s\'appliquent à tous les professeurs.'}
                 {accesRoleOnglet === 'employes_admin' && 'Ces paramètres s\'appliquent aux employés administratifs.'}

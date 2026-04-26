@@ -403,14 +403,14 @@ export default function Bulletins() {
               </span>
             )}
             <button onClick={validerCriteres}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
               <div style={{ width: 36, height: 20, borderRadius: 10, background: criteresValides ? '#10b981' : '#e2e8f0', position: 'relative' }}>
                 <div style={{ position: 'absolute', top: 2, left: criteresValides ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all 0.2s' }}></div>
               </div>
               {criteresValides ? 'Critères validés' : 'Valider les critères'}
             </button>
             <button onClick={sauvegarderTousCriteres}
-              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: '#6366f1', color: 'white' }}>
+              style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: '#6366f1', color: 'white' }}>
               💾 Sauvegarder
             </button>
           </div>
@@ -680,7 +680,7 @@ const s = {
   subTabBtn: { padding: '9px 14px', borderRadius: '0 0 10px 10px', fontSize: 14, background: '#e0e7ff', color: '#3730a3', fontWeight: 700, width: 160, minWidth: 160, textAlign: 'center', border: 'none', cursor: 'pointer', outline: 'none', position: 'relative', zIndex: 1, lineHeight: 1 },
   subTabBtnActif: { background: '#4f46e5', color: 'white', zIndex: 2, boxShadow: '0 4px 6px rgba(79,70,229,0.18)' },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 45, flexWrap: 'wrap', minHeight: 40 },
-  btnRetour: { padding: '7px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
+  btnRetour: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#475569' },
   titre: { fontSize: 22, fontWeight: 800, flex: 1, color: '#0f172a', margin: 0 },
   tblWrap: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
   tableContainer: { overflow: 'hidden', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },

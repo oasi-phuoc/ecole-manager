@@ -72,7 +72,7 @@ const importEleves = async (req, res) => {
 
       await pool.query(`
         INSERT INTO eleves (
-          nom, prenom, date_naissance, statut, nom_parent,
+          nom, prenom, date_naissance, nationalite, statut, nom_parent,
           categorie, classe_id, date_debut_cours,
           oasi_prog_nom, oasi_prog_encadrant, oasi_n, oasi_ref, oasi_pos,
           oasi_nom, oasi_nais,
@@ -82,18 +82,18 @@ const importEleves = async (req, res) => {
           oasi_prog_presences, oasi_prog_admin, oasi_as,
           oasi_prg_id, oasi_prg_occupation_id, oasi_ra_id, oasi_temps_reparti_id
         ) VALUES (
-          $1,$2,$3,'actif',$4,
-          'OASI',$5,$6,
-          $7,$8,$9,$10,$11,
-          $12,$13,
-          $14,
-          $15,$16,$17,$18,
-          $19,$20,$21,
-          $22,$23,$24,
-          $25,$26,$27,$28
+          $1,$2,$3,$4,'actif',$5,
+          'OASI',$6,$7,
+          $8,$9,$10,$11,$12,
+          $13,$14,
+          $15,
+          $16,$17,$18,$19,
+          $20,$21,$22,
+          $23,$24,$25,
+          $26,$27,$28,$29
         )
       `, [
-        nom, prenom, parseDate(row[6]),
+        nom, prenom, parseDate(row[6]), row[7]||null,
         row[17]||null, // AS copie aussi dans Contact / parent
         classeId, dateDebutAnnee,
         row[0]||null, row[1]||null, parseInt2(row[2]), ref, parseInt2(row[4]),
