@@ -2298,44 +2298,30 @@ export default function EmploiDuTemps() {
               ))}
             </div>
             {sousOngletAff === 'classes' && (
-              <div style={styles.toggleGroup}>
-                {pools.map(p => {
-                  const actif = String(poolAffId) === String(p.id);
-                  return (
-                    <button key={p.id}
-                      style={{...styles.toggleBtn,...(actif?styles.toggleBtnActif:{}), outline:'none'}}
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={e => {
-                        e.currentTarget.blur();
-                        if (actif) return;
-                        if (hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                        if (hasClassesUnsaved) abandonnerClassesNonSauvegardees();
-                        setPoolAffId(String(p.id));
-                      }}>
-                      {p.nom}
-                    </button>
-                  );
-                })}
-              </div>
+              <CustomSelect
+                value={poolAffId}
+                onChange={val => {
+                  if (String(val) === String(poolAffId)) return;
+                  if (hasClassesUnsaved && !window.confirm("Des changements dans Affectations > Classes ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                  if (hasClassesUnsaved) abandonnerClassesNonSauvegardees();
+                  setPoolAffId(String(val));
+                }}
+                options={pools.map(p => ({ value: String(p.id), label: p.nom }))}
+                placeholder="Choisir un pool..."
+                style={{ minWidth: 180, height: 34 }}
+              />
             )}
             {sousOngletAff === 'profs' && (
-              <div style={styles.toggleGroup}>
-                {pools.map(p => {
-                  const actif = String(poolAffId) === String(p.id);
-                  return (
-                    <button key={p.id}
-                      style={{...styles.toggleBtn,...(actif?styles.toggleBtnActif:{}), outline:'none'}}
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={e => {
-                        e.currentTarget.blur();
-                        if (actif) return;
-                        setPoolAffId(String(p.id));
-                      }}>
-                      {p.nom}
-                    </button>
-                  );
-                })}
-              </div>
+              <CustomSelect
+                value={poolAffId}
+                onChange={val => {
+                  if (String(val) === String(poolAffId)) return;
+                  setPoolAffId(String(val));
+                }}
+                options={pools.map(p => ({ value: String(p.id), label: p.nom }))}
+                placeholder="Choisir un pool..."
+                style={{ minWidth: 180, height: 34 }}
+              />
             )}
             {sousOngletAff === 'branches' && (
               <>
@@ -2375,25 +2361,18 @@ export default function EmploiDuTemps() {
             )}
             {sousOngletAff === 'salles' && (
               <>
-                <div style={styles.toggleGroup}>
-                  {lieuxTravailOptions.map(lieu => {
-                    const actif = String(sallesLieuTravailId) === String(lieu);
-                    return (
-                      <button key={lieu}
-                        style={{...styles.toggleBtn,...(actif?styles.toggleBtnActif:{}), outline:'none'}}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={e => {
-                          e.currentTarget.blur();
-                          if (actif) return;
-                          if (hasSallesUnsaved && !window.confirm("Des changements dans Affectations > Salles ne sont pas sauvegardés. Changer de lieu sans sauvegarder ?")) return;
-                          if (hasSallesUnsaved) abandonnerSallesNonSauvegardees();
-                          setSallesLieuTravailId(lieu);
-                        }}>
-                        {lieu}
-                      </button>
-                    );
-                  })}
-                </div>
+                <CustomSelect
+                  value={sallesLieuTravailId}
+                  onChange={val => {
+                    if (String(val) === String(sallesLieuTravailId)) return;
+                    if (hasSallesUnsaved && !window.confirm("Des changements dans Affectations > Salles ne sont pas sauvegardés. Changer de lieu sans sauvegarder ?")) return;
+                    if (hasSallesUnsaved) abandonnerSallesNonSauvegardees();
+                    setSallesLieuTravailId(val);
+                  }}
+                  options={lieuxTravailOptions.map(lieu => ({ value: lieu, label: lieu }))}
+                  placeholder="Choisir un lieu..."
+                  style={{ minWidth: 180, height: 34 }}
+                />
                 <CustomSelect
                   style={styles.selAff}
                   value={salleSelectionnee}

@@ -445,15 +445,14 @@ export default function TCF() {
       }
     }
 
-    // Fallback si aucun prof n'est remonté depuis les pools.
-    const totalProfs = Object.values(byLevel).reduce((acc, arr) => acc + arr.length, 0);
-    if (totalProfs === 0) {
-      Object.keys(byLevel).forEach(k => delete byLevel[k]);
-      byLevel['SANS NIVEAU'] = profs.map(p => ({
-        id: String(p.id),
-        nom: p.nom || '',
-        prenom: p.prenom || '',
-      }));
+    // Ajouter les profs non couverts par les pools dans SANS NIVEAU.
+    const tousLesPids = new Set(Object.values(seen).flatMap(s => [...s]));
+    const manquants = profs.filter(p => !tousLesPids.has(String(p.id)));
+    if (manquants.length > 0) {
+      if (!byLevel['SANS NIVEAU']) byLevel['SANS NIVEAU'] = [];
+      for (const p of manquants) {
+        byLevel['SANS NIVEAU'].push({ id: String(p.id), nom: p.nom || '', prenom: p.prenom || '' });
+      }
     }
 
     for (const niveau of Object.keys(byLevel)) {
@@ -790,16 +789,16 @@ export default function TCF() {
     });
   };
   const getHoraireSite = (siteKey, champ) => {
-    if (champ === 'matinDebutProf') return getHoraireSite(siteKey, 'matinDebut');
-    if (champ === 'matinFinProf') return getHoraireSite(siteKey, 'matinFin');
-    if (champ === 'apresMidiDebutProf') return getHoraireSite(siteKey, 'apresMidiDebut');
-    if (champ === 'apresMidiFinProf') return getHoraireSite(siteKey, 'apresMidiFin');
     const val = affectationHorairesBySite?.[siteKey]?.[champ];
     if (val !== undefined && val !== null && String(val).trim() !== '') return val;
     if (champ === 'matinDebut') return '08:20';
     if (champ === 'matinFin') return '11:15';
     if (champ === 'apresMidiDebut') return '13:30';
     if (champ === 'apresMidiFin') return '16:15';
+    if (champ === 'matinDebutProf') return '07:30';
+    if (champ === 'matinFinProf') return '12:00';
+    if (champ === 'apresMidiDebutProf') return '13:00';
+    if (champ === 'apresMidiFinProf') return '17:00';
     return '';
   };
   const setHoraireSite = (siteKey, champ, value) => {
@@ -919,28 +918,28 @@ export default function TCF() {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires élève</div>
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinDebut')}</span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinFin')}</span>
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebut')} onChange={e => setHoraireSite(siteKey, 'matinDebut', e.target.value)} style={styles.timePastilleFixe} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFin')} onChange={e => setHoraireSite(siteKey, 'matinFin', e.target.value)} style={styles.timePastilleFixe} />
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiDebut')}</span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiFin')}</span>
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebut')} onChange={e => setHoraireSite(siteKey, 'apresMidiDebut', e.target.value)} style={styles.timePastilleFixe} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFin')} onChange={e => setHoraireSite(siteKey, 'apresMidiFin', e.target.value)} style={styles.timePastilleFixe} />
               </label>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>Horaires professeurs</div>
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Matin</span><span>:</span></span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinDebutProf')}</span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'matinFinProf')}</span>
+                <TimePicker value={getHoraireSite(siteKey, 'matinDebutProf')} onChange={e => setHoraireSite(siteKey, 'matinDebutProf', e.target.value)} style={styles.timePastilleFixe} />
+                <TimePicker value={getHoraireSite(siteKey, 'matinFinProf')} onChange={e => setHoraireSite(siteKey, 'matinFinProf', e.target.value)} style={styles.timePastilleFixe} />
               </label>
               <div style={{marginBottom:6}} />
               <label style={styles.inlineLabel}>
                 <span style={styles.momentLabelFix}><span style={styles.momentLabelText}>Après-midi</span><span>:</span></span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiDebutProf')}</span>
-                <span style={styles.timePastilleFixe}>{getHoraireSite(siteKey, 'apresMidiFinProf')}</span>
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiDebutProf')} onChange={e => setHoraireSite(siteKey, 'apresMidiDebutProf', e.target.value)} style={styles.timePastilleFixe} />
+                <TimePicker value={getHoraireSite(siteKey, 'apresMidiFinProf')} onChange={e => setHoraireSite(siteKey, 'apresMidiFinProf', e.target.value)} style={styles.timePastilleFixe} />
               </label>
             </div>
           </div>
@@ -2408,7 +2407,8 @@ export default function TCF() {
         <div class="conv-date" style="text-align:right;margin-bottom:40px;">Vétroz, le ${dateVetroz}</div>
         <div>
           <p>Madame, Monsieur,</p>
-          <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>.</p>
+          <p>Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques.</p>
+          <p>Horaire matin : <strong>${escapeHtml(getHoraireSite(siteKey, 'matinDebut'))} – ${escapeHtml(getHoraireSite(siteKey, 'matinFin'))}</strong> &bull; Horaire après-midi : <strong>${escapeHtml(getHoraireSite(siteKey, 'apresMidiDebut'))} – ${escapeHtml(getHoraireSite(siteKey, 'apresMidiFin'))}</strong></p>
           ${classeId
             ? `<p>Classe : <strong>${escapeHtml(nom)}</strong>&emsp;Lieu : <strong>${escapeHtml(lieu)}</strong>&emsp;Jour : <strong>${escapeHtml(jour)}</strong>&emsp;Horaire : <strong>${escapeHtml(horaire)}</strong></p>`
             : `<div style="margin-top:20px;margin-bottom:20px">${buildGeneralTableHtml(siteKey)}</div>`
@@ -2471,22 +2471,7 @@ export default function TCF() {
       const sortByPrenom = (a, b) => (profMap[a]?.prenom || '').localeCompare(profMap[b]?.prenom || '', 'fr');
       const reserves = poolIds.filter(pid => isReserveCellule(pid, jour, moment)).sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
       const regular = poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').sort(sortByPrenom).map(pid => getProfNom(pid)).filter(Boolean);
-      const regularHtml = regular.map(nom =>
-        `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`
-      ).join('');
-      if (reserves.length === 0) {
-        return `<table style="width:100%;height:100%;border-collapse:collapse"><tbody>
-          <tr><td style="vertical-align:top;padding:0;text-align:left;border:none">${regularHtml}</td></tr>
-        </tbody></table>`;
-      }
-      const reserveHtml = `<div style="border-top:1px solid #e2e8f0;padding-top:3px">
-        <div style="color:#1e293b;font-size:9pt;font-weight:700;line-height:1.4;text-align:left">Réserve</div>
-        ${reserves.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('')}
-      </div>`;
-      return `<table style="width:100%;height:100%;border-collapse:collapse"><tbody>
-        <tr style="height:100%"><td style="vertical-align:top;padding:0;text-align:left;border:none">${regularHtml}</td></tr>
-        <tr><td style="vertical-align:bottom;padding:0;text-align:left;border:none">${reserveHtml}</td></tr>
-      </tbody></table>`;
+      return { regular, reserves };
     };
     const getEffectif = (jour, moment) =>
       poolIds.filter(pid => statutCellule(siteKey, pid, jour, moment) === 'vert').length;
@@ -2505,17 +2490,29 @@ export default function TCF() {
           </div>
         </td>`;
       }).join('');
-      const dataCells = joursActifs.map(j => `<td style="vertical-align:top;text-align:left;height:120px;border:1px solid #e2e8f0;padding:5px 7px">${getCellProfs(j, moment)}</td>`).join('');
+      const regularCells = joursActifs.map(j => {
+        const { regular } = getCellProfs(j, moment);
+        const html = regular.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('');
+        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;padding:5px 7px">${html}</td>`;
+      }).join('');
+      const reserveCells = joursActifs.map(j => {
+        const { reserves } = getCellProfs(j, moment);
+        const html = reserves.length > 0
+          ? `<div style="color:#1e293b;font-size:9pt;font-weight:700;line-height:1.4;text-align:left">Réserve</div>${reserves.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('')}`
+          : '';
+        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:5px 7px">${html}</td>`;
+      }).join('');
       return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:14px">
         ${colgroup}
         <tbody>
           <tr>
-            <td rowspan="2" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
+            <td rowspan="3" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px">
               <span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block">${label}</span>
             </td>
             ${headerCells}
           </tr>
-          <tr>${dataCells}</tr>
+          <tr>${regularCells}</tr>
+          <tr>${reserveCells}</tr>
         </tbody>
       </table>`;
     };
@@ -2555,6 +2552,13 @@ export default function TCF() {
       <p style="margin:0 0 16px">Horaire matin : <strong>${escapeHtml(horaireMatin)}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>${escapeHtml(horaireAM)}</strong></p>
       ${buildTable('matin')}
       ${buildTable('apresMidi')}
+      <div style="page-break-before:always;margin-top:28px">
+        <p style="font-weight:700;font-size:11pt;margin:0 0 8px">Information importante</p>
+        <p style="margin:0 0 10px;font-size:10pt;text-align:justify">Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme professeurs de réserve. À ce titre, ils sont tenus de se libérer impérativement lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</p>
+        <p style="margin:0 0 24px;font-size:10pt;text-align:justify">Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</p>
+        <p style="margin:0 0 4px;font-size:10pt">Cordialement,</p>
+        <p style="font-weight:700;margin-top:50px;padding-right:2cm;text-align:right;font-size:10pt">La direction</p>
+      </div>
       ${footerHtml}
     </div>`;
   };
@@ -3771,8 +3775,10 @@ export default function TCF() {
                   <div style={{ fontFamily: font }}>
                     <p style={p}>Madame, Monsieur,</p>
                     <p style={p}>
-                      Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>.
-                      Ce test évalue vos compétences linguistiques aux niveaux <strong>A1 à A2</strong>.
+                      Nous vous informons que vous êtes convoqué(e) au <strong>test de connaissance du français</strong>. Ce test évalue vos compétences linguistiques.
+                    </p>
+                    <p style={p}>
+                      Horaire matin : <strong>{getHoraireSite(sitePlan, 'matinDebut')} – {getHoraireSite(sitePlan, 'matinFin')}</strong> &bull; Horaire après-midi : <strong>{getHoraireSite(sitePlan, 'apresMidiDebut')} – {getHoraireSite(sitePlan, 'apresMidiFin')}</strong>
                     </p>
                     {classeConvocation ? (() => {
                       const cl = classes.find(c => String(c.id) === String(classeConvocation));
@@ -3843,7 +3849,7 @@ export default function TCF() {
                         <table style={{ ...styles.tableLarge, tableLayout: 'fixed' }}>
                           <tbody>
                             <tr style={styles.thead}>
-                              <td rowSpan={2} style={{ ...styles.thCenter, width: 36, verticalAlign: 'middle', background: '#eef2ff', color: '#4338ca', fontSize: 16 }}>
+                              <td rowSpan={3} style={{ ...styles.thCenter, width: 36, verticalAlign: 'middle', background: '#eef2ff', color: '#4338ca', fontSize: 16 }}>
                                 <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', display: 'inline-block', fontWeight: 700 }}>{moment === 'matin' ? 'Matin' : 'Après-midi'}</span>
                               </td>
                               {joursActifs.map(j => {
@@ -3860,36 +3866,42 @@ export default function TCF() {
                               })}
                             </tr>
                             <tr>
-                              {joursActifs.map(j => (
-                                <td key={j} style={{ ...cellStyle, height: 120 }}>
-                                  {(() => {
-                                    const { regular, reserves } = getCellProfs(j, moment);
-                                    return (
-                                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                                        <div>
-                                          {regular.map((nom, i) => (
-                                            <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
-                                          ))}
-                                        </div>
-                                        {reserves.length > 0 && (
-                                          <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: 4 }}>
-                                            <span style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 700, lineHeight: 1.4 }}>Réserve</span>
-                                            {reserves.map((nom, i) => (
-                                              <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-                                </td>
-                              ))}
+                              {joursActifs.map(j => {
+                                const { regular } = getCellProfs(j, moment);
+                                return (
+                                  <td key={j} style={{ ...cellStyle, verticalAlign: 'top' }}>
+                                    {regular.map((nom, i) => (
+                                      <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
+                                    ))}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr>
+                              {joursActifs.map(j => {
+                                const { reserves } = getCellProfs(j, moment);
+                                return (
+                                  <td key={j} style={{ ...cellStyle, verticalAlign: 'top', borderTop: '1px solid #e2e8f0' }}>
+                                    {reserves.length > 0 ? (
+                                      <>
+                                        <span style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 700, lineHeight: 1.4 }}>Réserve</span>
+                                        {reserves.map((nom, i) => (
+                                          <span key={i} style={{ display: 'block', color: '#1e293b', fontSize: 16, fontWeight: 400, lineHeight: 1.4 }}>{nom}</span>
+                                        ))}
+                                      </>
+                                    ) : null}
+                                  </td>
+                                );
+                              })}
                             </tr>
                           </tbody>
                         </table>
                       </div>
                     ))}
                     <div style={{ marginTop: 28 }}>
+                      <div style={{ ...pStyle, fontWeight: 700, marginBottom: 8 }}>Information importante</div>
+                      <div style={{ ...pStyle, textAlign: 'left' }}>Les professeurs listés en bas de chaque colonne sous la mention <strong>Réserve</strong> sont désignés comme professeurs de réserve. À ce titre, ils sont tenus de se libérer impérativement lors de la demi-journée pour laquelle ils sont inscrits en réserve, afin de pouvoir intervenir en remplacement d'un collègue absent ou empêché.</div>
+                      <div style={{ ...pStyle, marginTop: 10, textAlign: 'left' }}>Nous comptons sur votre engagement et votre sens des responsabilités pour garantir le bon déroulement du test dans les meilleures conditions.</div>
                       <div style={{ ...pStyle, marginTop: 24 }}>Cordialement,</div>
                       <div style={{ ...pStyle, fontWeight: 700, marginTop: 50, paddingRight: '2cm', textAlign: 'right' }}>La direction</div>
                     </div>
