@@ -666,8 +666,8 @@ export default function Notes() {
           <table style={s.tbl}>
             <thead>
               <tr style={s.theadRow}>
-                <th style={{ ...s.th, borderTopLeftRadius: 12 }}>Nom</th>
-                <th style={s.th}>Prénom</th>
+                <th style={{ ...s.th, borderTopLeftRadius: 12, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Nom</th>
+                <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Prénom</th>
                 {evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0
                   ? <th style={{ ...s.th, textAlign: 'center' }}>Points</th>
                   : null}
@@ -684,8 +684,8 @@ export default function Notes() {
                 const noteDirecte = !avecPoints && eleve.note !== '' ? parseFloat(eleve.note) : null;
                 return (
                   <tr key={eleve.id} style={{ ...s.tr, background: eleve.absent ? '#fff8f8' : eleve.dispense ? '#f8f8ff' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                    <td style={s.td}><b>{nomSansSuffixe(eleve.nom)}</b></td>
-                    <td style={s.td}>{eleve.prenom}</td>
+                    <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap', fontWeight: 700 }}>{nomSansSuffixe(eleve.nom)}</td>
+                    <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                     {avecPoints ? (
                       <td style={{ ...s.td, textAlign: 'center' }}>
                         <input className="note-input" data-col="points" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"

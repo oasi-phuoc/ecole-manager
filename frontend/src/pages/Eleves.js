@@ -506,7 +506,7 @@ export default function Eleves() {
             <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12}} />
             <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
               <a href={photoZoom} download="photo.jpg" style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Télécharger</a>
-              <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>✕ Fermer</button>
+              <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>Fermer</button>
             </div>
           </div>
         </div>
@@ -568,7 +568,7 @@ export default function Eleves() {
           <div style={{background:'white',padding:32,borderRadius:16,width:480,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{fontSize:18,fontWeight:800,margin:0}}>📥 Importer depuis LORA</h3>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>✕</button>
+              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => { setShowImport(false); setImportResult(null); setImportFile(null); }}>Fermer</button>
             </div>
             {importResult ? (
               <div>
@@ -600,7 +600,7 @@ export default function Eleves() {
           <div style={{background:'white',padding:32,borderRadius:16,width:'95vw',maxWidth:1100,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h3 style={{fontSize:18,fontWeight:800,margin:0}}>{eleveEdit?'Modifier':'Ajouter'} un élève</h3>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'}} onClick={() => setShowForm(false)}>✕</button>
+              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => setShowForm(false)}>Fermer</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,alignItems:'stretch'}}>
@@ -711,8 +711,8 @@ export default function Eleves() {
         <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
+              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => setShowDocsEleve(false)}>Fermer</button>
             </div>
             {isAdmin() && (
               <div style={{marginBottom:16}}>
@@ -725,7 +725,7 @@ export default function Eleves() {
                     options={['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => ({ value: t, label: t }))}
                   />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
-                    📎 Choisir un fichier
+                    Choisir un fichier
                     <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />
                   </label>
                   <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
@@ -740,7 +740,6 @@ export default function Eleves() {
               ) : eleveDocs.map(doc => (
                 <div key={doc.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,border:'1px solid #e2e8f0',marginBottom:8,background:'#f8fafc'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <span style={{fontSize:20}}>{doc.nom.endsWith('.pdf')?'📄':doc.nom.match(/\.(jpg|jpeg|png)$/i)?'🖼️':'📝'}</span>
                     <div>
                       <div style={{fontWeight:600,fontSize:13,color:'#1e293b'}}>{doc.nom}</div>
                       <div style={{fontSize:11,color:'#94a3b8'}}>
@@ -773,7 +772,7 @@ export default function Eleves() {
           <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
-              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>✕ Fermer</button>
+              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>Fermer</button>
             </div>
             {docPreview.url.match(/^data:image\//i) ? (
               <img src={docPreview.url} alt={docPreview.nom} style={{maxWidth:'100%',maxHeight:'100%',borderRadius:8,objectFit:'contain',background:'white'}} />
@@ -792,7 +791,7 @@ export default function Eleves() {
                 <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
                 {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
               </div>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
+              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
               <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
@@ -960,7 +959,7 @@ export default function Eleves() {
           <div style={{background:'white',padding:24,borderRadius:16,width:'71vw',maxWidth:825,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowObs(false)}>✕</button>
+              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => setShowObs(false)}>Fermer</button>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <span style={{fontSize:12,color:'#64748b'}}>Total: <b>{observations.length}</b> observation(s)</span>
@@ -1089,8 +1088,8 @@ export default function Eleves() {
           <thead>
             <tr>
               <th style={thSticky({padding:'10px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',width:62,minWidth:62,maxWidth:62,background:'#6366f1',borderTopLeftRadius:12})}>Photo</th>
-              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nom</th>
-              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Prénom</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',width:170,minWidth:170})}>Nom</th>
+              <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',width:170,minWidth:170})}>Prénom</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Nationalité</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Classe</th>
               <th style={thSticky({padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'})}>Naissance</th>
@@ -1137,8 +1136,8 @@ export default function Eleves() {
                     )}
                   </div>
                 </td>
-                <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13}}>{el.nom||'—'}</td>
-                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.prenom||'—'}</td>
+                <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13,width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.nom||'—'}</td>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151',width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.prenom||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.oasi_nationalite||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
                   <select value={el.classe_id||''} onChange={e => handleClasseChange(el.id, e.target.value)}

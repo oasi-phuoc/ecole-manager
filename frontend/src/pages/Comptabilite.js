@@ -1156,7 +1156,7 @@ export default function Comptabilite() {
                       <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Commande — {commandeEdit.numero_commande || '—'}</h3>
                       {readOnly && <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: 99 }}>Validée — lecture seule</span>}
                     </div>
-                    <button onClick={fermerCommandePopup} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
+                    <button onClick={fermerCommandePopup} style={{ padding: '6px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b', fontWeight: 600 }}>Fermer</button>
                   </div>
 
                   {/* Ligne d'ajout */}

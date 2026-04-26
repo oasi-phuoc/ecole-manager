@@ -216,7 +216,7 @@ export default function Calendrier() {
           <div style={{background:'white',borderRadius:14,width:320,boxShadow:'0 20px 40px rgba(0,0,0,0.15)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
               <span style={{fontWeight:800,fontSize:14}}>{jourPopup} {MOIS[moisActuel]} {anneeActuelle}</span>
-              <button style={s.btnX} onClick={() => setJourPopup(null)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setJourPopup(null)}>Fermer</button>
             </div>
             <div style={{maxHeight:300,overflowY:'auto'}}>
               {evtsPopup.map((ev,i) => (
@@ -240,7 +240,7 @@ export default function Calendrier() {
           <div style={{background:'white',borderRadius:14,width:320,boxShadow:'0 20px 40px rgba(0,0,0,0.15)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'}}>
               <span style={{fontWeight:800,fontSize:14}}>{jourPopup} {MOIS[moisActuel]} {anneeActuelle}</span>
-              <button style={s.btnX} onClick={() => setJourPopup(null)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setJourPopup(null)}>Fermer</button>
             </div>
             <div style={{maxHeight:300,overflowY:'auto'}}>
               {evtsPopup.map((ev,i) => (
@@ -264,7 +264,7 @@ export default function Calendrier() {
           <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une vacance</h3>
-              <button style={s.btnX} onClick={() => setShowFormVacance(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowFormVacance(false)}>Fermer</button>
             </div>
             <form onSubmit={sauverVacance}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -286,7 +286,7 @@ export default function Calendrier() {
           <div style={{background:'white',padding:28,borderRadius:14,width:400,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>Modifier une évaluation</h3>
-              <button style={s.btnX} onClick={() => setShowFormEval(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowFormEval(false)}>Fermer</button>
             </div>
             <form onSubmit={sauverEval}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -309,7 +309,7 @@ export default function Calendrier() {
           <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{seanceEdit?'Modifier':'Ajouter'} une séance</h3>
-              <button style={s.btnX} onClick={() => setShowFormSeance(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowFormSeance(false)}>Fermer</button>
             </div>
             <form onSubmit={sauverSeance}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -335,7 +335,7 @@ export default function Calendrier() {
           <div style={{background:'white',padding:28,borderRadius:14,width:440,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{retenueEdit?'Modifier':'Ajouter'} une retenue</h3>
-              <button style={s.btnX} onClick={() => setShowFormRetenue(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowFormRetenue(false)}>Fermer</button>
             </div>
             <form onSubmit={sauverRetenue}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -380,7 +380,7 @@ export default function Calendrier() {
           <div style={{background:'white',padding:28,borderRadius:14,width:420,boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <h3 style={{margin:0,fontSize:16,fontWeight:800}}>{particulierEdit?'Modifier':'Ajouter'} un événement</h3>
-              <button style={s.btnX} onClick={() => setShowFormParticulier(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowFormParticulier(false)}>Fermer</button>
             </div>
             <form onSubmit={sauverParticulier}>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>

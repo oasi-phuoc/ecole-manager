@@ -102,7 +102,7 @@ export default function Branches() {
           <div style={s.modal}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>{brancheEdit?'Modifier':'Ajouter'} une branche</h3>
-              <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowForm(false)}>Fermer</button>
             </div>
             {erreur && <div style={s.erreur}>❌ {erreur}</div>}
             <form onSubmit={handleSubmit}>

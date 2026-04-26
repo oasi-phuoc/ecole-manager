@@ -343,7 +343,7 @@ export default function Professeurs({
                   <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{formToast.message}</span>
                 )}
               </div>
-              <button type="button" style={s.btnClose} onClick={fermerFormulaire}>✕</button>
+              <button type="button" style={s.btnCancel} onClick={fermerFormulaire}>Fermer</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'stretch'}}>
@@ -697,7 +697,7 @@ export default function Professeurs({
           <div style={{...s.modal, maxWidth:600}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>📁 Documents — {docsProf.prenom} {nomSansSuffixe(docsProf.nom)}</h3>
-              <button style={s.btnClose} onClick={() => setShowDocs(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowDocs(false)}>Fermer</button>
             </div>
             {isAdmin() && (
               <div style={{marginBottom:16}}>

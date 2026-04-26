@@ -632,8 +632,8 @@ export default function Bulletins() {
               <table style={{ ...s.tbl, tableLayout: 'auto' }}>
                 <thead>
                   <tr style={s.theadRow}>
-                    <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Nom</th>
-                    <th style={{ ...s.th, width: 1, whiteSpace: 'nowrap' }}>Prénom</th>
+                    <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Nom</th>
+                    <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Prénom</th>
                     <th style={{ ...s.th, textAlign: 'center' }}>Critères validés</th>
                     <th style={{ ...s.th, textAlign: 'right' }}>Bulletin</th>
                   </tr>
@@ -647,8 +647,8 @@ export default function Bulletins() {
                     const valide = bulletinSemestre === '1' ? valideS1 : valideS2;
                     return (
                       <tr key={eleve.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                        <td style={{ ...s.td, fontWeight: 700, width: 1, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
-                        <td style={{ ...s.td, width: 1, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
+                        <td style={{ ...s.td, fontWeight: 700, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>{nomSansSuffixe(eleve.nom)}</td>
+                        <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
                         <td style={{ ...s.td, textAlign: 'center' }}>
                           <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: valide ? '#22c55e' : '#e2e8f0', verticalAlign: 'middle', marginRight: 6 }} />
                           <span style={{ fontSize: 12, color: valide ? '#16a34a' : '#94a3b8' }}>{valide ? 'Validé' : 'Non validé'}</span>

@@ -506,7 +506,7 @@ export default function DocumentsAdministratifs() {
           <div style={{ position: 'relative', width: '90vw', height: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>{docPreview.nom}</span>
-              <button onClick={() => setDocPreview(null)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', padding: '6px 14px', fontWeight: 600, fontSize: 13 }}>✕ Fermer</button>
+              <button onClick={() => setDocPreview(null)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', padding: '6px 14px', fontWeight: 600, fontSize: 13 }}>Fermer</button>
             </div>
             {docPreview.url.match(/^data:image\//i) ? (
               <img src={docPreview.url} alt={docPreview.nom} style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8, objectFit: 'contain', background: 'white' }} />

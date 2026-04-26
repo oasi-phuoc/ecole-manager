@@ -213,7 +213,7 @@ export default function Dashboard() {
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>👁 Détail de l'observation</h3>
-              <button style={styles.btnClose} onClick={() => setObservationDetail(null)}>✕</button>
+              <button style={{ padding: '6px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#64748b', fontWeight: 600 }} onClick={() => setObservationDetail(null)}>Fermer</button>
             </div>
             <div style={styles.detailRow}><b>Élève :</b> {observationDetail.eleve_prenom} {observationDetail.eleve_nom}</div>
             <div style={styles.detailRow}><b>Classe :</b> {observationDetail.classe || '—'}</div>

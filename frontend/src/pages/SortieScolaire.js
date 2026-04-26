@@ -358,16 +358,16 @@ export default function SortieScolaire() {
           <div style={st.modal} onClick={e => e.stopPropagation()}>
             <div style={st.modalHeader}>
               <h3 style={st.modalTitre}>{editId ? 'Modifier' : 'Nouvelle'} sortie scolaire</h3>
-              <button style={st.btnClose} onClick={() => setShowForm(false)}>✕</button>
+              <button style={st.btnCancel} onClick={() => setShowForm(false)}>Fermer</button>
             </div>
             <form onSubmit={sauvegarder}>
 
               {/* Type */}
               <div style={st.formSection}>Type</div>
-              <div style={st.typeToggleWrap}>
+              <div style={{ ...st.toggleGroup, display: 'inline-flex', marginBottom: 8 }}>
                 {['juin', 'autres'].map(t => (
                   <button key={t} type="button"
-                    style={{ ...st.typeToggleBtn, ...(form.type === t ? st.typeToggleBtnActif : {}) }}
+                    style={{ ...st.toggleBtn, ...(form.type === t ? st.toggleBtnActif : {}) }}
                     onClick={() => setForm({ ...form, type: t })}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -449,7 +449,7 @@ export default function SortieScolaire() {
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={st.lbl}>Lieu de départ *</label>
-                  <div style={st.toggleGroup}>
+                  <div style={{ ...st.toggleGroup, display: 'inline-flex' }}>
                     {[...LIEUX_PREDEFINIS, 'autre'].map((lieu) => (
                       <button key={lieu} type="button"
                         onClick={() => setForm({...form, lieu_depart: lieu, ...(lieu !== 'autre' ? { lieu_depart_autre: '' } : {})})}
@@ -474,7 +474,7 @@ export default function SortieScolaire() {
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={st.lbl}>Lieu de retour *</label>
-                  <div style={st.toggleGroup}>
+                  <div style={{ ...st.toggleGroup, display: 'inline-flex' }}>
                     {[...LIEUX_PREDEFINIS, 'autre'].map((lieu) => (
                       <button key={`retour-${lieu}`} type="button"
                         onClick={() => setForm({...form, lieu_retour: lieu, ...(lieu !== 'autre' ? { lieu_retour_autre: '' } : {})})}

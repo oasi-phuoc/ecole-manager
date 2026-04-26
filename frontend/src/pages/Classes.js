@@ -960,7 +960,7 @@ export default function Classes() {
         <img src={photoZoom} alt="photo" style={{maxWidth:'80vw',maxHeight:'80vh',borderRadius:12,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}} />
         <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:12}}>
           <a href={photoZoom} download="photo.jpg" style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Télécharger</a>
-          <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>✕ Fermer</button>
+          <button onClick={() => setPhotoZoom(null)} style={{padding:'8px 20px',background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600}}>Fermer</button>
         </div>
       </div>
     </div>
@@ -1157,8 +1157,8 @@ export default function Classes() {
         <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:600,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>📁 Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
-              <button style={{background:'none',border:'none',fontSize:18,cursor:'pointer'}} onClick={() => setShowDocsEleve(false)}>✕</button>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Documents — {docsEleve.prenom} {docsEleve.nom}</h3>
+              <button style={s.btnCancel} onClick={() => setShowDocsEleve(false)}>Fermer</button>
             </div>
             {isAdmin() && (
               <div style={{marginBottom:16}}>
@@ -1171,7 +1171,7 @@ export default function Classes() {
                     options={['CV','Charte','Attestation','Justificatif','Bulletin de notes','Autre'].map(t => ({value:t, label:t}))}
                   />
                   <label style={{padding:'8px 16px',background:'#6366f1',color:'white',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>
-                    📎 Choisir un fichier
+                    Choisir un fichier
                     <input type="file" style={{display:'none'}} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => { if(e.target.files[0]) uploadDocumentEleve(e.target.files[0], uploadEleveForm.type); e.target.value=''; }} />
                   </label>
                   <span style={{fontSize:11,color:'#94a3b8'}}>PDF, Word, image — max 5MB</span>
@@ -1186,7 +1186,6 @@ export default function Classes() {
               ) : eleveDocs.map(doc => (
                 <div key={doc.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,border:'1px solid #e2e8f0',marginBottom:8,background:'#f8fafc'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <span style={{fontSize:20}}>{doc.nom.endsWith('.pdf')?'📄':doc.nom.match(/\.(jpg|jpeg|png)$/i)?'🖼️':'📝'}</span>
                     <div>
                       <div style={{fontWeight:600,fontSize:13,color:'#1e293b'}}>{doc.nom}</div>
                       <div style={{fontSize:11,color:'#94a3b8'}}>
@@ -1219,7 +1218,7 @@ export default function Classes() {
           <div style={{position:'relative',width:'90vw',height:'85vh',display:'flex',flexDirection:'column'}} onClick={e => e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <span style={{color:'white',fontWeight:700,fontSize:14}}>{docPreview.nom}</span>
-              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>✕ Fermer</button>
+              <button onClick={() => setDocPreview(null)} style={{background:'#ef4444',color:'white',border:'none',borderRadius:8,cursor:'pointer',padding:'6px 14px',fontWeight:600,fontSize:13}}>Fermer</button>
             </div>
             {docPreview.url.match(/^data:image\//i) ? (
               <img src={docPreview.url} alt={docPreview.nom} style={{maxWidth:'100%',maxHeight:'100%',borderRadius:8,objectFit:'contain',background:'white'}} />
@@ -1238,7 +1237,7 @@ export default function Classes() {
                 <h3 style={s.modalTitle}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
                 {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
               </div>
-              <button style={s.btnClose} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>✕</button>
+              <button style={s.btnCancel} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
               <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
@@ -1383,7 +1382,7 @@ export default function Classes() {
           <div style={{...s.modal, width:'71vw', maxWidth:825, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Fiches d'observation — {obsEleve.prenom} {obsEleve.nom}</h3>
-              <button style={s.btnClose} onClick={() => setShowObs(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowObs(false)}>Fermer</button>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <span style={{fontSize:12,color:'#64748b'}}>Total: <b>{observations.length}</b> observation(s)</span>
@@ -1490,7 +1489,7 @@ export default function Classes() {
           <div style={{...s.modal, width:'95vw', maxWidth:960, maxHeight:'90vh', overflowY:'auto', padding:32}}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>Fiche élève</h3>
-              <button style={s.btnClose} onClick={() => setShowEleveReadOnly(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowEleveReadOnly(false)}>Fermer</button>
             </div>
             {(() => {
               const ro = {padding:'8px 10px',border:'1px solid #f1f5f9',borderRadius:7,fontSize:12,color:'#1e293b',width:'100%',boxSizing:'border-box',background:'#f8fafc'};
@@ -1598,8 +1597,8 @@ export default function Classes() {
               <tr style={s.thead}>
                 <th style={{...s.th,width:56,minWidth:56,maxWidth:56,textAlign:'center'}}></th>
                 <th style={{...s.th,width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>Photo</th>
-                <th style={s.th}>Nom</th>
-                <th style={s.th}>Prénom</th>
+                <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Nom</th>
+                <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Prénom</th>
                 <th style={s.th}>Nationalité</th>
                 <th style={s.th}>Naissance</th>
                 <th style={{...s.th, textAlign:'center'}}>Catégorie</th>
@@ -1645,8 +1644,8 @@ export default function Classes() {
                       )}
                     </div>
                   </td>
-                  <td style={{...s.td,fontWeight:700,color:'#1e293b'}}>{el.nom || '—'}</td>
-                  <td style={s.td}>{el.prenom || '—'}</td>
+                  <td style={{...s.td,fontWeight:700,color:'#1e293b',width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.nom || '—'}</td>
+                  <td style={{...s.td,width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.prenom || '—'}</td>
                   <td style={s.td}>{el.oasi_nationalite || '—'}</td>
                   <td style={s.td}>{el.date_naissance ? new Date(el.date_naissance).toLocaleDateString('fr-CH') : el.oasi_nais ? new Date(el.oasi_nais).toLocaleDateString('fr-CH') : '—'}</td>
                   <td style={{...s.td, textAlign:'center'}}>{el.categorie || '—'}</td>
@@ -2147,7 +2146,7 @@ export default function Classes() {
           <div style={s.modal}>
             <div style={s.modalHeader}>
               <h3 style={s.modalTitle}>{classeEdit?'Modifier':'Ajouter'} une classe</h3>
-              <button style={s.btnClose} onClick={() => setShowForm(false)}>✕</button>
+              <button style={s.btnCancel} onClick={() => setShowForm(false)}>Fermer</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div style={s.grid2}>

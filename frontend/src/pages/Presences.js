@@ -13,7 +13,7 @@ const OPTS_COLOR = { '': '#94a3b8', 'P': '#10b981', 'A': '#ef4444', 'R': '#f59e0
 const PERIODES = [1,2,3,4,5,6,7,8];
 const JOURS_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const COL_NOM_WIDTH = 170;
-const COL_PRENOM_WIDTH = 150;
+const COL_PRENOM_WIDTH = 170;
 const STATS_TD = { padding:'11px 14px', fontSize:13, color:'#374151' };
 /** Décalage vertical du 2e rang d’en-tête (saisie présences) pour le sticky */
 
@@ -653,8 +653,8 @@ export default function Presences() {
             <div style={{ overflowX: 'auto', maxHeight: 'min(72vh, calc(100vh - 260px))', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <colgroup>
-                  <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
-                  <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH, maxWidth: COL_PRENOM_WIDTH }} />
+                  <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH }} />
+                  <col style={{ width: COL_PRENOM_WIDTH, minWidth: COL_PRENOM_WIDTH }} />
                   <col style={{ width: 74, minWidth: 74, maxWidth: 74 }} />
                   {PERIODES.map(i => <col key={`col-p-${i}`} style={{ width: 46, minWidth: 46, maxWidth: 46 }} />)}
                   <col style={{ width: 'auto' }} />
