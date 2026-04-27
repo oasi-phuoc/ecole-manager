@@ -2328,8 +2328,15 @@ export default function TCF() {
       const y2 = chartBottom - h2;
       parts.push(`<rect x="${baseX}" y="${y1}" width="${barW}" height="${h1}" fill="#60a5fa" rx="4"/>`);
       parts.push(`<rect x="${baseX + barW + 8}" y="${y2}" width="${barW}" height="${h2}" fill="#34d399" rx="4"/>`);
-      parts.push(`<text x="${baseX + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
-      parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v2) || 0}</text>`);
+      if (showTrendPoints) {
+        // Points visibles : valeurs en blanc à l'intérieur des barres
+        parts.push(`<text x="${baseX + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
+        parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v2) || 0}</text>`);
+      } else {
+        // Points masqués : étiquettes au-dessus des barres en couleur foncée
+        parts.push(`<text x="${baseX + barW / 2}" y="${y1 - 5}" text-anchor="middle" font-size="13" fill="#1e40af" font-weight="800">${Number(s.v1) || 0}</text>`);
+        parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${y2 - 5}" text-anchor="middle" font-size="13" fill="#065f46" font-weight="800">${Number(s.v2) || 0}</text>`);
+      }
       parts.push(`<text x="${baseX + barW + 4}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(s.label || s.session || '')}</text>`);
     });
 
