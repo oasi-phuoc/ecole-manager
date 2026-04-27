@@ -251,7 +251,6 @@ export default function TCF() {
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphShowNiveaux, setGraphShowNiveaux] = useState(false);
   const [graphClasseId, setGraphClasseId] = useState('');
-  const [graphEleveSearch, setGraphEleveSearch] = useState('');
   const [graphRecherche, setGraphRecherche] = useState('');
   const [graphSortDir, setGraphSortDir] = useState('asc');
   const [anneeScolaire, setAnneeScolaire] = useState('');
@@ -2238,15 +2237,21 @@ export default function TCF() {
       ? Number(options.innerH)
       : (wide ? 340 : 230);
     const padL = wide ? 54 : 48;
-    const padT = 10;
-    const padB = 70;
+    const padT = options.fitContainer ? 5 : 10;
+    const padB = options.fitContainer ? 52 : 70;
     const legendW = wide ? 140 : 130;
-    const chartW = Math.max(groupW * Math.max(series.length, 1), 240);
+    const nSer = Math.max(series.length, 1);
+    const fitMinSlots = options.fitContainer ? Math.max(1, Number(options.fitMinSlots) > 0 ? Number(options.fitMinSlots) : 6) : nSer;
+    const slotCount = options.fitContainer ? Math.max(nSer, fitMinSlots) : nSer;
+    const chartW = Math.max(groupW * slotCount, 240);
     const svgW = padL + chartW + legendW + 24;
     const svgH = padT + innerH + padB;
     const chartLeft = padL;
     const chartRight = padL + chartW;
     const chartBottom = padT + innerH;
+    const barOffsetX = options.fitContainer && series.length > 0
+      ? chartLeft + Math.max(0, (chartW - groupW * series.length) / 2)
+      : chartLeft;
     const parts = [];
 
     const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(maxScore, Number(v) || 0)) / maxScore) * innerH;
@@ -2288,7 +2293,7 @@ export default function TCF() {
 
     // Barres + valeurs
     series.forEach((s, i) => {
-      const baseX = chartLeft + i * groupW + (groupW - (barW * 2 + 8)) / 2;
+      const baseX = barOffsetX + i * groupW + (groupW - (barW * 2 + 8)) / 2;
       const h1 = Math.max(2, ((Number(s.v1) || 0) / maxScore) * innerH);
       const h2 = Math.max(2, ((Number(s.v2) || 0) / maxScore) * innerH);
       const y1 = chartBottom - h1;
@@ -2305,7 +2310,7 @@ export default function TCF() {
       const pts = series.map((s, i) => {
         const moy = (Number(s.v1 || 0) + Number(s.v2 || 0)) / 2;
         const total = Number(s.v1 || 0) + Number(s.v2 || 0);
-        const x = chartLeft + i * groupW + groupW / 2;
+        const x = barOffsetX + i * groupW + groupW / 2;
         const y = yFromValue(moy);
         return { x, y, moy, total };
       });
@@ -2329,8 +2334,9 @@ export default function TCF() {
       parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Moyenne</text>`);
     }
 
-    const svgAttrs = wide
-      ? ` xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;height:auto;display:block"`
+    const responsiveSvg = wide || options.fitContainer === true;
+    const svgAttrs = responsiveSvg
+      ? ` xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;max-height:100%;height:auto;display:block"`
       : ` xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}"`;
     return `<svg${svgAttrs}>${parts.join('')}</svg>`;
   };
@@ -2924,8 +2930,6 @@ export default function TCF() {
       const classeNom = classesMap[String(e.classe_id)]?.nom || '';
       return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
     });
-    const elevesTousGraph = [...eleves]
-      .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
     const classModeActive = graphVue === 'moyenne' || graphVue === 'classe';
     const classesListeGraph = classesNiveau.filter((cl) => !search || String(cl.nom || '').toLowerCase().includes(search));
 
@@ -2942,11 +2946,52 @@ export default function TCF() {
           ? ["Test d'août", '1e semestre']
           : ["Test d'août"];
 
-    const sessionsIndiv = sessionsToShowIds.map(session => {
-      const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
-      if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
-      const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
-    }).filter(s => s.hasData);
+    const sessionsIndiv = graphEleveId
+      ? sessionsToShowIds.map(session => {
+        const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
+        if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+        const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+      }).filter(s => s.hasData)
+      : [];
+
+    const getEleveSessionGlobal = (e) => {
+      if (!graphSession) return null;
+      const scFr = getScore('francais', graphSession, String(e.id));
+      const scMa = getScore('math', graphSession, String(e.id));
+      const fr = calculFr(scFr);
+      const ma = calculMath(scMa);
+      const tFr = fr.total === '' ? null : Number(fr.total);
+      const tMa = ma.total === '' ? null : Number(ma.total);
+      const vals = [tFr, tMa].filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    };
+
+    const dataTousEleves = graphSession
+      ? elevesFiltered
+        .map((e) => {
+          const scFr = getScore('francais', graphSession, String(e.id));
+          const scMa = getScore('math', graphSession, String(e.id));
+          const fr = calculFr(scFr);
+          const ma = calculMath(scMa);
+          const v1 = fr.total !== '' ? Number(fr.total) : null;
+          const v2 = ma.total !== '' ? Number(ma.total) : null;
+          const hasData = v1 != null || v2 != null;
+          return {
+            label: `${e.prenom || ''} ${toDisplayNom(e.nom)}`.trim(),
+            v1: v1 != null ? Math.round(v1 * 10) / 10 : 0,
+            v2: v2 != null ? Math.round(v2 * 10) / 10 : 0,
+            hasData,
+          };
+        })
+        .filter((x) => x.hasData)
+        .map(({ label, v1, v2 }) => ({ label, v1, v2 }))
+      : [];
+
+    const moyenneTousEleves = (() => {
+      if (!graphSession) return null;
+      const vals = elevesFiltered.map((e) => getEleveSessionGlobal(e)).filter((v) => v != null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    })();
 
     // Vue Classe
     const elevesClasse = graphClasseId
@@ -3006,7 +3051,17 @@ export default function TCF() {
     };
 
     const handlePrintSelection = () => {
-      if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
+      if (graphVue === 'individuelle' && !graphEleveId && graphSession && dataTousEleves.length > 0) {
+        printCharts([{
+          label: `Moyennes élèves — ${SESSION_LABEL[graphSession] || graphSession}`,
+          series: dataTousEleves,
+          nom: niveauActif,
+          prenom: '',
+          classe: `${elevesFiltered.length} élève(s)`,
+          niveau: niveauActif,
+          showTrend: false,
+        }], isFr, 100);
+      } else if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
         const e = eleves.find(ev => String(ev.id) === graphEleveId);
         const classe = classesMap[String(e?.classe_id)]?.nom || '';
         const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
@@ -3049,7 +3104,8 @@ export default function TCF() {
       printCharts(charts, isFr, maxScore);
     };
 
-    const canPrintSelection = (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
+    const canPrintSelection = (graphVue === 'individuelle' && !graphEleveId && graphSession && dataTousEleves.length > 0) ||
+      (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
       (classModeActive && graphClasseId && graphSession && dataClasse.length > 0);
 
     const niveauIndividuel = (() => {
@@ -3079,14 +3135,25 @@ export default function TCF() {
       }));
     const classesRangeLabel = classesNiveau.length ? `${classesNiveau[0].nom} à ${classesNiveau[classesNiveau.length - 1].nom}` : '—';
 
+    /** Hauteurs stables (changement classe / élève sans saut de layout) */
+    const GRAPH_EMBED_IDENTITY_MIN = 56;
+    const GRAPH_EMBED_PLOT_PX = 272;
+    const GRAPH_FULL_IDENTITY_MIN = 72;
+    const GRAPH_FULL_PLOT_PX = graphUiLandscape ? 400 : 360;
+
     const renderSvgChart = (items, opts = {}) => {
       const chartMax = Number(opts.maxScoreOverride) > 0 ? Number(opts.maxScoreOverride) : maxScore;
-      const wideUi = graphUiLandscape;
+      const embedPanel = opts.embedClassPanel === true;
+      const fixPlot = embedPanel || opts.fixPlotHeight === true;
+      const wideUi = graphUiLandscape && !embedPanel;
+      const plotPx = embedPanel ? GRAPH_EMBED_PLOT_PX : (fixPlot ? GRAPH_FULL_PLOT_PX : null);
+      const identityMin = embedPanel ? GRAPH_EMBED_IDENTITY_MIN : (fixPlot ? GRAPH_FULL_IDENTITY_MIN : undefined);
       const svg = buildChartSVG(items, chartMax, isFr, {
         showTrend: opts.showTrend !== false,
         niveau: opts.niveau || '',
-        innerH: wideUi ? 360 : 320,
+        innerH: embedPanel ? 240 : (wideUi ? 360 : 320),
         chartWide: wideUi,
+        fitContainer: embedPanel || fixPlot,
         label1: opts.label1,
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
@@ -3103,14 +3170,39 @@ export default function TCF() {
       const classeAff = String(opts.classe || '');
       const identiteLabel = opts.identiteLabel || 'NOM Prénom';
       const cardW = opts.cardWidth != null ? opts.cardWidth : (wideUi ? 'min(100%, 1180px)' : 800);
+      const padCard = embedPanel ? '10px 12px' : (wideUi ? '24px 32px' : '24px 28px');
       return (
-        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: wideUi ? '24px 32px' : '24px 28px', width: cardW, maxWidth: '100%' }}>
-            {/* En-tête */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <img src={logoSrc} alt="Logo" style={{ width: 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
-                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#334155' }}>
+        <div style={{
+          display: 'flex', justifyContent: 'center', width: '100%',
+          height: embedPanel ? '100%' : undefined, minHeight: embedPanel ? 0 : undefined,
+        }}
+        >
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 12,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            padding: padCard,
+            width: cardW,
+            maxWidth: '100%',
+            height: embedPanel ? '100%' : undefined,
+            maxHeight: embedPanel ? '100%' : undefined,
+            minHeight: embedPanel ? 0 : undefined,
+            overflow: embedPanel ? 'hidden' : undefined,
+            display: embedPanel ? 'flex' : undefined,
+            flexDirection: embedPanel ? 'column' : undefined,
+            boxSizing: 'border-box',
+          }}
+          >
+            {/* En-tête — espacement sous l’en-tête réduit de moitié vs. maquette initiale */}
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: embedPanel ? 8 : 12,
+              marginBottom: embedPanel ? 4 : 9, paddingBottom: embedPanel ? 3 : 7, flexShrink: 0,
+            }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: embedPanel ? 6 : 10 }}>
+                <img src={logoSrc} alt="Logo" style={{ width: embedPanel ? 28 : 38, height: 'auto', objectFit: 'contain', backgroundColor: 'white', padding: 2 }} onError={e => { e.target.style.display = 'none'; }} />
+                <div style={{ fontSize: embedPanel ? 9 : 12, lineHeight: 1.45, color: '#334155' }}>
                   <div>Département de la santé, des affaires sociales et de la culture</div>
                   <div>Service de l'action sociale</div>
                   <div>Office de l'asile</div>
@@ -3118,28 +3210,51 @@ export default function TCF() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
+                <div style={{ fontSize: embedPanel ? 18 : 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                <div style={{ fontSize: embedPanel ? 10 : 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
+                <div style={{ fontSize: embedPanel ? 8 : 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
               </div>
             </div>
             {/* Titre */}
-            <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 25, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 40, marginTop: 60, color: '#0f172a' }}>{titreGraph}</div>
+            <div style={{
+              textAlign: 'center', fontWeight: 700, fontSize: embedPanel ? 14 : 25, letterSpacing: embedPanel ? 0.5 : 1, textTransform: 'uppercase',
+              marginBottom: embedPanel ? 3 : 20, marginTop: embedPanel ? 2 : 30, color: '#0f172a', flexShrink: 0,
+            }}
+            >{titreGraph}</div>
             {/* Date */}
-            <div style={{ textAlign: 'right', fontSize: 16, color: '#1e293b', marginBottom: 40 }}>{dateVetroz}</div>
-            {/* Identité */}
-            {(nomMaj || prenomAff) && <div style={{ fontSize: 16, color: '#1f2937', marginBottom: 4 }}><b>{identiteLabel} :</b> {nomMaj} {prenomAff}</div>}
-            {classeAff && <div style={{ fontSize: 16, color: '#1f2937', marginBottom: 16 }}><b>Classe :</b> {classeAff}</div>}
-            {/* Graphique */}
-            <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
-              <div dangerouslySetInnerHTML={{ __html: svg }} />
+            <div style={{ textAlign: 'right', fontSize: embedPanel ? 11 : 16, color: '#1e293b', marginBottom: embedPanel ? 3 : 20, flexShrink: 0 }}>{dateVetroz}</div>
+            {/* Identité — hauteur minimale fixe si zone tracé fixe (évite de redimensionner le graphique) */}
+            <div style={{ flexShrink: 0, minHeight: identityMin, marginBottom: embedPanel ? 6 : (fixPlot ? 12 : 0) }}>
+              {(nomMaj || prenomAff) && <div style={{ fontSize: embedPanel ? 12 : 16, color: '#1f2937', marginBottom: 4 }}><b>{identiteLabel} :</b> {nomMaj} {prenomAff}</div>}
+              {classeAff && <div style={{ fontSize: embedPanel ? 12 : 16, color: '#1f2937', marginBottom: embedPanel ? 0 : 16 }}><b>Classe :</b> {classeAff}</div>}
             </div>
+            {/* Graphique — hauteur de tracé fixe en mode panneau / fixPlotHeight */}
+            <div style={{
+              overflowX: fixPlot ? 'hidden' : 'auto',
+              overflowY: fixPlot ? 'hidden' : 'visible',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: fixPlot ? 'center' : undefined,
+              flex: embedPanel && !plotPx ? 1 : undefined,
+              minHeight: embedPanel && !plotPx ? 0 : undefined,
+              ...(plotPx != null ? { height: plotPx, minHeight: plotPx, maxHeight: plotPx, flex: '0 0 auto' } : {}),
+            }}
+            >
+              <div
+                style={fixPlot ? { width: '100%', height: '100%', maxHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 } : undefined}
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+            </div>
+            {embedPanel ? <div style={{ flex: 1, minHeight: 0 }} /> : null}
             {/* Pied de page */}
-            <div style={{ marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 10 }}>
+            <div style={{
+              marginTop: embedPanel ? 6 : 10, paddingTop: embedPanel ? 4 : 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 10, flexShrink: 0,
+            }}
+            >
               <img
                 src={logoPiedSrc}
                 alt="Logo pied de page"
-                style={{ height: 26, width: 'auto', objectFit: 'contain' }}
+                style={{ height: embedPanel ? 18 : 26, width: 'auto', objectFit: 'contain' }}
                 onError={(e) => {
                   if (!e.currentTarget.dataset.fallback) {
                     e.currentTarget.dataset.fallback = '1';
@@ -3149,7 +3264,7 @@ export default function TCF() {
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.35 }}>
+              <div style={{ fontSize: embedPanel ? 9 : 12, color: '#64748b', lineHeight: 1.35 }}>
                 <div>Zone Industrielle 4, 1963 Vétroz</div>
                 <div>Tél. 027 606 18 60</div>
               </div>
@@ -3181,7 +3296,7 @@ export default function TCF() {
               <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
                 <button
                   type="button"
-                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); }}
                   style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                 >
                   Trier
@@ -3190,7 +3305,7 @@ export default function TCF() {
                   <button
                     key={n}
                     type="button"
-                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); }}
                     style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                   >
                     {n}
@@ -3209,8 +3324,8 @@ export default function TCF() {
               ))}
             </div>
             <div style={styles.pillGroup}>
-              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(classModeActive ? styles.pillBtnActif : {}) }}>Classes</button>
-              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élèves</button>
+              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); }} style={{ ...styles.pillBtn, ...(classModeActive ? styles.pillBtnActif : {}) }}>Classes</button>
+              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); setGraphEleveId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élèves</button>
             </div>
             <div style={styles.pillGroup}>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
@@ -3218,34 +3333,92 @@ export default function TCF() {
             </div>
           </div>
         </div>
+        {/* Graphique Élèves — liste à gauche + graphique (comme Classes), « Tous les élèves » par défaut */}
         {graphVue === 'individuelle' && (
-          <div style={styles.filtersRow}>
-            <div style={{ ...styles.pillGroup, maxWidth: '100%', overflowX: 'auto', padding: 3 }}>
-              {elevesTousGraph.map((e) => {
-                const classeNom = classesMap[String(e.classe_id)]?.nom || '';
-                const label = `${e.prenom || ''} ${toDisplayNom(e.nom) || ''}`.trim();
-                const labelComplet = classeNom ? `${label} — ${classeNom}` : label;
-                const actif = String(graphEleveId) === String(e.id);
-                return (
-                  <button
-                    key={`graph-eleve-toggle-${e.id}`}
-                    type="button"
-                    onClick={() => setGraphEleveId(String(e.id))}
-                    style={{ ...styles.pillBtn, ...(actif ? styles.pillBtnActif : {}) }}
-                    title={labelComplet}
+          <div style={{ height: 'calc(100vh - 260px)', maxHeight: 'calc(100vh - 260px)', overflow: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 20, height: '100%', minHeight: 0, boxSizing: 'border-box' }}>
+              <div style={{ width: 300, flexShrink: 0, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>
+                  <span>Élève</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>Moyenne</span>
+                </div>
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { setGraphEleveId(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGraphEleveId(''); } }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', background: !graphEleveId ? '#eef2ff' : 'white', color: !graphEleveId ? '#4338ca' : '#1e293b', fontWeight: !graphEleveId ? 700 : 400, borderLeft: `3px solid ${!graphEleveId ? '#6366f1' : 'transparent'}`, borderBottom: '1px solid #e2e8f0', transition: 'background 0.1s' }}
                   >
-                    {labelComplet}
-                  </button>
-                );
-              })}
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Tous les élèves</span>
+                    <span style={{ flexShrink: 0, fontWeight: !graphEleveId ? 700 : 600, fontVariantNumeric: 'tabular-nums', color: !graphEleveId ? '#4338ca' : '#64748b' }}>{fmtMoyClasse(moyenneTousEleves)}</span>
+                  </div>
+                  {elevesFiltered.map((el, idx) => {
+                    const isSelected = String(graphEleveId) === String(el.id);
+                    const moy = getEleveSessionGlobal(el);
+                    const classeNom = classesMap[String(el.classe_id)]?.nom || '';
+                    const title = classeNom ? `${el.prenom || ''} ${toDisplayNom(el.nom)} — ${classeNom}` : `${el.prenom || ''} ${toDisplayNom(el.nom)}`;
+                    return (
+                      <div
+                        key={`graph-eleve-side-${el.id}`}
+                        role="button"
+                        tabIndex={0}
+                        title={title}
+                        onClick={() => setGraphEleveId(String(el.id))}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGraphEleveId(String(el.id)); } }}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSelected ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSelected ? '#4338ca' : '#1e293b', fontWeight: isSelected ? 700 : 400, borderLeft: `3px solid ${isSelected ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}
+                      >
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{el.prenom} {toDisplayNom(el.nom)}</span>
+                        <span style={{ flexShrink: 0, fontWeight: isSelected ? 700 : 500, fontVariantNumeric: 'tabular-nums', color: isSelected ? '#4338ca' : '#64748b' }}>{fmtMoyClasse(moy)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {!graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+                {!graphEleveId && graphSession && dataTousEleves.length === 0 && <div style={styles.msgVide}>Aucune note saisie pour les élèves de ce filtre et cette session.</div>}
+                {!graphEleveId && graphSession && dataTousEleves.length > 0 && renderSvgChart(
+                  dataTousEleves,
+                  {
+                    embedClassPanel: true,
+                    showTrend: false,
+                    niveau: niveauActif,
+                    nom: niveauActif,
+                    prenom: '',
+                    classe: `${SESSION_LABEL[graphSession] || graphSession} — ${elevesFiltered.length} élève(s)`,
+                    identiteLabel: 'Niveau',
+                    title: 'Moyennes des élèves',
+                    label1: 'Français',
+                    label2: 'Mathématiques',
+                    showFrenchLevelMarks: false,
+                    showMathLevelMarks: false,
+                    maxScoreOverride: 100,
+                    cardWidth: '100%',
+                  }
+                )}
+                {graphEleveId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+                {graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cet élève.</div>}
+                {graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(
+                  sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
+                  {
+                    embedClassPanel: true,
+                    showTrend: true,
+                    niveau: niveauIndividuel,
+                    nom: toDisplayNom(eleveIndividuel?.nom || ''),
+                    prenom: eleveIndividuel?.prenom || '',
+                    classe: classeIndividuelle?.nom || '',
+                  }
+                )}
+              </div>
             </div>
           </div>
         )}
-        {/* Graphique — zone défilante comme le tableau Résultats ; colonne classes sticky dans ce bloc */}
+        {/* Graphique Classes — même hauteur utile que le tableau Résultats ; défilement uniquement dans la liste classes */}
         {classModeActive && (
-          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 260px)', WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, paddingBottom: 8 }}>
-            <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, zIndex: 6, alignSelf: 'flex-start', maxHeight: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+          <div style={{ height: 'calc(100vh - 260px)', maxHeight: 'calc(100vh - 260px)', overflow: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 20, height: '100%', minHeight: 0, boxSizing: 'border-box' }}>
+            <div style={{ width: 280, flexShrink: 0, height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
               <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>
                 <span>Classe</span>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>Moyenne</span>
@@ -3280,12 +3453,13 @@ export default function TCF() {
                 })}
               </div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {!graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
               {!graphClasseId && graphSession && moyenneSeries.length === 0 && <div style={styles.msgVide}>Aucune moyenne disponible pour les classes de ce niveau et cette session.</div>}
               {!graphClasseId && graphSession && moyenneSeries.length > 0 && renderSvgChart(
                 moyenneSeries,
                 {
+                  embedClassPanel: true,
                   showTrend: false,
                   niveau: niveauActif,
                   nom: niveauActif,
@@ -3306,6 +3480,7 @@ export default function TCF() {
               {graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
                 dataClasse,
                 {
+                  embedClassPanel: true,
                   showTrend: false,
                   niveau: niveauClasse,
                   nom: '',
@@ -3316,19 +3491,6 @@ export default function TCF() {
             </div>
             </div>
           </div>
-        )}
-        {graphVue === 'individuelle' && !graphEleveId && <div style={styles.msgVide}>Sélectionnez un élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
-        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cet élève.</div>}
-        {graphVue === 'individuelle' && graphEleveId && graphSession && sessionsIndiv.length > 0 && renderSvgChart(
-          sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
-          {
-            showTrend: true,
-            niveau: niveauIndividuel,
-            nom: toDisplayNom(eleveIndividuel?.nom || ''),
-            prenom: eleveIndividuel?.prenom || '',
-            classe: classeIndividuelle?.nom || '',
-          }
         )}
       </div>
     );
@@ -3644,11 +3806,33 @@ export default function TCF() {
               <button type="button" onClick={() => {
                 const isFr = ongletGraphiqueMatiere === 'francais';
                 const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
-                const classesNiveau = classes.filter(c => normaliserNiveau(c.niveau) === niveauActif).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+                const classesNiveau = classes
+                  .filter(c => !graphNiveau || normaliserNiveau(c.niveau) === graphNiveau)
+                  .sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
                 const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
                 const maxScore = isFr ? 60 : 50;
                 const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : [];
-                if (graphVue === 'individuelle' && graphEleveId) {
+                if (graphVue === 'individuelle' && !graphEleveId && graphSession) {
+                  const classeIdsN = new Set(classesNiveau.map(c => String(c.id)));
+                  const elevesF = eleves.filter(e => classeIdsN.has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+                  const searchT = graphRecherche.trim().toLowerCase();
+                  const elevesFilt = !searchT ? elevesF : elevesF.filter((e) => {
+                    const cn = classesMap[String(e.classe_id)]?.nom || '';
+                    return `${toDisplayNom(e.nom)} ${e.prenom} ${cn}`.toLowerCase().includes(searchT);
+                  });
+                  const dataAll = elevesFilt.map((e) => {
+                    const scFr = getScore('francais', graphSession, String(e.id));
+                    const scMa = getScore('math', graphSession, String(e.id));
+                    const fr = calculFr(scFr);
+                    const ma = calculMath(scMa);
+                    const v1 = fr.total !== '' ? Number(fr.total) : null;
+                    const v2 = ma.total !== '' ? Number(ma.total) : null;
+                    const hasData = v1 != null || v2 != null;
+                    return { label: `${e.prenom || ''} ${toDisplayNom(e.nom)}`.trim(), v1: v1 != null ? Math.round(v1 * 10) / 10 : 0, v2: v2 != null ? Math.round(v2 * 10) / 10 : 0, hasData };
+                  }).filter((x) => x.hasData).map(({ label, v1, v2 }) => ({ label, v1, v2 }));
+                  if (dataAll.length === 0) return;
+                  printCharts([{ label: `Moyennes élèves — ${SESSION_LABEL[graphSession] || graphSession}`, series: dataAll, nom: niveauActif, prenom: '', classe: `${elevesFilt.length} élève(s)`, niveau: niveauActif, showTrend: false }], isFr, 100);
+                } else if (graphVue === 'individuelle' && graphEleveId) {
                   const sessionsIndiv = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData);
                   if (sessionsIndiv.length === 0) return;
                   const e = eleves.find(ev => String(ev.id) === graphEleveId);

@@ -495,8 +495,8 @@ export default function Notes() {
           <div class="bul-date">Vétroz, le ${dateStr}</div>
           <div style="font-size:12pt;color:#1e293b;margin-bottom:6px;line-height:1.35;padding-left:10px"><span style="font-weight:700">Nom Prénom :</span><span style="margin-left:6px">${eleve.prenom} ${eleve.nom}</span></div>
           <div style="font-size:12pt;color:#1e293b;margin-bottom:16px;line-height:1.35;padding-left:10px"><span style="font-weight:700">Classe :</span><span style="margin-left:6px">${classeNom}</span></div>
-          <div style="display:grid;grid-template-columns:50% 50%;gap:6px;">
-            <div style="display:flex;flex-direction:column;gap:20px;">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:20px;min-width:0;">
               <table><thead><tr><th style="${th}">Branches principales</th><th style="${thC}">S1</th><th style="${thC}">S2</th></tr></thead><tbody>
                 ${prin.length===0?`<tr><td colspan="3" style="${td};border-right:${blockBorder};color:#aaa">—</td></tr>`:prin.map(brRow).join('')}
                 <tr><td style="${tdBottomL};font-weight:700">Moyenne</td><td style="${tdBottomCR};font-weight:700">${fv(mP1)}</td><td style="${tdBottomCR};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
@@ -509,13 +509,13 @@ export default function Notes() {
                 <tr><td style="${tdBottomL};font-weight:700">Moyenne annuelle</td><td style="${tdBottomCR};font-weight:900" colspan="2">${showS2&&mAnn!=null?fv(mAnn):'—'}</td></tr>
               </tbody></table>
             </div>
-            <div style="display:flex;flex-direction:column;">
-              <div style="flex:1;">
-                <table><colgroup><col/><col style="width:34px"/><col style="width:34px"/></colgroup><thead><tr><th style="${th}">Comportements</th><th style="${thC};width:34px;">S1</th><th style="${thC};width:34px;">S2</th></tr></thead><tbody>
+            <div style="display:flex;flex-direction:column;min-width:0;">
+              <div style="flex:1;min-width:0;">
+                <table style="max-width:100%;"><colgroup><col/><col style="width:34px"/><col style="width:34px"/></colgroup><thead><tr><th style="${th}">Comportements</th><th style="${thC};width:34px;">S1</th><th style="${thC};width:34px;">S2</th></tr></thead><tbody>
                   ${BULLETIN_CRITERES_LABELS.map((label,idx)=>`<tr><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomL : td}">${label.join(' ')}</td><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomNoDiv : tdNoDiv}">${dotH(cr1['c'+(idx+1)])}</td><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomCR : tdCR}">${showS2?dotH(cr2['c'+(idx+1)]):'<span style="color:#aaa">—</span>'}</td></tr>`).join('')}
                 </tbody></table>
               </div>
-              <table><colgroup><col/><col style="width:34px"/><col style="width:34px"/></colgroup><tbody>
+              <table style="max-width:100%;"><colgroup><col/><col style="width:34px"/><col style="width:34px"/></colgroup><tbody>
                 <tr><td style="${tdTopL};">Absences excusées</td><td style="${tdTopNoDiv};text-align:center;">${stS1?.excuses??0}</td><td style="${tdTopCR};text-align:center;">${stS2?.excuses??0}</td></tr>
                 <tr><td style="${tdBottomL};">Absences non excusées</td><td style="${tdBottomNoDiv};text-align:center;">${stS1?.absents??0}</td><td style="${tdBottomCR};text-align:center;">${stS2?.absents??0}</td></tr>
               </tbody></table>
@@ -1104,8 +1104,8 @@ export default function Notes() {
                       </div>
                     </div>
                     {/* Tableaux */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 10 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, width: '100%' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={{ background: 'white' }}><th style={thBranch}>Branches principales</th><th style={thBranchC}>S1</th><th style={thBranchC}>S2</th></tr></thead>
                           <tbody>
@@ -1126,8 +1126,8 @@ export default function Notes() {
                           </tbody>
                         </table>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', maxWidth: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
                           <colgroup><col /><col style={{ width: 34 }} /><col style={{ width: 34 }} /></colgroup>
                           <thead><tr style={{ background: 'white' }}><th style={thBranch}>Comportements</th><th style={{ ...thBranchC, width: 34 }}>S1</th><th style={{ ...thBranchC, width: 34 }}>S2</th></tr></thead>
                           <tbody style={{ height: '100%' }}>
@@ -1143,7 +1143,7 @@ export default function Notes() {
                             })}
                           </tbody>
                         </table>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', maxWidth: '100%', tableLayout: 'fixed' }}>
                           <colgroup><col /><col style={{ width: 34 }} /><col style={{ width: 34 }} /></colgroup>
                           <tbody>
                             <tr style={s.tr}><td style={tdTopL}>Absences excusées</td><td style={tdTopNoDiv}>{stS1?.excuses ?? 0}</td><td style={tdTopCR}>{stS2?.excuses ?? 0}</td></tr>
@@ -2025,10 +2025,10 @@ export default function Notes() {
                       <div style={{ marginBottom: 6, lineHeight: 1.35 }}><span style={{ fontWeight: 700 }}>Nom Prénom :</span><span style={{ marginLeft: 6 }}>{eleve.prenom} {eleve.nom}</span></div>
                       <div style={{ lineHeight: 1.35 }}><span style={{ fontWeight: 700 }}>Classe :</span><span style={{ marginLeft: 6 }}>{classeNom}</span></div>
                     </div>
-                    {/* 2 colonnes : notes (60%) | comportement (40%) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 6 }}>
+                    {/* 2 colonnes : éviter 50 % + 50 % + gap au-delà de la largeur utile (bordure PDF) */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 6, width: '100%' }}>
                       {/* Colonne gauche : branches principales + secondaires empilées */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed', border: 'none' }}>
                           <thead><tr style={{ background: 'white' }}>
                             <th style={thBranch}>Branches principales</th>
@@ -2083,9 +2083,9 @@ export default function Notes() {
                         </table>
                       </div>
                       {/* Colonne droite : comportement */}
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ flex: 1 }}>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed', border: 'none' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <table style={{ ...s.tbl, width: '100%', maxWidth: '100%', tableLayout: 'fixed', border: 'none' }}>
                           <thead><tr style={{ background: 'white' }}>
                             <th style={thBranch}>Comportement</th>
                             <th style={{ ...thBranchC, width: 40 }}>S1</th>
@@ -2105,7 +2105,7 @@ export default function Notes() {
                           </tbody>
                         </table>
                         </div>
-                        <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed', border: 'none' }}>
+                        <table style={{ ...s.tbl, width: '100%', maxWidth: '100%', tableLayout: 'fixed', border: 'none' }}>
                           <colgroup><col /><col style={{ width: 40 }} /><col style={{ width: 40 }} /></colgroup>
                           <tbody>
                             <tr style={s.tr}><td style={{ ...tdP, border: 'none' }}>Absences excusées</td><td style={{ ...tdC, textAlign: 'center' }}>{stS1?.excuses ?? 0}</td><td style={{ ...tdC, textAlign: 'center' }}>{stS2?.excuses ?? 0}</td></tr>
