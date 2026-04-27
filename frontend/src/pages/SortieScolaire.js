@@ -555,12 +555,13 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
     </div>
   );
   return (
-    <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e8eaf6' }}>
+    <div style={{ borderRadius: 10, border: '1px solid #e8eaf6', overflow: 'hidden' }}>
+      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 230px)', WebkitOverflowScrolling: 'touch' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
             {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget',''].map(h => (
-              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -616,6 +617,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

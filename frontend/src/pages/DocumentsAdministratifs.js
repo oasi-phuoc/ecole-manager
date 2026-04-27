@@ -45,8 +45,6 @@ export default function DocumentsAdministratifs() {
   const [msg, setMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [docPreview, setDocPreview] = useState(null);
-  const [showMoreLast, setShowMoreLast] = useState(false);
-  const [showMorePopular, setShowMorePopular] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -272,14 +270,15 @@ export default function DocumentsAdministratifs() {
       </div>
 
       {(() => {
-        const docsLast = (documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 10);
-        const docsPopular = (documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 10);
+        const docsLast = (documents || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0, 15);
+        const docsPopular = (documents || []).slice().sort((a, b) => Number(b.telechargements || b.downloads || 0) - Number(a.telechargements || a.downloads || 0)).slice(0, 15);
         const btnAction = { padding: 4, border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
-        const renderTable = (title, docs, showMore, setShowMore) => (
+        const renderTable = (title, docs) => (
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, background: 'white', overflow: 'hidden' }}>
+            <div style={{ overflow: 'auto', maxHeight: 225, WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr><th colSpan={3} style={{ padding: '9px 14px', background: '#6366f1', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>{title}</th></tr>
+                <tr><th colSpan={3} style={{ padding: '9px 14px', background: '#6366f1', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>{title}</th></tr>
               </thead>
               <tbody>
                 {docs.length === 0 && (
@@ -289,7 +288,7 @@ export default function DocumentsAdministratifs() {
                     </td>
                   </tr>
                 )}
-                {docs.slice(0, showMore ? 10 : 5).map((d, idx) => (
+                {docs.map((d, idx) => (
                   <tr key={d.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc', borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '8px 14px', fontSize: 13, color: '#334155' }}>{d.designation}</td>
                     <td style={{ padding: '8px 4px', width: 28, textAlign: 'center' }}>
@@ -304,23 +303,15 @@ export default function DocumentsAdministratifs() {
                     </td>
                   </tr>
                 ))}
-                {docs.length > 5 && (
-                  <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '6px 14px', borderTop: '1px solid #e2e8f0' }}>
-                      <button onClick={() => setShowMore(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#6366f1', fontWeight: 600, fontFamily: 'inherit' }}>
-                        {showMore ? '▲ Réduire' : `··· Voir plus (${Math.min(docs.length, 10) - 5} de plus)`}
-                      </button>
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
+            </div>
           </div>
         );
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            {renderTable('Derniers documents ajoutés', docsLast, showMoreLast, setShowMoreLast)}
-            {renderTable('Documents souvent utilisés', docsPopular, showMorePopular, setShowMorePopular)}
+            {renderTable('Derniers documents ajoutés', docsLast)}
+            {renderTable('Documents souvent utilisés', docsPopular)}
           </div>
         );
       })()}
@@ -425,25 +416,27 @@ export default function DocumentsAdministratifs() {
         {loading ? (
           <div style={{ color: '#94a3b8', padding: 12 }}>Chargement...</div>
         ) : (
+          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0', marginTop: 4 }}>
+          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 290px)', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                 {activeTab === 'pedagogiques' ? (
                   <>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Date</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Nom</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>Niveau</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap' }}>VISA</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Nom</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Niveau</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, width: 1, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>VISA</th>
                   </>
                 ) : (
                   <>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Désignation</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Fichier</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Ajouté par</th>
-                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Désignation</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Fichier</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Ajouté par</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}>Date</th>
                   </>
                 )}
-                <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11 }}></th>
+                <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: 700, color: '#64748b', fontSize: 11, position: 'sticky', top: 0, zIndex: 2, background: 'white' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -498,6 +491,8 @@ export default function DocumentsAdministratifs() {
               })}
             </tbody>
           </table>
+          </div>
+          </div>
         )}
       </div>
       )}
