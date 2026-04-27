@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
+import { NATIONALITY_OPTIONS } from '../constants/nationalities';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -39,6 +40,7 @@ export default function Eleves() {
   const [email, setEmail] = useState('');
   const [classeId, setClasseId] = useState('');
   const [dateNaissance, setDateNaissance] = useState('');
+  const [sexe, setSexe] = useState('');
   const [nationalite, setNationalite] = useState('');
   const [dateDebutCours, setDateDebutCours] = useState('');
   const [categorie, setCategorie] = useState('');
@@ -137,7 +139,7 @@ export default function Eleves() {
 
   const resetForm = () => {
     setNom(''); setPrenom(''); setEmail(''); setClasseId('');
-    setDateNaissance(''); setNationalite(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
+    setDateNaissance(''); setSexe(''); setNationalite(''); setDateDebutCours(''); setCategorie(''); setAdresse(''); setTelephone('');
     setNomParent(''); setTelephoneParent(''); setStatut('actif');
     setOasiProgNom(''); setOasiProgEncadrant(''); setOasiN(''); setOasiRef(''); setOasiPos('');
     setOasiNom(''); setOasiNais(''); setOasiNationalite('');
@@ -152,6 +154,7 @@ export default function Eleves() {
     setNom(el.nom||''); setPrenom(el.prenom||''); setEmail(el.email||'');
     setClasseId(el.classe_id||'');
     setDateNaissance(el.date_naissance?el.date_naissance.substring(0,10):'');
+    setSexe(el.sexe||'');
     setNationalite(el.nationalite||'');
     setDateDebutCours(el.date_debut_cours?el.date_debut_cours.substring(0,10):'');
     setCategorie(el.categorie||'');
@@ -179,7 +182,7 @@ export default function Eleves() {
     try {
       const data = {
         nom, prenom, email, classe_id: classeId||null,
-        date_naissance: dateNaissance||null, nationalite: nationalite||null, date_debut_cours: dateDebutCours||null, categorie: categorie||null, adresse, telephone,
+        date_naissance: dateNaissance||null, sexe: sexe||null, nationalite: nationalite||null, date_debut_cours: dateDebutCours||null, categorie: categorie||null, adresse, telephone,
         nom_parent: nomParent, telephone_parent: telephoneParent, statut,
         oasi_prog_nom: oasiProgNom, oasi_prog_encadrant: oasiProgEncadrant,
         oasi_n: oasiN?parseInt(oasiN):null, oasi_ref: oasiRef?parseInt(oasiRef):null,
@@ -613,20 +616,29 @@ export default function Eleves() {
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     <Champ lbl="Nom *"><input style={inp} required value={nom} onChange={e => setNom(e.target.value.toUpperCase())} /></Champ>
                     <Champ lbl="Prénom *"><input style={inp} required value={prenom} onChange={e => setPrenom(e.target.value)} /></Champ>
-                    <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} /></Champ>
                     <Champ lbl="Date de naissance"><input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} /></Champ>
-                    <Champ lbl="Nationalité"><input style={inp} value={nationalite} onChange={e => setNationalite(e.target.value)} /></Champ>
-                    <Champ lbl="Classe">
+                    <Champ lbl="Sexe">
                       <CustomSelect
                         style={inp}
                         placeholder="-- Choisir --"
-                        value={classeId}
-                        onChange={(v) => setClasseId(v)}
-                        options={classes.map(c => ({ value: c.id, label: c.nom }))}
+                        value={sexe}
+                        onChange={(v) => setSexe(v)}
+                        options={[
+                          { value: 'M', label: 'Masculin' },
+                          { value: 'F', label: 'Féminin' },
+                          { value: 'X', label: 'Autre / Non précisé' },
+                        ]}
                       />
                     </Champ>
-                    <Champ lbl="A commencé l'école le *">
-                      <input style={inp} required type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
+                    <Champ lbl="Nationalité">
+                      <CustomSelect
+                        style={inp}
+                        placeholder="-- Choisir --"
+                        value={nationalite}
+                        onChange={(v) => setNationalite(v)}
+                        options={NATIONALITY_OPTIONS}
+                        searchable
+                      />
                     </Champ>
                     <Champ lbl="Catégorie *">
                       <CustomSelect
@@ -640,7 +652,20 @@ export default function Eleves() {
                         ]}
                       />
                     </Champ>
+                    <Champ lbl="Classe">
+                      <CustomSelect
+                        style={inp}
+                        placeholder="-- Choisir --"
+                        value={classeId}
+                        onChange={(v) => setClasseId(v)}
+                        options={classes.map(c => ({ value: c.id, label: c.nom }))}
+                      />
+                    </Champ>
+                    <Champ lbl="A commencé l'école le *">
+                      <input style={inp} required type="date" value={dateDebutCours} onChange={e => setDateDebutCours(e.target.value)} />
+                    </Champ>
                     <Champ lbl="Téléphone"><input style={inp} value={telephone} onChange={e => setTelephone(e.target.value)} /></Champ>
+                    <Champ lbl="Email"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} /></Champ>
                     <Champ lbl="Adresse"><input style={inp} value={adresse} onChange={e => setAdresse(e.target.value)} /></Champ>
                   </div>
                   <div style={{...secTitle('#92400e','#fef3c7'),marginTop:16}}>👨‍👩‍👦 Contact / Parent</div>

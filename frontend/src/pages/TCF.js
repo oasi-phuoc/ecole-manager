@@ -2901,6 +2901,8 @@ export default function TCF() {
       const classeNom = classesMap[String(e.classe_id)]?.nom || '';
       return `${toDisplayNom(e.nom)} ${e.prenom} ${classeNom}`.toLowerCase().includes(search);
     });
+    const elevesTousGraph = [...eleves]
+      .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
 
     const maxScore = isFr ? 60 : 50;
     const label1 = isFr ? 'Oral' : 'Partie 1-2';
@@ -3181,17 +3183,38 @@ export default function TCF() {
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
             </div>
+            {graphVue === 'classe' && (
+              <CustomSelect
+                value={graphClasseId}
+                onChange={(v) => setGraphClasseId(v)}
+                options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
+                placeholder="Choisir une classe"
+                style={styles.select}
+              />
+            )}
           </div>
         </div>
-        {graphVue === 'classe' && (
+        {graphVue === 'individuelle' && (
           <div style={styles.filtersRow}>
-            <CustomSelect
-              value={graphClasseId}
-              onChange={(v) => setGraphClasseId(v)}
-              options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
-              placeholder="Choisir une classe"
-              style={styles.select}
-            />
+            <div style={{ ...styles.pillGroup, maxWidth: '100%', overflowX: 'auto', padding: 3 }}>
+              {elevesTousGraph.map((e) => {
+                const classeNom = classesMap[String(e.classe_id)]?.nom || '';
+                const label = `${e.prenom || ''} ${toDisplayNom(e.nom) || ''}`.trim();
+                const labelComplet = classeNom ? `${label} — ${classeNom}` : label;
+                const actif = String(graphEleveId) === String(e.id);
+                return (
+                  <button
+                    key={`graph-eleve-toggle-${e.id}`}
+                    type="button"
+                    onClick={() => setGraphEleveId(String(e.id))}
+                    style={{ ...styles.pillBtn, ...(actif ? styles.pillBtnActif : {}) }}
+                    title={labelComplet}
+                  >
+                    {labelComplet}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
         {/* Graphique */}

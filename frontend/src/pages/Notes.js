@@ -454,10 +454,12 @@ export default function Notes() {
       const respNiveauNom = cleNiv==='CSC'?(ecoleParams.responsable_niveau_csc||''):cleNiv==='CFR'?(ecoleParams.responsable_niveau_cfr||''):cleNiv==='EPL'?(ecoleParams.responsable_niveau_epl||''):'';
       const respCoursNom = ecoleParams.responsable_langues_jeunes||'';
       const titulaire = [classeObj?.prof_prenom, classeObj?.prof_nom].filter(Boolean).join(' ');
-      const th = `border:none;background:white;color:#000;font-weight:800;text-align:left;font-size:13px;padding:5px 10px;box-shadow:none;`;
+      const blockBorder = '1px solid #cbd5e1';
+      const th = `background:#e5e7eb;color:#0f172a;font-weight:800;text-align:left;font-size:13px;padding:6px 10px;border:${blockBorder};box-shadow:none;`;
       const thC = `${th}text-align:center;width:44px;white-space:nowrap;`;
-      const td = `padding:4px 10px;font-size:13px;color:#374151;vertical-align:middle;`;
+      const td = `padding:4px 10px;font-size:13px;color:#374151;vertical-align:middle;border-left:${blockBorder};`;
       const tdC = `padding:4px 6px;font-size:13px;color:#374151;text-align:center;vertical-align:middle;`;
+      const tdCR = `${tdC}border-right:${blockBorder};`;
       const footerHtml = `<div class="bul-footer"><img src="${publicBase}/logo-pied-page.png" style="height:30px;object-fit:contain;" onerror="this.style.display='none'"/><span>Zone Industrielle 4, 1963 Vétroz<br/>Tél. 027 606 18 60</span></div>`;
       const enteteHtml = `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><div style="display:flex;align-items:flex-start;gap:10px;"><img src="${publicBase}/logo-etat-du-valais.png" style="width:38px;" onerror="this.style.display='none'"/><div class="entete-txt"><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div></div><div style="text-align:right;"><div class="scai">SCAI</div><div style="font-size:12px;font-weight:700;color:#374151;">${annee}</div><div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div></div></div>`;
       const pages = elevesToShow.map(eleve => {
@@ -476,7 +478,7 @@ export default function Notes() {
         const mAnn=mG1!=null&&mG2!=null?(mG1+mG2)/2:null;
         const fn=v=>v!=null?parseFloat(v).toFixed(1):'—';
         const fv=v=>showAppreciations?apprH(v):fn(v);
-        const brRow=(n)=>`<tr><td style="${td}">${n}</td><td style="${tdC}">${pm1[n]?.moyenne!=null?fv(pm1[n].moyenne):'—'}</td><td style="${tdC}">${showS2&&pm2[n]?.moyenne!=null?fv(pm2[n].moyenne):'—'}</td></tr>`;
+        const brRow=(n)=>`<tr><td style="${td}">${n}</td><td style="${tdC}">${pm1[n]?.moyenne!=null?fv(pm1[n].moyenne):'—'}</td><td style="${tdCR}">${showS2&&pm2[n]?.moyenne!=null?fv(pm2[n].moyenne):'—'}</td></tr>`;
         const rem1=splitRem(cr1.remarques); const rem2=splitRem(cr2.remarques);
         const obsHtml=()=>{let h='';if(rem1.length){h+=`<div style="font-size:13px;font-weight:700;">1er semestre</div>`;h+=rem1.map(r=>`<div style="font-size:13px;">${r}</div>`).join('');}if(showS2&&rem2.length){if(rem1.length)h+=`<div style="height:10px;"></div>`;h+=`<div style="font-size:13px;font-weight:700;">2e semestre</div>`;h+=rem2.map(r=>`<div style="font-size:13px;">${r}</div>`).join('');}return h;};
         const sigHtml=[{label:'Titulaire',nom:titulaire},{label:'Responsable de niveau',nom:respNiveauNom},{label:'Responsable des cours',nom:respCoursNom}].map(({label,nom})=>`<div style="flex:1;text-align:center;"><div style="border-top:0.5px solid #94a3b8;padding-top:6px;"></div><div style="font-size:11px;font-weight:700;color:#334155;">${label}</div>${nom?`<div style="font-size:11px;color:#334155;">${nom}</div>`:''}</div>`).join('');
@@ -490,25 +492,25 @@ export default function Notes() {
             <div style="display:flex;flex-direction:column;gap:20px;">
               <table><thead><tr><th style="${th}">Branches principales</th><th style="${thC}">S1</th><th style="${thC}">S2</th></tr></thead><tbody>
                 ${prin.length===0?`<tr><td colspan="3" style="${td};color:#aaa">—</td></tr>`:prin.map(brRow).join('')}
-                <tr><td style="${td};font-weight:700">Moyenne</td><td style="${tdC};font-weight:700">${fv(mP1)}</td><td style="${tdC};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
+                <tr><td style="${td};font-weight:700">Moyenne</td><td style="${tdC};font-weight:700">${fv(mP1)}</td><td style="${tdCR};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
               </tbody></table>
               <table><thead><tr><th style="${th}">Branches secondaires</th><th style="${thC}">S1</th><th style="${thC}">S2</th></tr></thead><tbody>
                 ${sec.length===0?`<tr><td colspan="3" style="${td};color:#aaa">—</td></tr>`:sec.map(brRow).join('')}
-                <tr><td style="${td};font-weight:700">Moyenne</td><td style="${tdC};font-weight:700">${fv(mS1)}</td><td style="${tdC};font-weight:700">${showS2?fv(mS2):'—'}</td></tr>
+                <tr><td style="${td};font-weight:700">Moyenne</td><td style="${tdC};font-weight:700">${fv(mS1)}</td><td style="${tdCR};font-weight:700">${showS2?fv(mS2):'—'}</td></tr>
                 <tr><td colspan="3" style="height:6px;padding:0;border:none;"></td></tr>
-                <tr><td style="${td};font-weight:700">Moyenne semestrielle</td><td style="${tdC};font-weight:700">${fv(mG1)}</td><td style="${tdC};font-weight:700">${showS2?fv(mG2):'—'}</td></tr>
-                <tr><td style="${td};font-weight:700">Moyenne annuelle</td><td style="${tdC};font-weight:900" colspan="2">${showS2&&mAnn!=null?fv(mAnn):'—'}</td></tr>
+                <tr><td style="${td};font-weight:700">Moyenne semestrielle</td><td style="${tdC};font-weight:700">${fv(mG1)}</td><td style="${tdCR};font-weight:700">${showS2?fv(mG2):'—'}</td></tr>
+                <tr><td style="${td};font-weight:700">Moyenne annuelle</td><td style="${tdCR};font-weight:900" colspan="2">${showS2&&mAnn!=null?fv(mAnn):'—'}</td></tr>
               </tbody></table>
             </div>
             <div style="display:flex;flex-direction:column;">
               <div style="flex:1;">
-                <table><thead><tr><th style="${th}">Comportement</th><th style="${thC};width:40px;">S1</th><th style="${thC};width:40px;">S2</th></tr></thead><tbody>
-                  ${BULLETIN_CRITERES_LABELS.map((label,idx)=>`<tr><td style="${td}">${label.join(' ')}</td><td style="${tdC}">${dotH(cr1['c'+(idx+1)])}</td><td style="${tdC}">${showS2?dotH(cr2['c'+(idx+1)]):'<span style="color:#aaa">—</span>'}</td></tr>`).join('')}
+                <table><thead><tr><th style="${th}">Comportements</th><th style="${thC};width:40px;">S1</th><th style="${thC};width:40px;">S2</th></tr></thead><tbody>
+                  ${BULLETIN_CRITERES_LABELS.map((label,idx)=>`<tr><td style="${td}">${label.join(' ')}</td><td style="${tdC}">${dotH(cr1['c'+(idx+1)])}</td><td style="${tdCR}">${showS2?dotH(cr2['c'+(idx+1)]):'<span style="color:#aaa">—</span>'}</td></tr>`).join('')}
                 </tbody></table>
               </div>
               <table><colgroup><col/><col style="width:40px"/><col style="width:40px"/></colgroup><tbody>
-                <tr><td style="${td};border:none;">Absences excusées</td><td style="${tdC};text-align:center;">${stS1?.excuses??0}</td><td style="${tdC};text-align:center;">${stS2?.excuses??0}</td></tr>
-                <tr><td style="${td};border:none;">Absences non excusées</td><td style="${tdC};text-align:center;">${stS1?.absents??0}</td><td style="${tdC};text-align:center;">${stS2?.absents??0}</td></tr>
+                <tr><td style="${td};">Absences excusées</td><td style="${tdC};text-align:center;">${stS1?.excuses??0}</td><td style="${tdCR};text-align:center;">${stS2?.excuses??0}</td></tr>
+                <tr><td style="${td};">Absences non excusées</td><td style="${tdC};text-align:center;">${stS1?.absents??0}</td><td style="${tdCR};text-align:center;">${stS2?.absents??0}</td></tr>
               </tbody></table>
             </div>
           </div>
@@ -1021,12 +1023,13 @@ export default function Notes() {
           const rem1 = splitRem(cr1.remarques);
           const rem2 = splitRem(cr2.remarques);
           const dot = (v) => v ? <span style={{ width: 11, height: 11, borderRadius: '50%', display: 'inline-block', background: v === 'vert' ? '#22c55e' : v === 'orange' ? '#f97316' : '#ef4444' }} /> : <span style={{ color: '#aaa' }}>—</span>;
-          const tblBorder = {};
-          const thBranch = { border: 'none', background: 'white', color: '#000', fontWeight: 800, textAlign: 'left', fontSize: 13, padding: '5px 10px', textTransform: 'none', letterSpacing: 'normal', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif', boxShadow: 'none', position: 'static' };
+          const tblBorder = { border: '1px solid #cbd5e1' };
+          const thBranch = { border: '1px solid #cbd5e1', background: '#e5e7eb', color: '#0f172a', fontWeight: 800, textAlign: 'left', fontSize: 13, padding: '6px 10px', textTransform: 'none', letterSpacing: 'normal', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif', boxShadow: 'none', position: 'static' };
           const thBranchC = { ...thBranch, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
           const tdP = { ...s.td, padding: '2px 10px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const tdC = { ...s.td, border: 'none', textAlign: 'center', padding: '2px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
-          const tdL = { ...s.td, border: 'none', padding: '2px 14px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
+          const tdCR = { ...tdC, borderRight: '1px solid #cbd5e1' };
+          const tdL = { ...s.td, border: 'none', borderLeft: '1px solid #cbd5e1', padding: '2px 14px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
           const articleSexe = (sexe) => String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du';
           const niveauCl = String(classeObj?.niveau || '').toUpperCase();
@@ -1089,38 +1092,38 @@ export default function Notes() {
                     {/* Tableaux */}
                     <div style={{ display: 'grid', gridTemplateColumns: '50% 50%', gap: 10 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', border: 'none' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={{ background: 'white' }}><th style={thBranch}>Branches principales</th><th style={thBranchC}>S1</th><th style={thBranchC}>S2</th></tr></thead>
                           <tbody>
                             {principales.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
-                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdC}>{showS2popup && moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
+                            {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdCR}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdCR}>{showS2popup && moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
                           </tbody>
                         </table>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', border: 'none' }}>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <thead><tr style={{ background: 'white' }}><th style={thBranch}>Branches secondaires</th><th style={thBranchC}>S1</th><th style={thBranchC}>S2</th></tr></thead>
                           <tbody>
                             {secondaires.length === 0 && <tr><td colSpan={3} style={{ ...tdL, color: '#aaa' }}>—</td></tr>}
-                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdC}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdC}>{showS2popup && moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
+                            {secondaires.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdCR}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne</td><td style={tdC}>{moyS1 != null ? fmtNote(moyS1) : '—'}</td><td style={tdCR}>{showS2popup && moyS2 != null ? fmtNote(moyS2) : '—'}</td></tr>
                             <tr><td colSpan={3} style={{ height: 10, padding: 0, border: 'none', background: 'white' }}></td></tr>
-                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdC}>{showS2popup && moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
-                            <tr style={{ ...s.tr, fontWeight: 700, color: '#000000' }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdC, fontWeight: 900, color: '#000000' }} colSpan={2}>{showS2popup && moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdL}>Moyenne semestrielle</td><td style={tdC}>{moyG1 != null ? fmtNote(moyG1) : '—'}</td><td style={tdCR}>{showS2popup && moyG2 != null ? fmtNote(moyG2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700, color: '#000000' }}><td style={tdL}>Moyenne annuelle</td><td style={{ ...tdCR, fontWeight: 900, color: '#000000' }} colSpan={2}>{showS2popup && moyAnn != null ? fmtNote(moyAnn) : '—'}</td></tr>
                           </tbody>
                         </table>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%', border: 'none' }}>
-                          <thead><tr style={{ background: 'white' }}><th style={thBranch}>Comportement</th><th style={{ ...thBranchC, width: 40 }}>S1</th><th style={{ ...thBranchC, width: 40 }}>S2</th></tr></thead>
+                        <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed', flex: 1, height: '100%' }}>
+                          <thead><tr style={{ background: 'white' }}><th style={thBranch}>Comportements</th><th style={{ ...thBranchC, width: 40 }}>S1</th><th style={{ ...thBranchC, width: 40 }}>S2</th></tr></thead>
                           <tbody style={{ height: '100%' }}>
-                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={tdL}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdC}>{showS2popup ? dot(cr2['c' + (idx + 1)]) : <span style={{ color: '#aaa' }}>—</span>}</td></tr>))}
+                            {BULLETIN_CRITERES_LABELS.map((label, idx) => (<tr key={idx} style={{ ...s.tr, height: '1px' }}><td style={tdL}>{label.join(' ')}</td><td style={tdC}>{dot(cr1['c' + (idx + 1)])}</td><td style={tdCR}>{showS2popup ? dot(cr2['c' + (idx + 1)]) : <span style={{ color: '#aaa' }}>—</span>}</td></tr>))}
                           </tbody>
                         </table>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
                           <colgroup><col /><col style={{ width: 40 }} /><col style={{ width: 40 }} /></colgroup>
                           <tbody>
-                            <tr style={s.tr}><td style={tdL}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdC}>{stS2?.excuses ?? 0}</td></tr>
-                            <tr style={s.tr}><td style={tdL}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdC}>{stS2?.absents ?? 0}</td></tr>
+                            <tr style={s.tr}><td style={tdL}>Absences excusées</td><td style={tdC}>{stS1?.excuses ?? 0}</td><td style={tdCR}>{stS2?.excuses ?? 0}</td></tr>
+                            <tr style={s.tr}><td style={tdL}>Absences non excusées</td><td style={tdC}>{stS1?.absents ?? 0}</td><td style={tdCR}>{stS2?.absents ?? 0}</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -1821,13 +1824,15 @@ export default function Notes() {
             const rawNaissance = eleveInfo.date_naissance || eleveInfo.oasi_nais;
             const dateNaissance = rawNaissance ? new Date(rawNaissance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
             const nationalite = eleveInfo.nationalite || eleveInfo.oasi_nationalite || '';
+            const sexeEleve = String(eleveInfo.sexe || '').trim().toUpperCase();
+            const neLabel = sexeEleve === 'M' ? 'né le' : sexeEleve === 'F' ? 'née le' : 'né(e) le';
             const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
             const now = new Date();
             const as = now.getMonth() >= 7 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
             const printId = `attest-print-${eleveId}`;
             return (
               <div key={eleveId} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                <div id={printId} style={{ border: '2px solid #6366f1', borderRadius: 12, padding: '32px 40px', fontFamily: font, minHeight: 420, position: 'relative', background: 'white' }}>
+                <div id={printId} style={{ border: '2px solid #dc2626', borderRadius: 0, padding: '32px 40px', fontFamily: font, minHeight: 420, position: 'relative', background: 'white' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <img src="/logo-etat-du-valais.png" alt="" style={{ width: 36, height: 'auto', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
@@ -1844,18 +1849,18 @@ export default function Notes() {
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#0f172a' }}>CLASSES D'ACCUEIL</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 22, letterSpacing: 6, textTransform: 'uppercase', color: '#1e293b', marginBottom: 8 }}>Attestation</div>
+                  <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '36pt', letterSpacing: 6, textTransform: 'uppercase', color: '#1e293b', marginBottom: 8 }}>Attestation</div>
                   {(() => {
                     const cn = classeNom.toUpperCase();
                     const sub = cn.includes('CFR') ? 'Cours de français' : cn.includes('CSC') ? 'Cours de scolarisation' : cn.includes('EPL') ? 'Encouragement précoce de la langue' : cn.includes('CPR') ? 'Cours préparatoires' : null;
-                    return sub ? <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 600, color: '#0f172a', marginBottom: 28 }}>{sub}</div> : <div style={{ marginBottom: 28 }} />;
+                    return sub ? <div style={{ textAlign: 'center', fontSize: '24pt', fontWeight: 600, color: '#0f172a', marginBottom: 28 }}>{sub}</div> : <div style={{ marginBottom: 28 }} />;
                   })()}
                   <div style={{ fontSize: 14, lineHeight: 2, color: '#1e293b', textAlign: 'center' }}>
                     <div>Le Service de l'action sociale du canton du Valais atteste que</div>
-                    <div style={{ fontWeight: 800, fontSize: 18, margin: '8px 0', color: '#0f172a' }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
+                    <div style={{ fontWeight: 800, fontSize: '24pt', margin: '4px 0 2px', color: '#0f172a' }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
                     {(dateNaissance || nationalite) && (
-                      <div style={{ fontSize: 13, color: '#1e293b', marginBottom: 4 }}>
-                        {dateNaissance && nationalite ? `né(e) le ${dateNaissance}, ${nationalite}` : dateNaissance ? `né(e) le ${dateNaissance}` : nationalite}
+                      <div style={{ fontSize: '10pt', color: '#1e293b', marginBottom: 4 }}>
+                        {dateNaissance && nationalite ? `${neLabel} ${dateNaissance}, ${nationalite}` : dateNaissance ? `${neLabel} ${dateNaissance}` : nationalite}
                       </div>
                     )}
                     <div style={{ marginTop: 12 }}>a suivi les cours de langue française du <strong>{dateDebutCours}</strong> au <strong>{dateFinCours}</strong>,</div>
