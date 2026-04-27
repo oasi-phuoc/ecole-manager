@@ -2996,7 +2996,7 @@ export default function TCF() {
           niveau,
           showTrend: true,
         }], isFr, maxScore);
-      } else if (graphVue === 'classe' && graphClasseId && graphSession) {
+      } else if ((graphVue === 'moyenne' || graphVue === 'classe') && graphClasseId && graphSession) {
         const charts = buildChartsForClasse();
         if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
         printCharts(charts, isFr, maxScore);
@@ -3137,35 +3137,20 @@ export default function TCF() {
               placeholder="Rechercher un élève, une classe..."
               style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
             />
-            {!graphShowNiveaux ? (
-              <button
-                type="button"
-                onClick={() => setGraphShowNiveaux(true)}
-                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-              >
-                Trier
-              </button>
-            ) : (
-              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
-                <button
-                  type="button"
-                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-                >
-                  Trier
-                </button>
-                {niveauxTabs.map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
-                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            )}
+            <FiltreDropdown
+              label="Trier / Tous niveaux"
+              value={graphNiveau}
+              options={niveauxTabs.map((n) => ({ value: n, label: n }))}
+              allLabel="Tous niveaux"
+              width={210}
+              onSelect={(v) => {
+                setGraphNiveau(v);
+                setGraphShowNiveaux(false);
+                setGraphClasseId('');
+                setGraphEleveId('');
+                setGraphEleveSearch('');
+              }}
+            />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={styles.pillGroup}>
@@ -3215,6 +3200,12 @@ export default function TCF() {
             <div style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
               <div style={{ padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>Classes</div>
               <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                <div
+                  onClick={() => { setGraphClasseId(''); }}
+                  style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 12, background: !graphClasseId ? '#eef2ff' : '#f8fafc', color: !graphClasseId ? '#4338ca' : '#64748b', fontWeight: !graphClasseId ? 700 : 600, borderLeft: `3px solid ${!graphClasseId ? '#6366f1' : 'transparent'}`, borderBottom: '1px solid #e2e8f0', transition: 'background 0.1s' }}
+                >
+                  Toutes les classes
+                </div>
                 {classesListeGraph.map((cl, idx) => {
                   const isSelected = String(graphClasseId) === String(cl.id);
                   return (
@@ -3230,7 +3221,26 @@ export default function TCF() {
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              {!graphClasseId && <div style={styles.msgVide}>Sélectionnez une classe.</div>}
+              {!graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+              {!graphClasseId && graphSession && moyenneSeries.length === 0 && <div style={styles.msgVide}>Aucune moyenne disponible pour les classes de ce niveau et cette session.</div>}
+              {!graphClasseId && graphSession && moyenneSeries.length > 0 && renderSvgChart(
+                moyenneSeries,
+                {
+                  showTrend: false,
+                  niveau: niveauActif,
+                  nom: niveauActif,
+                  prenom: '',
+                  classe: classesRangeLabel,
+                  identiteLabel: 'Niveau',
+                  title: 'Moyennes des classes',
+                  label1: 'Français',
+                  label2: 'Mathématiques',
+                  showFrenchLevelMarks: false,
+                  showMathLevelMarks: false,
+                  maxScoreOverride: 100,
+                  cardWidth: '100%',
+                }
+              )}
               {graphClasseId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
               {graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cette classe et cette session.</div>}
               {graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
