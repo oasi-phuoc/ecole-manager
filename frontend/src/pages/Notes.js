@@ -805,6 +805,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         </div>
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
+          <div style={{overflow:'auto',maxHeight:'calc(100vh - 320px)',WebkitOverflowScrolling:'touch'}}>
           <table style={s.tbl}>
             <thead>
               <tr style={s.theadRow}>
@@ -870,6 +871,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     );
@@ -2354,6 +2356,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         )}
 
         <div style={s.tblWrap}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 290px)',WebkitOverflowScrolling:'touch'}}>
         <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: COL_OEIL_DETAIL }} />
@@ -2442,6 +2445,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           </tbody>
         </table>
         </div>
+        </div>
       </div>
     );
   }
@@ -2470,6 +2474,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           </div>
         </div>
         <div style={{ ...s.tblWrap, marginTop: 4 }}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 290px)',WebkitOverflowScrolling:'touch'}}>
         <table style={{ ...s.tbl, tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             <col style={{ width: COL_OEIL_DETAIL }} />
@@ -2516,6 +2521,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             })}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     );
@@ -2585,6 +2591,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
 
         {/* Tableau des classes */}
         <div style={s.tblWrap}>
+          <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
               <tr style={s.theadRow}>
@@ -2666,6 +2673,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
               })}
             </tbody>
           </table>
+          </div>
         </div>
     </div>
   );
@@ -2692,12 +2700,12 @@ const s = {
   btnSauver: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   btnImprimer: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   successMsg: { background: '#d1fae5', color: '#065f46', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontWeight: 600, fontSize: 13 },
-  tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
-  tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' },
+  tableContainer: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' },
+  tblWrap: { borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', overflow: 'hidden' },
   btnAjouter: { padding: '8px 14px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tbl: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#f8fafc', borderBottom: 'none' },
-  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#f8fafc', boxShadow: 'none' },
+  th: { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc' },
   tr: { borderBottom: 'none' },
   td: { padding: '11px 14px', fontSize: 13, color: '#374151', verticalAlign: 'middle' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', background: 'white' },

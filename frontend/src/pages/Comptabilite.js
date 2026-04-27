@@ -793,7 +793,7 @@ export default function Comptabilite() {
     } catch { alert('Erreur lors de la mise à jour'); }
   };
 
-  const cmdTh = { padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)' };
+  const cmdTh = { padding: '10px 14px', textAlign: 'left', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.15)', position: 'sticky', top: 0, zIndex: 2 };
   const classeFactureObj = classes.find(c => String(c.id) === String(classeFacturationId));
   const classeFactureNom = classeFactureObj?.nom || '—';
   const toutesFacturesClasseValidees = elevesClasseFacturation.length > 0
@@ -848,7 +848,7 @@ export default function Comptabilite() {
                 .filter(c => facturesNiveau === 'Tous' || String(c.niveau || '').toUpperCase().includes(facturesNiveau))
                 .filter(c => !rechercheFactures || (c.nom || '').toLowerCase().includes(rechercheFactures.toLowerCase()));
               return (
-                <div style={styles.tableWrap}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
+                <div style={styles.tableWrap}><div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}><table style={{ ...styles.tableMateriel, tableLayout: 'auto', fontSize: 13 }}>
                   <thead>
                     <tr>
                       <th style={{ ...styles.thMateriel, width: 1, whiteSpace: 'nowrap', textAlign: 'center' }}></th>
@@ -889,7 +889,7 @@ export default function Comptabilite() {
                       <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
                     )}
                   </tbody>
-                </table></div>
+                </table></div></div>
               );
             })()}
           </div>
@@ -923,7 +923,7 @@ export default function Comptabilite() {
                     {toutesFacturesClasseValidees ? 'Factures validées' : 'Valider toutes les factures'}
                   </button>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 290px)', WebkitOverflowScrolling: 'touch' }}>
                   <table style={{ ...styles.tableMateriel, minWidth: 900, tableLayout: 'auto' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
@@ -1016,7 +1016,7 @@ export default function Comptabilite() {
               </div>
             )}
           </div>
-        <div style={styles.tableWrap}><table style={{ ...styles.table, tableLayout: 'auto' }}>
+        <div style={styles.tableWrap}><div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}><table style={{ ...styles.table, tableLayout: 'auto' }}>
           <thead>
             <tr style={styles.theadRow}>
               <th style={styles.th}>Élève</th>
@@ -1082,7 +1082,7 @@ export default function Comptabilite() {
               );
             })}
           </tbody>
-        </table></div>
+        </table></div></div>
         </>
       )}
 
@@ -1093,7 +1093,7 @@ export default function Comptabilite() {
             <input style={styles.tabSearch} placeholder="Rechercher un article, une réf, un montant total..." value={rechercheCommandes} onChange={e => setRechercheCommandes(e.target.value)} />
           </div>
           <div style={{ ...styles.tabContent, marginTop: 8 }}>
-              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid #e8eaf6' }}>
+              <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 230px)', borderRadius: 12, border: '1px solid #e8eaf6', WebkitOverflowScrolling: 'touch' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#6366f1', color: 'white' }}>
@@ -1355,7 +1355,7 @@ export default function Comptabilite() {
 
             {/* Écolage */}
           {prixOnglet === 'ecolage' && (
-            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -1402,12 +1402,12 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </table></div></div>
           )}
 
           {/* Matériel scolaire */}
           {prixOnglet === 'scolaire' && (
-            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -1442,12 +1442,12 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </table></div></div>
           )}
 
           {/* Autres fournitures */}
           {prixOnglet === 'fournitures' && (
-            <div style={styles.tableWrap}><table style={styles.tableMateriel}>
+            <div style={styles.tableWrap}><div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}><table style={styles.tableMateriel}>
               <colgroup>
                 <col /><col style={{ width: 110 }} /><col style={{ width: 100 }} /><col style={{ width: 130 }} /><col style={{ width: 90 }} /><col style={{ width: 160 }} /><col style={{ width: 85 }} />
               </colgroup>
@@ -1482,7 +1482,7 @@ export default function Comptabilite() {
                   </tr>
                 ))}
               </tbody>
-            </table></div>
+            </table></div></div>
           )}
 
         </div>
@@ -2072,7 +2072,7 @@ const styles = {
   select: { padding: '7px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: 'white' },
   table: { width: '100%', borderCollapse: 'collapse', background: 'white' },
   theadRow: { background: '#6366f1' },
-  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', background: '#6366f1', boxShadow: 'none' },
+  th: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1' },
   tr: { borderBottom: '1px solid #f8fafc' },
   td: { padding: '12px 16px', fontSize: 13, color: '#374151' },
   vide: { padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 },
@@ -2094,7 +2094,7 @@ const styles = {
   btnValidatedPill: { padding: '7px 16px', borderRadius: 17, border: '1px solid #6366f1', background: '#eef2ff', color: '#4338ca', cursor: 'default', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' },
   tableWrap: { borderRadius: 12, overflow: 'hidden', background: 'white' },
   tableMateriel: { width: '100%', borderCollapse: 'collapse', background: 'white', tableLayout: 'fixed' },
-  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'static', top: 'auto', zIndex: 'auto', boxShadow: 'none' },
+  thMateriel: { padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2 },
   tdMateriel: { padding: '12px 16px', fontSize: 13, color: '#374151', borderBottom: '1px solid #f8fafc' },
   /** Alignement liste classes (onglet Classes) sur la page Notes : padding cellules + bouton œil */
   tdClasseListe: { padding: '10px 14px' },
