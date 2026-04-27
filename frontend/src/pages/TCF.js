@@ -2903,6 +2903,8 @@ export default function TCF() {
     });
     const elevesTousGraph = [...eleves]
       .sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+    const classModeActive = graphVue === 'moyenne' || graphVue === 'classe';
+    const classesListeGraph = classesNiveau.filter((cl) => !search || String(cl.nom || '').toLowerCase().includes(search));
 
     const maxScore = isFr ? 60 : 50;
     const label1 = isFr ? 'Oral' : 'Partie 1-2';
@@ -3025,7 +3027,7 @@ export default function TCF() {
     };
 
     const canPrintSelection = (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) ||
-      (graphVue === 'classe' && graphClasseId && graphSession);
+      (classModeActive && graphClasseId && graphSession && dataClasse.length > 0);
 
     const niveauIndividuel = (() => {
       const e = eleves.find(ev => String(ev.id) === String(graphEleveId));
@@ -3175,23 +3177,13 @@ export default function TCF() {
               ))}
             </div>
             <div style={styles.pillGroup}>
-              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'moyenne' ? styles.pillBtnActif : {}) }}>Tous</button>
-              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élève</button>
-              <button type="button" onClick={() => { setGraphVue('classe'); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'classe' ? styles.pillBtnActif : {}) }}>Classe</button>
+              <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }} style={{ ...styles.pillBtn, ...(classModeActive ? styles.pillBtnActif : {}) }}>Classes</button>
+              <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élèves</button>
             </div>
             <div style={styles.pillGroup}>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
             </div>
-            {graphVue === 'classe' && (
-              <CustomSelect
-                value={graphClasseId}
-                onChange={(v) => setGraphClasseId(v)}
-                options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
-                placeholder="Choisir une classe"
-                style={styles.select}
-              />
-            )}
           </div>
         </div>
         {graphVue === 'individuelle' && (
@@ -3218,58 +3210,40 @@ export default function TCF() {
           </div>
         )}
         {/* Graphique */}
-        {graphVue === 'moyenne' && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
-        {graphVue === 'moyenne' && graphSession && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 12 }}>
-            <div style={styles.tableWrap}>
-              <table style={{ ...styles.tableRolesLeft, width: 'min-content', tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '33%' }} />
-                  <col style={{ width: '33%' }} />
-                  <col style={{ width: '34%' }} />
-                </colgroup>
-                <thead>
-                  <tr style={styles.thead}>
-                    <th style={{ ...styles.thLeftFixed, whiteSpace: 'nowrap' }}>Classe</th>
-                    <th style={{ ...styles.thCenter, whiteSpace: 'nowrap' }}>FR</th>
-                    <th style={{ ...styles.thCenter, whiteSpace: 'nowrap' }}>MATH</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {moyenneRows.map((r) => {
-                    const isLow = lowSet.has(String(r.id));
-                    const isHigh = highSet.has(String(r.id));
-                    const bg = isLow ? '#fee2e2' : isHigh ? '#dcfce7' : 'white';
-                    const color = isLow ? '#991b1b' : isHigh ? '#166534' : '#334155';
-                    return (
-                      <tr key={`moy-row-${r.id}`} style={{ background: bg }}>
-                        <td style={{ ...styles.tdLeft, color, fontWeight: 700 }}>{r.nom}</td>
-                        <td style={{ ...styles.tdCenter, color, fontWeight: 700 }}>{r.frAvg == null ? '—' : r.frAvg.toFixed(1)}</td>
-                        <td style={{ ...styles.tdCenter, color, fontWeight: 700 }}>{r.maAvg == null ? '—' : r.maAvg.toFixed(1)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        {classModeActive && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
+            <div style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+              <div style={{ padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>Classes</div>
+              <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                {classesListeGraph.map((cl, idx) => {
+                  const isSelected = String(graphClasseId) === String(cl.id);
+                  return (
+                    <div
+                      key={`graph-classe-side-${cl.id}`}
+                      onClick={() => setGraphClasseId(String(cl.id))}
+                      style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSelected ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSelected ? '#4338ca' : '#1e293b', fontWeight: isSelected ? 700 : 400, borderLeft: `3px solid ${isSelected ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}
+                    >
+                      {cl.nom}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            {renderSvgChart(
-              moyenneSeries,
-              {
-                showTrend: false,
-                niveau: niveauActif,
-                nom: niveauActif,
-                prenom: '',
-                classe: classesRangeLabel,
-                identiteLabel: 'Niveau',
-                title: 'Moyennes des classes',
-                label1: 'Français',
-                label2: 'Mathématiques',
-                showFrenchLevelMarks: false,
-                showMathLevelMarks: false,
-                maxScoreOverride: 100,
-                cardWidth: '100%',
-              }
-            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {!graphClasseId && <div style={styles.msgVide}>Sélectionnez une classe.</div>}
+              {graphClasseId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
+              {graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cette classe et cette session.</div>}
+              {graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
+                dataClasse,
+                {
+                  showTrend: false,
+                  niveau: niveauClasse,
+                  nom: '',
+                  prenom: '',
+                  classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
+                }
+              )}
+            </div>
           </div>
         )}
         {graphVue === 'individuelle' && !graphEleveId && <div style={styles.msgVide}>Sélectionnez un élève.</div>}
@@ -3283,19 +3257,6 @@ export default function TCF() {
             nom: toDisplayNom(eleveIndividuel?.nom || ''),
             prenom: eleveIndividuel?.prenom || '',
             classe: classeIndividuelle?.nom || '',
-          }
-        )}
-        {graphVue === 'classe' && !graphClasseId && <div style={styles.msgVide}>Sélectionnez une classe.</div>}
-        {graphVue === 'classe' && graphClasseId && !graphSession && <div style={styles.msgVide}>Sélectionnez une session.</div>}
-        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length === 0 && <div style={styles.msgVide}>Aucun résultat saisi pour cette classe et cette session.</div>}
-        {graphVue === 'classe' && graphClasseId && graphSession && dataClasse.length > 0 && renderSvgChart(
-          dataClasse,
-          {
-            showTrend: false,
-            niveau: niveauClasse,
-            nom: '',
-            prenom: '',
-            classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
           }
         )}
       </div>
@@ -3588,7 +3549,7 @@ export default function TCF() {
           {onglet === 'plannings' && planningsType === 'professeurs' && (
             <button type="button" onClick={printProfPlanning} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
           )}
-          {onglet === 'graphique' && graphVue !== 'moyenne' && (
+          {onglet === 'graphique' && (
             <>
               <button type="button" onClick={() => {
                 const isFr = ongletGraphiqueMatiere === 'francais';
@@ -3623,7 +3584,7 @@ export default function TCF() {
                   const classe = classesMap[String(e?.classe_id)]?.nom || '';
                   const niveau = normaliserNiveau(classesMap[String(e?.classe_id)]?.niveau || '');
                   printCharts([{ label: `${e?.prenom || ''} ${toDisplayNom(e?.nom || '')} — ${classe}`, series: sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })), nom: toDisplayNom(e?.nom || ''), prenom: e?.prenom || '', classe, niveau, showTrend: true }], isFr, maxScore);
-                } else if (graphVue === 'classe' && graphClasseId && graphSession) {
+                } else if ((graphVue === 'moyenne' || graphVue === 'classe') && graphClasseId && graphSession) {
                   const elevesClasseFiltres = eleves.filter(e => String(e.classe_id) === String(graphClasseId)).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
                   const classe = classes.find(c => String(c.id) === graphClasseId);
                   const charts = elevesClasseFiltres.map(e => { const series = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, String(e.id)); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData).map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })); return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`, series, nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: true }; }).filter(c => c.series.length > 0);
