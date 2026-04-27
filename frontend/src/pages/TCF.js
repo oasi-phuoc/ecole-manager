@@ -255,7 +255,24 @@ export default function TCF() {
   const [graphRecherche, setGraphRecherche] = useState('');
   const [graphSortDir, setGraphSortDir] = useState('asc');
   const [anneeScolaire, setAnneeScolaire] = useState('');
+  /** UI graphique : orientation paysage (fenêtre / appareil) → graphique plus large */
+  const [graphUiLandscape, setGraphUiLandscape] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(orientation: landscape)').matches
+  );
   const savedScoresRef = useRef({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(orientation: landscape)');
+    const update = () => setGraphUiLandscape(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    window.addEventListener('resize', update);
+    return () => {
+      mq.removeEventListener('change', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
 
   const appliquerPoolState = (poolState = {}) => {
     const savedOrder = Array.isArray(poolState?.siteOrder) && poolState.siteOrder.length
@@ -2214,13 +2231,16 @@ export default function TCF() {
     const label1 = options.label1 || (isFr ? 'Oral' : 'Base');
     const label2 = options.label2 || (isFr ? 'Écrit' : 'Avancé');
 
-    const barW = 52;
-    const groupW = 180;
-    const innerH = Number(options.innerH) > 0 ? Number(options.innerH) : 230;
-    const padL = 48;
+    const wide = options.chartWide === true;
+    const barW = wide ? 62 : 52;
+    const groupW = wide ? 220 : 180;
+    const innerH = Number(options.innerH) > 0
+      ? Number(options.innerH)
+      : (wide ? 340 : 230);
+    const padL = wide ? 54 : 48;
     const padT = 10;
     const padB = 70;
-    const legendW = 130;
+    const legendW = wide ? 140 : 130;
     const chartW = Math.max(groupW * Math.max(series.length, 1), 240);
     const svgW = padL + chartW + legendW + 24;
     const svgH = padT + innerH + padB;
@@ -2309,7 +2329,10 @@ export default function TCF() {
       parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Moyenne</text>`);
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">${parts.join('')}</svg>`;
+    const svgAttrs = wide
+      ? ` xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;height:auto;display:block"`
+      : ` xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}"`;
+    return `<svg${svgAttrs}>${parts.join('')}</svg>`;
   };
 
   const convocationRef = useRef(null);
@@ -3038,6 +3061,12 @@ export default function TCF() {
     const classeIndividuelle = classesMap[String(eleveIndividuel?.classe_id)];
     const niveauClasse = normaliserNiveau(classes.find(c => String(c.id) === String(graphClasseId))?.niveau || '');
     const moyenneRows = getClassMoyennes();
+    const moyRowByClasseId = new Map(moyenneRows.map((r) => [String(r.id), r]));
+    const moyenneGlobaleListe = moyenneRows.filter((r) => r.global != null).map((r) => r.global);
+    const moyenneToutesClasses = graphSession && moyenneGlobaleListe.length
+      ? moyenneGlobaleListe.reduce((a, b) => a + b, 0) / moyenneGlobaleListe.length
+      : null;
+    const fmtMoyClasse = (v) => (v != null && !Number.isNaN(v) ? Number(v).toFixed(1) : '—');
     const moyenneRowsClassees = moyenneRows.filter(r => r.global != null).sort((a, b) => a.global - b.global);
     const lowSet = new Set(moyenneRowsClassees.slice(0, 3).map(r => String(r.id)));
     const highSet = new Set(moyenneRowsClassees.slice(-3).map(r => String(r.id)));
@@ -3052,10 +3081,12 @@ export default function TCF() {
 
     const renderSvgChart = (items, opts = {}) => {
       const chartMax = Number(opts.maxScoreOverride) > 0 ? Number(opts.maxScoreOverride) : maxScore;
+      const wideUi = graphUiLandscape;
       const svg = buildChartSVG(items, chartMax, isFr, {
         showTrend: opts.showTrend !== false,
         niveau: opts.niveau || '',
-        innerH: 320,
+        innerH: wideUi ? 360 : 320,
+        chartWide: wideUi,
         label1: opts.label1,
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
@@ -3071,9 +3102,10 @@ export default function TCF() {
       const prenomAff = String(opts.prenom || '');
       const classeAff = String(opts.classe || '');
       const identiteLabel = opts.identiteLabel || 'NOM Prénom';
+      const cardW = opts.cardWidth != null ? opts.cardWidth : (wideUi ? 'min(100%, 1180px)' : 800);
       return (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '24px 28px', width: opts.cardWidth || 800, maxWidth: '100%' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: wideUi ? '24px 32px' : '24px 28px', width: cardW, maxWidth: '100%' }}>
             {/* En-tête */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18, paddingBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -3137,20 +3169,35 @@ export default function TCF() {
               placeholder="Rechercher un élève, une classe..."
               style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
             />
-            <FiltreDropdown
-              label="Trier / Tous niveaux"
-              value={graphNiveau}
-              options={niveauxTabs.map((n) => ({ value: n, label: n }))}
-              allLabel="Tous niveaux"
-              width={210}
-              onSelect={(v) => {
-                setGraphNiveau(v);
-                setGraphShowNiveaux(false);
-                setGraphClasseId('');
-                setGraphEleveId('');
-                setGraphEleveSearch('');
-              }}
-            />
+            {!graphShowNiveaux ? (
+              <button
+                type="button"
+                onClick={() => setGraphShowNiveaux(true)}
+                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+              >
+                Trier
+              </button>
+            ) : (
+              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                >
+                  Trier
+                </button>
+                {niveauxTabs.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); setGraphEleveSearch(''); }}
+                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={styles.pillGroup}>
@@ -3194,27 +3241,40 @@ export default function TCF() {
             </div>
           </div>
         )}
-        {/* Graphique */}
+        {/* Graphique — zone défilante comme le tableau Résultats ; colonne classes sticky dans ce bloc */}
         {classModeActive && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
-            <div style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-              <div style={{ padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>Classes</div>
-              <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+          <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 260px)', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, paddingBottom: 8 }}>
+            <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, zIndex: 6, alignSelf: 'flex-start', maxHeight: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', fontWeight: 700, fontSize: 11, color: 'white', background: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '12px 12px 0 0' }}>
+                <span>Classe</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>Moyenne</span>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => { setGraphClasseId(''); }}
-                  style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 12, background: !graphClasseId ? '#eef2ff' : '#f8fafc', color: !graphClasseId ? '#4338ca' : '#64748b', fontWeight: !graphClasseId ? 700 : 600, borderLeft: `3px solid ${!graphClasseId ? '#6366f1' : 'transparent'}`, borderBottom: '1px solid #e2e8f0', transition: 'background 0.1s' }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGraphClasseId(''); } }}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', background: !graphClasseId ? '#eef2ff' : 'white', color: !graphClasseId ? '#4338ca' : '#1e293b', fontWeight: !graphClasseId ? 700 : 400, borderLeft: `3px solid ${!graphClasseId ? '#6366f1' : 'transparent'}`, borderBottom: '1px solid #e2e8f0', transition: 'background 0.1s' }}
                 >
-                  Toutes les classes
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Toutes les classes</span>
+                  <span style={{ flexShrink: 0, fontWeight: !graphClasseId ? 700 : 600, fontVariantNumeric: 'tabular-nums', color: !graphClasseId ? '#4338ca' : '#64748b' }}>{fmtMoyClasse(moyenneToutesClasses)}</span>
                 </div>
                 {classesListeGraph.map((cl, idx) => {
                   const isSelected = String(graphClasseId) === String(cl.id);
+                  const moy = moyRowByClasseId.get(String(cl.id))?.global ?? null;
                   return (
                     <div
                       key={`graph-classe-side-${cl.id}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setGraphClasseId(String(cl.id))}
-                      style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSelected ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSelected ? '#4338ca' : '#1e293b', fontWeight: isSelected ? 700 : 400, borderLeft: `3px solid ${isSelected ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGraphClasseId(String(cl.id)); } }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, background: isSelected ? '#eef2ff' : idx % 2 === 0 ? 'white' : '#fafbfc', color: isSelected ? '#4338ca' : '#1e293b', fontWeight: isSelected ? 700 : 400, borderLeft: `3px solid ${isSelected ? '#6366f1' : 'transparent'}`, transition: 'background 0.1s' }}
                     >
-                      {cl.nom}
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cl.nom}</span>
+                      <span style={{ flexShrink: 0, fontWeight: isSelected ? 700 : 500, fontVariantNumeric: 'tabular-nums', color: isSelected ? '#4338ca' : '#64748b' }}>{fmtMoyClasse(moy)}</span>
                     </div>
                   );
                 })}
@@ -3253,6 +3313,7 @@ export default function TCF() {
                   classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
                 }
               )}
+            </div>
             </div>
           </div>
         )}

@@ -1857,7 +1857,7 @@ export default function Notes() {
             return (
               <div key={eleveId} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div id={printId} style={{ border: '2px solid #dc2626', borderRadius: 0, padding: '16px 24px 12px', fontFamily: font, position: 'relative', background: 'white', height: '194mm', maxHeight: '194mm', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <img src="/logo-etat-du-valais.png" alt="" style={{ width: 34, height: 'auto', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                       <div style={{ fontSize: 9, lineHeight: 1.45, color: '#334155' }}>
@@ -1873,35 +1873,35 @@ export default function Notes() {
                       <div style={{ fontSize: 9, fontWeight: 700, color: '#0f172a' }}>CLASSES D'ACCUEIL</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '36pt', letterSpacing: 6, textTransform: 'uppercase', color: '#1e293b', marginBottom: 4 }}>Attestation</div>
+                  <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '36pt', letterSpacing: 6, textTransform: 'uppercase', color: '#1e293b', marginBottom: 0 }}>Attestation</div>
                   {(() => {
                     const cn = classeNom.toUpperCase();
                     const sub = cn.includes('CFR') ? 'Cours de français' : cn.includes('CSC') ? 'Cours de scolarisation' : cn.includes('EPL') ? 'Encouragement précoce de la langue' : cn.includes('CPR') ? 'Cours préparatoires' : null;
-                    return sub ? <div style={{ textAlign: 'center', fontSize: '24pt', fontWeight: 600, color: '#0f172a', marginBottom: 10 }}>{sub}</div> : <div style={{ marginBottom: 10 }} />;
+                    return sub ? <div style={{ textAlign: 'center', fontSize: '24pt', fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>{sub}</div> : <div style={{ marginBottom: 6 }} />;
                   })()}
-                  <div style={{ fontSize: '15pt', lineHeight: 1.45, color: '#1e293b', textAlign: 'center', margin: '4px 0 8px' }}>
-                    <div style={{ marginBottom: 3 }}>Le Service de l'action sociale du canton du Valais atteste que</div>
-                    <div style={{ fontWeight: 800, fontSize: '24pt', margin: '2px 0 2px', color: '#0f172a', lineHeight: 1.2 }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
+                  <div style={{ fontSize: '15pt', lineHeight: 1.45, color: '#1e293b', textAlign: 'center', margin: '0 0 4px' }}>
+                    <div style={{ marginBottom: 12 }}>Le Service de l'action sociale du canton du Valais atteste que</div>
+                    <div style={{ fontWeight: 800, fontSize: '24pt', margin: '0 0 2px', color: '#0f172a', lineHeight: 1.2 }}>{eleveInfo.prenom} {eleveInfo.nom}</div>
                     {(dateNaissance || nationalite) && (
-                      <div style={{ fontSize: '10pt', color: '#1e293b', marginBottom: 3 }}>
+                      <div style={{ fontSize: '10pt', color: '#1e293b', marginBottom: 14 }}>
                         {dateNaissance && nationalite ? `${neLabel} ${dateNaissance}, ${nationalite}` : dateNaissance ? `${neLabel} ${dateNaissance}` : nationalite}
                       </div>
                     )}
-                    <div style={{ marginTop: 6 }}>a suivi les cours de langue française du <strong>{dateDebutCours}</strong> au <strong>{dateFinCours}</strong>,</div>
-                    <div>à raison de <strong>4 heures</strong> par jour.</div>
-                    <div style={{ marginTop: 6 }}>Niveau atteint : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong></div>
+                    <div style={{ marginTop: 5 }}>a suivi les cours de langue française du <strong>{dateDebutCours}</strong> au <strong>{dateFinCours}</strong>,</div>
+                    <div style={{ marginBottom: 14 }}>à raison de <strong>4 heures</strong> par jour.</div>
+                    <div style={{ marginTop: 2 }}>Niveau atteint : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong></div>
                     {taux !== null && <div>Taux de présence : <strong>{taux} %</strong></div>}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                    <div style={{ fontSize: 13, color: '#475569', marginTop: 8 }}>Vétroz, le {now.toLocaleDateString('fr-CH')}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>Vétroz, le {now.toLocaleDateString('fr-CH')}</div>
                     <div style={{ textAlign: 'center', minWidth: 220 }}>
-                      <div style={{ marginTop: 8 }}></div>
+                      <div style={{ marginTop: 4 }}></div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{respCoursNom || 'Responsable des cours'}</div>
                       <div style={{ fontSize: 12, color: '#475569' }}>Responsable des cours de langues</div>
                       <div style={{ fontSize: 12, color: '#475569' }}>Office de l'asile</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11, color: '#64748b' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, fontSize: 11, color: '#64748b' }}>
                     <img src="/logo-pied-page.png" alt="" style={{ height: 17, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
                     <span>Zone Industrielle 4, 1963 Vétroz — Tél. 027 606 18 60</span>
                   </div>
