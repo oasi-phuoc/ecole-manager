@@ -175,6 +175,7 @@ export default function Branches() {
 
       <div style={{marginTop:4}}>
         <div style={s.tableWrap}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
             <tr>
@@ -213,6 +214,7 @@ export default function Branches() {
             })}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     </div>
@@ -253,7 +255,7 @@ const s = {
   toggleBtnActif: { background: '#6366f1', color: 'white', fontWeight: 700 },
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'white'},
-  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',background:'#6366f1',borderBottom:'1px solid rgba(0,0,0,0.06)'},
+  th:{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',background:'#6366f1',borderBottom:'1px solid rgba(0,0,0,0.06)',position:'sticky',top:0,zIndex:2},
   tr:{},
   td:{padding:'12px 16px',fontSize:13,color:'#374151',background:'white',borderBottom:'1px solid #f8fafc',verticalAlign:'middle'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8',background:'white'},

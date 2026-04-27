@@ -1592,6 +1592,7 @@ export default function Classes() {
           )}
         </div>
         <div style={{...s.tableWrap, marginTop:10}}>
+          <div style={{overflow:'auto',maxHeight:'calc(100vh - 280px)',WebkitOverflowScrolling:'touch'}}>
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
@@ -1670,6 +1671,7 @@ export default function Classes() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
         </>
       ) : classeVueTab === 'devoirs' ? (
@@ -2183,6 +2185,7 @@ export default function Classes() {
       )}
 
       <div style={{...s.tableWrap, marginTop:4}}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -2281,6 +2284,7 @@ export default function Classes() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -2331,7 +2335,7 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'static',top:'auto',zIndex:'auto',boxShadow:'none'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:2},
   tr:{borderBottom:'1px solid #f8fafc'},
   trActive:{borderBottom:'1px solid #f8fafc',background:'#eef2ff'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},

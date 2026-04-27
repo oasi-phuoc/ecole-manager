@@ -883,6 +883,7 @@ export default function Presences() {
       {onglet === 'stats' && (
         <div>
           <div style={{background:'white',borderRadius:14,boxShadow:'none',border:'none',overflow:'hidden'}}>
+          <div style={{overflow:'auto',maxHeight:'calc(100vh - 260px)',WebkitOverflowScrolling:'touch'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <colgroup>
               <col style={{ width: COL_NOM_WIDTH, minWidth: COL_NOM_WIDTH, maxWidth: COL_NOM_WIDTH }} />
@@ -900,6 +901,9 @@ export default function Presences() {
                     borderTopLeftRadius: hi === 0 ? 12 : 0,
                     borderTopRightRadius: hi === 9 ? 12 : 0,
                     boxShadow: 'none',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
                   }}>{h}</th>
                 ))}
               </tr>
@@ -935,6 +939,7 @@ export default function Presences() {
               })}
             </tbody>
           </table>
+          </div>
           </div>
         </div>
       )}

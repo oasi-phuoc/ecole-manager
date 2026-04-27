@@ -763,7 +763,8 @@ export default function Professeurs({
         </div>
       )}
 
-      <div style={{ ...s.tableWrap, marginTop: 4, overflow: 'visible', background: 'white' }}>
+      <div style={{ ...s.tableWrap, marginTop: 4, background: 'white' }}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
             <tr style={s.thead}>
@@ -833,6 +834,7 @@ export default function Professeurs({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -874,7 +876,7 @@ const s = {
   tableWrap:{borderRadius:12,overflow:'hidden',background:'white'},
   table:{width:'100%',borderCollapse:'collapse',background:'white'},
   thead:{background:'#6366f1'},
-  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1'},
+  th:{padding:'10px 14px',textAlign:'left',fontSize:11,fontWeight:700,color:'white',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap',background:'#6366f1',position:'sticky',top:0,zIndex:2},
   tr:{borderBottom:'1px solid #f8fafc'},
   td:{padding:'11px 14px',fontSize:13,color:'#374151'},
   empty:{padding:40,textAlign:'center',color:'#94a3b8'},

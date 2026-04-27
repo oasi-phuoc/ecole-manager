@@ -494,10 +494,9 @@ export default function Eleves() {
   };
 
   const thSticky = (extra = {}) => ({
-    position: 'static',
-    top: 'auto',
-    zIndex: 'auto',
-    boxShadow: 'none',
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
     ...extra,
   });
 
@@ -1112,6 +1111,7 @@ export default function Eleves() {
       {/* Tableau */}
       <div style={{marginTop:4}}>
         <div style={{borderRadius:12,overflow:'hidden',background:'white'}}>
+        <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
           <thead>
             <tr>
@@ -1225,6 +1225,7 @@ export default function Eleves() {
             ))}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     </div>
