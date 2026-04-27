@@ -457,6 +457,9 @@ export default function Notes() {
       const blockBorder = '1px solid #cbd5e1';
       const th = `background:#e5e7eb;color:#0f172a;font-weight:800;text-align:left;font-size:13px;padding:6px 10px;border:${blockBorder};box-shadow:none;`;
       const thC = `${th}text-align:center;width:44px;white-space:nowrap;`;
+      /** Branches principales : pas de séparateur vertical entre S1 et S2 (impression PDF) */
+      const thCmid = `${th}text-align:center;width:44px;white-space:nowrap;border-right:none;`;
+      const thClast = `${th}text-align:center;width:44px;white-space:nowrap;border-left:none;`;
       const td = `padding:4px 10px;font-size:13px;color:#374151;vertical-align:middle;border-left:${blockBorder};`;
       const tdC = `padding:4px 6px;font-size:13px;color:#374151;text-align:center;vertical-align:middle;`;
       const tdCR = `${tdC}border-right:${blockBorder};`;
@@ -497,9 +500,9 @@ export default function Notes() {
           <div style="font-size:12pt;color:#1e293b;margin-bottom:16px;line-height:1.35;padding-left:10px"><span style="font-weight:700">Classe :</span><span style="margin-left:6px">${classeNom}</span></div>
           <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;width:100%;">
             <div style="display:flex;flex-direction:column;gap:20px;min-width:0;">
-              <table><thead><tr><th style="${th}">Branches principales</th><th style="${thC}">S1</th><th style="${thC}">S2</th></tr></thead><tbody>
+              <table><thead><tr><th style="${th}">Branches principales</th><th style="${thCmid}">S1</th><th style="${thClast}">S2</th></tr></thead><tbody>
                 ${prin.length===0?`<tr><td colspan="3" style="${td};border-right:${blockBorder};color:#aaa">—</td></tr>`:prin.map(brRow).join('')}
-                <tr><td style="${tdBottomL};font-weight:700">Moyenne</td><td style="${tdBottomCR};font-weight:700">${fv(mP1)}</td><td style="${tdBottomCR};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
+                <tr><td style="${tdBottomL};font-weight:700">Moyenne</td><td style="${tdBottomNoDiv};font-weight:700">${fv(mP1)}</td><td style="${tdBottomCR};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
               </tbody></table>
               <table><thead><tr><th style="${th}">Branches secondaires</th><th style="${thC}">S1</th><th style="${thC}">S2</th></tr></thead><tbody>
                 ${sec.length===0?`<tr><td colspan="3" style="${td};border-right:${blockBorder};color:#aaa">—</td></tr>`:sec.map(brRow).join('')}
@@ -1033,6 +1036,8 @@ export default function Notes() {
           const tblBorder = { border: '1px solid #cbd5e1' };
           const thBranch = { border: '1px solid #cbd5e1', background: '#e5e7eb', color: '#0f172a', fontWeight: 800, textAlign: 'left', fontSize: 13, padding: '6px 10px', textTransform: 'none', letterSpacing: 'normal', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif', boxShadow: 'none', position: 'static' };
           const thBranchC = { ...thBranch, textAlign: 'center', width: 44, whiteSpace: 'nowrap' };
+          const thBranchCS1 = { ...thBranchC, borderRight: 'none' };
+          const thBranchCS2 = { ...thBranchC, borderLeft: 'none' };
           const tdP = { ...s.td, padding: '2px 10px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const tdC = { ...s.td, border: 'none', textAlign: 'center', padding: '2px 6px', fontFamily: 'Century Gothic, CenturyGothic, AppleGothic, sans-serif' };
           const tdCR = { ...tdC, borderRight: '1px solid #cbd5e1' };
@@ -1107,11 +1112,11 @@ export default function Notes() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>
-                          <thead><tr style={{ background: 'white' }}><th style={thBranch}>Branches principales</th><th style={thBranchC}>S1</th><th style={thBranchC}>S2</th></tr></thead>
+                          <thead><tr style={{ background: 'white' }}><th style={thBranch}>Branches principales</th><th style={thBranchCS1}>S1</th><th style={thBranchCS2}>S2</th></tr></thead>
                           <tbody>
                             {principales.length === 0 && <tr><td colSpan={3} style={{ ...tdL, borderRight: '1px solid #cbd5e1', color: '#aaa' }}>—</td></tr>}
                             {principales.map(nom => (<tr key={nom} style={s.tr}><td style={tdL}>{nom}</td><td style={tdC}>{pm1[nom]?.moyenne != null ? fmtNote(pm1[nom].moyenne) : '—'}</td><td style={tdCR}>{showS2popup && pm2[nom]?.moyenne != null ? fmtNote(pm2[nom].moyenne) : '—'}</td></tr>))}
-                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdBottomL}>Moyenne</td><td style={tdBottomCR}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdBottomCR}>{showS2popup && moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
+                            <tr style={{ ...s.tr, fontWeight: 700 }}><td style={tdBottomL}>Moyenne</td><td style={tdBottomNoDiv}>{moyP1 != null ? fmtNote(moyP1) : '—'}</td><td style={tdBottomCR}>{showS2popup && moyP2 != null ? fmtNote(moyP2) : '—'}</td></tr>
                           </tbody>
                         </table>
                         <table style={{ ...s.tbl, ...tblBorder, width: '100%', tableLayout: 'fixed' }}>

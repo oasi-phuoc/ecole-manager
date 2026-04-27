@@ -55,9 +55,17 @@ const nb = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+const parseNoteTCF = (v) => {
+  if (v === '' || v === undefined || v === null) return null;
+  const n = typeof v === 'string' ? parseFloat(String(v).replace(',', '.')) : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+/** Total TCF (/100) : ≤ 30 rouge, ≥ 85 vert (onglet Résultats — vues Classe / Élève ; Statistiques) */
 const couleurTotale = (total) => {
-  if (total <= 30) return { color: '#b91c1c' };
-  if (total >= 85) return { color: '#166534' };
+  const n = parseNoteTCF(total);
+  if (n == null) return {};
+  if (n <= 30) return { color: '#b91c1c' };
+  if (n >= 85) return { color: '#166534' };
   return { color: '#0f172a' };
 };
 const cycleStatut = (statut) => {
@@ -250,6 +258,8 @@ export default function TCF() {
   const [graphVue, setGraphVue] = useState('moyenne');
   const [graphNiveau, setGraphNiveau] = useState('');
   const [graphShowNiveaux, setGraphShowNiveaux] = useState(false);
+  /** Points / étiquettes sur la courbe de tendance (vue élève, plusieurs sessions) */
+  const [graphShowTrendPoints, setGraphShowTrendPoints] = useState(true);
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphRecherche, setGraphRecherche] = useState('');
   const [graphSortDir, setGraphSortDir] = useState('asc');
@@ -1512,7 +1522,7 @@ export default function TCF() {
                             <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
                           </>
                         )}
-                        <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                        <td style={{ ...styles.tdCenterRead, ...totalStyle }}>{computed.total === '' ? '' : computed.total}</td>
                       </React.Fragment>
                     );
                   })}
@@ -1597,7 +1607,7 @@ export default function TCF() {
                           ))}
                           <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
                           <td style={styles.tdCenterRead}>{computed.ecrit === '' ? '' : computed.ecrit}</td>
-                          <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                          <td style={{ ...styles.tdCenterRead, ...totalStyle }}>{computed.total === '' ? '' : computed.total}</td>
                         </>
                       ) : (
                         <>
@@ -1612,7 +1622,7 @@ export default function TCF() {
                           ))}
                           <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
                           <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
-                          <td style={{ ...styles.tdCenterRead, color: totalStyle.color }}>{computed.total === '' ? '' : computed.total}</td>
+                          <td style={{ ...styles.tdCenterRead, ...totalStyle }}>{computed.total === '' ? '' : computed.total}</td>
                         </>
                       )}
                     </tr>
@@ -2226,6 +2236,7 @@ export default function TCF() {
   const buildChartSVG = (series, maxScore, isFr, options = {}) => {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const showTrend = options.showTrend !== false;
+    const showTrendPoints = options.showTrendPoints !== false;
     const niveau = normaliserNiveau(options.niveau || '');
     const label1 = options.label1 || (isFr ? 'Oral' : 'Base');
     const label2 = options.label2 || (isFr ? 'Écrit' : 'Avancé');
@@ -2315,10 +2326,12 @@ export default function TCF() {
         return { x, y, moy, total };
       });
       parts.push(`<polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6,3" points="${pts.map(p => `${p.x},${p.y}`).join(' ')}"/>`);
-      pts.forEach((p) => {
-        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>`);
-        parts.push(`<text x="${p.x}" y="${p.y - 8}" text-anchor="middle" font-size="11" fill="#92400e" font-weight="700">${p.total}</text>`);
-      });
+      if (showTrendPoints) {
+        pts.forEach((p) => {
+          parts.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>`);
+          parts.push(`<text x="${p.x}" y="${p.y - 8}" text-anchor="middle" font-size="11" fill="#92400e" font-weight="700">${p.total}</text>`);
+        });
+      }
     }
 
     // Légendes à droite, alignées en bas du cadre
@@ -2330,13 +2343,26 @@ export default function TCF() {
     parts.push(`<text x="${lx + 22}" y="${ly + 39}" font-size="12" fill="#334155" font-weight="700">${label2}</text>`);
     if (showTrend && series.length > 1) {
       parts.push(`<line x1="${lx}" y1="${ly + 58}" x2="${lx + 18}" y2="${ly + 58}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);
-      parts.push(`<circle cx="${lx + 9}" cy="${ly + 58}" r="3.5" fill="#f59e0b"/>`);
+      if (showTrendPoints) {
+        parts.push(`<circle cx="${lx + 9}" cy="${ly + 58}" r="3.5" fill="#f59e0b"/>`);
+      }
       parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Moyenne</text>`);
     }
 
     const responsiveSvg = wide || options.fitContainer === true;
+    const scrollPlotHorizontal = options.scrollPlotHorizontal === true;
+    const expandVerticalFill = options.expandVerticalFill === true;
+    const svgWidthAttr = scrollPlotHorizontal ? '' : ' width="100%"';
+    let svgStyle;
+    if (scrollPlotHorizontal) {
+      svgStyle = 'height:100%;width:auto;max-height:100%;display:block;flex-shrink:0';
+    } else if (expandVerticalFill) {
+      svgStyle = 'max-width:100%;max-height:100%;width:100%;height:100%;display:block';
+    } else {
+      svgStyle = 'max-width:100%;max-height:100%;height:auto;display:block';
+    }
     const svgAttrs = responsiveSvg
-      ? ` xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" style="max-width:100%;max-height:100%;height:auto;display:block"`
+      ? ` xmlns="http://www.w3.org/2000/svg"${svgWidthAttr} viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" style="${svgStyle}"`
       : ` xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}"`;
     return `<svg${svgAttrs}>${parts.join('')}</svg>`;
   };
@@ -3144,16 +3170,26 @@ export default function TCF() {
     const renderSvgChart = (items, opts = {}) => {
       const chartMax = Number(opts.maxScoreOverride) > 0 ? Number(opts.maxScoreOverride) : maxScore;
       const embedPanel = opts.embedClassPanel === true;
+      /** Graphique en panneau : même hauteur utile (flex) ; défilement horizontal si beaucoup de barres */
+      const expandPlot = embedPanel && opts.expandPlotInPanel === true;
+      const scrollPlotHorizontal = embedPanel && opts.scrollPlotHorizontally === true;
       const fixPlot = embedPanel || opts.fixPlotHeight === true;
       const wideUi = graphUiLandscape && !embedPanel;
-      const plotPx = embedPanel ? GRAPH_EMBED_PLOT_PX : (fixPlot ? GRAPH_FULL_PLOT_PX : null);
+      const plotPx = embedPanel && !expandPlot ? GRAPH_EMBED_PLOT_PX : (!embedPanel && fixPlot ? GRAPH_FULL_PLOT_PX : null);
       const identityMin = embedPanel ? GRAPH_EMBED_IDENTITY_MIN : (fixPlot ? GRAPH_FULL_IDENTITY_MIN : undefined);
       const svg = buildChartSVG(items, chartMax, isFr, {
         showTrend: opts.showTrend !== false,
+        showTrendPoints: graphShowTrendPoints,
         niveau: opts.niveau || '',
-        innerH: embedPanel ? 240 : (wideUi ? 360 : 320),
+        innerH: expandPlot ? 400 : (embedPanel ? 240 : (wideUi ? 360 : 320)),
         chartWide: wideUi,
         fitContainer: embedPanel || fixPlot,
+        ...(expandPlot ? {
+          fitMinSlots: Math.max(items.length, 2),
+          ...(scrollPlotHorizontal
+            ? { scrollPlotHorizontal: true }
+            : { expandVerticalFill: true }),
+        } : {}),
         label1: opts.label1,
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
@@ -3228,24 +3264,58 @@ export default function TCF() {
               {(nomMaj || prenomAff) && <div style={{ fontSize: embedPanel ? 12 : 16, color: '#1f2937', marginBottom: 4 }}><b>{identiteLabel} :</b> {nomMaj} {prenomAff}</div>}
               {classeAff && <div style={{ fontSize: embedPanel ? 12 : 16, color: '#1f2937', marginBottom: embedPanel ? 0 : 16 }}><b>Classe :</b> {classeAff}</div>}
             </div>
-            {/* Graphique — hauteur de tracé fixe en mode panneau / fixPlotHeight */}
+            {/* Graphique — flex 1 si expandPlot ; défilement horizontal si scrollPlotHorizontally */}
             <div style={{
-              overflowX: fixPlot ? 'hidden' : 'auto',
+              overflowX: scrollPlotHorizontal ? 'auto' : (fixPlot ? 'hidden' : 'auto'),
               overflowY: fixPlot ? 'hidden' : 'visible',
               display: 'flex',
-              justifyContent: 'center',
-              alignItems: fixPlot ? 'center' : undefined,
-              flex: embedPanel && !plotPx ? 1 : undefined,
-              minHeight: embedPanel && !plotPx ? 0 : undefined,
+              justifyContent: scrollPlotHorizontal ? 'flex-start' : 'center',
+              alignItems: expandPlot ? 'stretch' : (fixPlot ? 'center' : undefined),
+              flex: expandPlot ? 1 : undefined,
+              minHeight: expandPlot ? 220 : undefined,
+              marginTop: expandPlot ? 10 : undefined,
+              scrollbarGutter: scrollPlotHorizontal ? 'stable' : undefined,
               ...(plotPx != null ? { height: plotPx, minHeight: plotPx, maxHeight: plotPx, flex: '0 0 auto' } : {}),
             }}
             >
-              <div
-                style={fixPlot ? { width: '100%', height: '100%', maxHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 } : undefined}
-                dangerouslySetInnerHTML={{ __html: svg }}
-              />
+              {scrollPlotHorizontal ? (
+                <div style={{
+                  height: '100%',
+                  width: 'max-content',
+                  minWidth: '100%',
+                  minHeight: 0,
+                  boxSizing: 'border-box',
+                }}
+                >
+                  <div
+                    style={{
+                      width: 'max-content',
+                      minWidth: '100%',
+                      height: '100%',
+                      maxHeight: '100%',
+                      display: 'block',
+                      minHeight: 0,
+                    }}
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={fixPlot ? {
+                    width: '100%',
+                    height: '100%',
+                    maxHeight: '100%',
+                    display: 'flex',
+                    alignItems: expandPlot ? 'stretch' : 'center',
+                    justifyContent: 'center',
+                    minHeight: 0,
+                    ...(expandPlot ? { flex: 1, alignSelf: 'stretch' } : {}),
+                  } : undefined}
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                />
+              )}
             </div>
-            {embedPanel ? <div style={{ flex: 1, minHeight: 0 }} /> : null}
+            {embedPanel && !expandPlot ? <div style={{ flex: 1, minHeight: 0 }} /> : null}
             {/* Pied de page */}
             <div style={{
               marginTop: embedPanel ? 6 : 10, paddingTop: embedPanel ? 4 : 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 10, flexShrink: 0,
@@ -3274,6 +3344,29 @@ export default function TCF() {
       );
     };
 
+    const btnGraphTrendPointsStyle = {
+      padding: '7px 14px',
+      borderRadius: 17,
+      border: `1.5px solid ${graphShowTrendPoints ? '#6366f1' : '#e2e8f0'}`,
+      background: graphShowTrendPoints ? '#e0e7ff' : 'white',
+      cursor: 'pointer',
+      fontWeight: 600,
+      color: graphShowTrendPoints ? '#4338ca' : '#94a3b8',
+      fontSize: 13,
+      fontFamily: 'inherit',
+      whiteSpace: 'nowrap',
+      boxSizing: 'border-box',
+      width: 220,
+      minWidth: 220,
+      maxWidth: 220,
+      textAlign: 'center',
+    };
+    const btnGraphTrendPoints = (
+      <button type="button" onClick={() => setGraphShowTrendPoints((v) => !v)} style={btnGraphTrendPointsStyle}>
+        {graphShowTrendPoints ? 'Masquer les points' : 'Afficher les points'}
+      </button>
+    );
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 0 }}>
@@ -3285,33 +3378,39 @@ export default function TCF() {
               style={{ ...styles.searchInput, minWidth: 160, flex: '0 1 220px' }}
             />
             {!graphShowNiveaux ? (
-              <button
-                type="button"
-                onClick={() => setGraphShowNiveaux(true)}
-                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-              >
-                Trier
-              </button>
-            ) : (
-              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              <>
                 <button
                   type="button"
-                  onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); }}
-                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                  onClick={() => setGraphShowNiveaux(true)}
+                  style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                 >
                   Trier
                 </button>
-                {niveauxTabs.map((n) => (
+                {btnGraphTrendPoints}
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
                   <button
-                    key={n}
                     type="button"
-                    onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); }}
-                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); }}
+                    style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !graphNiveau ? '#6366f1' : 'transparent', color: !graphNiveau ? 'white' : '#6d28d9', fontWeight: !graphNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                   >
-                    {n}
+                    Trier
                   </button>
-                ))}
-              </div>
+                  {niveauxTabs.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => { setGraphNiveau(n); setGraphClasseId(''); setGraphEleveId(''); }}
+                      style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: graphNiveau === n ? '#6366f1' : 'transparent', color: graphNiveau === n ? 'white' : '#6d28d9', fontWeight: graphNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                {btnGraphTrendPoints}
+              </>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
@@ -3382,6 +3481,8 @@ export default function TCF() {
                   dataTousEleves,
                   {
                     embedClassPanel: true,
+                    expandPlotInPanel: true,
+                    scrollPlotHorizontally: true,
                     showTrend: false,
                     niveau: niveauActif,
                     nom: niveauActif,
@@ -3403,6 +3504,7 @@ export default function TCF() {
                   sessionsIndiv.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })),
                   {
                     embedClassPanel: true,
+                    expandPlotInPanel: true,
                     showTrend: true,
                     niveau: niveauIndividuel,
                     nom: toDisplayNom(eleveIndividuel?.nom || ''),
@@ -3627,7 +3729,7 @@ export default function TCF() {
                         const v = r.totalsBySession[s];
                         const c = v == null ? {} : couleurTotale(v);
                         return (
-                          <td key={`td-stat-${r.id}-${s}`} style={{ ...styles.tdCenterRead, color: c.color }}>
+                          <td key={`td-stat-${r.id}-${s}`} style={{ ...styles.tdCenterRead, ...c }}>
                             {v == null ? '—' : v}
                           </td>
                         );
