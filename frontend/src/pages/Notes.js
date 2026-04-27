@@ -48,6 +48,8 @@ const abregerMatiere = (nom) => {
   return map[txt] || txt;
 };
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
+/** Impression HTML (attestations) */
+const escapeHtmlAttest = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const parseMatieresDetail = (row) => {
   const md = row?.matieres_detail;
@@ -430,8 +432,9 @@ export default function Notes() {
     }
   };
 
-  const handleImprimer = () => {
-    if (vue === 'bulletin' && bulletinMode === 'eleve' && !eleveSelectionne) {
+  const handleImprimer = (opts = {}) => {
+    const imprimerTouteLaClasse = opts.touteLaClasse === true;
+    if (vue === 'bulletin' && !imprimerTouteLaClasse && bulletinMode === 'eleve' && !eleveSelectionne) {
       alert('Sélectionnez un élève avant impression.');
       return;
     }
@@ -443,7 +446,9 @@ export default function Notes() {
       const showS2 = bulletinSemestre === '2';
       const seen = new Set(); const allEleves = [];
       for (const b of [...bulletinsSem1, ...bulletinsSem2]) { if (!seen.has(b.eleve.id)) { seen.add(b.eleve.id); allEleves.push(b.eleve); } }
-      const elevesToShow = bulletinMode === 'tous' ? allEleves : allEleves.filter(el => el.id === parseInt(eleveSelectionne));
+      const elevesToShow = imprimerTouteLaClasse || bulletinMode === 'tous'
+        ? allEleves
+        : allEleves.filter(el => el.id === parseInt(eleveSelectionne, 10));
       const moyBr = (names, pm) => { const w = names.filter(n => pm[n]?.moyenne != null); return w.length ? w.reduce((a,n) => a + parseFloat(pm[n].moyenne||0), 0)/w.length : null; };
       const apprH = (n) => { if (n==null) return '—'; const v=parseFloat(n); if(isNaN(v))return'—'; if(v<4)return'INS'; if(v<4.5)return'S'; if(v<5)return'AB'; if(v<5.5)return'B'; if(v<6)return'TB'; return'EXC'; };
       const valH = (n, pm) => showAppreciations ? apprH(pm != null ? pm : n) : (n != null ? parseFloat(n).toFixed(1) : '—');
@@ -537,8 +542,8 @@ export default function Notes() {
         body{font-family:'Century Gothic',CenturyGothic,'Apple Gothic',Futura,'Trebuchet MS',sans-serif;background:white;color:#1e293b;}
         @page{size:A4 portrait;margin:15mm 20mm;}
         @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-        .bul-page{page-break-after:always;position:relative;min-height:calc(297mm - 30mm);padding-bottom:50px;display:flex;flex-direction:column;}
-        .bul-page:last-child{page-break-after:auto;}
+        .bul-page{break-after:page;page-break-after:always;position:relative;min-height:calc(297mm - 30mm);padding-bottom:50px;display:flex;flex-direction:column;}
+        .bul-page:last-child{break-after:auto;page-break-after:auto;}
         .entete-txt,.entete-txt *{font-size:6pt!important;}
         .scai{font-size:17pt!important;font-weight:800;line-height:1;color:#1e293b;}
         .bul-titre{text-align:center;font-weight:700;font-size:17pt;letter-spacing:1px;text-transform:uppercase;margin-top:20pt;margin-bottom:12pt;color:#0f172a;}
@@ -558,6 +563,116 @@ export default function Notes() {
     openPrintPopup(finalHtml, { title: 'Notes', width: 1100, height: 820 });
   };
   const classeNom = classeObj?.nom || '';
+
+  /** HTML d’une attestation (même contenu que l’aperçu à l’écran) — pour impression sans dépendre du DOM */
+  const buildAttestationInnerHtml = (eleveId) => {
+    const bdS1 = bulletinsSem1.find((b) => b.eleve.id === eleveId);
+    const bdS2 = bulletinsSem2.find((b) => b.eleve.id === eleveId);
+    const eleveInfo = bdS1?.eleve || bdS2?.eleve;
+    if (!eleveInfo) return '';
+    const stS1 = bulletinStatsS1.find((s) => Number(s.eleve_id) === Number(eleveId));
+    const stS2 = bulletinStatsS2.find((s) => Number(s.eleve_id) === Number(eleveId));
+    const anneeStats = Number(stS1?.presents || 0) + Number(stS1?.absents || 0) + Number(stS1?.excuses || 0) + Number(stS2?.presents || 0) + Number(stS2?.absents || 0) + Number(stS2?.excuses || 0);
+    const presS1S2 = Number(stS1?.presents || 0) + Number(stS2?.presents || 0);
+    const taux = anneeStats > 0 ? Math.round((presS1S2 / anneeStats) * 100) : null;
+    const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
+    const dateDebutCours = eleveInfo.date_debut_cours
+      ? new Date(eleveInfo.date_debut_cours).toLocaleDateString('fr-CH')
+      : ecoleParams.date_debut_annee
+        ? new Date(ecoleParams.date_debut_annee).toLocaleDateString('fr-CH')
+        : '—';
+    const dateFinCours = ecoleParams.date_fin_annee ? new Date(ecoleParams.date_fin_annee).toLocaleDateString('fr-CH') : '—';
+    const rawNaissance = eleveInfo.date_naissance || eleveInfo.oasi_nais;
+    const dateNaissance = rawNaissance ? new Date(rawNaissance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const nationalite = eleveInfo.nationalite || eleveInfo.oasi_nationalite || '';
+    const sexeEleve = String(eleveInfo.sexe || '').trim().toUpperCase();
+    const neLabel = sexeEleve === 'M' ? 'né le' : sexeEleve === 'F' ? 'née le' : 'né(e) le';
+    const now = new Date();
+    const as = now.getMonth() >= 7 ? `${now.getFullYear()}-${now.getFullYear() + 1}` : `${now.getFullYear() - 1}-${now.getFullYear()}`;
+    const cn = String(classeNom || '').toUpperCase();
+    let subLine = '';
+    if (cn.includes('CFR')) subLine = 'Cours de français';
+    else if (cn.includes('CSC')) subLine = 'Cours de scolarisation';
+    else if (cn.includes('EPL')) subLine = 'Encouragement précoce de la langue';
+    else if (cn.includes('CPR')) subLine = 'Cours préparatoires';
+    const subHtml = subLine
+      ? `<div style="text-align:center;font-size:24pt;font-weight:600;color:#0f172a;margin-bottom:6px">${escapeHtmlAttest(subLine)}</div>`
+      : '<div style="margin-bottom:6px"></div>';
+    let naissanceBlock = '';
+    if (dateNaissance || nationalite) {
+      const naisText = dateNaissance && nationalite ? `${neLabel} ${dateNaissance}, ${nationalite}` : dateNaissance ? `${neLabel} ${dateNaissance}` : nationalite;
+      naissanceBlock = `<div style="font-size:10pt;color:#1e293b;margin-bottom:14px">${escapeHtmlAttest(naisText)}</div>`;
+    }
+    const tauxLine = taux !== null ? `<div>Taux de présence : <strong>${taux} %</strong></div>` : '';
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const logoState = `${publicBase}/logo-etat-du-valais.png`;
+    const logoPied = `${publicBase}/logo-pied-page.png`;
+    const dateStr = now.toLocaleDateString('fr-CH');
+    return `<div id="attest-print-${eleveId}" style="border:2px solid #dc2626;border-radius:0;padding:16px 24px 12px;font-family:Century Gothic,CenturyGothic,AppleGothic,sans-serif;position:relative;background:white;height:194mm;max-height:194mm;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+<div style="display:flex;align-items:flex-start;gap:10px">
+<img src="${logoState}" alt="" style="width:34px;height:auto;object-fit:contain" onerror="this.style.display='none'"/>
+<div style="font-size:9px;line-height:1.45;color:#334155">
+<div>Département de la santé, des affaires sociales et de la culture</div>
+<div>Service de l'action sociale</div>
+<div>Office de l'asile</div>
+<div>Centre de formation "Le Botza"</div>
+</div></div>
+<div style="text-align:right">
+<div style="font-size:22px;font-weight:800;color:#1e293b">SCAI</div>
+<div style="font-size:11px;font-weight:700;color:#374151">${escapeHtmlAttest(as)}</div>
+<div style="font-size:9px;font-weight:700;color:#0f172a">CLASSES D'ACCUEIL</div>
+</div></div>
+<div style="text-align:center;font-weight:900;font-size:36pt;letter-spacing:6px;text-transform:uppercase;color:#1e293b;margin-bottom:0">Attestation</div>
+${subHtml}
+<div style="font-size:15pt;line-height:1.45;color:#1e293b;text-align:center;margin:0 0 4px">
+<div style="margin-bottom:12px">Le Service de l'action sociale du canton du Valais atteste que</div>
+<div style="font-weight:800;font-size:24pt;margin:0 0 2px;color:#0f172a;line-height:1.2">${escapeHtmlAttest(`${eleveInfo.prenom || ''} ${eleveInfo.nom || ''}`)}</div>
+${naissanceBlock}
+<div style="margin-top:5px">a suivi les cours de langue française du <strong>${escapeHtmlAttest(dateDebutCours)}</strong> au <strong>${escapeHtmlAttest(dateFinCours)}</strong>,</div>
+<div style="margin-bottom:14px">à raison de <strong>4 heures</strong> par jour.</div>
+<div style="margin-top:2px">Niveau atteint : <strong style="color:#94a3b8;font-style:italic">[à compléter]</strong></div>
+${tauxLine}
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:4px">
+<div style="font-size:13px;color:#475569;margin-top:4px">Vétroz, le ${escapeHtmlAttest(dateStr)}</div>
+<div style="text-align:center;min-width:220px">
+<div style="margin-top:4px"></div>
+<div style="font-size:13px;font-weight:700;color:#1e293b">${escapeHtmlAttest(respCoursNom || 'Responsable des cours')}</div>
+<div style="font-size:12px;color:#475569">Responsable des cours de langues</div>
+<div style="font-size:12px;color:#475569">Office de l'asile</div>
+</div></div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:6px;font-size:11px;color:#64748b">
+<img src="${logoPied}" alt="" style="height:17px;object-fit:contain" onerror="this.style.display='none'"/>
+<span>Zone Industrielle 4, 1963 Vétroz — Tél. 027 606 18 60</span>
+</div></div>`;
+  };
+
+  const imprimerToutesAttestationsClasse = () => {
+    const seen = new Set();
+    const elevsAtt = [];
+    for (const b of [...bulletinsSem1, ...bulletinsSem2]) {
+      if (!seen.has(b.eleve.id)) {
+        seen.add(b.eleve.id);
+        elevsAtt.push(b.eleve);
+      }
+    }
+    const pages = elevsAtt.map((e) => buildAttestationInnerHtml(e.id)).filter(Boolean);
+    if (pages.length === 0) {
+      alert('Aucune attestation à imprimer pour cette classe.');
+      return;
+    }
+    const body = pages.map((inner) => `<div class="attest-print-page">${inner}</div>`).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Attestations</title><style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;color:#1e293b;background:white;}
+@page{size:A4 landscape;margin:8mm 10mm;}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+.attest-print-page{break-after:page;page-break-after:always;}
+.attest-print-page:last-child{break-after:auto;page-break-after:auto;}
+</style></head><body>${body}</body></html>`;
+    openPrintPopup(injectForcedPrintCss(html, 'A4 landscape', '8mm 10mm'), { title: 'Attestations', width: 1200, height: 820 });
+  };
 
   const ouvrirVueDepuisSelectionClasse = async (mode, classeIdParam = classeSelectionnee) => {
     if (!classeIdParam) return;
@@ -1572,7 +1687,7 @@ export default function Notes() {
           {bulletinOnglet === 'notes' && vueClasseAction !== 'attestation' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
-              <button style={s.btnImprimer} onClick={() => { setBulletinMode('tous'); setTimeout(() => { handleImprimer(); setBulletinMode('eleve'); }, 80); }}>Tout imprimer</button>
+              <button type="button" style={s.btnImprimer} onClick={() => handleImprimer({ touteLaClasse: true })}>Tout imprimer</button>
               <button style={s.btnImprimer} onClick={handleImprimer}>
                 Imprimer
               </button>
@@ -1580,12 +1695,7 @@ export default function Notes() {
           )}
           {bulletinOnglet === 'notes' && vueClasseAction === 'attestation' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button style={s.btnImprimer} onClick={() => {
-                const nodes = document.querySelectorAll('[id^="attest-print-"]');
-                const body = Array.from(nodes).map(n => n.outerHTML).join('');
-                const html = `<html><head><title>Attestations</title><style>@page{size:A4 landscape;margin:8mm 10mm;}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;page-break-after:always;}</style></head><body>${body}</body></html>`;
-                openPrintPopup(injectForcedPrintCss(html, 'A4 landscape', '8mm 10mm'), { title: 'Attestations', width: 1200, height: 820 });
-              }}>Tout imprimer</button>
+              <button type="button" style={s.btnImprimer} onClick={imprimerToutesAttestationsClasse}>Tout imprimer</button>
               {attestationPopupEleve && attestationMode === 'eleve' && (
                 <button style={s.btnImprimer} onClick={() => {
                   const node = document.getElementById(`attest-print-${attestationPopupEleve}`);

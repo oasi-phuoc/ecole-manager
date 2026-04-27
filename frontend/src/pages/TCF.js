@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import TimePicker from '../components/TimePicker';
@@ -260,6 +260,8 @@ export default function TCF() {
   const [graphShowNiveaux, setGraphShowNiveaux] = useState(false);
   /** Points / étiquettes sur la courbe de tendance (vue élève, plusieurs sessions) */
   const [graphShowTrendPoints, setGraphShowTrendPoints] = useState(true);
+  /** Largeur du bouton Afficher/Masquer les points = max des deux libellés (mesure une fois) */
+  const [graphTrendPointsBtnWidthPx, setGraphTrendPointsBtnWidthPx] = useState(168);
   const [graphClasseId, setGraphClasseId] = useState('');
   const [graphRecherche, setGraphRecherche] = useState('');
   const [graphSortDir, setGraphSortDir] = useState('asc');
@@ -281,6 +283,20 @@ export default function TCF() {
       mq.removeEventListener('change', update);
       window.removeEventListener('resize', update);
     };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return;
+    const el = document.createElement('span');
+    el.style.cssText =
+      'font-weight:600;font-size:13px;font-family:Century Gothic,CenturyGothic,Apple Gothic,Futura,Trebuchet MS,sans-serif;position:absolute;left:-9999px;top:0;white-space:nowrap;visibility:hidden;';
+    document.body.appendChild(el);
+    el.textContent = 'Afficher les points';
+    const w1 = el.offsetWidth;
+    el.textContent = 'Masquer les points';
+    const w2 = el.offsetWidth;
+    document.body.removeChild(el);
+    setGraphTrendPointsBtnWidthPx(Math.ceil(Math.max(w1, w2)) + 29);
   }, []);
 
   const appliquerPoolState = (poolState = {}) => {
@@ -2236,7 +2252,8 @@ export default function TCF() {
   const buildChartSVG = (series, maxScore, isFr, options = {}) => {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const showTrend = options.showTrend !== false;
-    const showTrendPoints = options.showTrendPoints !== false;
+    /** Par défaut affichés ; masqués seulement si hideTrendPoints === true (évite ambiguïtés avec undefined) */
+    const showTrendPoints = options.hideTrendPoints !== true;
     const niveau = normaliserNiveau(options.niveau || '');
     const label1 = options.label1 || (isFr ? 'Oral' : 'Base');
     const label2 = options.label2 || (isFr ? 'Écrit' : 'Avancé');
@@ -2884,21 +2901,42 @@ export default function TCF() {
           <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>`;
-    const pagesWithLayout = charts.map(c => {
-      const svg = c.series.length > 0
-        ? buildChartSVG(c.series, maxScore, isFr, { showTrend: c.showTrend !== false, niveau: c.niveau || '', innerH: 260 })
+    const pagesWithLayout = charts.map((c) => {
+      const nSer = c.series.length;
+      const printScroll = nSer > 10;
+      const svg = nSer > 0
+        ? buildChartSVG(c.series, maxScore, isFr, {
+          showTrend: c.showTrend !== false,
+          niveau: c.niveau || '',
+          innerH: 400,
+          fitContainer: true,
+          fitMinSlots: Math.max(nSer, 2),
+          ...(printScroll
+            ? { scrollPlotHorizontal: true }
+            : { expandVerticalFill: true }),
+          label1: c.label1,
+          label2: c.label2,
+          showFrenchLevelMarks: c.showFrenchLevelMarks,
+          showMathLevelMarks: c.showMathLevelMarks,
+          hideTrendPoints: false,
+        })
         : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
       const nom = c.nom || '';
       const prenom = c.prenom || '';
       const classe = c.classe || '';
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      const chartInner = printScroll
+        ? `<div class="chart-scroll-inner">${svg}</div>`
+        : svg;
       return `<div class="page">
           ${headerHtml}
-          <div class="page-title">${titleMain}</div>
-          <div class="page-date">${dateVetroz}</div>
-          ${nom || prenom ? `<div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>` : ''}
-          ${classe ? `<div class="page-classe"><b>Classe :</b> ${classe}</div>` : ''}
-          <div class="chart-wrap">${svg}</div>
+          <div class="page-stack">
+            <div class="page-title">${titleMain}</div>
+            <div class="page-date">${dateVetroz}</div>
+            ${nom || prenom ? `<div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>` : ''}
+            ${classe ? `<div class="page-classe"><b>Classe :</b> ${classe}</div>` : ''}
+            <div class="chart-wrap${printScroll ? ' chart-wrap--hscroll' : ''}">${chartInner}</div>
+          </div>
           <div class="page-footer">
             <img class="footer-logo" src="${logoPiedUrl}" alt="Logo pied de page" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoPiedFallbackUrl}';}else{this.style.display='none';}" />
             <div class="footer-text">
@@ -2911,10 +2949,12 @@ export default function TCF() {
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Graphiques TCF</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
         body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; }
-        .page { page-break-after: always; }
+        .page { page-break-after: always; min-height: 100vh; display: flex; flex-direction: column; }
         .page:last-child { page-break-after: auto; }
-        .page-header { padding-bottom: 14px; margin-bottom: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .page-stack { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .page-header { flex-shrink: 0; padding-bottom: 14px; margin-bottom: 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
         .header-left { display: flex; align-items: flex-start; gap: 10px; }
         .header-logo { width: 38px; height: auto; object-fit: contain; display: block; }
         .header-admin { font-size: 8pt; color: #334155; line-height: 1.5; }
@@ -2922,13 +2962,16 @@ export default function TCF() {
         .header-scai { font-size: 17pt; font-weight: 800; color: #1e293b; line-height: 1; }
         .header-year { font-size: 10pt; font-weight: 700; color: #374151; margin-top: 2px; }
         .header-sub { font-size: 8pt; font-weight: 700; color: #475569; margin-top: 2px; }
-        .page-title { font-size: 17pt; font-weight: 700; color: #0f172a; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 60px; margin-bottom: 40px; }
-        .page-date { font-size: 10pt; color: #1e293b; text-align: right; margin-bottom: 40px; }
-        .page-identite { font-size: 10pt; color: #1f2937; margin-bottom: 4px; }
-        .page-classe { font-size: 10pt; color: #1f2937; margin-bottom: 16px; }
-        .chart-wrap { overflow-x: auto; display: flex; justify-content: center; }
-        .chart-wrap svg { max-width: 100%; height: auto; display: block; }
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; display: flex; align-items: center; gap: 12px; padding-top: 8px; }
+        .page-title { flex-shrink: 0; font-size: 17pt; font-weight: 700; color: #0f172a; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 12px; margin-bottom: 10px; }
+        .page-date { flex-shrink: 0; font-size: 10pt; color: #1e293b; text-align: right; margin-bottom: 10px; }
+        .page-identite { flex-shrink: 0; font-size: 10pt; color: #1f2937; margin-bottom: 4px; }
+        .page-classe { flex-shrink: 0; font-size: 10pt; color: #1f2937; margin-bottom: 10px; }
+        .chart-wrap { flex: 1; min-height: 180px; display: flex; align-items: stretch; justify-content: center; overflow: hidden; }
+        .chart-wrap--hscroll { justify-content: flex-start; overflow-x: auto; overflow-y: hidden; }
+        .chart-scroll-inner { height: 100%; min-width: 100%; display: flex; align-items: stretch; box-sizing: border-box; }
+        .chart-wrap svg { max-width: 100%; max-height: 100%; width: 100%; height: 100%; display: block; }
+        .chart-wrap--hscroll svg { width: auto; height: 100%; max-width: none; flex-shrink: 0; }
+        .page-footer { flex-shrink: 0; margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
         .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
         .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
         @page { size: A4 portrait; margin: 10mm; }
@@ -3179,7 +3222,6 @@ export default function TCF() {
       const identityMin = embedPanel ? GRAPH_EMBED_IDENTITY_MIN : (fixPlot ? GRAPH_FULL_IDENTITY_MIN : undefined);
       const svg = buildChartSVG(items, chartMax, isFr, {
         showTrend: opts.showTrend !== false,
-        showTrendPoints: graphShowTrendPoints,
         niveau: opts.niveau || '',
         innerH: expandPlot ? 400 : (embedPanel ? 240 : (wideUi ? 360 : 320)),
         chartWide: wideUi,
@@ -3194,6 +3236,7 @@ export default function TCF() {
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
         showMathLevelMarks: opts.showMathLevelMarks,
+        hideTrendPoints: !graphShowTrendPoints,
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
       const logoSrc = `${publicBase}/logo-etat-du-valais.png`;
@@ -3288,6 +3331,7 @@ export default function TCF() {
                 }}
                 >
                   <div
+                    key={`tcfsvg-${graphShowTrendPoints}`}
                     style={{
                       width: 'max-content',
                       minWidth: '100%',
@@ -3301,6 +3345,7 @@ export default function TCF() {
                 </div>
               ) : (
                 <div
+                  key={`tcfsvg-${graphShowTrendPoints}`}
                   style={fixPlot ? {
                     width: '100%',
                     height: '100%',
@@ -3356,9 +3401,9 @@ export default function TCF() {
       fontFamily: 'inherit',
       whiteSpace: 'nowrap',
       boxSizing: 'border-box',
-      width: 220,
-      minWidth: 220,
-      maxWidth: 220,
+      width: graphTrendPointsBtnWidthPx,
+      minWidth: graphTrendPointsBtnWidthPx,
+      maxWidth: graphTrendPointsBtnWidthPx,
       textAlign: 'center',
     };
     const btnGraphTrendPoints = (
@@ -3482,7 +3527,7 @@ export default function TCF() {
                   {
                     embedClassPanel: true,
                     expandPlotInPanel: true,
-                    scrollPlotHorizontally: true,
+                    scrollPlotHorizontally: dataTousEleves.length > 6,
                     showTrend: false,
                     niveau: niveauActif,
                     nom: niveauActif,
@@ -3510,6 +3555,7 @@ export default function TCF() {
                     nom: toDisplayNom(eleveIndividuel?.nom || ''),
                     prenom: eleveIndividuel?.prenom || '',
                     classe: classeIndividuelle?.nom || '',
+                    cardWidth: '100%',
                   }
                 )}
               </div>
@@ -3562,6 +3608,9 @@ export default function TCF() {
                 moyenneSeries,
                 {
                   embedClassPanel: true,
+                  expandPlotInPanel: true,
+                  /** Même comportement que l’onglet Élèves : remplissage vertical ; scroll seulement si beaucoup de classes */
+                  scrollPlotHorizontally: moyenneSeries.length > 6,
                   showTrend: false,
                   niveau: niveauActif,
                   nom: niveauActif,
@@ -3583,11 +3632,14 @@ export default function TCF() {
                 dataClasse,
                 {
                   embedClassPanel: true,
+                  expandPlotInPanel: true,
+                  scrollPlotHorizontally: dataClasse.length > 6,
                   showTrend: false,
                   niveau: niveauClasse,
                   nom: '',
                   prenom: '',
                   classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
+                  cardWidth: '100%',
                 }
               )}
             </div>
