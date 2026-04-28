@@ -233,7 +233,12 @@ export default function TCF() {
   const [statMatiere, setStatMatiere] = useState('francais');
   const [statSens, setStatSens] = useState('fort');
   const [statOrdre, setStatOrdre] = useState('decroissant');
-  const [statSession, setStatSession] = useState('');
+  const [statSession, setStatSession] = useState(() => {
+    const m = new Date().getMonth() + 1;
+    if (m >= 8 && m <= 11) return "Test d'août";
+    if (m === 12 || (m >= 1 && m <= 4)) return '1e semestre';
+    return '2e semestre';
+  });
   const [statSeuil, setStatSeuil] = useState('60');
   const [statNiveau, setStatNiveau] = useState('');
   const [statRecherche, setStatRecherche] = useState('');
@@ -1445,6 +1450,10 @@ export default function TCF() {
     });
 
     const sessionsAAfficher = resultatSession ? [resultatSession] : SESSIONS;
+    const withResultatToggleGuard = (action) => {
+      if (!confirmResultatDiscardIfNeeded()) return;
+      action();
+    };
     const elevesResultatSorted = [...elevesResultat].sort((a, b) => {
       const nomA = toDisplayNom(a.nom).toLowerCase();
       const nomB = toDisplayNom(b.nom).toLowerCase();
@@ -1462,7 +1471,7 @@ export default function TCF() {
         : [['p1','P1'],['p2','P2'],['p3','P3'],['p4','P4']];
       const computedCols = isFr
         ? [['oral','Oral'],['ecrit','Écrit']]
-        : [['cscCfr','Base'],['cafCap','Avancé']];
+        : [];
       const ROW1_H = 29;
       const stickyTh = (left, extra = {}) => ({ ...thFix, position: 'sticky', left, top: ROW1_H, zIndex: 5, ...extra });
       const stickyThCorner = (left, extra = {}) => ({ ...thFix, position: 'sticky', left, top: ROW1_H, zIndex: 6, ...extra });
@@ -1532,12 +1541,7 @@ export default function TCF() {
                             <td style={styles.tdCenterRead}>{computed.oral === '' ? '' : computed.oral}</td>
                             <td style={styles.tdCenterRead}>{computed.ecrit === '' ? '' : computed.ecrit}</td>
                           </>
-                        ) : (
-                          <>
-                            <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
-                            <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
-                          </>
-                        )}
+                        ) : null}
                         <td style={{ ...styles.tdCenterRead, ...totalStyle }}>{computed.total === '' ? '' : computed.total}</td>
                       </React.Fragment>
                     );
@@ -1585,8 +1589,6 @@ export default function TCF() {
                       <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P2</th>
                       <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P3</th>
                       <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>P4</th>
-                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Base</th>
-                      <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3}}>Avancé</th>
                       <th style={{...styles.thCenter, position:'sticky', top:0, zIndex:3, borderTopRightRadius:10}}>Total</th>
                     </>
                   )}
@@ -1636,8 +1638,6 @@ export default function TCF() {
                                 onChange={ev => setScore('math', session, e.id, f, ev.target.value)} />
                             </td>
                           ))}
-                          <td style={styles.tdCenterRead}>{computed.cscCfr === '' ? '' : computed.cscCfr}</td>
-                          <td style={styles.tdCenterRead}>{computed.cafCap === '' ? '' : computed.cafCap}</td>
                           <td style={{ ...styles.tdCenterRead, ...totalStyle }}>{computed.total === '' ? '' : computed.total}</td>
                         </>
                       )}
@@ -1645,7 +1645,7 @@ export default function TCF() {
                   );
                 })}
                 {elevesSession.length === 0 && (
-                  <tr><td colSpan={12} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
+                  <tr><td colSpan={isFr ? 12 : 10} style={styles.empty}>Aucun élève trouvé pour cette sélection.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1676,7 +1676,7 @@ export default function TCF() {
             <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               <button
                 type="button"
-                onClick={() => { setResultatNiveau(''); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); setShowTrierNiveaux(false); }}
+                onClick={() => withResultatToggleGuard(() => { setResultatNiveau(''); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); setShowTrierNiveaux(false); })}
                 style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !resultatNiveau ? '#6366f1' : 'transparent', color: !resultatNiveau ? 'white' : '#6d28d9', fontWeight: !resultatNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
               >
                 Trier
@@ -1685,7 +1685,7 @@ export default function TCF() {
                 <button
                   key={n}
                   type="button"
-                  onClick={() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); }}
+                  onClick={() => withResultatToggleGuard(() => { setResultatNiveau(n); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); })}
                   style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: resultatNiveau === n ? '#6366f1' : 'transparent', color: resultatNiveau === n ? 'white' : '#6d28d9', fontWeight: resultatNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                 >
                   {n}
@@ -1696,7 +1696,7 @@ export default function TCF() {
           {resultatVue === 'classe' && (
             <CustomSelect
               value={resultatClasseId}
-              onChange={(v) => setResultatClasseId(v)}
+              onChange={(v) => withResultatToggleGuard(() => setResultatClasseId(v))}
               options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
               placeholder="Classe"
               allowClear={true}
@@ -1707,12 +1707,15 @@ export default function TCF() {
 
         <div style={{...styles.filtersStack}}>
           <div style={styles.pillGroup}>
-            <button onClick={() => setResultatSession('')}
-              style={{ ...styles.pillBtn, ...(resultatSession === '' ? styles.pillBtnActif : {}) }}>
-              Tous
-            </button>
+            {/* Backup visuel conservé: option "Tous" */}
+            {false && (
+              <button onClick={() => withResultatToggleGuard(() => setResultatSession(''))}
+                style={{ ...styles.pillBtn, ...(resultatSession === '' ? styles.pillBtnActif : {}) }}>
+                Tous
+              </button>
+            )}
             {SESSIONS.map(s => (
-              <button key={s} onClick={() => setResultatSession(s)}
+              <button key={s} onClick={() => withResultatToggleGuard(() => setResultatSession(s))}
                 style={{ ...styles.pillBtn, ...(resultatSession === s ? styles.pillBtnActif : {}) }}>
                 {SESSION_LABEL[s] || s}
               </button>
@@ -1720,13 +1723,13 @@ export default function TCF() {
           </div>
           <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
-              <button key={val} onClick={() => setResultatMatiere(val)}
+              <button key={val} onClick={() => withResultatToggleGuard(() => setResultatMatiere(val))}
                 style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
           <div style={styles.pillGroup}>
             {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
-              <button key={val} onClick={() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } }}
+              <button key={val} onClick={() => withResultatToggleGuard(() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } })}
                 style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
@@ -2255,8 +2258,9 @@ export default function TCF() {
     /** Par défaut affichés ; masqués seulement si hideTrendPoints === true (évite ambiguïtés avec undefined) */
     const showTrendPoints = options.hideTrendPoints !== true;
     const niveau = normaliserNiveau(options.niveau || '');
-    const label1 = options.label1 || (isFr ? 'Oral' : 'Base');
-    const label2 = options.label2 || (isFr ? 'Écrit' : 'Avancé');
+    const singleSeries = options.singleSeries === true;
+    const label1 = options.label1 || (isFr ? 'Oral' : (singleSeries ? 'Total' : 'Base'));
+    const label2 = options.label2 || (isFr ? 'Écrit' : (singleSeries ? '' : 'Avancé'));
 
     const wide = options.chartWide === true;
     const barW = wide ? 62 : 52;
@@ -2282,38 +2286,22 @@ export default function TCF() {
       : chartLeft;
     const parts = [];
 
-    const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(maxScore, Number(v) || 0)) / maxScore) * innerH;
+    const axisMax = Number(options.axisMax) > 0 ? Number(options.axisMax) : maxScore;
+    const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(axisMax, Number(v) || 0)) / axisMax) * innerH;
 
     // Grille (tous les 5 points) sans numérotation 0/10/20...
-    const showFrenchLevelMarks = isFr && options.showFrenchLevelMarks !== false && !options.label1 && !options.label2;
-    const showMathLevelMarks = !isFr && options.showMathLevelMarks !== false && !options.label1 && !options.label2;
-    if (showFrenchLevelMarks) {
-      for (let v = 0; v <= 55; v += 5) {
-        const y = yFromValue(v);
-        parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`);
-      }
-      const marks = niveau === 'CSC'
-        ? [{ v: 45, label: 'A1' }, { v: 25, label: 'A0.2' }, { v: 5, label: 'A0.1' }]
-        : [{ v: 45, label: 'A2' }, { v: 25, label: 'A1.2' }, { v: 5, label: 'A1.1' }];
-      marks.forEach((m) => {
-        const y = yFromValue(m.v);
-        parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="700">${esc(m.label)}</text>`);
-      });
-    } else {
-      for (let v = 0; v <= maxScore; v += 5) {
-        const y = yFromValue(v);
-        parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="${v % 10 === 0 ? 1.2 : 1}" />`);
-      }
-      if (showMathLevelMarks) {
-        const marks = niveau === 'CSC'
-          ? [{ v: 45, label: 'CFR' }, { v: 35, label: 'CSC' }]
-          : [{ v: 45, label: 'CAF' }, { v: 40, label: 'CFR' }, { v: 20, label: 'CSC' }];
-        marks.forEach((m) => {
-          const y = yFromValue(m.v);
-          parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="700">${esc(m.label)}</text>`);
-        });
-      }
+    const marks = Array.isArray(options.levelMarks) ? options.levelMarks : [];
+    const marksByValue = new Map(marks.map((m) => [Number(m.v), m]));
+    for (let v = 0; v <= axisMax; v += 5) {
+      const y = yFromValue(v);
+      const isMajor = v % 10 === 0;
+      const isMarked = marksByValue.has(v);
+      parts.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e5e7eb" stroke-width="${isMarked ? 2.2 : (isMajor ? 1.2 : 1)}" />`);
     }
+    marks.forEach((m) => {
+      const y = yFromValue(m.v);
+      parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="${m.bold ? '800' : '700'}">${esc(m.label)}</text>`);
+    });
 
     // Axes
     parts.push(`<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" stroke="#94a3b8" stroke-width="1.5"/>`);
@@ -2322,29 +2310,39 @@ export default function TCF() {
     // Barres + valeurs
     series.forEach((s, i) => {
       const baseX = barOffsetX + i * groupW + (groupW - (barW * 2 + 8)) / 2;
-      const h1 = Math.max(2, ((Number(s.v1) || 0) / maxScore) * innerH);
-      const h2 = Math.max(2, ((Number(s.v2) || 0) / maxScore) * innerH);
+      const h1 = Math.max(2, ((Number(s.v1) || 0) / axisMax) * innerH);
+      const h2 = Math.max(2, ((Number(s.v2) || 0) / axisMax) * innerH);
       const y1 = chartBottom - h1;
       const y2 = chartBottom - h2;
-      parts.push(`<rect x="${baseX}" y="${y1}" width="${barW}" height="${h1}" fill="#60a5fa" rx="4"/>`);
-      parts.push(`<rect x="${baseX + barW + 8}" y="${y2}" width="${barW}" height="${h2}" fill="#34d399" rx="4"/>`);
-      if (showTrendPoints) {
-        // Points visibles : valeurs en blanc à l'intérieur des barres
-        parts.push(`<text x="${baseX + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
-        parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v2) || 0}</text>`);
+      if (singleSeries) {
+        const oneBarW = Math.min(groupW - 18, wide ? 94 : 84);
+        const oneBarX = barOffsetX + i * groupW + (groupW - oneBarW) / 2;
+        parts.push(`<rect x="${oneBarX}" y="${y1}" width="${oneBarW}" height="${h1}" fill="#6366f1" rx="4"/>`);
       } else {
-        // Points masqués : étiquettes au-dessus des barres en couleur foncée
-        parts.push(`<text x="${baseX + barW / 2}" y="${y1 - 5}" text-anchor="middle" font-size="13" fill="#1e40af" font-weight="800">${Number(s.v1) || 0}</text>`);
-        parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${y2 - 5}" text-anchor="middle" font-size="13" fill="#065f46" font-weight="800">${Number(s.v2) || 0}</text>`);
+        parts.push(`<rect x="${baseX}" y="${y1}" width="${barW}" height="${h1}" fill="#60a5fa" rx="4"/>`);
+        parts.push(`<rect x="${baseX + barW + 8}" y="${y2}" width="${barW}" height="${h2}" fill="#34d399" rx="4"/>`);
       }
-      parts.push(`<text x="${baseX + barW + 4}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(s.label || s.session || '')}</text>`);
+      if (showTrendPoints) {
+        if (singleSeries) {
+          const oneBarW = Math.min(groupW - 18, wide ? 94 : 84);
+          const oneBarX = barOffsetX + i * groupW + (groupW - oneBarW) / 2;
+          parts.push(`<text x="${oneBarX + oneBarW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
+        } else {
+          parts.push(`<text x="${baseX + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v1) || 0}</text>`);
+          parts.push(`<text x="${baseX + barW + 8 + barW / 2}" y="${chartBottom - 8}" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">${Number(s.v2) || 0}</text>`);
+        }
+      }
+      const labelX = singleSeries
+        ? (barOffsetX + i * groupW + groupW / 2)
+        : (baseX + barW + 4);
+      parts.push(`<text x="${labelX}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(s.label || s.session || '')}</text>`);
     });
 
     // Ligne d'évolution
     if (showTrend && series.length > 1) {
       const pts = series.map((s, i) => {
-        const moy = (Number(s.v1 || 0) + Number(s.v2 || 0)) / 2;
-        const total = Number(s.v1 || 0) + Number(s.v2 || 0);
+        const moy = singleSeries ? Number(s.v1 || 0) : ((Number(s.v1 || 0) + Number(s.v2 || 0)) / 2);
+        const total = singleSeries ? Number(s.v1 || 0) : (Number(s.v1 || 0) + Number(s.v2 || 0));
         const x = barOffsetX + i * groupW + groupW / 2;
         const y = yFromValue(moy);
         return { x, y, moy, total };
@@ -2361,10 +2359,15 @@ export default function TCF() {
     // Légendes à droite, alignées en bas du cadre
     const lx = chartRight + 18;
     const ly = chartBottom - 64;
-    parts.push(`<rect x="${lx}" y="${ly}" width="15" height="15" fill="#60a5fa" rx="2"/>`);
-    parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
-    parts.push(`<rect x="${lx}" y="${ly + 28}" width="15" height="15" fill="#34d399" rx="2"/>`);
-    parts.push(`<text x="${lx + 22}" y="${ly + 39}" font-size="12" fill="#334155" font-weight="700">${label2}</text>`);
+    if (singleSeries) {
+      parts.push(`<rect x="${lx}" y="${ly}" width="15" height="15" fill="#6366f1" rx="2"/>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
+    } else {
+      parts.push(`<rect x="${lx}" y="${ly}" width="15" height="15" fill="#60a5fa" rx="2"/>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 11}" font-size="12" fill="#334155" font-weight="700">${label1}</text>`);
+      parts.push(`<rect x="${lx}" y="${ly + 28}" width="15" height="15" fill="#34d399" rx="2"/>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 39}" font-size="12" fill="#334155" font-weight="700">${label2}</text>`);
+    }
     if (showTrend && series.length > 1) {
       parts.push(`<line x1="${lx}" y1="${ly + 58}" x2="${lx + 18}" y2="${ly + 58}" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>`);
       if (showTrendPoints) {
@@ -3009,9 +3012,21 @@ export default function TCF() {
     const classModeActive = graphVue === 'moyenne' || graphVue === 'classe';
     const classesListeGraph = classesNiveau.filter((cl) => !search || String(cl.nom || '').toLowerCase().includes(search));
 
-    const maxScore = isFr ? 60 : 50;
+    const maxScore = isFr ? 60 : 110;
     const label1 = isFr ? 'Oral' : 'Partie 1-2';
     const label2 = isFr ? 'Écrit' : 'Partie 3-4';
+    const isNiveauCscCpr = ['CSC', 'CPR'].includes(normaliserNiveau(niveauActif || ''));
+    const frenchMarks = (aggregate = false) => {
+      if (aggregate) {
+        return isNiveauCscCpr
+          ? [{ v: 90, label: 'A1', bold: true }, { v: 50, label: 'A0.2', bold: true }, { v: 10, label: 'A0.1', bold: true }]
+          : [{ v: 90, label: 'A2', bold: true }, { v: 50, label: 'A1.2', bold: true }, { v: 10, label: 'A1.1', bold: true }];
+      }
+      return isNiveauCscCpr
+        ? [{ v: 45, label: 'A1', bold: true }, { v: 25, label: 'A0.2', bold: true }, { v: 5, label: 'A0.1', bold: true }]
+        : [{ v: 45, label: 'A2', bold: true }, { v: 25, label: 'A1.2', bold: true }, { v: 5, label: 'A1.1', bold: true }];
+    };
+    const mathMarks = [{ v: 80, label: 'CAF', bold: true }, { v: 60, label: 'CFR', bold: true }, { v: 30, label: 'CSC', bold: true }];
 
     // Sessions cumulatives selon la sélection
     const sessionsToShowIds = !graphSession
@@ -3026,37 +3041,36 @@ export default function TCF() {
       ? sessionsToShowIds.map(session => {
         const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId);
         if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
-        const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+        const ma = calculMath(sc); return { session, v1: Number(ma.total || 0), v2: 0, hasData: ma.total !== '' };
       }).filter(s => s.hasData)
       : [];
 
     const getEleveSessionGlobal = (e) => {
       if (!graphSession) return null;
-      const scFr = getScore('francais', graphSession, String(e.id));
-      const scMa = getScore('math', graphSession, String(e.id));
-      const fr = calculFr(scFr);
-      const ma = calculMath(scMa);
-      const tFr = fr.total === '' ? null : Number(fr.total);
-      const tMa = ma.total === '' ? null : Number(ma.total);
-      const vals = [tFr, tMa].filter((v) => v != null);
-      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
+      const computed = isFr ? calculFr(sc) : calculMath(sc);
+      return computed.total === '' ? null : Number(computed.total);
     };
 
     const dataTousEleves = graphSession
       ? elevesFiltered
         .map((e) => {
-          const scFr = getScore('francais', graphSession, String(e.id));
-          const scMa = getScore('math', graphSession, String(e.id));
-          const fr = calculFr(scFr);
-          const ma = calculMath(scMa);
-          const v1 = fr.total !== '' ? Number(fr.total) : null;
-          const v2 = ma.total !== '' ? Number(ma.total) : null;
-          const hasData = v1 != null || v2 != null;
+          const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
+          if (isFr) {
+            const fr = calculFr(sc);
+            return {
+              label: `${e.prenom || ''} ${toDisplayNom(e.nom)}`.trim(),
+              v1: Number(fr.oral || 0),
+              v2: Number(fr.ecrit || 0),
+              hasData: fr.total !== '',
+            };
+          }
+          const ma = calculMath(sc);
           return {
             label: `${e.prenom || ''} ${toDisplayNom(e.nom)}`.trim(),
-            v1: v1 != null ? Math.round(v1 * 10) / 10 : 0,
-            v2: v2 != null ? Math.round(v2 * 10) / 10 : 0,
-            hasData,
+            v1: Number(ma.total || 0),
+            v2: 0,
+            hasData: ma.total !== '',
           };
         })
         .filter((x) => x.hasData)
@@ -3077,7 +3091,7 @@ export default function TCF() {
       ? elevesClasse.map(e => {
           const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
           if (isFr) { const fr = calculFr(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
-          const ma = calculMath(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+          const ma = calculMath(sc); return { id: e.id, label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.total || 0), v2: 0, hasData: ma.total !== '' };
         }).filter(e => e.hasData)
       : [];
 
@@ -3110,19 +3124,32 @@ export default function TCF() {
         .filter((cl) => !search || String(cl.nom || '').toLowerCase().includes(search))
         .map((cl) => {
         const elevesClasse = eleves.filter(e => String(e.classe_id) === String(cl.id));
-        const frTotals = elevesClasse
-          .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).total)
-          .filter((v) => v !== '' && v !== null && v !== undefined)
-          .map(Number);
-        const maTotals = elevesClasse
+        if (isFr) {
+          const oralVals = elevesClasse
+            .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).oral)
+            .filter((v) => v !== '' && v !== null && v !== undefined)
+            .map(Number);
+          const ecritVals = elevesClasse
+            .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).ecrit)
+            .filter((v) => v !== '' && v !== null && v !== undefined)
+            .map(Number);
+          const totalVals = elevesClasse
+            .map((e) => calculFr(getScore('francais', graphSession, String(e.id))).total)
+            .filter((v) => v !== '' && v !== null && v !== undefined)
+            .map(Number);
+          const v1Avg = oralVals.length ? oralVals.reduce((a, b) => a + b, 0) / oralVals.length : null;
+          const v2Avg = ecritVals.length ? ecritVals.reduce((a, b) => a + b, 0) / ecritVals.length : null;
+          const totalAvg = totalVals.length ? totalVals.reduce((a, b) => a + b, 0) / totalVals.length : null;
+          return { id: cl.id, nom: cl.nom, v1Avg, v2Avg, totalAvg, global: totalAvg };
+        }
+        const totalVals = elevesClasse
           .map((e) => calculMath(getScore('math', graphSession, String(e.id))).total)
           .filter((v) => v !== '' && v !== null && v !== undefined)
           .map(Number);
-        const frAvg = frTotals.length ? frTotals.reduce((a, b) => a + b, 0) / frTotals.length : null;
-        const maAvg = maTotals.length ? maTotals.reduce((a, b) => a + b, 0) / maTotals.length : null;
-        const globalAvg = [frAvg, maAvg].filter(v => v != null);
-        const global = globalAvg.length ? globalAvg.reduce((a, b) => a + b, 0) / globalAvg.length : null;
-        return { id: cl.id, nom: cl.nom, frAvg, maAvg, global };
+          const v1Avg = totalVals.length ? totalVals.reduce((a, b) => a + b, 0) / totalVals.length : null;
+          const v2Avg = null;
+        const totalAvg = totalVals.length ? totalVals.reduce((a, b) => a + b, 0) / totalVals.length : null;
+        return { id: cl.id, nom: cl.nom, v1Avg, v2Avg, totalAvg, global: totalAvg };
       });
     };
 
@@ -3203,11 +3230,11 @@ export default function TCF() {
     const lowSet = new Set(moyenneRowsClassees.slice(0, 3).map(r => String(r.id)));
     const highSet = new Set(moyenneRowsClassees.slice(-3).map(r => String(r.id)));
     const moyenneSeries = moyenneRows
-      .filter(r => r.frAvg != null || r.maAvg != null)
+      .filter(r => r.v1Avg != null || r.v2Avg != null)
       .map(r => ({
         label: r.nom,
-        v1: Math.round(Number(r.frAvg || 0) * 10) / 10,
-        v2: Math.round(Number(r.maAvg || 0) * 10) / 10,
+        v1: Math.round(Number(r.v1Avg || 0) * 10) / 10,
+        v2: Math.round(Number(r.v2Avg || 0) * 10) / 10,
       }));
     const classesRangeLabel = classesNiveau.length ? `${classesNiveau[0].nom} à ${classesNiveau[classesNiveau.length - 1].nom}` : '—';
 
@@ -3542,11 +3569,14 @@ export default function TCF() {
                     classe: `${SESSION_LABEL[graphSession] || graphSession} — ${elevesFiltered.length} élève(s)`,
                     identiteLabel: 'Niveau',
                     title: 'Moyennes des élèves',
-                    label1: 'Français',
-                    label2: 'Mathématiques',
+                    label1: isFr ? 'Oral' : 'Total',
+                    label2: isFr ? 'Écrit' : '',
                     showFrenchLevelMarks: false,
                     showMathLevelMarks: false,
-                    maxScoreOverride: 100,
+                    levelMarks: isFr ? frenchMarks(true) : mathMarks,
+                    axisMax: isFr ? 100 : 110,
+                    singleSeries: !isFr,
+                    maxScoreOverride: isFr ? 100 : 110,
                     cardWidth: '100%',
                   }
                 )}
@@ -3562,6 +3592,11 @@ export default function TCF() {
                     nom: toDisplayNom(eleveIndividuel?.nom || ''),
                     prenom: eleveIndividuel?.prenom || '',
                     classe: classeIndividuelle?.nom || '',
+                    label1: isFr ? 'Oral' : 'Total',
+                    label2: isFr ? 'Écrit' : '',
+                    levelMarks: isFr ? frenchMarks(false) : mathMarks,
+                    axisMax: isFr ? 60 : 110,
+                    singleSeries: !isFr,
                     cardWidth: '100%',
                   }
                 )}
@@ -3625,11 +3660,14 @@ export default function TCF() {
                   classe: classesRangeLabel,
                   identiteLabel: 'Niveau',
                   title: 'Moyennes des classes',
-                  label1: 'Français',
-                  label2: 'Mathématiques',
+                  label1: isFr ? 'Oral' : 'Total',
+                  label2: isFr ? 'Écrit' : '',
                   showFrenchLevelMarks: false,
                   showMathLevelMarks: false,
-                  maxScoreOverride: 100,
+                  levelMarks: isFr ? frenchMarks(true) : mathMarks,
+                  axisMax: isFr ? 100 : 110,
+                  singleSeries: !isFr,
+                  maxScoreOverride: isFr ? 100 : 110,
                   cardWidth: '100%',
                 }
               )}
@@ -3645,6 +3683,11 @@ export default function TCF() {
                   niveau: niveauClasse,
                   nom: '',
                   prenom: '',
+                  label1: isFr ? 'Oral' : 'Total',
+                  label2: isFr ? 'Écrit' : '',
+                  levelMarks: isFr ? frenchMarks(false) : mathMarks,
+                  axisMax: isFr ? 60 : 110,
+                  singleSeries: !isFr,
                   classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
                   cardWidth: '100%',
                 }
@@ -3885,6 +3928,19 @@ export default function TCF() {
     afficherSaveMsg('resultat');
   };
 
+  const resetResultatToSaved = () => {
+    setScores(savedScoresRef.current || {});
+    setResultatDirty(false);
+  };
+
+  const confirmResultatDiscardIfNeeded = () => {
+    if (!tabHasUnsaved('resultat')) return true;
+    const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cette vue sans sauvegarder ?');
+    if (!ok) return false;
+    resetResultatToSaved();
+    return true;
+  };
+
   const tabHasUnsaved = (tab) => {
     if (tab === 'pool') return poolDirty;
     if (tab === 'affectation' || tab === 'classes' || tab === 'roles') return affectationDirty;
@@ -3898,6 +3954,7 @@ export default function TCF() {
       const ok = window.confirm('Des changements ne sont pas sauvegardés. Voulez-vous quitter cet onglet sans sauvegarder ?');
       if (!ok) return;
       if (onglet === 'affectation' || onglet === 'classes' || onglet === 'roles') resetAffectationToSaved();
+      if (onglet === 'resultat') resetResultatToSaved();
     }
     setOnglet(nextTab);
   };
