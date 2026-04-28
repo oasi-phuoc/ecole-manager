@@ -2618,8 +2618,8 @@ export default function TCF() {
     const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
     const logoPiedUrl = `${publicBase}/logo-pied-page.png`;
     const nomSite = escapeHtml(siteNames[siteKey] || siteKey);
-    const horaireMatin = `${getHoraireSite(siteKey, 'matinDebut')} – ${getHoraireSite(siteKey, 'matinFin')}`;
-    const horaireAM = `${getHoraireSite(siteKey, 'apresMidiDebut')} – ${getHoraireSite(siteKey, 'apresMidiFin')}`;
+    const horaireMatin = `${getHoraireSite(siteKey, 'matinDebutProf')} – ${getHoraireSite(siteKey, 'matinFinProf')}`;
+    const horaireAM = `${getHoraireSite(siteKey, 'apresMidiDebutProf')} – ${getHoraireSite(siteKey, 'apresMidiFinProf')}`;
     const headerHtml = `
       <div class="page-header">
         <div class="header-left">
