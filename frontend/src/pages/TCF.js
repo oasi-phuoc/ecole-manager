@@ -3015,8 +3015,9 @@ export default function TCF() {
     const maxScore = isFr ? 60 : 110;
     const label1 = isFr ? 'Oral' : 'Partie 1-2';
     const label2 = isFr ? 'Écrit' : 'Partie 3-4';
-    const isNiveauCscCpr = ['CSC', 'CPR'].includes(normaliserNiveau(niveauActif || ''));
-    const frenchMarks = (aggregate = false) => {
+    const frenchMarks = (niveauSource, aggregate = false) => {
+      const niveauNormalise = normaliserNiveau(niveauSource || '');
+      const isNiveauCscCpr = ['CSC', 'CPR'].includes(niveauNormalise);
       if (aggregate) {
         return isNiveauCscCpr
           ? [{ v: 90, label: 'A1', bold: true }, { v: 50, label: 'A0.2', bold: true }, { v: 10, label: 'A0.1', bold: true }]
@@ -3564,7 +3565,7 @@ export default function TCF() {
                   {
                     embedClassPanel: true,
                     expandPlotInPanel: true,
-                    scrollPlotHorizontally: dataTousEleves.length > 6,
+                    scrollPlotHorizontally: dataTousEleves.length > 4,
                     showTrend: false,
                     niveau: niveauActif,
                     nom: niveauActif,
@@ -3576,7 +3577,7 @@ export default function TCF() {
                     label2: isFr ? 'Écrit' : '',
                     showFrenchLevelMarks: false,
                     showMathLevelMarks: false,
-                    levelMarks: isFr ? frenchMarks(true) : mathMarks,
+                    levelMarks: isFr ? frenchMarks(niveauActif, true) : mathMarks,
                     axisMax: isFr ? 100 : 110,
                     singleSeries: !isFr,
                     maxScoreOverride: isFr ? 100 : 110,
@@ -3597,7 +3598,7 @@ export default function TCF() {
                     classe: classeIndividuelle?.nom || '',
                     label1: isFr ? 'Oral' : 'Total',
                     label2: isFr ? 'Écrit' : '',
-                    levelMarks: isFr ? frenchMarks(false) : mathMarks,
+                    levelMarks: isFr ? frenchMarks(niveauIndividuel, false) : mathMarks,
                     axisMax: isFr ? 60 : 110,
                     singleSeries: !isFr,
                     cardWidth: '100%',
@@ -3655,7 +3656,7 @@ export default function TCF() {
                   embedClassPanel: true,
                   expandPlotInPanel: true,
                   /** Même comportement que l’onglet Élèves : remplissage vertical ; scroll seulement si beaucoup de classes */
-                  scrollPlotHorizontally: moyenneSeries.length > 6,
+                  scrollPlotHorizontally: moyenneSeries.length > 4,
                   showTrend: false,
                   niveau: niveauActif,
                   nom: niveauActif,
@@ -3667,7 +3668,7 @@ export default function TCF() {
                   label2: isFr ? 'Écrit' : '',
                   showFrenchLevelMarks: false,
                   showMathLevelMarks: false,
-                  levelMarks: isFr ? frenchMarks(true) : mathMarks,
+                  levelMarks: isFr ? frenchMarks(niveauActif, true) : mathMarks,
                   axisMax: isFr ? 100 : 110,
                   singleSeries: !isFr,
                   maxScoreOverride: isFr ? 100 : 110,
@@ -3681,14 +3682,14 @@ export default function TCF() {
                 {
                   embedClassPanel: true,
                   expandPlotInPanel: true,
-                  scrollPlotHorizontally: dataClasse.length > 6,
+                  scrollPlotHorizontally: dataClasse.length > 4,
                   showTrend: false,
                   niveau: niveauClasse,
                   nom: '',
                   prenom: '',
                   label1: isFr ? 'Oral' : 'Total',
                   label2: isFr ? 'Écrit' : '',
-                  levelMarks: isFr ? frenchMarks(false) : mathMarks,
+                  levelMarks: isFr ? frenchMarks(niveauClasse, false) : mathMarks,
                   axisMax: isFr ? 60 : 110,
                   singleSeries: !isFr,
                   classe: classes.find(c => String(c.id) === String(graphClasseId))?.nom || '',
