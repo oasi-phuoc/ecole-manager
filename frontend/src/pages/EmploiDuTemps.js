@@ -90,6 +90,8 @@ export default function EmploiDuTemps() {
   const [disposAffectations, setDisposAffectations] = useState({});
   const [planningGeneral, setPlanningGeneral] = useState(null);
   const [planningPoolId, setPlanningPoolId] = useState('');
+  const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
+  const [showJoursFiltres, setShowJoursFiltres] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
   const [profPlanningId, setProfPlanningId] = useState('');
   const [planningClasse, setPlanningClasse] = useState(null);
@@ -1878,7 +1880,8 @@ export default function EmploiDuTemps() {
           </div>
 
           {!profSelectionne && (
-            <div style={{overflowX:'auto',marginTop:8}}>
+            <div style={{overflow:'hidden',marginTop:8,borderRadius:10,border:'1px solid #e8eaf6'}}>
+            <div style={{overflow:'auto',maxHeight:'calc(100vh - 280px)',WebkitOverflowScrolling:'touch'}}>
               {(() => {
                 const poolSelectionne = pools.find(p => String(p.id) === sousOngletDisp);
                 const profIds = poolSelectionne ? (poolSelectionne.profs||[]).map(x=>x.id) : null;
@@ -1899,12 +1902,12 @@ export default function EmploiDuTemps() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th style={{...styles.th, width:56, minWidth:56, maxWidth:56, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box'}}></th>
-                    <th style={styles.th}>Nom</th>
-                    <th style={styles.th}>Prénom</th>
-                    <th style={{...styles.th, textAlign:'center'}}>Taux</th>
+                    <th style={{...styles.th, width:56, minWidth:56, maxWidth:56, whiteSpace:'nowrap', textAlign:'center', boxSizing:'border-box', position:'sticky', top:0, zIndex:2, background:'white'}}></th>
+                    <th style={{...styles.th, position:'sticky', top:0, zIndex:2, background:'white'}}>Nom</th>
+                    <th style={{...styles.th, position:'sticky', top:0, zIndex:2, background:'white'}}>Prénom</th>
+                    <th style={{...styles.th, textAlign:'center', position:'sticky', top:0, zIndex:2, background:'white'}}>Taux</th>
                     {['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(j => (
-                      <th key={j} style={{...styles.th, textAlign:'center'}}>{j}</th>
+                      <th key={j} style={{...styles.th, textAlign:'center', position:'sticky', top:0, zIndex:2, background:'white'}}>{j}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1946,6 +1949,7 @@ export default function EmploiDuTemps() {
               </table>
                 );
               })()}
+            </div>
             </div>
           )}
           {profSelectionne && (
@@ -2325,25 +2329,18 @@ export default function EmploiDuTemps() {
             )}
             {sousOngletAff === 'branches' && (
               <>
-                <div style={styles.toggleGroup}>
-                  {pools.map(p => {
-                    const actif = String(classePlanningPoolId) === String(p.id);
-                    return (
-                      <button key={p.id}
-                        style={{...styles.toggleBtn,...(actif?styles.toggleBtnActif:{}), outline:'none'}}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={e => {
-                          e.currentTarget.blur();
-                          if (actif) return;
-                          if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
-                          if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
-                          setClassePlanningPoolId(String(p.id)); setClassePlanningId(''); setPlanningClasse(null);
-                        }}>
-                        {p.nom}
-                      </button>
-                    );
-                  })}
-                </div>
+                <CustomSelect
+                  style={styles.selAff}
+                  value={classePlanningPoolId || ''}
+                  placeholder="Choisir un pool..."
+                  options={pools.map(p => ({value: String(p.id), label: p.nom}))}
+                  onChange={(poolId) => {
+                    if (String(classePlanningPoolId) === String(poolId)) return;
+                    if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
+                    if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
+                    setClassePlanningPoolId(String(poolId)); setClassePlanningId(''); setPlanningClasse(null);
+                  }}
+                />
                 <CustomSelect
                   style={styles.selAff}
                   value={classePlanningId || ''}
@@ -3529,8 +3526,30 @@ export default function EmploiDuTemps() {
             </div>
           )}
           {planningPoolId && planningGeneral && (
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              {!showJoursFiltres ? (
+                <button onClick={() => setShowJoursFiltres(true)}
+                  style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                  Trier
+                </button>
+              ) : (
+                <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+                  {['tous',...JOURS].map(j => (
+                    <button key={j}
+                      onClick={() => { setJourPlanningFiltre(j); if (j==='tous') setShowJoursFiltres(false); }}
+                      style={{padding:'6px 14px',borderRadius:99,border:'none',fontWeight: jourPlanningFiltre===j ? 700 : 600,fontSize:13,cursor:'pointer',
+                        background: jourPlanningFiltre===j ? '#6366f1' : 'transparent',
+                        color: jourPlanningFiltre===j ? 'white' : '#4c1d95',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                      {j === 'tous' ? 'Trier' : j}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {planningPoolId && planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
-              {JOURS.map(jour => {
+              {(jourPlanningFiltre === 'tous' ? JOURS : JOURS.filter(j => j === jourPlanningFiltre)).map(jour => {
                 const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
                 if (!crs.length) return null;
                 const nCols = planningGeneral.profs.length + 1;

@@ -53,6 +53,14 @@ export default function Sondage() {
   useEffect(() => { chargerListe(); }, [chargerListe]);
 
   useEffect(() => {
+    if (onglet === 'reponses' && detail?.id) {
+      axios.get(`${API}/sondages/${detail.id}/reponses`, { headers: getHeaders() })
+        .then(r => setReponses(r.data || []))
+        .catch(() => {});
+    }
+  }, [onglet, detail?.id]);
+
+  useEffect(() => {
     if (!lienPublic) {
       setQrDataUrl('');
       return;
