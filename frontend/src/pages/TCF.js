@@ -2373,7 +2373,7 @@ export default function TCF() {
       if (showTrendPoints) {
         parts.push(`<circle cx="${lx + 9}" cy="${ly + 58}" r="3.5" fill="#f59e0b"/>`);
       }
-      parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Moyenne</text>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 62}" font-size="12" fill="#334155" font-weight="700">Évolution</text>`);
     }
 
     const responsiveSvg = wide || options.fitContainer === true;
@@ -3270,6 +3270,9 @@ export default function TCF() {
         label2: opts.label2,
         showFrenchLevelMarks: opts.showFrenchLevelMarks,
         showMathLevelMarks: opts.showMathLevelMarks,
+        levelMarks: opts.levelMarks,
+        axisMax: opts.axisMax,
+        singleSeries: opts.singleSeries,
         hideTrendPoints: !graphShowTrendPoints,
       });
       const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
