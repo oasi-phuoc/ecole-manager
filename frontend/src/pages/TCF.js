@@ -3795,7 +3795,7 @@ export default function TCF() {
             value={statRecherche}
             onChange={(e) => setStatRecherche(e.target.value)}
             placeholder="Rechercher un élève, une classe..."
-            style={styles.searchInput}
+            style={{ ...styles.searchInput, width: 200, minWidth: 'unset', flex: 'none' }}
           />
           <div style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
