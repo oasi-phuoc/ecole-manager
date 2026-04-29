@@ -554,32 +554,35 @@ export default function Eleves() {
             Trier
           </button>
         ) : (
-          <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
-            {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
-              const actif = niveauOnglet === k;
-              const label = k === 'tous' ? 'Trier' : k === 'sans' ? 'Sans classe' : k;
+          <>
+            <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+              {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
+                const actif = niveauOnglet === k;
+                const label = k === 'tous' ? 'Trier' : k === 'sans' ? 'Sans classe' : k;
+                return (
+                  <button key={k}
+                    style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
+                    onClick={() => { setNiveauOnglet(k); setClasseFiltreNiveau(''); setRecherche(''); if (k === 'tous') setShowNiveauxFiltres(false); }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {niveauOnglet !== 'tous' && niveauOnglet !== 'sans' && (() => {
+              const classesNiveau = classes.filter(c => c.niveau === niveauOnglet).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+              if (classesNiveau.length === 0) return null;
               return (
-                <button key={k}
-                  style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-                  onClick={() => { setNiveauOnglet(k); setClasseFiltreNiveau(''); setRecherche(''); if (k === 'tous') setShowNiveauxFiltres(false); }}>
-                  {label}
-                </button>
+                <CustomSelect
+                  key="filtre-classe-niveau"
+                  value={classeFiltreNiveau}
+                  placeholder="Toutes les classes"
+                  options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
+                  onChange={v => setClasseFiltreNiveau(v)}
+                  style={{ minWidth: 160 }}
+                />
               );
-            })}
-          </div>
-          {showNiveauxFiltres && niveauOnglet !== 'tous' && niveauOnglet !== 'sans' && (() => {
-            const classesNiveau = classes.filter(c => c.niveau === niveauOnglet).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
-            if (classesNiveau.length === 0) return null;
-            return (
-              <CustomSelect
-                value={classeFiltreNiveau}
-                placeholder="Toutes les classes"
-                options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
-                onChange={v => setClasseFiltreNiveau(v)}
-                style={{ minWidth: 160 }}
-              />
-            );
-          })()}
+            })()}
+          </>
         )}
       </div>
       </div>
