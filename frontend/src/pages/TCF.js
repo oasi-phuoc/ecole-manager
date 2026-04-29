@@ -1011,7 +1011,7 @@ export default function TCF() {
                       return (
                         <td key={j} style={thStyle}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                            {eff > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>}
                             <span>{j}</span>
                           </div>
                         </td>
@@ -1215,7 +1215,7 @@ export default function TCF() {
                     return (
                       <td key={j} style={{ ...styles.thCenter, fontSize: 15 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                          {eff > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>}
                           <span>{j}{date ? ` - ${date}` : ''}</span>
                         </div>
                       </td>
@@ -2468,7 +2468,7 @@ export default function TCF() {
         const classesCell = getAffectationClassesSite(siteKey, j, moment.id);
         const eff = classesCell.reduce((acc, cid) => acc + eleves.filter(e => String(e.classe_id) === String(cid)).length, 0);
         return `<td style="background:#f8fafc;color:#64748b;font-size:9pt;padding:5px 8px;border:1px solid #e2e8f0;text-align:center">
-          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:4px">${eff}</span>
+          ${eff > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:4px">${eff}</span>` : ''}
           ${escapeHtml(j)}${date ? ` - ${date}` : ''}
         </td>`;
       }).join('');
@@ -2602,7 +2602,7 @@ export default function TCF() {
         const date = getDateStr(j);
         return `<td style="background:#f8fafc;color:#64748b;font-size:9pt;padding:4px 6px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center">
           <div style="display:flex;align-items:center;justify-content:center;gap:5px">
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>
+            ${eff > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;flex-shrink:0">${eff}</span>` : ''}
             <span>${escapeHtml(j)}${date ? ` - ${date}` : ''}</span>
           </div>
         </td>`;
@@ -4375,7 +4375,7 @@ export default function TCF() {
                                 return (
                                   <td key={j} style={{ ...styles.thCenter, fontSize: 15 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>
+                                      {eff > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: '50%', background: '#eef2ff', color: '#4338ca', fontSize: 11, fontWeight: 700, border: '1px solid #a5b4fc', flexShrink: 0 }}>{eff}</span>}
                                       <span>{j}{date ? ` - ${date}` : ''}</span>
                                     </div>
                                   </td>
