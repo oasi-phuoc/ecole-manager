@@ -4053,18 +4053,36 @@ export default function TCF() {
                 const classesNiveau = classes.filter(c => normaliserNiveau(c.niveau) === niveauActif).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
                 const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
                 const maxScore = isFr ? 60 : 50;
-                const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : SESSIONS.slice();
-                const charts = elevesNiveauGraph.map(e => {
-                  const series = sessionsToShowIds.map(session => {
-                    const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
-                    if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
-                    const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
-                  }).filter(s => s.hasData);
-                  const classe = classesMap[String(e.classe_id)]?.nom || '';
-                  return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series: series.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })), nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe, niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''), showTrend: true };
-                }).filter(c => c.series.length > 0);
-                if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
-                printCharts(charts, isFr, maxScore);
+                if (graphVue === 'classe' || graphVue === 'moyenne') {
+                  const sessionsList = graphSession ? [graphSession] : SESSIONS.slice();
+                  const charts = classesNiveau.flatMap(cl => {
+                    const elevsCl = eleves.filter(e => String(e.classe_id) === String(cl.id)).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
+                    return sessionsList.map(session => {
+                      const series = elevsCl.map(e => {
+                        const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
+                        if (isFr) { const fr = calculFr(sc); return { label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+                        const ma = calculMath(sc); return { label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.total || 0), v2: 0, hasData: ma.total !== '' };
+                      }).filter(e => e.hasData);
+                      if (series.length === 0) return null;
+                      return { label: `${cl.nom} — ${SESSION_LABEL[session] || session}`, series, nom: cl.nom, prenom: '', classe: cl.nom, niveau: normaliserNiveau(cl.niveau || ''), showTrend: false };
+                    }).filter(Boolean);
+                  });
+                  if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
+                  printCharts(charts, isFr, maxScore);
+                } else {
+                  const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : SESSIONS.slice();
+                  const charts = elevesNiveauGraph.map(e => {
+                    const series = sessionsToShowIds.map(session => {
+                      const sc = getScore(ongletGraphiqueMatiere, session, String(e.id));
+                      if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+                      const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' };
+                    }).filter(s => s.hasData);
+                    const classe = classesMap[String(e.classe_id)]?.nom || '';
+                    return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe}`, series: series.map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })), nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe, niveau: normaliserNiveau(classesMap[String(e.classe_id)]?.niveau || ''), showTrend: true };
+                  }).filter(c => c.series.length > 0);
+                  if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
+                  printCharts(charts, isFr, maxScore);
+                }
               }} style={{ ...styles.btnAjouter, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Tout imprimer</button>
               <button type="button" onClick={() => {
                 const isFr = ongletGraphiqueMatiere === 'francais';
@@ -4105,9 +4123,13 @@ export default function TCF() {
                 } else if ((graphVue === 'moyenne' || graphVue === 'classe') && graphClasseId && graphSession) {
                   const elevesClasseFiltres = eleves.filter(e => String(e.classe_id) === String(graphClasseId)).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
                   const classe = classes.find(c => String(c.id) === graphClasseId);
-                  const charts = elevesClasseFiltres.map(e => { const series = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, String(e.id)); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData).map(s => ({ ...s, label: SESSION_LABEL[s.session] || s.session })); return { label: `${e.prenom} ${toDisplayNom(e.nom)} — ${classe?.nom || ''}`, series, nom: toDisplayNom(e.nom), prenom: e.prenom || '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: true }; }).filter(c => c.series.length > 0);
-                  if (charts.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
-                  printCharts(charts, isFr, maxScore);
+                  const seriesClasse = elevesClasseFiltres.map(e => {
+                    const sc = getScore(ongletGraphiqueMatiere, graphSession, String(e.id));
+                    if (isFr) { const fr = calculFr(sc); return { label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; }
+                    const ma = calculMath(sc); return { label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.total || 0), v2: 0, hasData: ma.total !== '' };
+                  }).filter(e => e.hasData);
+                  if (seriesClasse.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
+                  printCharts([{ label: `${classe?.nom || ''} — ${SESSION_LABEL[graphSession] || graphSession}`, series: seriesClasse, nom: classe?.nom || '', prenom: '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: false }], isFr, maxScore);
                 }
               }} style={{ ...styles.btnSauver, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
             </>
