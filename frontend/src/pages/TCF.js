@@ -243,6 +243,7 @@ export default function TCF() {
   const [statSeuil, setStatSeuil] = useState('60');
   const [statNiveau, setStatNiveau] = useState('');
   const [statRecherche, setStatRecherche] = useState('');
+  const [statShowNiveaux, setStatShowNiveaux] = useState(false);
   const [rolesGroupActif, setRolesGroupActif] = useState('g1');
   const [affectationDateDebutBySite, setAffectationDateDebutBySite] = useState({});
   const [affectationHorairesBySite, setAffectationHorairesBySite] = useState({});
@@ -3815,22 +3816,36 @@ export default function TCF() {
                 style={{ ...styles.pillBtn, ...(statOrdre === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-          <FiltreDropdown
-            value={statNiveau}
-            options={niveauxTabs.map(n => ({ value: n, label: n }))}
-            onSelect={setStatNiveau}
-            allLabel="Tous niveaux"
-          />
+          {!statShowNiveaux ? (
+            <button type="button" onClick={() => setStatShowNiveaux(true)}
+              style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              Trier
+            </button>
+          ) : (
+            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              <button type="button" onClick={() => { setStatNiveau(''); setStatShowNiveaux(false); }}
+                style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !statNiveau ? '#6366f1' : 'transparent', color: !statNiveau ? 'white' : '#6d28d9', fontWeight: !statNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                Trier
+              </button>
+              {niveauxTabs.map(n => (
+                <button key={n} type="button" onClick={() => setStatNiveau(n)}
+                  style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: statNiveau === n ? '#6366f1' : 'transparent', color: statNiveau === n ? 'white' : '#6d28d9', fontWeight: statNiveau === n ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
-          <CustomSelect
-            value={statSession}
-            onChange={(v) => setStatSession(v)}
-            options={SESSIONS.map(s => ({ value: s, label: SESSION_LABEL[s] || s }))}
-            placeholder="Choisir une session"
-            style={styles.select}
-          />
+          <div style={styles.pillGroup}>
+            {SESSIONS.map(s => (
+              <button key={s} type="button" onClick={() => setStatSession(prev => prev === s ? '' : s)}
+                style={{ ...styles.pillBtn, ...(statSession === s ? styles.pillBtnActif : {}) }}>
+                {labelSession[s] || s}
+              </button>
+            ))}
+          </div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Points :</span>
           <input type="number" value={statSeuil} onChange={e => setStatSeuil(e.target.value)}
             style={{ ...styles.select, width: 90 }} placeholder="Seuil" />
