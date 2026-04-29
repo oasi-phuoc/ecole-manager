@@ -33,11 +33,11 @@ const getEvaluations = async (req, res) => {
 };
 
 const creerEvaluation = async (req, res) => {
-  const { nom, classe_id, matiere_id, date, type, coefficient, sur, points_max, semestre } = req.body;
+  const { nom, classe_id, matiere_id, date, type, coefficient, sur, points_max, semestre, nb_exercices } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO evaluations (nom, classe_id, matiere_id, prof_id, date, type, coefficient, sur, points_max, semestre) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
-      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max != null && points_max !== '' ? points_max : null, semestre || 1]
+      'INSERT INTO evaluations (nom, classe_id, matiere_id, prof_id, date, type, coefficient, sur, points_max, semestre, nb_exercices) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *',
+      [nom, classe_id, matiere_id, req.user.id, date, type || 'Ecrit', coefficient || 1, sur || 6, points_max != null && points_max !== '' ? points_max : null, semestre || 1, parseInt(nb_exercices) || 0]
     );
     res.status(201).json({ message: 'Evaluation creee', evaluation: result.rows[0] });
   } catch (err) {
@@ -46,14 +46,14 @@ const creerEvaluation = async (req, res) => {
 };
 
 const modifierEvaluation = async (req, res) => {
-  const { nom, date, type, coefficient, points_max } = req.body;
+  const { nom, date, type, coefficient, points_max, nb_exercices } = req.body;
   const pm = points_max != null && points_max !== '' ? parseFloat(points_max) : null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query(
-      'UPDATE evaluations SET nom=$1, date=$2, type=$3, coefficient=$4, points_max=$5 WHERE id=$6',
-      [nom, date || null, type || 'Ecrit', coefficient || 1, pm, req.params.id]
+      'UPDATE evaluations SET nom=$1, date=$2, type=$3, coefficient=$4, points_max=$5, nb_exercices=$6 WHERE id=$7',
+      [nom, date || null, type || 'Ecrit', coefficient || 1, pm, parseInt(nb_exercices) || 0, req.params.id]
     );
     if (pm && pm > 0) {
       await client.query(`
@@ -113,6 +113,7 @@ const getNotesEvaluation = async (req, res) => {
         absent: note ? note.absent : false,
         dispense: note ? note.dispense : false,
         commentaire: note ? note.commentaire : '',
+        points_detail: note ? (note.points_detail || {}) : {},
         note_id: note ? note.id : null
       };
     });
@@ -136,15 +137,16 @@ const sauvegarderNotes = async (req, res) => {
       const abs = n.absent === true;
       const disp = n.dispense === true;
       const com = n.commentaire || null;
+      const det = n.points_detail && Object.keys(n.points_detail).length > 0 ? JSON.stringify(n.points_detail) : null;
       if (existe.rows.length > 0) {
         await client.query(
-          'UPDATE notes SET points=$1, valeur=$2, absent=$3, dispense=$4, commentaire=$5 WHERE evaluation_id=$6 AND eleve_id=$7',
-          [pts, val, abs, disp, com, eval_id, n.eleve_id]
+          'UPDATE notes SET points=$1, valeur=$2, absent=$3, dispense=$4, commentaire=$5, points_detail=$6 WHERE evaluation_id=$7 AND eleve_id=$8',
+          [pts, val, abs, disp, com, det, eval_id, n.eleve_id]
         );
       } else {
         await client.query(
-          'INSERT INTO notes (evaluation_id, eleve_id, points, valeur, absent, dispense, commentaire) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [eval_id, n.eleve_id, pts, val, abs, disp, com]
+          'INSERT INTO notes (evaluation_id, eleve_id, points, valeur, absent, dispense, commentaire, points_detail) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [eval_id, n.eleve_id, pts, val, abs, disp, com, det]
         );
       }
     }

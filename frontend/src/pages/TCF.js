@@ -21,28 +21,28 @@ const DEMI_JOURNEES = JOURS.flatMap(j => ([
   { id: `${j}|matin`, label: `${j} matin`, jour: j, moment: 'matin' },
   { id: `${j}|apresMidi`, label: `${j} après-midi`, jour: j, moment: 'apresMidi' },
 ]));
-const ROLE_CAP = {
-  Appel: Infinity,
-  Surveillance: 2,
-  Accompagnement: 1,
-  'Oral Groupe 1': 2,
-  'Oral Groupe 2': 2,
-  Correction: Infinity,
+const getRoleCap = (role) => {
+  if (role.startsWith('Oral Groupe ')) return 2;
+  return Infinity;
 };
-const ROLES_COLONNE = ['Appel', 'Surveillance', 'Accompagnement', 'Oral Groupe 1', 'Oral Groupe 2', 'Correction'];
-const LIGNES_ORGANISATION = [
-  { row: 1, role: 'Appel', temps: 25, bloc: null },
-  { row: 2, role: 'Surveillance', temps: 10, bloc: null },
-  { row: 3, role: 'Accompagnement', temps: 45, bloc: 'blocA' },
-  { row: 4, role: 'Oral 1', temps: null, bloc: 'blocA' },
-  { row: 5, role: 'Oral 2', temps: null, bloc: 'blocA' },
-  { row: 6, role: 'Surveillance', temps: 25, bloc: null },
-  { row: 7, role: 'Surveillance', temps: 25, bloc: null },
-  { row: 8, role: 'Accompagnement', temps: 45, bloc: 'blocB' },
-  { row: 9, role: 'Oral 1', temps: null, bloc: 'blocB' },
-  { row: 10, role: 'Oral 2', temps: null, bloc: 'blocB' },
-  { row: 11, role: 'Correction', temps: null, bloc: null },
-];
+const getLignesOrganisation = (n) => {
+  const N = Math.max(n, 2);
+  return [
+    { row: 1, key: 'appel', role: 'Appel', temps: 25, bloc: null, type: 'normal' },
+    { row: 2, key: 'surv1', role: 'Surveillance', temps: 10, bloc: null, type: 'normal' },
+    { row: 3, key: 'acc_a', role: 'Accompagnement', temps: 45, bloc: 'blocA', type: 'blocStart' },
+    ...Array.from({ length: N }, (_, i) => ({ row: 4 + i, key: `oral_a_${i + 1}`, role: `Oral ${i + 1}`, temps: null, bloc: 'blocA', type: 'blocInner' })),
+    { row: 4 + N, key: 'surv2', role: 'Surveillance', temps: 25, bloc: null, type: 'normal' },
+    { row: 5 + N, key: 'surv3', role: 'Surveillance', temps: 25, bloc: null, type: 'normal' },
+    { row: 6 + N, key: 'acc_b', role: 'Accompagnement', temps: 45, bloc: 'blocB', type: 'blocStart' },
+    ...Array.from({ length: N }, (_, i) => ({ row: 7 + N + i, key: `oral_b_${i + 1}`, role: `Oral ${i + 1}`, temps: null, bloc: 'blocB', type: 'blocInner' })),
+    { row: 7 + 2 * N, key: 'correction', role: 'Correction', temps: null, bloc: null, type: 'correction' },
+  ];
+};
+const getRolesColonne = (n) => {
+  const N = Math.max(n, 2);
+  return ['Appel', 'Surveillance', 'Accompagnement', ...Array.from({ length: N }, (_, i) => `Oral Groupe ${i + 1}`), 'Correction'];
+};
 
 const normaliserNiveau = (niveau) => String(niveau || '').trim().toUpperCase();
 const clampNote = (value, min = 0, max = 25) => {
@@ -1253,6 +1253,7 @@ export default function TCF() {
     const demi = DEMI_JOURNEES.find(d => d.id === rolesDemiJourneeSelect);
     const key = `${siteKey}::${rolesDemiJourneeSelect}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
+    const poolIdsReadOnly = new Set((selectedBySite[siteKey] || []).map(String));
     const org = organisationByPoolDemi[key] || {};
     const classesAffecteesDemi = demi ? (affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
     const classesAffecteesObjs = classesAffecteesDemi.map(cid => classes.find(c => String(c.id) === String(cid))).filter(Boolean);
@@ -1271,9 +1272,11 @@ export default function TCF() {
       ? (demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut'))
       : '';
     const defaultStartMin = parseTimeToMinutes(defaultStart);
+    const nbOralGroupsRO = Math.max(classesAffecteesObjs.length, 2);
+    const lignesOrgRO = getLignesOrganisation(nbOralGroupsRO);
     const lignesHoraire = {};
     let cursor = defaultStartMin;
-    LIGNES_ORGANISATION.forEach((lg) => {
+    lignesOrgRO.forEach((lg) => {
       const saved = org[`horaire_${lg.row}`];
       if (saved?.start || saved?.end) {
         lignesHoraire[lg.row] = { start: saved.start || '', end: saved.end || '' };
@@ -1314,13 +1317,13 @@ export default function TCF() {
                 </tr>
               </thead>
               <tbody>
-                {LIGNES_ORGANISATION.map((lg) => {
-                  const estBlocAStart = lg.row === 3;
-                  const estBlocAInner = lg.row === 4 || lg.row === 5;
-                  const estBlocBStart = lg.row === 8;
-                  const estBlocBInner = lg.row === 9 || lg.row === 10;
+                {lignesOrgRO.map((lg) => {
+                  const estBlocAStart = lg.type === 'blocStart' && lg.bloc === 'blocA';
+                  const estBlocAInner = lg.type === 'blocInner' && lg.bloc === 'blocA';
+                  const estBlocBStart = lg.type === 'blocStart' && lg.bloc === 'blocB';
+                  const estBlocBInner = lg.type === 'blocInner' && lg.bloc === 'blocB';
                   const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
-                  const isCorrection = lg.row === 11;
+                  const isCorrection = lg.type === 'correction';
                   const prevEnd = (() => {
                     if (lg.row <= 1) return lignesHoraire[lg.row]?.start || '';
                     for (let r = lg.row - 1; r >= 1; r--) {
@@ -1333,7 +1336,7 @@ export default function TCF() {
                   return (
                     <tr key={`rro-ligne-${lg.row}`}>
                       {afficherHoraireTemps && (
-                        <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
+                        <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? nbOralGroupsRO + 1 : 1}>
                           <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
                             {spanHoraire(startValue)}
                             {spanHoraire(endValue)}
@@ -1341,16 +1344,16 @@ export default function TCF() {
                         </td>
                       )}
                       {afficherHoraireTemps && (
-                        <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
+                        <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? nbOralGroupsRO + 1 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
                       )}
                       {classesColonnes.map((cl) => {
-                        if (lg.row === 1) return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
-                        if (lg.row === 2) return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
+                        if (lg.key === 'appel') return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
+                        if (lg.key === 'surv1') return <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
                         if (estBlocAInner || estBlocBInner) return null;
                         if (estBlocAStart) {
                           const bloc = org.blocA || {};
                           return (
-                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={nbOralGroupsRO + 1}>
                               <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                                 {['PE', 'PO', 'CE'].map(tag => {
                                   const selectedVal = String(bloc[tag] || '');
@@ -1362,7 +1365,7 @@ export default function TCF() {
                             </td>
                           );
                         }
-                        if (lg.row === 6 || lg.row === 7) {
+                        if (lg.key === 'surv2' || lg.key === 'surv3') {
                           const bloc = org[`ligne${lg.row}`] || {};
                           return (
                             <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter}>
@@ -1380,7 +1383,7 @@ export default function TCF() {
                         if (estBlocBStart) {
                           const bloc = org.blocB || {};
                           return (
-                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                            <td key={`rro-${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={nbOralGroupsRO + 1}>
                               <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                                 {['PE', 'PO', 'CE'].map(tag => {
                                   const selectedVal = String(bloc[tag] || '');
@@ -1398,11 +1401,12 @@ export default function TCF() {
                       <td style={styles.tdLeft}>
                         <div style={styles.pastillesWrap}>
                           {Object.entries(rolesMap)
-                            .filter(([, role]) => {
+                            .filter(([pid, role]) => {
                               if (!role) return false;
+                              const isResp = String(pid).startsWith('resp_');
+                              if (!isResp && !poolIdsReadOnly.has(String(pid))) return false;
                               if (lg.role === 'Appel') return role === 'Appel';
-                              if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
-                              if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+                              if (lg.role.startsWith('Oral ')) return role === `Oral Groupe ${lg.role.split(' ')[1]}`;
                               if (lg.role === 'Accompagnement') return role === 'Accompagnement';
                               if (lg.role === 'Correction') return role === 'Correction';
                               if (lg.role === 'Surveillance') return role === 'Surveillance';
@@ -1847,6 +1851,7 @@ export default function TCF() {
       });
     const key = `${siteKey}::${rolesDemiJourneeSelect}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
+    const poolIdsEdit = new Set(selectedProfIds.map(String));
     const org = organisationByPoolDemi[key] || {};
     const classesAffecteesDemi = demi ? (affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || []) : [];
     const classesAffecteesObjs = classesAffecteesDemi
@@ -1883,9 +1888,12 @@ export default function TCF() {
       ? (demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut'))
       : '';
     const defaultStartMin = parseTimeToMinutes(defaultStart);
+    const nbOralGroups = Math.max(classesAffecteesObjs.length, 2);
+    const lignesOrg = getLignesOrganisation(nbOralGroups);
+    const rolesColonne = getRolesColonne(nbOralGroups);
     const lignesHoraire = {};
     let cursor = defaultStartMin;
-    LIGNES_ORGANISATION.forEach((lg) => {
+    lignesOrg.forEach((lg) => {
       const saved = org[`horaire_${lg.row}`];
       if (saved?.start || saved?.end) {
         lignesHoraire[lg.row] = { start: saved.start || '', end: saved.end || '' };
@@ -1930,7 +1938,11 @@ export default function TCF() {
             style={styles.select}
           />
           {rolesDemiJourneeSelect && (() => {
-            const ROLE_MIN = { 'Appel': 1, 'Surveillance': 2, 'Accompagnement': 1, 'Oral Groupe 1': 2, 'Oral Groupe 2': 2, 'Correction': 2 };
+            const ROLE_MIN = Object.fromEntries([
+              ['Appel', 1], ['Surveillance', 2], ['Accompagnement', 1],
+              ...Array.from({ length: nbOralGroups }, (_, i) => [`Oral Groupe ${i + 1}`, 2]),
+              ['Correction', 2],
+            ]);
             const counts = {};
             Object.values(rolesMap).forEach(role => { if (role) counts[role] = (counts[role] || 0) + 1; });
             const complet = Object.entries(ROLE_MIN).every(([role, min]) => (counts[role] || 0) >= min);
@@ -1971,7 +1983,7 @@ export default function TCF() {
           <div style={styles.empty}>La demi-journée sélectionnée est inactive pour ce site.</div>
         ) : (
           <><div style={styles.rolesGrid}>
-            <div style={styles.tableWrap}>
+            <div style={{ ...styles.tableWrap, overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
               <table style={styles.tableRolesLeft}>
                 <colgroup>
                   <col />
@@ -1979,8 +1991,8 @@ export default function TCF() {
                 </colgroup>
                 <thead>
                   <tr style={styles.thead}>
-                    <th style={{ ...styles.thLeftFixed, width: 'auto', minWidth: 0, maxWidth: 'none' }}>Professeurs</th>
-                    <th style={{ ...styles.thLeftFixed, width: 190, minWidth: 190, maxWidth: 190 }}>Rôle</th>
+                    <th style={{ ...styles.thLeftFixed, width: 'auto', minWidth: 0, maxWidth: 'none', position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc' }}>Professeurs</th>
+                    <th style={{ ...styles.thLeftFixed, width: 190, minWidth: 190, maxWidth: 190, position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc' }}>Rôle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1999,11 +2011,11 @@ export default function TCF() {
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#4338ca' }}>Resp.</span>
                           </div>
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190 }}>
+                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190, paddingRight: 8 }}>
                           <CustomSelect
                             value={selectedRole}
                             onChange={(v) => setRoleProf(siteKey, rolesDemiJourneeSelect, resp.id, v)}
-                            options={ROLES_COLONNE.map(r => ({ value: r, label: r }))}
+                            options={rolesColonne.map(r => ({ value: r, label: r }))}
                             placeholder="—"
                             style={{ ...styles.selectRole, width: '100%' }}
                           />
@@ -2022,20 +2034,20 @@ export default function TCF() {
                             {isReserve ? <span style={styles.reserveBadge}>Réserve</span> : null}
                           </div>
                         </td>
-                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190 }}>
+                        <td style={{ ...styles.tdLeft, width: 190, minWidth: 190, maxWidth: 190, paddingRight: 8 }}>
                           <CustomSelect
                             value={selectedRole}
                             onChange={(v) => {
                               const nextRole = v;
                               if (nextRole) {
                                 const deja = Object.entries(rolesMap).filter(([pid, r]) => String(pid) !== String(p.id) && r === nextRole).length;
-                                if (deja >= (ROLE_CAP[nextRole] ?? Infinity)) return;
+                                if (deja >= getRoleCap(nextRole)) return;
                               }
                               setRoleProf(siteKey, rolesDemiJourneeSelect, p.id, nextRole);
                             }}
-                            options={ROLES_COLONNE.map((r) => {
+                            options={rolesColonne.map((r) => {
                               const nb = Object.entries(rolesMap).filter(([pid, role]) => String(pid) !== String(p.id) && role === r).length;
-                              const max = ROLE_CAP[r] ?? Infinity;
+                              const max = getRoleCap(r);
                               const disabled = nb >= max;
                               return { value: r, label: r, disabled };
                             })}
@@ -2069,12 +2081,12 @@ export default function TCF() {
                   </tr>
                 </thead>
                 <tbody>
-                  {LIGNES_ORGANISATION.map((lg) => {
-                    const estBlocAStart = lg.row === 3;
-                    const estBlocAInner = lg.row === 4 || lg.row === 5;
-                    const estBlocBStart = lg.row === 8;
-                    const estBlocBInner = lg.row === 9 || lg.row === 10;
-                    const isCorrection = lg.row === 11;
+                  {lignesOrg.map((lg) => {
+                    const estBlocAStart = lg.type === 'blocStart' && lg.bloc === 'blocA';
+                    const estBlocAInner = lg.type === 'blocInner' && lg.bloc === 'blocA';
+                    const estBlocBStart = lg.type === 'blocStart' && lg.bloc === 'blocB';
+                    const estBlocBInner = lg.type === 'blocInner' && lg.bloc === 'blocB';
+                    const isCorrection = lg.type === 'correction';
                     const afficherHoraireTemps = !(estBlocAInner || estBlocBInner);
                     const prevEnd = (() => {
                       if (lg.row <= 1) return lignesHoraire[lg.row]?.start || '';
@@ -2087,7 +2099,7 @@ export default function TCF() {
                     return (
                       <tr key={`ligne-${lg.row}`}>
                         {afficherHoraireTemps && (
-                          <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>
+                          <td style={styles.tdCenter} rowSpan={estBlocAStart || estBlocBStart ? nbOralGroups + 1 : 1}>
                             <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
                               <input
                                 style={{ ...styles.select, width: 48, minWidth: 0, maxWidth: 48, boxSizing: 'border-box', padding: '4px 4px', fontSize: 12, textAlign: 'center' }}
@@ -2113,16 +2125,16 @@ export default function TCF() {
                           </td>
                         )}
                         {afficherHoraireTemps && (
-                          <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? 3 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
+                          <td style={styles.tdCenterRead} rowSpan={estBlocAStart || estBlocBStart ? nbOralGroups + 1 : 1}>{lg.temps ? `${lg.temps}'` : ''}</td>
                         )}
                         {classesColonnes.map((cl) => {
-                          if (lg.row === 1) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
-                          if (lg.row === 2) return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
+                          if (lg.key === 'appel') return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Appel et consignes</td>;
+                          if (lg.key === 'surv1') return <td key={`${lg.row}-${cl.id}`} style={styles.tdCenterRead}>Préparation PO</td>;
                           if (estBlocAInner || estBlocBInner) return null;
                           if (estBlocAStart) {
                             const bloc = org.blocA || {};
                             return (
-                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={nbOralGroups + 1}>
                                 <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                                   {['PE', 'PO', 'CE'].map(tag => {
                                     const selectedVal = String(bloc[tag] || '');
@@ -2146,7 +2158,7 @@ export default function TCF() {
                               </td>
                             );
                           }
-                          if (lg.row === 6 || lg.row === 7) {
+                          if (lg.key === 'surv2' || lg.key === 'surv3') {
                             const bloc = org[`ligne${lg.row}`] || {};
                             return (
                               <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter}>
@@ -2183,7 +2195,7 @@ export default function TCF() {
                           if (estBlocBStart) {
                             const bloc = org.blocB || {};
                             return (
-                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={3}>
+                              <td key={`${lg.row}-${cl.id}`} style={styles.tdCenter} rowSpan={nbOralGroups + 1}>
                                 <div style={{ ...styles.pastillesWrap, justifyContent: 'center' }}>
                                   {['PE', 'PO', 'CE'].map(tag => {
                                     const selectedVal = String(bloc[tag] || '');
@@ -2213,11 +2225,12 @@ export default function TCF() {
                         <td style={styles.tdLeft}>
                           <div style={styles.pastillesWrap}>
                             {Object.entries(rolesMap)
-                              .filter(([, role]) => {
+                              .filter(([pid, role]) => {
                                 if (!role) return false;
+                                const isResp = String(pid).startsWith('resp_');
+                                if (!isResp && !poolIdsEdit.has(String(pid))) return false;
                                 if (lg.role === 'Appel') return role === 'Appel';
-                                if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
-                                if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+                                if (lg.role.startsWith('Oral ')) return role === `Oral Groupe ${lg.role.split(' ')[1]}`;
                                 if (lg.role === 'Accompagnement') return role === 'Accompagnement';
                                 if (lg.role === 'Correction') return role === 'Correction';
                                 if (lg.role === 'Surveillance') return role === 'Surveillance';
@@ -2226,15 +2239,20 @@ export default function TCF() {
                               .map(([pid]) => {
                                 const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
                                 if (!p) return null;
-                                const ROLE_CHIP_COLORS = {
-                                  'Appel':          { bg: '#dbeafe', border: '#93c5fd', color: '#1e3a8a' },
-                                  'Surveillance':   { bg: '#fef9c3', border: '#fde047', color: '#713f12' },
-                                  'Accompagnement': { bg: '#dcfce7', border: '#86efac', color: '#14532d' },
-                                  'Oral 1':         { bg: '#ede9fe', border: '#c4b5fd', color: '#4c1d95' },
-                                  'Oral 2':         { bg: '#fce7f3', border: '#f9a8d4', color: '#831843' },
-                                  'Correction':     { bg: '#ffedd5', border: '#fdba74', color: '#7c2d12' },
-                                };
-                                const rc = ROLE_CHIP_COLORS[lg.role] || {};
+                                const oralPalette = [
+                                  { bg: '#ede9fe', border: '#c4b5fd', color: '#4c1d95' },
+                                  { bg: '#fce7f3', border: '#f9a8d4', color: '#831843' },
+                                  { bg: '#d1fae5', border: '#6ee7b7', color: '#064e3b' },
+                                  { bg: '#fef3c7', border: '#fcd34d', color: '#78350f' },
+                                ];
+                                const rc = (() => {
+                                  if (lg.role === 'Appel') return { bg: '#dbeafe', border: '#93c5fd', color: '#1e3a8a' };
+                                  if (lg.role === 'Surveillance') return { bg: '#fef9c3', border: '#fde047', color: '#713f12' };
+                                  if (lg.role === 'Accompagnement') return { bg: '#dcfce7', border: '#86efac', color: '#14532d' };
+                                  if (lg.role === 'Correction') return { bg: '#ffedd5', border: '#fdba74', color: '#7c2d12' };
+                                  if (lg.role.startsWith('Oral ')) return oralPalette[(parseInt(lg.role.split(' ')[1]) - 1) % oralPalette.length] || {};
+                                  return {};
+                                })();
                                 return <span key={`${lg.row}-prof-${pid}`} style={{ ...styles.profChip, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color }}>{p.prenom ? `${p.prenom} ${toDisplayNom(p.nom)}` : p.nom}</span>;
                               })}
                           </div>
@@ -2717,6 +2735,7 @@ export default function TCF() {
     if (!demi) return '';
     const key = `${siteKey}::${demiId}`;
     const rolesMap = rolesAffectesByPoolDemi[key] || {};
+    const poolIdsPdf = new Set((selectedBySite[siteKey] || []).map(String));
     const org = organisationByPoolDemi[key] || {};
     const classesAffecteesDemi = affectationClassesBySite?.[siteKey]?.[cellKeyAffectation(demi.jour, demi.moment)] || [];
     const classesAffecteesObjs = classesAffecteesDemi.map(cid => classes.find(c => String(c.id) === String(cid))).filter(Boolean);
@@ -2731,8 +2750,10 @@ export default function TCF() {
       : classesAffecteesObjs.map(cl => ({ id: String(cl.id), nom: cl.nom, classIds: [String(cl.id)] }));
     const defaultStart = demi.moment === 'matin' ? getHoraireSite(siteKey, 'matinDebut') : getHoraireSite(siteKey, 'apresMidiDebut');
     let cursor = parseTimeToMinutes(defaultStart);
+    const nbOralGroupsPdf = Math.max(classesAffecteesObjs.length, 2);
+    const lignesOrgPdf = getLignesOrganisation(nbOralGroupsPdf);
     const lignesHoraire = {};
-    LIGNES_ORGANISATION.forEach(lg => {
+    lignesOrgPdf.forEach(lg => {
       const saved = org[`horaire_${lg.row}`];
       if (saved?.start || saved?.end) {
         lignesHoraire[lg.row] = { start: saved.start || '', end: saved.end || '' };
@@ -2755,41 +2776,49 @@ export default function TCF() {
     const logoPiedUrl = `${publicBase}/logo-pied-page.png`;
     const colgroup = `<col style="width:118px"><col style="width:50px">${classesColonnes.map(() => '<col>').join('')}<col style="width:110px"><col>`;
     const thead = `<thead><tr><th>Horaire</th><th>Temps</th>${classesColonnes.map(cl => `<th>${escapeHtml(cl.nom)}</th>`).join('')}<th>Rôle</th><th>Professeurs</th></tr></thead>`;
-    const tbody = LIGNES_ORGANISATION.map(lg => {
-      const estBlocAStart = lg.row === 3, estBlocAInner = lg.row === 4 || lg.row === 5;
-      const estBlocBStart = lg.row === 8, estBlocBInner = lg.row === 9 || lg.row === 10;
-      const isCorrection = lg.row === 11;
+    const tbody = lignesOrgPdf.map(lg => {
+      const estBlocAStart = lg.type === 'blocStart' && lg.bloc === 'blocA';
+      const estBlocAInner = lg.type === 'blocInner' && lg.bloc === 'blocA';
+      const estBlocBStart = lg.type === 'blocStart' && lg.bloc === 'blocB';
+      const estBlocBInner = lg.type === 'blocInner' && lg.bloc === 'blocB';
+      const isCorrection = lg.type === 'correction';
       const afficher = !(estBlocAInner || estBlocBInner);
       const prevEnd = (() => { if (lg.row <= 1) return lignesHoraire[lg.row]?.start || ''; for (let r = lg.row - 1; r >= 1; r--) { if (lignesHoraire[r]?.end) return lignesHoraire[r].end; } return ''; })();
       const startVal = lg.row === 1 ? (lignesHoraire[lg.row]?.start || '') : prevEnd;
       const endVal = isCorrection ? '...' : (lignesHoraire[lg.row]?.end || '');
-      const rs = (estBlocAStart || estBlocBStart) ? ' rowspan="3"' : '';
+      const rs = (estBlocAStart || estBlocBStart) ? ` rowspan="${nbOralGroupsPdf + 1}"` : '';
       const horTd = afficher ? `<td class="tc"${rs}><span class="time">${escapeHtml(startVal)}</span> <span class="time">${escapeHtml(endVal)}</span></td>` : '';
       const tmpTd = afficher ? `<td class="tc"${rs}>${lg.temps ? `${lg.temps}'` : ''}</td>` : '';
       const classCells = classesColonnes.map(cl => {
-        if (lg.row === 1) return `<td class="tc">Appel et consignes</td>`;
-        if (lg.row === 2) return `<td class="tc">Préparation PO</td>`;
+        if (lg.key === 'appel') return `<td class="tc">Appel et consignes</td>`;
+        if (lg.key === 'surv1') return `<td class="tc">Préparation PO</td>`;
         if (estBlocAInner || estBlocBInner) return '';
         const getChips = (bloc, tags) => tags.filter(tag => { const v = String(bloc[tag] || ''); return cl.classIds.includes(v) || v === cl.id; }).map(tag => `<span class="chip-tag">${tag}</span>`).join('');
-        if (estBlocAStart) return `<td class="tc" rowspan="3">${getChips(org.blocA || {}, ['PE','PO','CE'])}</td>`;
-        if (lg.row === 6 || lg.row === 7) return `<td class="tc">${getChips(org[`ligne${lg.row}`] || {}, ['Pause','CO'])}</td>`;
-        if (estBlocBStart) return `<td class="tc" rowspan="3">${getChips(org.blocB || {}, ['PE','PO','CE'])}</td>`;
+        if (estBlocAStart) return `<td class="tc" rowspan="${nbOralGroupsPdf + 1}">${getChips(org.blocA || {}, ['PE','PO','CE'])}</td>`;
+        if (lg.key === 'surv2' || lg.key === 'surv3') return `<td class="tc">${getChips(org[`ligne${lg.row}`] || {}, ['Pause','CO'])}</td>`;
+        if (estBlocBStart) return `<td class="tc" rowspan="${nbOralGroupsPdf + 1}">${getChips(org.blocB || {}, ['PE','PO','CE'])}</td>`;
         return `<td class="tc"></td>`;
       }).join('');
-      const PDF_ROLE_CHIP = {
-        'Appel':          'background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a',
-        'Surveillance':   'background:#fef9c3;border:1px solid #fde047;color:#713f12',
-        'Accompagnement': 'background:#dcfce7;border:1px solid #86efac;color:#14532d',
-        'Oral 1':         'background:#ede9fe;border:1px solid #c4b5fd;color:#4c1d95',
-        'Oral 2':         'background:#fce7f3;border:1px solid #f9a8d4;color:#831843',
-        'Correction':     'background:#ffedd5;border:1px solid #fdba74;color:#7c2d12',
-      };
-      const chipStyle = PDF_ROLE_CHIP[lg.role] || 'background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3';
-      const profsHtml = Object.entries(rolesMap).filter(([, role]) => {
+      const oralPdfPalette = [
+        'background:#ede9fe;border:1px solid #c4b5fd;color:#4c1d95',
+        'background:#fce7f3;border:1px solid #f9a8d4;color:#831843',
+        'background:#d1fae5;border:1px solid #6ee7b7;color:#064e3b',
+        'background:#fef3c7;border:1px solid #fcd34d;color:#78350f',
+      ];
+      const chipStyle = (() => {
+        if (lg.role === 'Appel') return 'background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a';
+        if (lg.role === 'Surveillance') return 'background:#fef9c3;border:1px solid #fde047;color:#713f12';
+        if (lg.role === 'Accompagnement') return 'background:#dcfce7;border:1px solid #86efac;color:#14532d';
+        if (lg.role === 'Correction') return 'background:#ffedd5;border:1px solid #fdba74;color:#7c2d12';
+        if (lg.role.startsWith('Oral ')) return oralPdfPalette[(parseInt(lg.role.split(' ')[1]) - 1) % oralPdfPalette.length];
+        return 'background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3';
+      })();
+      const profsHtml = Object.entries(rolesMap).filter(([pid, role]) => {
         if (!role) return false;
+        const isResp = String(pid).startsWith('resp_');
+        if (!isResp && !poolIdsPdf.has(String(pid))) return false;
         if (lg.role === 'Appel') return role === 'Appel';
-        if (lg.role === 'Oral 1') return role === 'Oral Groupe 1';
-        if (lg.role === 'Oral 2') return role === 'Oral Groupe 2';
+        if (lg.role.startsWith('Oral ')) return role === `Oral Groupe ${lg.role.split(' ')[1]}`;
         return role === lg.role;
       }).map(([pid]) => {
         const p = profMap[String(pid)] || responsablesTCF.find(r => r.id === pid);
@@ -3895,13 +3924,25 @@ export default function TCF() {
         return;
       }
     }
+    const cleanedRoles = {};
+    for (const [key, rolesMap] of Object.entries(rolesAffectesByPoolDemi)) {
+      const siteK = key.split('::')[0];
+      const poolSet = new Set((selectedBySite[siteK] || []).map(String));
+      const cleaned = {};
+      for (const [pid, role] of Object.entries(rolesMap)) {
+        if (String(pid).startsWith('resp_') || poolSet.has(String(pid))) {
+          cleaned[pid] = role;
+        }
+      }
+      cleanedRoles[key] = cleaned;
+    }
     const payload = {
       updatedAt: new Date().toISOString(),
       dateDebutBySite: affectationDateDebutBySite,
       horairesBySite: affectationHorairesBySite,
       classesBySite: affectationClassesBySite,
       joursActifsBySite: affectationJoursActifsBySite,
-      rolesByPoolDemi: rolesAffectesByPoolDemi,
+      rolesByPoolDemi: cleanedRoles,
       organisationByPoolDemi: organisationByPoolDemi,
     };
     try {
@@ -4573,7 +4614,7 @@ const styles = {
   toggleBtnDay: { padding: '8px 14px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', outline: 'none', boxShadow: 'none', lineHeight: '1' },
   toggleBtnDayActif: { background: '#6366f1', color: '#ffffff', fontWeight: 800 },
   select: { height:36, padding:'0 14px', boxSizing:'border-box', borderRadius:8, border:'1px solid #c7d2fe', background:'white', color:'#1e293b', fontWeight:400, fontSize:13, outline:'none', cursor:'pointer', fontFamily:'inherit', minWidth:190 },
-  selectRole: { padding: '8px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit', minWidth: 180 },
+  selectRole: { padding: '4px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', color: '#1e293b', fontWeight: 400, fontSize: 13, outline: 'none', cursor: 'pointer', fontFamily: 'inherit', minWidth: 120 },
   inputField: { padding: '6px 8px', borderRadius: 8, border: '1px solid #c7d2fe', background: 'white', outline: 'none', fontSize: 13, color: '#1e293b', fontFamily: 'inherit', width: 72, textAlign: 'center' },
   timePastille: { padding: '5px 14px', borderRadius: 999, border: '1px solid #c7d2fe', background: '#eef2ff', outline: 'none', fontSize: 13, color: '#3730a3', fontWeight: 700, fontFamily: 'inherit', width: 76, textAlign: 'center', cursor: 'pointer' },
   timePastilleFixe: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '5px 14px', borderRadius: 999, border: '1px solid #c7d2fe', background: '#eef2ff', fontSize: 13, color: '#3730a3', fontWeight: 700, fontFamily: 'inherit', width: 76, textAlign: 'center' },

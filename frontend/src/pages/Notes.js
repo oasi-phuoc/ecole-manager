@@ -160,9 +160,10 @@ export default function Notes() {
   const [criteresLocaux, setCriteresLocaux] = useState([]);
   const [criteresModifies, setCriteresModifies] = useState(false);
   const [criteresValides, setCriteresValides] = useState(false);
-  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
+  const [form, setForm] = useState({ nom: '', matiere_id: '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, nb_exercices: '', editId: null });
   const [searchParams, setSearchParams] = useSearchParams();
   const [rechercheClasses, setRechercheClasses] = useState('');
+  const [tcfScores, setTcfScores] = useState({});
   const printRef = useRef();
   const navigate = useNavigate();
   const location = useLocation();
@@ -170,6 +171,38 @@ export default function Notes() {
   const currentUser = getSessionUser() || {};
   const profNomSession = ((currentUser.prenom || '') + ' ' + (currentUser.nom || '')).trim() || '—';
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
+
+  useEffect(() => {
+    axios.get(API + '/tcf-state/resultats', { headers })
+      .then(r => setTcfScores(r.data?.donnees || {}))
+      .catch(() => {});
+  }, []);
+
+  const getTcfScore = (matiere, eleveId) => {
+    for (const session of ["2e semestre", "1e semestre", "Test d'août"]) {
+      const key = `${matiere}::${session}::${eleveId}`;
+      const row = tcfScores[key];
+      if (row && Object.values(row).some(v => v !== '' && v != null)) return row;
+    }
+    return null;
+  };
+
+  const niveauFrLabel = (pts, isCfrEpl) => {
+    if (pts >= 45) return isCfrEpl ? 'A2' : 'A1';
+    if (pts >= 25) return isCfrEpl ? 'A1.2' : 'A0.2';
+    if (pts >= 5) return isCfrEpl ? 'A1.1' : 'A0.1';
+    return null;
+  };
+
+  const niveauMathLabel = (pts) => {
+    if (pts >= 80) return 'Avancé';
+    if (pts >= 60) return 'Moyen';
+    if (pts >= 30) return 'Élémentaire';
+    return null;
+  };
+
+  const nbTcf = (v) => (v === '' || v == null ? 0 : parseFloat(v) || 0);
+
   const nbEvalMatiereProf = (classeId, profId, matiereId) => {
     const pid = profId != null && profId !== '' ? String(profId) : 'null';
     const k = `${classeId}-${matiereId}-${pid}`;
@@ -343,13 +376,14 @@ export default function Notes() {
         note: e.valeur !== null ? String(parseFloat(e.valeur)) : '',
         absent: e.absent || false,
         dispense: e.dispense || false,
-        commentaire: e.commentaire || ''
+        commentaire: e.commentaire || '',
+        points_detail: e.points_detail || {}
       })));
       setVue('saisie');
     } catch (err) { console.error(err); }
   };
 
-  const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null };
+  const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, nb_exercices: '', editId: null };
 
   const ouvrirEditionEvaluation = (ev) => {
     const avecPoints = ev.points_max && parseFloat(ev.points_max) > 0;
@@ -362,6 +396,7 @@ export default function Notes() {
       sur: String(ev.sur || 6),
       points_max: avecPoints ? String(parseFloat(ev.points_max)) : '',
       sans_points: !avecPoints,
+      nb_exercices: ev.nb_exercices ? String(ev.nb_exercices) : '',
       editId: ev.id
     });
     setShowForm(true);
@@ -399,7 +434,8 @@ export default function Notes() {
           : (e.note !== '' ? Math.min(parseFloat(e.note), 6) : null),
         absent: e.absent,
         dispense: e.dispense,
-        commentaire: e.commentaire
+        commentaire: e.commentaire,
+        points_detail: e.points_detail || {}
       }));
       await axios.post(API + '/notes/' + evaluationOuverte.id + '/notes', { notes }, { headers });
       showToast('Notes enregistrées.');
@@ -604,6 +640,32 @@ export default function Notes() {
       naissanceBlock = `<div style="font-size:10pt;color:#1e293b;margin-bottom:14px">${escapeHtmlAttest(naisText)}</div>`;
     }
     const tauxLine = taux !== null ? `<div>Taux de présence : <strong>${taux} %</strong></div>` : '';
+    const isCfrEpl = cn.includes('CFR') || cn.includes('EPL');
+    const niveauHtml = (() => {
+      const frLabel = isCfrEpl ? 'Niveau atteint en français' : 'Niveau atteint';
+      let html = '';
+      const frRow = getTcfScore('francais', eleveId);
+      if (frRow && ['co','po','ce','pe'].some(f => frRow[f] !== '' && frRow[f] != null)) {
+        const oral = nbTcf(frRow.co) + nbTcf(frRow.po);
+        const ecrit = nbTcf(frRow.ce) + nbTcf(frRow.pe);
+        const oLvl = niveauFrLabel(oral, isCfrEpl) || '—';
+        const eLvl = niveauFrLabel(ecrit, isCfrEpl) || '—';
+        html += `<div style="margin-top:2px">${frLabel} : <strong>Oral ${escapeHtmlAttest(oLvl)} · Écrit ${escapeHtmlAttest(eLvl)}</strong></div>`;
+      } else {
+        html += `<div style="margin-top:2px">${frLabel} : <strong style="color:#94a3b8;font-style:italic">[à compléter]</strong></div>`;
+      }
+      if (isCfrEpl) {
+        const mathRow = getTcfScore('mathematiques', eleveId);
+        if (mathRow && ['p1','p2','p3','p4'].some(f => mathRow[f] !== '' && mathRow[f] != null)) {
+          const mathTotal = nbTcf(mathRow.p1) + nbTcf(mathRow.p2) + nbTcf(mathRow.p3) + nbTcf(mathRow.p4);
+          const mLvl = niveauMathLabel(mathTotal);
+          html += `<div style="margin-top:2px">Niveau atteint en mathématiques : <strong>${mLvl ? escapeHtmlAttest(mLvl) : '<span style="color:#94a3b8;font-style:italic">[à compléter]</span>'}</strong></div>`;
+        } else {
+          html += `<div style="margin-top:2px">Niveau atteint en mathématiques : <strong style="color:#94a3b8;font-style:italic">[à compléter]</strong></div>`;
+        }
+      }
+      return html;
+    })();
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const logoState = `${publicBase}/logo-etat-du-valais.png`;
     const logoPied = `${publicBase}/logo-pied-page.png`;
@@ -631,7 +693,7 @@ ${subHtml}
 ${naissanceBlock}
 <div style="margin-top:5px">a suivi les cours de langue française du <strong>${escapeHtmlAttest(dateDebutCours)}</strong> au <strong>${escapeHtmlAttest(dateFinCours)}</strong>,</div>
 <div style="margin-bottom:14px">à raison de <strong>4 heures</strong> par jour.</div>
-<div style="margin-top:2px">Niveau atteint : <strong style="color:#94a3b8;font-style:italic">[à compléter]</strong></div>
+${niveauHtml}
 ${tauxLine}
 </div>
 <div style="display:flex;justify-content:space-between;margin-top:4px">
@@ -806,71 +868,101 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
           <div style={{overflow:'auto',maxHeight:'calc(100vh - 320px)',WebkitOverflowScrolling:'touch'}}>
-          <table style={s.tbl}>
-            <thead>
-              <tr style={s.theadRow}>
-                <th style={{ ...s.th, borderTopLeftRadius: 12, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Nom</th>
-                <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Prénom</th>
-                {evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0
-                  ? <th style={{ ...s.th, textAlign: 'center' }}>Points</th>
-                  : null}
-                <th style={{ ...s.th, textAlign: 'center' }}>Note</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Absent</th>
-                <th style={{ ...s.th, textAlign: 'center' }}>Dispensé</th>
-                <th style={{ ...s.th, borderTopRightRadius: 12 }}>Remarques</th>
-              </tr>
-            </thead>
-            <tbody>
-              {elevesNotes.map((eleve, i) => {
-                const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
-                const note = avecPoints ? calculerNote(eleve.points, evaluationOuverte.points_max) : null;
-                const noteDirecte = !avecPoints && eleve.note !== '' ? parseFloat(eleve.note) : null;
-                return (
-                  <tr key={eleve.id} style={{ ...s.tr, background: eleve.absent ? '#fff8f8' : eleve.dispense ? '#f8f8ff' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
-                    <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap', fontWeight: 700 }}>{nomSansSuffixe(eleve.nom)}</td>
-                    <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
-                    {avecPoints ? (
-                      <td style={{ ...s.td, textAlign: 'center' }}>
-                        <input className="note-input" data-col="points" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
-                          value={eleve.points} disabled={eleve.absent || eleve.dispense}
-                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; const max = parseFloat(evaluationOuverte.points_max); if (v !== '' && !isNaN(max) && parseFloat(v) > max) v = String(max); if (v !== '' && parseFloat(v) < 0) v = '0'; c[i].points = v; setElevesNotes(c); }}
-                          onFocus={ev => ev.target.select()}
-                          onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="points"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
-                      </td>
-                    ) : null}
-                    <td style={{ ...s.td, textAlign: 'center' }}>
+          {(() => {
+            const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
+            const nbEx = parseInt(evaluationOuverte.nb_exercices) || 0;
+            const exNums = nbEx > 0 ? Array.from({ length: nbEx }, (_, k) => k + 1) : [];
+            return (
+            <table style={s.tbl}>
+              <thead>
+                <tr style={s.theadRow}>
+                  <th style={{ ...s.th, borderTopLeftRadius: 12, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Nom</th>
+                  <th style={{ ...s.th, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>Prénom</th>
+                  {avecPoints && exNums.map(n => (
+                    <th key={`ex-h-${n}`} style={{ ...s.th, textAlign: 'center', minWidth: 52, width: 52 }}>{n}</th>
+                  ))}
+                  {avecPoints ? <th style={{ ...s.th, textAlign: 'center' }}>{nbEx > 0 ? 'Total' : 'Points'}</th> : null}
+                  <th style={{ ...s.th, textAlign: 'center' }}>Note</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Absent</th>
+                  <th style={{ ...s.th, textAlign: 'center' }}>Dispensé</th>
+                  <th style={{ ...s.th, borderTopRightRadius: 12 }}>Remarques</th>
+                </tr>
+              </thead>
+              <tbody>
+                {elevesNotes.map((eleve, i) => {
+                  const note = avecPoints ? calculerNote(eleve.points, evaluationOuverte.points_max) : null;
+                  const noteDirecte = !avecPoints && eleve.note !== '' ? parseFloat(eleve.note) : null;
+                  return (
+                    <tr key={eleve.id} style={{ ...s.tr, background: eleve.absent ? '#fff8f8' : eleve.dispense ? '#f8f8ff' : i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                      <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap', fontWeight: 700 }}>{nomSansSuffixe(eleve.nom)}</td>
+                      <td style={{ ...s.td, width: 170, minWidth: 170, whiteSpace: 'nowrap' }}>{eleve.prenom}</td>
+                      {avecPoints && exNums.map(n => (
+                        <td key={`ex-${i}-${n}`} style={{ ...s.td, textAlign: 'center', minWidth: 52, width: 52 }}>
+                          <input className="note-input" data-col={`ex${n}`} style={{ ...s.noteInput, width: 44 }} type="number" min="0" step="0.5"
+                            value={eleve.points_detail?.[String(n)] ?? ''}
+                            disabled={eleve.absent || eleve.dispense}
+                            onChange={ev => {
+                              const c = [...elevesNotes];
+                              const det = { ...(c[i].points_detail || {}) };
+                              det[String(n)] = ev.target.value;
+                              const total = exNums.reduce((s, k) => s + (parseFloat(det[String(k)]) || 0), 0);
+                              const maxPts = parseFloat(evaluationOuverte.points_max);
+                              c[i].points_detail = det;
+                              c[i].points = String(Math.min(total, isNaN(maxPts) ? Infinity : maxPts));
+                              setElevesNotes(c);
+                            }}
+                            onFocus={ev => ev.target.select()}
+                            onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll(`input[data-col="ex${n}"]`)]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
+                        </td>
+                      ))}
                       {avecPoints ? (
-                        <span style={{ fontWeight: 700, fontSize: 16, color: eleve.absent || eleve.dispense ? '#888' : note !== null ? (note >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
-                          {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : fmtNote(note)}
-                        </span>
-                      ) : eleve.absent || eleve.dispense ? (
-                        <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
-                      ) : (
-                        <input className="note-input" data-col="note" style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
-                          type="number" min="1" max="6" step="0.1"
-                          value={eleve.note} placeholder="—"
-                          onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; if (v !== '' && parseFloat(v) < 1) v = '1'; c[i].note = v; setElevesNotes(c); }}
-                          onFocus={ev => ev.target.select()}
-                          onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="note"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
-                      )}
-                    </td>
-                    <td style={{ ...s.td, textAlign: 'center' }}>
-                      <input type="checkbox" checked={eleve.absent} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].absent = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].dispense = false; } setElevesNotes(c); }} />
-                    </td>
-                    <td style={{ ...s.td, textAlign: 'center' }}>
-                      <input type="checkbox" checked={eleve.dispense} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].dispense = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].absent = false; } setElevesNotes(c); }} />
-                    </td>
-                    <td style={s.td}>
-                      <input style={s.commentInput} type="text" placeholder="Remarque..." value={eleve.commentaire}
-                        onChange={ev => { const c = [...elevesNotes]; c[i].commentaire = ev.target.value; setElevesNotes(c); }} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        <td style={{ ...s.td, textAlign: 'center' }}>
+                          {nbEx > 0 ? (
+                            <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>{eleve.points !== '' ? eleve.points : '—'}</span>
+                          ) : (
+                            <input className="note-input" data-col="points" style={s.noteInput} type="number" min="0" max={evaluationOuverte.points_max} step="0.5"
+                              value={eleve.points} disabled={eleve.absent || eleve.dispense}
+                              onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; const max = parseFloat(evaluationOuverte.points_max); if (v !== '' && !isNaN(max) && parseFloat(v) > max) v = String(max); if (v !== '' && parseFloat(v) < 0) v = '0'; c[i].points = v; setElevesNotes(c); }}
+                              onFocus={ev => ev.target.select()}
+                              onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="points"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
+                          )}
+                        </td>
+                      ) : null}
+                      <td style={{ ...s.td, textAlign: 'center' }}>
+                        {avecPoints ? (
+                          <span style={{ fontWeight: 700, fontSize: 16, color: eleve.absent || eleve.dispense ? '#888' : note !== null ? (note >= 4 ? '#2e7d32' : '#ef4444') : '#888' }}>
+                            {eleve.absent ? 'ABS' : eleve.dispense ? 'DISP' : fmtNote(note)}
+                          </span>
+                        ) : eleve.absent || eleve.dispense ? (
+                          <span style={{ fontWeight: 700, fontSize: 16, color: '#888' }}>{eleve.absent ? 'ABS' : 'DISP'}</span>
+                        ) : (
+                          <input className="note-input" data-col="note" style={{ ...s.noteInput, color: noteDirecte !== null ? (noteDirecte >= 4 ? '#2e7d32' : '#ef4444') : '#333' }}
+                            type="number" min="1" max="6" step="0.1"
+                            value={eleve.note} placeholder="—"
+                            onChange={ev => { const c = [...elevesNotes]; let v = ev.target.value; if (v !== '' && parseFloat(v) > 6) v = '6'; if (v !== '' && parseFloat(v) < 1) v = '1'; c[i].note = v; setElevesNotes(c); }}
+                            onFocus={ev => ev.target.select()}
+                            onKeyDown={ev => { if (ev.key === 'Tab') { ev.preventDefault(); const inputs = [...document.querySelectorAll('input[data-col="note"]')]; const idx = inputs.indexOf(ev.target); const next = inputs[ev.shiftKey ? idx - 1 : idx + 1]; if (next) next.focus(); } }} />
+                        )}
+                      </td>
+                      <td style={{ ...s.td, textAlign: 'center' }}>
+                        <input type="checkbox" checked={eleve.absent} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
+                          onChange={ev => { const c = [...elevesNotes]; c[i].absent = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].points_detail = {}; c[i].dispense = false; } setElevesNotes(c); }} />
+                      </td>
+                      <td style={{ ...s.td, textAlign: 'center' }}>
+                        <input type="checkbox" checked={eleve.dispense} style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
+                          onChange={ev => { const c = [...elevesNotes]; c[i].dispense = ev.target.checked; if (ev.target.checked) { c[i].points = ''; c[i].note = ''; c[i].points_detail = {}; c[i].absent = false; } setElevesNotes(c); }} />
+                      </td>
+                      <td style={s.td}>
+                        <input style={s.commentInput} type="text" placeholder="Remarque..." value={eleve.commentaire}
+                          onChange={ev => { const c = [...elevesNotes]; c[i].commentaire = ev.target.value; setElevesNotes(c); }} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            );
+          })()}
           </div>
         </div>
       </div>
@@ -1971,6 +2063,15 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             const now = new Date();
             const as = now.getMonth() >= 7 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
             const printId = `attest-print-${eleveId}`;
+            const cnPrev = String(classeNom || '').toUpperCase();
+            const isCfrEplPrev = cnPrev.includes('CFR') || cnPrev.includes('EPL');
+            const frRowPrev = getTcfScore('francais', eleveId);
+            const frHasPrev = frRowPrev && ['co','po','ce','pe'].some(f => frRowPrev[f] !== '' && frRowPrev[f] != null);
+            const oralPrev = frHasPrev ? nbTcf(frRowPrev.co) + nbTcf(frRowPrev.po) : null;
+            const ecritPrev = frHasPrev ? nbTcf(frRowPrev.ce) + nbTcf(frRowPrev.pe) : null;
+            const mathRowPrev = isCfrEplPrev ? getTcfScore('mathematiques', eleveId) : null;
+            const mathHasPrev = mathRowPrev && ['p1','p2','p3','p4'].some(f => mathRowPrev[f] !== '' && mathRowPrev[f] != null);
+            const mathTotalPrev = mathHasPrev ? nbTcf(mathRowPrev.p1) + nbTcf(mathRowPrev.p2) + nbTcf(mathRowPrev.p3) + nbTcf(mathRowPrev.p4) : null;
             return (
               <div key={eleveId} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div id={printId} style={{ border: '2px solid #dc2626', borderRadius: 0, padding: '16px 24px 12px', fontFamily: font, position: 'relative', background: 'white', height: '194mm', maxHeight: '194mm', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -2006,7 +2107,8 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                     )}
                     <div style={{ marginTop: 5 }}>a suivi les cours de langue française du <strong>{dateDebutCours}</strong> au <strong>{dateFinCours}</strong>,</div>
                     <div style={{ marginBottom: 14 }}>à raison de <strong>4 heures</strong> par jour.</div>
-                    <div style={{ marginTop: 2 }}>Niveau atteint : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong></div>
+                    <div style={{ marginTop: 2 }}>{isCfrEplPrev ? 'Niveau atteint en français' : 'Niveau atteint'} : {frHasPrev ? <strong>{niveauFrLabel(oralPrev, isCfrEplPrev) ? `Oral ${niveauFrLabel(oralPrev, isCfrEplPrev)}` : 'Oral —'} · {niveauFrLabel(ecritPrev, isCfrEplPrev) ? `Écrit ${niveauFrLabel(ecritPrev, isCfrEplPrev)}` : 'Écrit —'}</strong> : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong>}</div>
+                    {isCfrEplPrev && <div style={{ marginTop: 2 }}>Niveau atteint en mathématiques : {mathHasPrev ? <strong>{niveauMathLabel(mathTotalPrev) || '—'}</strong> : <strong style={{ color: '#94a3b8', fontStyle: 'italic' }}>[à compléter]</strong>}</div>}
                     {taux !== null && <div>Taux de présence : <strong>{taux} %</strong></div>}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
@@ -2295,7 +2397,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
 
         {showForm && (
           <div className="modal-overlay" style={s.overlay} onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
-            <div style={s.modal}>
+            <div style={{ ...s.modal, maxWidth: 680 }}>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{form.editId ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}</h3>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={s.infoBox}>
@@ -2319,13 +2421,19 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                       onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Ex: Contrôle chapitre 3..." />
                   </div>
                   <div style={s.formChamp}>
-                    <label style={s.label}>Type</label>
+                    <label style={s.label}>Type <span style={{ color: '#ef4444' }}>*</span></label>
                     <CustomSelect
                       style={s.input}
                       value={form.type}
+                      required
                       onChange={(v) => setForm({ ...form, type: v })}
                       options={TYPES.map(t => ({ value: t, label: t }))}
                     />
+                  </div>
+                  <div style={s.formChamp}>
+                    <label style={s.label}>Coefficient <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input style={s.input} type="number" step="0.1" min="0.1" required value={form.coefficient}
+                      onChange={e => setForm({ ...form, coefficient: e.target.value })} />
                   </div>
                   <div style={s.formChamp}>
                     <label style={s.label}>Points maximum</label>
@@ -2333,17 +2441,22 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                       <input style={{ ...s.input, flex: 1, opacity: form.sans_points ? 0.4 : 1 }} type="number" step="0.5"
                         value={form.points_max} disabled={form.sans_points}
                         onChange={e => setForm({ ...form, points_max: e.target.value })} placeholder="Ex: 30" />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        <input type="checkbox" checked={form.sans_points}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: parseInt(form.nb_exercices) > 0 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', opacity: parseInt(form.nb_exercices) > 0 ? 0.4 : 1 }}>
+                        <input type="checkbox" checked={form.sans_points} disabled={parseInt(form.nb_exercices) > 0}
                           onChange={e => setForm({ ...form, sans_points: e.target.checked, points_max: e.target.checked ? '' : '' })} />
                         Pas de points
                       </label>
                     </div>
                   </div>
                   <div style={s.formChamp}>
-                    <label style={s.label}>Coefficient</label>
-                    <input style={s.input} type="number" step="0.1" value={form.coefficient}
-                      onChange={e => setForm({ ...form, coefficient: e.target.value })} />
+                    <label style={s.label}>Nombre d'exercices</label>
+                    <input style={s.input} type="number" step="1" min="0" max="20" value={form.nb_exercices}
+                      placeholder="0 = pas de découpage"
+                      onChange={e => {
+                        const v = e.target.value;
+                        const n = parseInt(v);
+                        setForm(prev => ({ ...prev, nb_exercices: v, sans_points: n > 0 ? false : prev.sans_points }));
+                      }} />
                   </div>
                 </div>
                 <div style={s.formActions}>

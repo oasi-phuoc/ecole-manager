@@ -27,6 +27,7 @@ export default function Eleves() {
   const [recherche, setRecherche] = useState('');
   const [niveauOnglet, setNiveauOnglet] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
+  const [classeFiltreNiveau, setClasseFiltreNiveau] = useState('');
   const [showInactif, setShowInactif] = useState(true);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [showImport, setShowImport] = useState(false);
@@ -466,7 +467,11 @@ export default function Eleves() {
     const niveau = classe?.niveau || '';
     const matchR = ((el.nom||'')+' '+(el.prenom||'')+' '+classeNom).toLowerCase().includes(recherche.toLowerCase());
     if (niveauOnglet === 'sans') return !el.classe_id && matchR;
-    if (niveauOnglet !== 'tous') return niveau === niveauOnglet && matchR;
+    if (niveauOnglet !== 'tous') {
+      if (niveau !== niveauOnglet) return false;
+      if (classeFiltreNiveau && String(el.classe_id) !== classeFiltreNiveau) return false;
+      return matchR;
+    }
     return matchR;
   });
 
@@ -556,12 +561,25 @@ export default function Eleves() {
               return (
                 <button key={k}
                   style={{padding:'7px 14px',borderRadius:17,border:'none',background:actif?'#6366f1':'transparent',cursor:'pointer',fontWeight:actif?700:600,color:actif?'white':'#6d28d9',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}
-                  onClick={() => { setNiveauOnglet(k); setRecherche(''); if (k === 'tous') setShowNiveauxFiltres(false); }}>
+                  onClick={() => { setNiveauOnglet(k); setClasseFiltreNiveau(''); setRecherche(''); if (k === 'tous') setShowNiveauxFiltres(false); }}>
                   {label}
                 </button>
               );
             })}
           </div>
+          {showNiveauxFiltres && niveauOnglet !== 'tous' && niveauOnglet !== 'sans' && (() => {
+            const classesNiveau = classes.filter(c => c.niveau === niveauOnglet).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
+            if (classesNiveau.length === 0) return null;
+            return (
+              <CustomSelect
+                value={classeFiltreNiveau}
+                placeholder="Toutes les classes"
+                options={classesNiveau.map(c => ({ value: String(c.id), label: c.nom }))}
+                onChange={v => setClasseFiltreNiveau(v)}
+                style={{ minWidth: 160 }}
+              />
+            );
+          })()}
         )}
       </div>
       </div>

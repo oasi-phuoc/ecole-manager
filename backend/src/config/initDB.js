@@ -191,9 +191,11 @@ const initDB = async () => {
 
     // Colonnes additionnelles evaluations
     await pool.query(`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS points_max DECIMAL(4,2) DEFAULT 30`);
+    await pool.query(`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS nb_exercices INTEGER DEFAULT 0`);
 
     // Colonne points dans notes (points bruts de l'élève)
     await pool.query(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS points DECIMAL(5,2)`);
+    await pool.query(`ALTER TABLE notes ADD COLUMN IF NOT EXISTS points_detail JSONB`);
 
     // Table paramètres école (si absente)
     await pool.query(`CREATE TABLE IF NOT EXISTS parametres_ecole (id SERIAL PRIMARY KEY, nom_ecole VARCHAR(200), adresse TEXT, telephone VARCHAR(50), email VARCHAR(150), annee_scolaire VARCHAR(20), directeur VARCHAR(200))`);
