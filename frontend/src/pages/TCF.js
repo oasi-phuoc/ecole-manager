@@ -175,6 +175,7 @@ export default function TCF() {
     const tab = String(tabValue || '').trim().toLowerCase();
     if (!tab) return 'pool';
     if (tab === 'resultats') return 'resultat';
+    if (tab === 'stats') return 'statistique';
     return tab;
   };
   const onglet = normalizeTCFTab(searchParams.get('tab'));
@@ -2915,7 +2916,7 @@ export default function TCF() {
     openPrintPopup(finalHtml, { title: filename, width: 1300, height: 820 });
   };
 
-  const printCharts = (charts, isFr, maxScore) => {
+  const printCharts = (charts, isFr, maxScore, isLandscape = false) => {
     const titleMain = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
     const logoUrl = `${publicBase}/logo-etat-du-valais.png`;
@@ -3013,13 +3014,13 @@ export default function TCF() {
         .page-footer { flex-shrink: 0; margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
         .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
         .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
-        @page { size: A4 portrait; margin: 10mm; }
+        @page { size: A4 ${isLandscape ? 'landscape' : 'portrait'}; margin: 10mm; }
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       </style></head><body>${pagesWithLayout.join('')}</body></html>`;
-    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '10mm');
-    openPrintPopup(finalHtml, { title: 'Graphiques TCF', width: 1200, height: 820 });
+    const finalHtml = injectForcedPrintCss(html, `A4 ${isLandscape ? 'landscape' : 'portrait'}`, '10mm');
+    openPrintPopup(finalHtml, { title: 'Graphiques TCF', width: isLandscape ? 1400 : 1200, height: 820 });
   };
 
   const renderGraphique = () => {
@@ -4068,7 +4069,7 @@ export default function TCF() {
                     }).filter(Boolean);
                   });
                   if (charts.length === 0) { alert('Aucun résultat saisi pour ce niveau.'); return; }
-                  printCharts(charts, isFr, maxScore);
+                  printCharts(charts, isFr, maxScore, true);
                 } else {
                   const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : SESSIONS.slice();
                   const charts = elevesNiveauGraph.map(e => {
@@ -4129,7 +4130,7 @@ export default function TCF() {
                     const ma = calculMath(sc); return { label: `${e.prenom} ${toDisplayNom(e.nom)}`, v1: Number(ma.total || 0), v2: 0, hasData: ma.total !== '' };
                   }).filter(e => e.hasData);
                   if (seriesClasse.length === 0) { alert('Aucun résultat saisi pour cette classe.'); return; }
-                  printCharts([{ label: `${classe?.nom || ''} — ${SESSION_LABEL[graphSession] || graphSession}`, series: seriesClasse, nom: classe?.nom || '', prenom: '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: false }], isFr, maxScore);
+                  printCharts([{ label: `${classe?.nom || ''} — ${SESSION_LABEL[graphSession] || graphSession}`, series: seriesClasse, nom: classe?.nom || '', prenom: '', classe: classe?.nom || '', niveau: normaliserNiveau(classe?.niveau || ''), showTrend: false }], isFr, maxScore, true);
                 }
               }} style={{ ...styles.btnSauver, background: '#6366f1', color: 'white', border: '1px solid #6366f1' }}>Imprimer</button>
             </>
