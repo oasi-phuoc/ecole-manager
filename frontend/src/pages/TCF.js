@@ -4646,7 +4646,7 @@ const styles = {
   tdReserve: { background: '#fee2e2', color: '#7f1d1d', fontWeight: 700 },
   reserveCellWrap: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' },
   reserveBadge: { marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#991b1b' },
-  profChip: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 138, padding: '5px 9px', borderRadius: 999, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: 13, fontWeight: 700 },
+  profChip: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 185, flexShrink: 0, padding: '5px 9px', borderRadius: 999, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: 13, fontWeight: 700, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' },
   graphWrap: { display: 'flex', alignItems: 'flex-end', gap: 20, minHeight: 240, padding: '12px 8px' },
   graphSessionCol: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
   graphSessionLabel: { fontSize: 12, color: '#334155', fontWeight: 700, textAlign: 'center' },
