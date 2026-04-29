@@ -2596,6 +2596,12 @@ export default function TCF() {
     const nCols = joursActifs.length;
     const colPct = nCols > 0 ? `${((100 - 3) / nCols).toFixed(2)}%` : 'auto';
     const colgroup = `<colgroup><col style="width:28px">${joursActifs.map(() => `<col style="width:${colPct}">`).join('')}</colgroup>`;
+    const maxRegular = Math.max(0, ...['matin', 'apresMidi'].flatMap(m => joursActifs.map(j => getCellProfs(j, m).regular.length)));
+    const compact = maxRegular > 12;
+    const nameFontSize = compact ? '7pt' : '9pt';
+    const lineHeight = compact ? '1.3' : '1.4';
+    const cellPad = compact ? '3px 5px' : '5px 7px';
+    const tableMb = compact ? '8px' : '14px';
     const buildTable = (moment) => {
       const label = moment === 'matin' ? 'Matin' : 'Après-midi';
       const headerCells = joursActifs.map(j => {
@@ -2610,17 +2616,17 @@ export default function TCF() {
       }).join('');
       const regularCells = joursActifs.map(j => {
         const { regular } = getCellProfs(j, moment);
-        const html = regular.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('');
-        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;padding:5px 7px">${html}</td>`;
+        const html = regular.map(nom => `<div style="color:#1e293b;font-size:${nameFontSize};font-weight:400;line-height:${lineHeight};text-align:left">${escapeHtml(nom)}</div>`).join('');
+        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;padding:${cellPad}">${html}</td>`;
       }).join('');
       const reserveCells = joursActifs.map(j => {
         const { reserves } = getCellProfs(j, moment);
         const html = reserves.length > 0
-          ? `<div style="color:#1e293b;font-size:9pt;font-weight:700;line-height:1.4;text-align:left">Réserve</div>${reserves.map(nom => `<div style="color:#1e293b;font-size:9pt;font-weight:400;line-height:1.4;text-align:left">${escapeHtml(nom)}</div>`).join('')}`
+          ? `<div style="color:#1e293b;font-size:${nameFontSize};font-weight:700;line-height:${lineHeight};text-align:left">Réserve</div>${reserves.map(nom => `<div style="color:#1e293b;font-size:${nameFontSize};font-weight:400;line-height:${lineHeight};text-align:left">${escapeHtml(nom)}</div>`).join('')}`
           : '';
-        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:5px 7px">${html}</td>`;
+        return `<td style="vertical-align:top;text-align:left;border:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:${cellPad}">${html}</td>`;
       }).join('');
-      return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:14px">
+      return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:${tableMb}">
         ${colgroup}
         <tbody>
           <tr>
@@ -2665,9 +2671,9 @@ export default function TCF() {
     <div class="page">
       ${headerHtml}
       <div class="page-title">Répartition des professeurs</div>
-      <div style="text-align:right;font-size:11pt;color:#1e293b;margin-bottom:30px">Vétroz, le ${new Date().toLocaleDateString('fr-CH')}</div>
+      <div style="text-align:right;font-size:11pt;color:#1e293b;margin-bottom:${compact ? '12px' : '30px'}">Vétroz, le ${new Date().toLocaleDateString('fr-CH')}</div>
       <p style="margin:0 0 4px">Lieu : <strong>${nomSite}</strong></p>
-      <p style="margin:0 0 16px">Horaire matin : <strong>${escapeHtml(horaireMatin)}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>${escapeHtml(horaireAM)}</strong></p>
+      <p style="margin:0 0 ${compact ? '8px' : '16px'}">Horaire matin : <strong>${escapeHtml(horaireMatin)}</strong>&emsp;&bull;&emsp;Horaire après-midi : <strong>${escapeHtml(horaireAM)}</strong></p>
       ${buildTable('matin')}
       ${buildTable('apresMidi')}
       <div style="page-break-before:always;margin-top:28px">
