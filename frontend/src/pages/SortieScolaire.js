@@ -49,20 +49,28 @@ export default function SortieScolaire() {
   const [showAddTit, setShowAddTit] = useState(false);
   const [suiviClasseSelect, setSuiviClasseSelect] = useState(null);
   const [showSuivi, setShowSuivi] = useState(false);
+  const [showAnciennesSorties, setShowAnciennesSorties] = useState(false);
+  const [ecoleParams, setEcoleParams] = useState({ date_debut_annee: '', date_fin_annee: '' });
   const [rechercheSorties, setRechercheSorties] = useState('');
   const [showTriTypes, setShowTriTypes] = useState(false);
   const [triType, setTriType] = useState('Tous');
 
   const charger = async () => {
     try {
-      const [sortiesRes, classesRes, profsRes] = await Promise.all([
+      const [sortiesRes, classesRes, profsRes, ecoleRes] = await Promise.all([
         axios.get(API + '/sorties', { headers: getHeaders() }),
         axios.get(API + '/classes', { headers: getHeaders() }),
         axios.get(API + '/profs', { headers: getHeaders() }),
+        axios.get(API + '/parametres/ecole', { headers: getHeaders() }).catch(() => ({ data: {} })),
       ]);
       setSorties(sortiesRes.data || []);
       setClasses(classesRes.data || []);
       setProfs(profsRes.data || []);
+      const eco = ecoleRes.data || {};
+      setEcoleParams({
+        date_debut_annee: eco.date_debut_annee || '',
+        date_fin_annee: eco.date_fin_annee || '',
+      });
     } catch (e) { console.error(e); }
   };
 
@@ -274,7 +282,21 @@ export default function SortieScolaire() {
     openPrintPopup(finalHtml, { title: 'Sortie scolaire', width: 820, height: 900 });
   };
 
-  const sortiesOnglet = sorties
+  const sortieDansAnneeScolaire = (s, debutIso, finIso) => {
+    if (!debutIso || !finIso) return true;
+    const raw = (s.date_sortie && String(s.date_sortie).split('T')[0]) || '';
+    if (!raw) return false;
+    const d0 = String(debutIso).split('T')[0];
+    const d1 = String(finIso).split('T')[0];
+    return raw >= d0 && raw <= d1;
+  };
+
+  const sortiesFiltreesAnnee = (showAnciennesSorties
+    ? sorties
+    : sorties.filter((s) => sortieDansAnneeScolaire(s, ecoleParams.date_debut_annee, ecoleParams.date_fin_annee))
+  );
+
+  const sortiesOnglet = sortiesFiltreesAnnee
     .filter(s => {
       if (triType === 'Tous') return true;
       return (s.type || '').toLowerCase() === triType.toLowerCase();
@@ -311,13 +333,22 @@ export default function SortieScolaire() {
           onChange={(e) => setRechercheSorties(e.target.value)}
           placeholder="Rechercher professeur, classe, destination..."
         />
-        <button
-          type="button"
-          onClick={() => setShowSuivi(v => !v)}
-          style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showSuivi ? '#6366f1' : '#e2e8f0'), background: showSuivi ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showSuivi ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', width: 140, textAlign: 'center' }}
-        >
-          {showSuivi ? 'Masquer suivi' : 'Afficher suivi'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setShowAnciennesSorties((v) => !v)}
+            style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAnciennesSorties ? '#6366f1' : '#e2e8f0'), background: showAnciennesSorties ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showAnciennesSorties ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', minWidth: 200, textAlign: 'center' }}
+          >
+            {showAnciennesSorties ? 'Masquer anciennes sorties' : 'Afficher anciennes sorties'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSuivi((v) => !v)}
+            style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showSuivi ? '#6366f1' : '#e2e8f0'), background: showSuivi ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showSuivi ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', width: 140, textAlign: 'center' }}
+          >
+            {showSuivi ? 'Masquer suivi' : 'Afficher suivi'}
+          </button>
+        </div>
         {!showTriTypes ? (
           <button type="button" style={st.btnTri} onClick={() => setShowTriTypes(true)}>Trier</button>
         ) : (
@@ -549,20 +580,49 @@ function SortieCard({ sortie, onEdit, onDelete }) {
 }
 
 function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
+  const budgetCol = {
+    width: 100,
+    minWidth: 100,
+    maxWidth: 100,
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    fontVariantNumeric: 'tabular-nums',
+    boxSizing: 'border-box',
+    verticalAlign: 'middle',
+  };
+  const totalBudget = sorties.reduce((sum, s) => {
+    if (s.budget == null || s.budget === '') return sum;
+    const n = parseFloat(String(s.budget).replace(',', '.'));
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
   if (sorties.length === 0) return (
     <div style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
       Aucune sortie enregistrée pour cet onglet.
     </div>
   );
+  const thBase = { padding: '10px 10px', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1' };
   return (
     <div style={{ borderRadius: 10, border: '1px solid #e8eaf6', overflow: 'hidden' }}>
       <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 230px)', WebkitOverflowScrolling: 'touch' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+        <colgroup>
+          <col />
+          <col style={{ width: 104 }} />
+          <col />
+          <col />
+          <col />
+          <col style={{ width: 100 }} />
+          <col style={{ width: 148 }} />
+        </colgroup>
         <thead>
           <tr style={{ background: '#6366f1', color: 'white' }}>
-            {['Classes','Date','Destination','Lieu de départ','Lieu de retour','Budget',''].map(h => (
-              <th key={h} style={{ padding: '10px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1' }}>{h}</th>
-            ))}
+            <th style={{ ...thBase, textAlign: 'left' }}>Classes</th>
+            <th style={{ ...thBase, textAlign: 'left' }}>Date</th>
+            <th style={{ ...thBase, textAlign: 'left' }}>Destination</th>
+            <th style={{ ...thBase, textAlign: 'left' }}>Lieu de départ</th>
+            <th style={{ ...thBase, textAlign: 'left' }}>Lieu de retour</th>
+            <th style={{ ...thBase, ...budgetCol }}>Budget</th>
+            <th style={{ ...thBase, textAlign: 'center' }} />
           </tr>
         </thead>
         <tbody>
@@ -583,7 +643,7 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
                     ? `${s.lieu_retour}${fmtHeure(s.heure_retour) ? ` - ${fmtHeure(s.heure_retour)}` : ''}`
                     : (fmtHeure(s.heure_retour) || '—')}
                 </td>
-                <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'right' }}>{s.budget ? parseFloat(s.budget).toFixed(1) : '—'}</td>
+                <td style={{ ...sc.td, ...budgetCol }}>{s.budget !== null && s.budget !== '' && !Number.isNaN(parseFloat(String(s.budget))) ? parseFloat(String(s.budget).replace(',', '.')).toFixed(2) : '—'}</td>
                 <td style={{ ...sc.td, whiteSpace: 'nowrap', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
                     <button style={sc.btnEdit} onClick={() => onEdit(s)} title="Modifier">
@@ -616,6 +676,13 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
             );
           })}
         </tbody>
+        <tfoot>
+          <tr style={{ background: '#f1f5f9', borderTop: '2px solid #cbd5e1', fontWeight: 700, color: '#0f172a' }}>
+            <td colSpan={5} style={{ ...sc.td, textAlign: 'right', padding: '12px 10px' }}>Total budgets (CHF)</td>
+            <td style={{ ...sc.td, ...budgetCol, padding: '12px 10px' }}>{totalBudget.toFixed(2)}</td>
+            <td style={{ ...sc.td, padding: '12px 10px' }} />
+          </tr>
+        </tfoot>
       </table>
       </div>
     </div>

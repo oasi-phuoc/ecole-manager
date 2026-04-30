@@ -318,99 +318,10 @@ export default function DocumentsAdministratifs() {
 
       {(!isAccueil || rechercheDocs.trim()) && (
       <div>
-        {msg && (
+        {msg && !showForm && (
           <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontSize: 13, fontWeight: 600 }}>
             {msg}
           </div>
-        )}
-
-        {showForm && isAdmin && (
-          <form onSubmit={handleSubmit} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 16, background: '#f8fafc' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Nom & prénom (session)</div>
-                <input value={auteurSession} disabled style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#334155' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Date</div>
-                <input value={now.toLocaleDateString('fr-CH')} disabled style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#334155' }} />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
-              <input
-                value={designation}
-                onChange={e => setDesignation(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155', boxSizing: 'border-box' }}
-                placeholder="Ex: Attestation de suivi TCF"
-              />
-            </div>
-
-            {activeTab === 'pedagogiques' && niveauxDB.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau *</div>
-                <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
-                  {[{ id: '', label: 'Tous les niveaux' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => setSousCategorie(n.id)}
-                      style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: sousCategorie === n.id ? '#6366f1' : 'transparent', cursor: 'pointer', fontWeight: sousCategorie === n.id ? 700 : 600, color: sousCategorie === n.id ? 'white' : '#6d28d9', fontSize: 13, fontFamily: 'inherit', outline: 'none', whiteSpace: 'nowrap' }}
-                    >
-                      {n.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                border: '2px dashed ' + (dragOver ? '#6366f1' : '#cbd5e1'),
-                borderRadius: 10,
-                padding: 18,
-                textAlign: 'center',
-                background: dragOver ? '#eef2ff' : 'white',
-                cursor: 'pointer',
-                marginBottom: 10
-              }}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                style={{ display: 'none' }}
-                onChange={e => setSelectedFile(e.target.files?.[0] || null)}
-              />
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#6366f1', lineHeight: 1 }}>+</div>
-              <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
-                Glisser-déposer le document ici
-              </div>
-              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-                ou cliquer pour parcourir l'ordinateur
-              </div>
-            </div>
-
-            {selectedFile && (
-              <div style={{ fontSize: 12, color: '#0f766e', marginBottom: 10 }}>
-                📎 {selectedFile.name}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => { setShowForm(false); resetForm(); }} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}>
-                Annuler
-              </button>
-              <button type="submit" disabled={saving} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
-                {saving ? 'Enregistrement...' : (editing ? 'Modifier' : 'Ajouter')}
-              </button>
-            </div>
-          </form>
         )}
 
         {loading ? (
@@ -496,6 +407,124 @@ export default function DocumentsAdministratifs() {
         )}
       </div>
       )}
+
+      {showForm && isAdmin && (
+        <div
+          className="modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1250, padding: 20, boxSizing: 'border-box' }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); resetForm(); setMsg(''); } }}
+        >
+          <div
+            style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0f172a' }}>{editing ? 'Modifier le document' : 'Nouveau document'}</h3>
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); resetForm(); setMsg(''); }}
+                style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#64748b' }}
+              >
+                Fermer
+              </button>
+            </div>
+            <div style={{ padding: 18, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              {msg && (
+                <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontSize: 13, fontWeight: 600 }}>
+                  {msg}
+                </div>
+              )}
+              <form onSubmit={handleSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Nom & prénom (session)</div>
+                    <input value={auteurSession} readOnly style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#334155', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Date</div>
+                    <input value={now.toLocaleDateString('fr-CH')} readOnly style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#334155', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Désignation *</div>
+                  <input
+                    value={designation}
+                    onChange={e => setDesignation(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', color: '#334155', boxSizing: 'border-box' }}
+                    placeholder="Ex: Attestation de suivi TCF"
+                  />
+                </div>
+
+                {activeTab === 'pedagogiques' && niveauxDB.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau *</div>
+                    <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+                      {[{ id: '', label: 'Tous les niveaux' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
+                        <button
+                          key={n.id === '' ? '__tous' : n.id}
+                          type="button"
+                          onClick={() => setSousCategorie(n.id)}
+                          style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: sousCategorie === n.id ? '#6366f1' : 'transparent', cursor: 'pointer', fontWeight: sousCategorie === n.id ? 700 : 600, color: sousCategorie === n.id ? 'white' : '#6d28d9', fontSize: 13, fontFamily: 'inherit', outline: 'none', whiteSpace: 'nowrap' }}
+                        >
+                          {n.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: '2px dashed ' + (dragOver ? '#6366f1' : '#cbd5e1'),
+                    borderRadius: 10,
+                    padding: 18,
+                    textAlign: 'center',
+                    background: dragOver ? '#eef2ff' : 'white',
+                    cursor: 'pointer',
+                    marginBottom: 10,
+                  }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontSize: 26, fontWeight: 800, color: '#6366f1', lineHeight: 1 }}>+</div>
+                  <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
+                    Glisser-déposer le document ici
+                  </div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                    ou cliquer pour parcourir l'ordinateur
+                  </div>
+                </div>
+
+                {selectedFile && (
+                  <div style={{ fontSize: 12, color: '#0f766e', marginBottom: 10 }}>
+                    📎 {selectedFile.name}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8, paddingTop: 12, borderTop: '1px solid #f1f5f9' }}>
+                  <button type="button" onClick={() => { setShowForm(false); resetForm(); setMsg(''); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                    Annuler
+                  </button>
+                  <button type="submit" disabled={saving} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', fontSize: 13 }}>
+                    {saving ? 'Enregistrement...' : (editing ? 'Modifier' : 'Ajouter')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {docPreview && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }} onClick={() => setDocPreview(null)}>
           <div style={{ position: 'relative', width: '90vw', height: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>

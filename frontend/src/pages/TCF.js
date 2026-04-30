@@ -2274,6 +2274,13 @@ export default function TCF() {
 
   const buildChartSVG = (series, maxScore, isFr, options = {}) => {
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const splitPrenomNomAxis = (raw) => {
+      const t = String(raw ?? '').trim();
+      if (!t) return { prenom: '', nom: '' };
+      const parts = t.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return { prenom: '', nom: parts[0] };
+      return { prenom: parts.slice(0, -1).join(' '), nom: parts[parts.length - 1] };
+    };
     const showTrend = options.showTrend !== false;
     /** Par défaut affichés ; masqués seulement si hideTrendPoints === true (évite ambiguïtés avec undefined) */
     const showTrendPoints = options.hideTrendPoints !== true;
@@ -2283,18 +2290,31 @@ export default function TCF() {
     const label2 = options.label2 || (isFr ? 'Écrit' : (singleSeries ? '' : 'Avancé'));
 
     const wide = options.chartWide === true;
-    const barW = wide ? 62 : 52;
-    const groupW = wide ? 220 : 180;
+    const printLayout = options.printLayout === true;
+    const verticalXLabels = options.verticalXLabels === true;
     const innerH = Number(options.innerH) > 0
       ? Number(options.innerH)
       : (wide ? 340 : 230);
-    const padL = wide ? 54 : 48;
+    let padL = wide ? 54 : 48;
     const padT = options.fitContainer ? 5 : 10;
-    const padB = options.fitContainer ? 52 : 70;
+    let padB = options.fitContainer ? 52 : 70;
+    if (verticalXLabels) padB = Math.max(padB, options.fitContainer ? 118 : 125);
     const legendW = wide ? 140 : 130;
     const nSer = Math.max(series.length, 1);
-    const fitMinSlots = options.fitContainer ? Math.max(1, Number(options.fitMinSlots) > 0 ? Number(options.fitMinSlots) : 6) : nSer;
+    let barW = wide ? 62 : 52;
+    let groupW = wide ? 220 : 180;
+    if (printLayout && !wide && nSer >= 1) {
+      const budget = Number(options.printBarWidthBudget) > 0 ? Number(options.printBarWidthBudget) : 520;
+      groupW = Math.max(34, Math.min(96, Math.floor(budget / Math.max(nSer, 1))));
+      barW = Math.max(8, Math.floor((groupW - 14) / 2));
+    }
+    const fitMinSlots = options.fitContainer
+      ? Math.max(1, Number(options.fitMinSlots) > 0 ? Number(options.fitMinSlots) : (printLayout ? nSer : 6))
+      : nSer;
     const slotCount = options.fitContainer ? Math.max(nSer, fitMinSlots) : nSer;
+
+    const marks = Array.isArray(options.levelMarks) ? options.levelMarks : [];
+    if (marks.length && !wide) padL = Math.max(padL, 58);
     const chartW = Math.max(groupW * slotCount, 240);
     const svgW = padL + chartW + legendW + 24;
     const svgH = padT + innerH + padB;
@@ -2310,7 +2330,6 @@ export default function TCF() {
     const yFromValue = (v) => chartBottom - (Math.max(0, Math.min(axisMax, Number(v) || 0)) / axisMax) * innerH;
 
     // Grille (tous les 5 points) sans numérotation 0/10/20...
-    const marks = Array.isArray(options.levelMarks) ? options.levelMarks : [];
     const marksByValue = new Map(marks.map((m) => [Number(m.v), m]));
     for (let v = 0; v <= axisMax; v += 5) {
       const y = yFromValue(v);
@@ -2320,7 +2339,8 @@ export default function TCF() {
     }
     marks.forEach((m) => {
       const y = yFromValue(m.v);
-      parts.push(`<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="${m.bold ? '800' : '700'}">${esc(m.label)}</text>`);
+      const lx = Math.max(12, chartLeft - (printLayout ? 12 : 10));
+      parts.push(`<text x="${lx}" y="${y + 4}" text-anchor="end" font-size="12" fill="#334155" font-weight="${m.bold ? '800' : '700'}">${esc(m.label)}</text>`);
     });
 
     // Axes
@@ -2355,7 +2375,18 @@ export default function TCF() {
       const labelX = singleSeries
         ? (barOffsetX + i * groupW + groupW / 2)
         : (baseX + barW + 4);
-      parts.push(`<text x="${labelX}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(s.label || s.session || '')}</text>`);
+      const rawLabel = s.label || s.session || '';
+      if (verticalXLabels) {
+        const { prenom: pAx, nom: nAx } = splitPrenomNomAxis(rawLabel);
+        const labelAnchorY = chartBottom + (printLayout ? 96 : 88);
+        const fs = printLayout && nSer > 10 ? 9 : 10;
+        parts.push(`<g transform="translate(${labelX},${labelAnchorY}) rotate(-90)">`);
+        if (pAx) parts.push(`<text x="0" y="${nAx ? -5 : 0}" text-anchor="middle" font-size="${fs}" fill="#334155">${esc(pAx)}</text>`);
+        if (nAx) parts.push(`<text x="0" y="${pAx ? 9 : 0}" text-anchor="middle" font-size="${fs}" fill="#334155" font-weight="700">${esc(nAx)}</text>`);
+        parts.push('</g>');
+      } else {
+        parts.push(`<text x="${labelX}" y="${chartBottom + 18}" text-anchor="middle" font-size="11" fill="#334155">${esc(rawLabel)}</text>`);
+      }
     });
 
     // Ligne d'évolution
@@ -2923,6 +2954,21 @@ export default function TCF() {
     openPrintPopup(finalHtml, { title: filename, width: 1300, height: 820 });
   };
 
+  const getLevelMarksForPrintChart = (c, isFr) => {
+    if (!isFr) return [{ v: 80, label: 'CAF', bold: true }, { v: 60, label: 'CFR', bold: true }, { v: 30, label: 'CSC', bold: true }];
+    const agg = c.levelMarksAggregate === true;
+    const niveauNormalise = normaliserNiveau(c.niveau || '');
+    const isNiveauCscCpr = ['CSC', 'CPR'].includes(niveauNormalise);
+    if (agg) {
+      return isNiveauCscCpr
+        ? [{ v: 90, label: 'A1', bold: true }, { v: 50, label: 'A0.2', bold: true }, { v: 10, label: 'A0.1', bold: true }]
+        : [{ v: 90, label: 'A2', bold: true }, { v: 50, label: 'A1.2', bold: true }, { v: 10, label: 'A1.1', bold: true }];
+    }
+    return isNiveauCscCpr
+      ? [{ v: 45, label: 'A1', bold: true }, { v: 25, label: 'A0.2', bold: true }, { v: 5, label: 'A0.1', bold: true }]
+      : [{ v: 45, label: 'A2', bold: true }, { v: 25, label: 'A1.2', bold: true }, { v: 5, label: 'A1.1', bold: true }];
+  };
+
   const printCharts = (charts, isFr, maxScore, isLandscape = false) => {
     const titleMain = isFr ? 'Test de connaissance de français' : 'Test de connaissance des mathématiques';
     const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
@@ -2950,21 +2996,21 @@ export default function TCF() {
       </div>`;
     const pagesWithLayout = charts.map((c) => {
       const nSer = c.series.length;
-      const printScroll = nSer > 10;
+      const levelMarks = c.levelMarks?.length ? c.levelMarks : getLevelMarksForPrintChart(c, isFr);
+      const verticalXLabels = c.verticalXLabels !== undefined ? c.verticalXLabels === true : (!c.showTrend && nSer > 1);
       const svg = nSer > 0
         ? buildChartSVG(c.series, maxScore, isFr, {
           showTrend: c.showTrend !== false,
           niveau: c.niveau || '',
-          innerH: 400,
+          innerH: 380,
           fitContainer: true,
-          fitMinSlots: Math.max(nSer, 2),
-          ...(printScroll
-            ? { scrollPlotHorizontal: true }
-            : { expandVerticalFill: true }),
+          fitMinSlots: nSer,
+          expandVerticalFill: true,
+          levelMarks,
+          printLayout: true,
+          verticalXLabels,
           label1: c.label1,
           label2: c.label2,
-          showFrenchLevelMarks: c.showFrenchLevelMarks,
-          showMathLevelMarks: c.showMathLevelMarks,
           hideTrendPoints: false,
         })
         : '<p style="color:#94a3b8;font-size:13px">Aucune donnée</p>';
@@ -2972,9 +3018,7 @@ export default function TCF() {
       const prenom = c.prenom || '';
       const classe = c.classe || '';
       const dateVetroz = `Vétroz, le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-      const chartInner = printScroll
-        ? `<div class="chart-scroll-inner">${svg}</div>`
-        : svg;
+      const chartInner = `<div class="chart-print-frame">${svg}</div>`;
       return `<div class="page">
           ${headerHtml}
           <div class="page-stack">
@@ -2982,7 +3026,7 @@ export default function TCF() {
             <div class="page-date">${dateVetroz}</div>
             ${nom || prenom ? `<div class="page-identite"><b>NOM Prénom :</b> ${nom.toUpperCase()} ${prenom}</div>` : ''}
             ${classe ? `<div class="page-classe"><b>Classe :</b> ${classe}</div>` : ''}
-            <div class="chart-wrap${printScroll ? ' chart-wrap--hscroll' : ''}">${chartInner}</div>
+            <div class="chart-wrap">${chartInner}</div>
           </div>
           <div class="page-footer">
             <img class="footer-logo" src="${logoPiedUrl}" alt="Logo pied de page" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${logoPiedFallbackUrl}';}else{this.style.display='none';}" />
@@ -3013,11 +3057,19 @@ export default function TCF() {
         .page-date { flex-shrink: 0; font-size: 10pt; color: #1e293b; text-align: right; margin-bottom: 10px; }
         .page-identite { flex-shrink: 0; font-size: 10pt; color: #1f2937; margin-bottom: 4px; }
         .page-classe { flex-shrink: 0; font-size: 10pt; color: #1f2937; margin-bottom: 10px; }
-        .chart-wrap { flex: 1; min-height: 180px; display: flex; align-items: stretch; justify-content: center; overflow: hidden; }
-        .chart-wrap--hscroll { justify-content: flex-start; overflow-x: auto; overflow-y: hidden; }
-        .chart-scroll-inner { height: 100%; min-width: 100%; display: flex; align-items: stretch; box-sizing: border-box; }
-        .chart-wrap svg { max-width: 100%; max-height: 100%; width: 100%; height: 100%; display: block; }
-        .chart-wrap--hscroll svg { width: auto; height: 100%; max-width: none; flex-shrink: 0; }
+        .chart-wrap { flex: 1; min-height: 180px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; overflow: visible; }
+        .chart-print-frame {
+          width: 100%;
+          height: 400px;
+          max-height: 400px;
+          flex-shrink: 0;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-sizing: border-box;
+        }
+        .chart-print-frame svg { width: 100%; height: 100%; max-width: 100%; max-height: 100%; display: block; }
         .page-footer { flex-shrink: 0; margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 10px; }
         .footer-logo { height: 26px; width: auto; object-fit: contain; display: block; }
         .footer-text { font-size: 8pt; color: #64748b; line-height: 1.35; }
@@ -3201,6 +3253,7 @@ export default function TCF() {
           classe: `${elevesFiltered.length} élève(s)`,
           niveau: niveauActif,
           showTrend: false,
+          levelMarksAggregate: true,
         }], isFr, 100);
       } else if (graphVue === 'individuelle' && graphEleveId && sessionsIndiv.length > 0) {
         const e = eleves.find(ev => String(ev.id) === graphEleveId);
@@ -4074,7 +4127,7 @@ export default function TCF() {
                 const niveauActif = graphNiveau || (niveaux.length ? niveaux[0] : '');
                 const classesNiveau = classes.filter(c => normaliserNiveau(c.niveau) === niveauActif).sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
                 const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
-                const maxScore = isFr ? 60 : 50;
+                const maxScore = isFr ? 60 : 110;
                 if (graphVue === 'classe' || graphVue === 'moyenne') {
                   const sessionsList = graphSession ? [graphSession] : SESSIONS.slice();
                   const charts = classesNiveau.flatMap(cl => {
@@ -4113,7 +4166,7 @@ export default function TCF() {
                   .filter(c => !graphNiveau || normaliserNiveau(c.niveau) === graphNiveau)
                   .sort((a, b) => String(a.nom).localeCompare(String(b.nom), 'fr'));
                 const elevesNiveauGraph = eleves.filter(e => new Set(classesNiveau.map(c => String(c.id))).has(String(e.classe_id))).sort((a, b) => `${toDisplayNom(a.nom) || ''} ${a.prenom || ''}`.localeCompare(`${toDisplayNom(b.nom) || ''} ${b.prenom || ''}`, 'fr'));
-                const maxScore = isFr ? 60 : 50;
+                const maxScore = isFr ? 60 : 110;
                 const sessionsToShowIds = graphSession === "2e semestre" ? ["Test d'août", '1e semestre', '2e semestre'] : graphSession === '1e semestre' ? ["Test d'août", '1e semestre'] : graphSession === "Test d'août" ? ["Test d'août"] : [];
                 if (graphVue === 'individuelle' && !graphEleveId && graphSession) {
                   const classeIdsN = new Set(classesNiveau.map(c => String(c.id)));
@@ -4134,7 +4187,7 @@ export default function TCF() {
                     return { label: `${e.prenom || ''} ${toDisplayNom(e.nom)}`.trim(), v1: v1 != null ? Math.round(v1 * 10) / 10 : 0, v2: v2 != null ? Math.round(v2 * 10) / 10 : 0, hasData };
                   }).filter((x) => x.hasData).map(({ label, v1, v2 }) => ({ label, v1, v2 }));
                   if (dataAll.length === 0) return;
-                  printCharts([{ label: `Moyennes élèves — ${SESSION_LABEL[graphSession] || graphSession}`, series: dataAll, nom: niveauActif, prenom: '', classe: `${elevesFilt.length} élève(s)`, niveau: niveauActif, showTrend: false }], isFr, 100);
+                  printCharts([{ label: `Moyennes élèves — ${SESSION_LABEL[graphSession] || graphSession}`, series: dataAll, nom: niveauActif, prenom: '', classe: `${elevesFilt.length} élève(s)`, niveau: niveauActif, showTrend: false, levelMarksAggregate: true }], isFr, 100);
                 } else if (graphVue === 'individuelle' && graphEleveId) {
                   const sessionsIndiv = sessionsToShowIds.map(session => { const sc = getScore(ongletGraphiqueMatiere, session, graphEleveId); if (isFr) { const fr = calculFr(sc); return { session, v1: Number(fr.oral || 0), v2: Number(fr.ecrit || 0), hasData: fr.total !== '' }; } const ma = calculMath(sc); return { session, v1: Number(ma.cscCfr || 0), v2: Number(ma.cafCap || 0), hasData: ma.total !== '' }; }).filter(s => s.hasData);
                   if (sessionsIndiv.length === 0) return;

@@ -404,6 +404,14 @@ export default function Notes() {
 
   const handleCreerEvaluation = async (e) => {
     e.preventDefault();
+    const nbEx = parseInt(form.nb_exercices, 10) || 0;
+    if (nbEx > 0) {
+      const pm = form.points_max !== '' && form.points_max != null ? parseFloat(String(form.points_max).replace(',', '.')) : NaN;
+      if (form.sans_points || Number.isNaN(pm) || pm <= 0) {
+        alert('Lorsque le nombre d\'exercices est renseigné, les points maximum sont obligatoires (valeur > 0).');
+        return;
+      }
+    }
     try {
       const payload = {
         ...form,
@@ -2436,11 +2444,15 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                       onChange={e => setForm({ ...form, coefficient: e.target.value })} />
                   </div>
                   <div style={s.formChamp}>
-                    <label style={s.label}>Points maximum</label>
+                    <label style={s.label}>
+                      Points maximum
+                      {(parseInt(form.nb_exercices, 10) || 0) > 0 ? <span style={{ color: '#ef4444' }}> *</span> : null}
+                    </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <input style={{ ...s.input, flex: 1, opacity: form.sans_points ? 0.4 : 1 }} type="number" step="0.5"
+                      <input style={{ ...s.input, flex: 1, opacity: form.sans_points ? 0.4 : 1 }} type="number" step="0.5" min="0.5"
                         value={form.points_max} disabled={form.sans_points}
-                        onChange={e => setForm({ ...form, points_max: e.target.value })} placeholder="Ex: 30" />
+                        required={(parseInt(form.nb_exercices, 10) || 0) > 0 && !form.sans_points}
+                        onChange={e => setForm({ ...form, points_max: e.target.value })} placeholder="" />
                       <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: parseInt(form.nb_exercices) > 0 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', opacity: parseInt(form.nb_exercices) > 0 ? 0.4 : 1 }}>
                         <input type="checkbox" checked={form.sans_points} disabled={parseInt(form.nb_exercices) > 0}
                           onChange={e => setForm({ ...form, sans_points: e.target.checked, points_max: e.target.checked ? '' : '' })} />
@@ -2451,7 +2463,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                   <div style={s.formChamp}>
                     <label style={s.label}>Nombre d'exercices</label>
                     <input style={s.input} type="number" step="1" min="0" max="20" value={form.nb_exercices}
-                      placeholder="0 = pas de découpage"
+                      placeholder=""
                       onChange={e => {
                         const v = e.target.value;
                         const n = parseInt(v);
