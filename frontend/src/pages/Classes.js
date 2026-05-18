@@ -547,6 +547,98 @@ export default function Classes() {
     openPrintPopup(finalHtml, { title: `Trombinoscope - ${detailClasse.nom}`, width: 1100, height: 800 });
   };
 
+  const imprimerListeEleves = () => {
+    const publicBase = `${window.location.origin}${process.env.PUBLIC_URL || ''}`;
+    const dateStr = new Date().toLocaleDateString('fr-CH');
+    const annee = detailClasse.annee_scolaire || '';
+    const titulaire = (detailClasse.prof_prenom && detailClasse.prof_nom)
+      ? `${detailClasse.prof_prenom} ${detailClasse.prof_nom}`
+      : '—';
+
+    const rows = elevesClasse.map((el, i) => `
+      <tr>
+        <td class="tc num">${i + 1}</td>
+        <td class="tl nom">${(el.nom || '—').toUpperCase()}</td>
+        <td class="tl">${el.prenom || '—'}</td>
+        <td class="tc box-cell"><div class="checkbox"></div></td>
+        <td class="tc box-cell"><div class="checkbox"></div></td>
+      </tr>
+    `).join('');
+
+    const listePrintCSS = `
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif; background: white; color: #1e293b; padding-bottom: 22mm; }
+      @page { size: A4 portrait; margin: 12mm 15mm; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1.5px solid #e2e8f0; }
+      .header-left { display: flex; align-items: flex-start; gap: 10px; }
+      .header-logo { width: 34px; height: auto; object-fit: contain; }
+      .header-admin { font-size: 7.5pt; color: #334155; line-height: 1.5; }
+      .header-right { text-align: right; }
+      .header-scai { font-size: 16pt; font-weight: 800; color: #1e293b; line-height: 1; }
+      .header-year { font-size: 9pt; font-weight: 700; color: #374151; margin-top: 2px; }
+      .header-sub { font-size: 7.5pt; font-weight: 700; color: #475569; margin-top: 2px; }
+      .page-title { font-size: 15pt; font-weight: 700; color: #0f172a; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-top: 16px; margin-bottom: 4px; }
+      .page-subtitle { font-size: 9pt; color: #64748b; text-align: center; margin-bottom: 14px; }
+      table { border-collapse: collapse; width: 100%; }
+      thead th { background: #6366f1 !important; color: white !important; padding: 5px 8px; font-size: 9pt; font-weight: 700; text-align: center; border: 1px solid #4338ca !important; }
+      thead th.tl { text-align: left; }
+      tbody tr:nth-child(even) { background: #f8fafc; }
+      tbody tr:nth-child(odd) { background: white; }
+      td { padding: 4px 8px; font-size: 9pt; border: 1px solid #e2e8f0; vertical-align: middle; }
+      td.tc { text-align: center; }
+      td.tl { text-align: left; }
+      td.num { color: #94a3b8; font-size: 8pt; width: 24px; }
+      td.nom { font-weight: 700; }
+      td.box-cell { width: 52px; }
+      .checkbox { width: 14px; height: 14px; border: 1.5px solid #94a3b8; border-radius: 3px; margin: 0 auto; }
+      .page-footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: 5px 15mm 6px; border-top: 1px solid #e2e8f0; background: white; }
+      .footer-logo { height: 22px; width: auto; object-fit: contain; }
+      .footer-text { font-size: 7.5pt; color: #64748b; line-height: 1.35; }
+    `;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Liste - ${detailClasse.nom}</title><style>${listePrintCSS}</style></head>
+    <body>
+      <div class="page-header">
+        <div class="header-left">
+          <img class="header-logo" src="${publicBase}/logo-etat-du-valais.png" onerror="this.style.display='none'" />
+          <div class="header-admin">
+            <div>Département de la santé, des affaires sociales et de la culture</div>
+            <div>Service de l'action sociale</div>
+            <div>Office de l'asile</div>
+            <div>Centre de formation "Le Botza"</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-scai">SCAI</div>
+          <div class="header-year">${annee}</div>
+          <div class="header-sub">CLASSES D'ACCUEIL</div>
+        </div>
+      </div>
+      <div class="page-title">Liste de classe — ${detailClasse.nom}</div>
+      <div class="page-subtitle">Titulaire : ${titulaire} · Généré le ${dateStr}</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px">#</th>
+            <th class="tl">NOM</th>
+            <th class="tl">PRÉNOM</th>
+            <th style="width:60px">PRÉSENT</th>
+            <th style="width:60px">ABSENT</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="page-footer">
+        <img class="footer-logo" src="${publicBase}/logo-pied-page.png" onerror="this.style.display='none'" />
+        <div class="footer-text"><div>Zone Industrielle 4, 1963 Vétroz</div><div>Tél. 027 606 18 60</div></div>
+      </div>
+    </body></html>`;
+
+    const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm 15mm');
+    openPrintPopup(finalHtml, { title: `Liste - ${detailClasse.nom}`, width: 1100, height: 820 });
+  };
+
   const tauxPresence = (eleve) => {
     const total = parseInt(eleve.nb_absences||0) + parseInt(eleve.nb_retards||0);
     if (total === 0) return 100;
@@ -1563,6 +1655,9 @@ export default function Classes() {
         )}
         {classeVueTab === 'trombinoscope' && (
           <button style={{...s.btnAdd,background:'#6366f1',marginLeft:'auto'}} onClick={imprimerTrombinoscope}>Imprimer</button>
+        )}
+        {classeVueTab === 'eleves' && (
+          <button style={{...s.btnAdd,background:'#6366f1',marginLeft:'auto'}} onClick={imprimerListeEleves}>Imprimer</button>
         )}
         {classeVueTab === 'devoirs' && devoirSousOnglet === 'devoirs' && (
           <button style={{...s.btnAdd,marginLeft:'auto'}} onClick={() => setShowDevoirForm(true)}>+ Ajouter</button>
