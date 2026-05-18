@@ -586,6 +586,20 @@ export default function TCF() {
           }));
           return next;
         });
+      } else {
+        // Supprimer les rôles affectés pour ce prof sur toutes les demi-journées du site
+        setAffectationDirty(true);
+        setRolesAffectesByPoolDemi(prev => {
+          const next = { ...prev };
+          for (const key of Object.keys(next)) {
+            if (key.startsWith(`${siteKey}::`)) {
+              const cleaned = { ...next[key] };
+              delete cleaned[String(profId)];
+              next[key] = cleaned;
+            }
+          }
+          return next;
+        });
       }
       return {
         ...prev,
@@ -718,6 +732,19 @@ export default function TCF() {
     else if (courant === 'orange')                   { suivantStatut = 'rouge';  suivantRActif = false; }
     else if (courant === 'rouge' && !rActifCourant)  { suivantStatut = 'rouge';  suivantRActif = true;  }
     else /* réserve (rouge+R) */                     { suivantStatut = 'vert';   suivantRActif = false; }
+    // Si le prof devient indisponible (rouge non-réserve), supprimer son rôle pour cette demi-journée
+    if (suivantStatut === 'rouge' && !suivantRActif) {
+      const demiKey = `${siteKey}::${jour}|${momentId}`;
+      setAffectationDirty(true);
+      setRolesAffectesByPoolDemi(prev => {
+        if (!prev[demiKey] || !Object.prototype.hasOwnProperty.call(prev[demiKey], String(profId))) return prev;
+        const next = { ...prev };
+        const cleaned = { ...next[demiKey] };
+        delete cleaned[String(profId)];
+        next[demiKey] = cleaned;
+        return next;
+      });
+    }
     setPoolCellOverrides(prev => ({
       ...prev,
       [key]: { statut: suivantStatut, rActif: suivantRActif },
@@ -729,6 +756,20 @@ export default function TCF() {
     const statut = statutCellule(siteKey, profId, jour, momentId);
     if (statut !== 'rouge') return;
     setPoolDirty(true);
+    const etaitReserve = rActifCellule(siteKey, profId, jour, momentId);
+    // Si on passe de réserve → rouge pur, supprimer le rôle affecté pour cette demi-journée
+    if (etaitReserve) {
+      const demiKey = `${siteKey}::${jour}|${momentId}`;
+      setAffectationDirty(true);
+      setRolesAffectesByPoolDemi(prev => {
+        if (!prev[demiKey] || !Object.prototype.hasOwnProperty.call(prev[demiKey], String(profId))) return prev;
+        const next = { ...prev };
+        const cleaned = { ...next[demiKey] };
+        delete cleaned[String(profId)];
+        next[demiKey] = cleaned;
+        return next;
+      });
+    }
     setPoolCellOverrides(prev => ({
       ...prev,
       [key]: {
