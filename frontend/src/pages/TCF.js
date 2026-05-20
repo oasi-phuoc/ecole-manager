@@ -732,6 +732,45 @@ export default function TCF() {
     else if (courant === 'orange')                   { suivantStatut = 'rouge';  suivantRActif = false; }
     else if (courant === 'rouge' && !rActifCourant)  { suivantStatut = 'rouge';  suivantRActif = true;  }
     else /* réserve (rouge+R) */                     { suivantStatut = 'vert';   suivantRActif = false; }
+    // Si le prof devient disponible, vérifier les conflits avec les autres sites
+    if (suivantStatut !== 'rouge') {
+      const autresSitesConflits = siteOrder.filter(k =>
+        k !== siteKey &&
+        (selectedBySite[k] || []).map(String).includes(String(profId)) &&
+        statutCellule(k, String(profId), jour, momentId) !== 'rouge'
+      );
+      if (autresSitesConflits.length > 0) {
+        const momentLabel = MOMENTS.find(m => m.id === momentId)?.label || momentId;
+        const nomsAutresSites = autresSitesConflits.map(k => siteNames[k] || k).join(', ');
+        const prof = profMap[String(profId)];
+        const nomProf = prof ? `${prof.prenom} ${toDisplayNom(prof.nom)}` : `Prof #${profId}`;
+        const ok = window.confirm(
+          `${nomProf} est déjà disponible le ${jour} ${momentLabel.toLowerCase()} sur : ${nomsAutresSites}.\n\nVoulez-vous le rendre disponible sur le site actuel et indisponible sur ${autresSitesConflits.length > 1 ? 'ces autres sites' : 'cet autre site'} ?`
+        );
+        if (!ok) return;
+        // Marquer rouge sur les sites en conflit et supprimer leurs rôles
+        setPoolCellOverrides(prev => {
+          const next = { ...prev };
+          for (const k of autresSitesConflits) {
+            next[cleCellulePool(k, profId, jour, momentId)] = { statut: 'rouge', rActif: false };
+          }
+          return next;
+        });
+        setAffectationDirty(true);
+        setRolesAffectesByPoolDemi(prev => {
+          const next = { ...prev };
+          for (const k of autresSitesConflits) {
+            const demiKey = `${k}::${jour}|${momentId}`;
+            if (next[demiKey] && Object.prototype.hasOwnProperty.call(next[demiKey], String(profId))) {
+              const cleaned = { ...next[demiKey] };
+              delete cleaned[String(profId)];
+              next[demiKey] = cleaned;
+            }
+          }
+          return next;
+        });
+      }
+    }
     // Si le prof devient indisponible (rouge non-réserve), supprimer son rôle pour cette demi-journée
     if (suivantStatut === 'rouge' && !suivantRActif) {
       const demiKey = `${siteKey}::${jour}|${momentId}`;
