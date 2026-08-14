@@ -82,7 +82,24 @@ export default function EmploiDuTemps() {
   const [affectations, setAffectations] = useState([]);
   const [affectationsDraft, setAffectationsDraft] = useState([]);
   const [hasAffectationsUnsaved, setHasAffectationsUnsaved] = useState(false);
-  const [titulariatsDraftByProf, setTitulariatsDraftByProf] = useState({});
+  const [titulariatsDraftByProf, setTitulariatsDraftByProf] = useState({}); // { [profId]: [classeId1, classeId2] }
+  const NORMALISER_TITULARIATS_PROF = (val) => {
+    if (Array.isArray(val)) {
+      return [String(val[0] || ''), String(val[1] || '')];
+    }
+    if (val) return [String(val), ''];
+    return ['', ''];
+  };
+  const getTitulariatsProf = (draft, profId) => NORMALISER_TITULARIATS_PROF(draft?.[String(profId)]);
+  const listerTitulariatsPairs = (draft) => {
+    const pairs = [];
+    Object.entries(draft || {}).forEach(([profId, val]) => {
+      NORMALISER_TITULARIATS_PROF(val).forEach((classeId) => {
+        if (classeId) pairs.push({ profId: String(profId), classeId: String(classeId) });
+      });
+    });
+    return pairs;
+  };
   const [branchesMatiereDraftMap, setBranchesMatiereDraftMap] = useState({});
   const [hasBranchesUnsaved, setHasBranchesUnsaved] = useState(false);
   const [affectationModes, setAffectationModes] = useState({});
@@ -535,12 +552,17 @@ export default function EmploiDuTemps() {
   useEffect(() => {
     if (sousOngletAff !== 'profs') return;
     const init = {};
-    classesPool.forEach((cl) => {
+    const classesTriees = [...classesPool].sort((a, b) =>
+      String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+    );
+    classesTriees.forEach((cl) => {
       const classeComplete = classesParId.get(String(cl.id));
       const profId = classeComplete?.prof_principal_id;
-      if (profId && profsPoolIds.has(String(profId)) && !init[String(profId)]) {
-        init[String(profId)] = String(cl.id);
-      }
+      if (!profId || !profsPoolIds.has(String(profId))) return;
+      const key = String(profId);
+      if (!init[key]) init[key] = ['', ''];
+      const slot = init[key].findIndex((v) => !v);
+      if (slot >= 0) init[key][slot] = String(cl.id);
     });
     setTitulariatsDraftByProf(init);
   }, [sousOngletAff, poolAffId, classes, pools, profs]);
@@ -1018,12 +1040,17 @@ export default function EmploiDuTemps() {
   const abandonnerAffectationsNonSauvegardees = () => {
     setAffectationsDraft(affectations || []);
     const init = {};
-    classesPool.forEach((cl) => {
+    const classesTriees = [...classesPool].sort((a, b) =>
+      String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+    );
+    classesTriees.forEach((cl) => {
       const classeComplete = classesParId.get(String(cl.id));
       const profId = classeComplete?.prof_principal_id;
-      if (profId && profsPoolIds.has(String(profId)) && !init[String(profId)]) {
-        init[String(profId)] = String(cl.id);
-      }
+      if (!profId || !profsPoolIds.has(String(profId))) return;
+      const key = String(profId);
+      if (!init[key]) init[key] = ['', ''];
+      const slot = init[key].findIndex((v) => !v);
+      if (slot >= 0) init[key][slot] = String(cl.id);
     });
     setTitulariatsDraftByProf(init);
     setHasAffectationsUnsaved(false);
@@ -1073,7 +1100,7 @@ export default function EmploiDuTemps() {
     const ok = window.confirm(
       'Générer une proposition d\'affectations pour ce pool ?\n\n' +
       'Règles : blocs de demi-journée (4 périodes) dans la même classe, sinon 2 périodes à la suite ; ' +
-      '1 période de titulariat ; 8 à 12 périodes dans la classe titulaire selon disponibilités/quota.\n\n' +
+      '1 période de titulariat par classe titulaire (max 2) ; 8 à 12 périodes par classe titulaire selon disponibilités/quota.\n\n' +
       'Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
     );
     if (!ok) return;
@@ -1101,29 +1128,49 @@ export default function EmploiDuTemps() {
       return { normales: PERIODES_PAR_NIVEAU[niveauClasse] || 0, soutien: 0, niveauClasse };
     };
 
-    // Titulariats de départ
-    const titulariats = {};
-    Object.entries(titulariatsDraftByProf || {}).forEach(([pid, cid]) => {
-      if (profsPoolIds.has(String(pid)) && cid && classesPoolIds.has(String(cid))) {
-        titulariats[String(pid)] = String(cid);
-      }
+    // Titulariats de départ (jusqu'à 2 classes par professeur)
+    const titulariatsParProf = {};
+    const classesTitulairesPrises = new Set();
+    listerTitulariatsPairs(titulariatsDraftByProf).forEach(({ profId, classeId }) => {
+      if (!profsPoolIds.has(profId) || !classesPoolIds.has(classeId)) return;
+      if (classesTitulairesPrises.has(classeId)) return;
+      if (!titulariatsParProf[profId]) titulariatsParProf[profId] = [];
+      if (titulariatsParProf[profId].length >= 2) return;
+      titulariatsParProf[profId].push(classeId);
+      classesTitulairesPrises.add(classeId);
     });
     classesPool.forEach((cl) => {
       const classeComplete = classesParId.get(String(cl.id));
-      const profId = classeComplete?.prof_principal_id;
-      if (!profId || !profsPoolIds.has(String(profId))) return;
-      if (Object.values(titulariats).includes(String(cl.id))) return;
-      if (!titulariats[String(profId)]) titulariats[String(profId)] = String(cl.id);
+      const profId = classeComplete?.prof_principal_id ? String(classeComplete.prof_principal_id) : '';
+      const cid = String(cl.id);
+      if (!profId || !profsPoolIds.has(profId)) return;
+      if (classesTitulairesPrises.has(cid)) return;
+      if (!titulariatsParProf[profId]) titulariatsParProf[profId] = [];
+      if (titulariatsParProf[profId].length >= 2) return;
+      titulariatsParProf[profId].push(cid);
+      classesTitulairesPrises.add(cid);
     });
     const classesSansTitulaire = classesPool
       .map((cl) => String(cl.id))
-      .filter((cid) => !Object.values(titulariats).includes(cid));
-    const profsSansTitulaire = profsPool
+      .filter((cid) => !classesTitulairesPrises.has(cid));
+    const profsAvecPlace = profsPool
       .map((p) => String(p.id))
-      .filter((pid) => !titulariats[pid]);
-    classesSansTitulaire.forEach((cid, idx) => {
-      if (idx < profsSansTitulaire.length) titulariats[profsSansTitulaire[idx]] = cid;
+      .filter((pid) => (titulariatsParProf[pid] || []).length < 2);
+    classesSansTitulaire.forEach((cid) => {
+      const pid = profsAvecPlace.find((p) => (titulariatsParProf[p] || []).length < 2);
+      if (!pid) return;
+      if (!titulariatsParProf[pid]) titulariatsParProf[pid] = [];
+      titulariatsParProf[pid].push(cid);
+      classesTitulairesPrises.add(cid);
     });
+    const titulariatsPairs = Object.entries(titulariatsParProf).flatMap(([profId, classesIds]) =>
+      (classesIds || []).map((classeId) => ({ profId, classeId }))
+    );
+    const estTitulaireDe = (profId, classeId) =>
+      (titulariatsParProf[String(profId)] || []).includes(String(classeId));
+    const loadTitulaireParClasse = Object.fromEntries(
+      titulariatsPairs.map(({ profId, classeId }) => [`${profId}|${classeId}`, 0])
+    );
 
     let nextDraft = (affectationsDraft || []).filter((a) => !profsPoolIds.has(String(a.prof_id)));
     const nextModes = {};
@@ -1132,7 +1179,6 @@ export default function EmploiDuTemps() {
     const loadProf = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
     const loadClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
     const loadSoutien = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
-    const loadTitulaireClasse = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
     const quotaProf = Object.fromEntries(profsPool.map((p) => [String(p.id), getQuotaProf(p)]));
     const requisParClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), getRequisClasse(c)]));
 
@@ -1160,7 +1206,10 @@ export default function EmploiDuTemps() {
       if (cid && mode === 'soutien') loadSoutien[cid] += 1;
       else if (cid) {
         loadClasse[cid] += 1;
-        if (titulariats[pid] === cid) loadTitulaireClasse[pid] += 1;
+        const cleTit = `${pid}|${cid}`;
+        if (Object.prototype.hasOwnProperty.call(loadTitulaireParClasse, cleTit)) {
+          loadTitulaireParClasse[cleTit] += 1;
+        }
       }
       return true;
     };
@@ -1225,31 +1274,35 @@ export default function EmploiDuTemps() {
       }) || null;
     };
 
-    // Phase 1 — classe titulaire en blocs 4 puis 2 (cible 8–12)
-    Object.entries(titulariats).forEach(([profId, classeId]) => {
-      const quotaPourClasse = Math.max(0, (quotaProf[profId] || 0) - 1); // réserver 1 pour titulariat
+    // Phase 1 — classe(s) titulaire(s) en blocs 4 puis 2 (cible 8–12 par classe)
+    titulariatsPairs.forEach(({ profId, classeId }) => {
+      const nbTitulariatsProf = (titulariatsParProf[profId] || []).length;
+      const quotaPourClasse = Math.max(0, (quotaProf[profId] || 0) - nbTitulariatsProf);
       const requisRestants = Math.max(0, (requisParClasse[classeId]?.normales || 0) - (loadClasse[classeId] || 0));
+      const cleTit = `${profId}|${classeId}`;
       let cible = Math.min(12, quotaPourClasse);
       if (quotaPourClasse >= 8) cible = Math.min(12, Math.max(8, Math.min(10, quotaPourClasse)));
       if (requisRestants > 0) cible = Math.min(cible, requisRestants);
       else cible = 0;
 
-      while ((loadTitulaireClasse[profId] || 0) + 4 <= cible) {
+      while ((loadTitulaireParClasse[cleTit] || 0) + 4 <= cible) {
         const bloc = trouverBloc(profId, classeId, 4);
         if (!bloc) break;
         if (!assignerBloc(profId, classeId, bloc)) break;
       }
-      while ((loadTitulaireClasse[profId] || 0) + 2 <= cible) {
+      while ((loadTitulaireParClasse[cleTit] || 0) + 2 <= cible) {
         const bloc = trouverBloc(profId, classeId, 2);
         if (!bloc) break;
         if (!assignerBloc(profId, classeId, bloc)) break;
       }
     });
 
-    // Phase 2 — 1 période de titulariat (toujours), de préférence sur un créneau de la classe
-    Object.entries(titulariats).forEach(([profId, classeId]) => {
+    // Phase 2 — 1 période de titulariat par classe titulaire
+    titulariatsPairs.forEach(({ profId, classeId }) => {
       const dejaTitulariat = nextDraft.some((a) =>
-        String(a.prof_id) === String(profId) && a.type_special === 'titulariat'
+        String(a.prof_id) === String(profId)
+        && a.type_special === 'titulariat'
+        && String(a.classe_id || '') === String(classeId)
       );
       if (dejaTitulariat) return;
       const slotsPref = creneauxTries.filter((cr) =>
@@ -1263,7 +1316,7 @@ export default function EmploiDuTemps() {
         && !slotsPref.some((s) => String(s.id) === String(cr.id))
       );
       const candidat = slotsPref[0] || slotsAutres[0];
-      if (candidat) ajouterAffectation({ profId, creneauId: candidat.id, typeSpecial: 'titulariat' });
+      if (candidat) ajouterAffectation({ profId, creneauId: candidat.id, classeId, typeSpecial: 'titulariat' });
     });
 
     // Phase 3 — compléter les classes (blocs 4 puis 2, tous profs)
@@ -1280,16 +1333,16 @@ export default function EmploiDuTemps() {
         let gardeFou = 0;
         while (restant >= taille && gardeFou < 40) {
           gardeFou += 1;
+          const cleTitPour = (pid) => `${pid}|${classeId}`;
           const candidats = [...profsPool]
             .map((p) => String(p.id))
             .filter((pid) => (loadProf[pid] || 0) + taille <= (quotaProf[pid] || 0))
             .sort((a, b) => {
-              const titA = titulariats[a] === String(classeId) ? 0 : 1;
-              const titB = titulariats[b] === String(classeId) ? 0 : 1;
+              const titA = estTitulaireDe(a, classeId) ? 0 : 1;
+              const titB = estTitulaireDe(b, classeId) ? 0 : 1;
               if (titA !== titB) return titA - titB;
-              // Titulaire : ne pas dépasser 12 dans sa classe
-              if (titulariats[a] === String(classeId) && (loadTitulaireClasse[a] || 0) >= 12) return 1;
-              if (titulariats[b] === String(classeId) && (loadTitulaireClasse[b] || 0) >= 12) return -1;
+              if (estTitulaireDe(a, classeId) && (loadTitulaireParClasse[cleTitPour(a)] || 0) >= 12) return 1;
+              if (estTitulaireDe(b, classeId) && (loadTitulaireParClasse[cleTitPour(b)] || 0) >= 12) return -1;
               const restA = (quotaProf[a] || 0) - (loadProf[a] || 0);
               const restB = (quotaProf[b] || 0) - (loadProf[b] || 0);
               return restB - restA;
@@ -1297,7 +1350,7 @@ export default function EmploiDuTemps() {
 
           let assigne = false;
           for (const pid of candidats) {
-            if (titulariats[pid] === String(classeId) && (loadTitulaireClasse[pid] || 0) + taille > 12) continue;
+            if (estTitulaireDe(pid, classeId) && (loadTitulaireParClasse[cleTitPour(pid)] || 0) + taille > 12) continue;
             const bloc = trouverBloc(pid, classeId, taille);
             if (!bloc) continue;
             if (assignerBloc(pid, classeId, bloc)) {
@@ -1391,7 +1444,9 @@ export default function EmploiDuTemps() {
     setTitulariatsDraftByProf((prev) => {
       const next = { ...prev };
       profsPoolIds.forEach((pid) => { delete next[String(pid)]; });
-      Object.entries(titulariats).forEach(([pid, cid]) => { next[pid] = cid; });
+      Object.entries(titulariatsParProf).forEach(([pid, classesIds]) => {
+        next[pid] = [String(classesIds[0] || ''), String(classesIds[1] || '')];
+      });
       return next;
     });
     setHasAffectationsUnsaved(true);
@@ -1682,8 +1737,7 @@ export default function EmploiDuTemps() {
       });
       const desiredTitulaireByClasse = {};
       classesPool.forEach((cl) => { desiredTitulaireByClasse[String(cl.id)] = ''; });
-      Object.entries(titulariatsDraftByProf || {}).forEach(([profId, classeId]) => {
-        if (!classeId) return;
+      listerTitulariatsPairs(titulariatsDraftByProf).forEach(({ profId, classeId }) => {
         if (!Object.prototype.hasOwnProperty.call(desiredTitulaireByClasse, String(classeId))) return;
         desiredTitulaireByClasse[String(classeId)] = String(profId);
       });
@@ -3389,52 +3443,79 @@ export default function EmploiDuTemps() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={styles.tr}>
-                    <td style={{...styles.td,background:'#f8f9fa',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>
-                      Titulariat
-                    </td>
-                    {profsPool.map(prof => {
-                      const selectedClasseId = String(titulariatsDraftByProf[String(prof.id)] || '');
-                      const classesDejaAttribueesAuxAutres = new Set(
-                        Object.entries(titulariatsDraftByProf || {})
-                          .filter(([profId, classeId]) => String(profId) !== String(prof.id) && classeId)
-                          .map(([, classeId]) => String(classeId))
-                      );
-                      const options = classesPoolTriees.filter(cl =>
-                        !classesDejaAttribueesAuxAutres.has(String(cl.id)) || String(cl.id) === selectedClasseId
-                      );
-                      return (
-                        <td key={`titulariat-${prof.id}`} style={{...styles.td,padding:'8px 4px',background:'#fff',textAlign:'center'}}>
-                          <select
-                            style={styles.cellSel}
-                            value={selectedClasseId}
-                            onChange={e => {
-                              const classeId = String(e.target.value || '');
-                              setTitulariatsDraftByProf(prev => {
-                                const next = { ...prev };
-                                Object.keys(next).forEach((pid) => {
-                                  if (String(pid) !== String(prof.id) && String(next[pid] || '') === classeId) {
-                                    next[pid] = '';
+                  {[0, 1].map((slot) => (
+                    <tr key={`titulariat-row-${slot}`} style={styles.tr}>
+                      <td style={{...styles.td,background:'#f8f9fa',fontWeight:700,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>
+                        {slot === 0 ? 'Titulariat' : 'Titulariat 2'}
+                      </td>
+                      {profsPool.map(prof => {
+                        const slotsProf = getTitulariatsProf(titulariatsDraftByProf, prof.id);
+                        const selectedClasseId = String(slotsProf[slot] || '');
+                        const classesDejaAttribuees = new Set(
+                          listerTitulariatsPairs(titulariatsDraftByProf)
+                            .filter(({ profId, classeId }) => {
+                              if (!classeId) return false;
+                              if (String(profId) === String(prof.id) && String(classeId) === selectedClasseId) return false;
+                              return true;
+                            })
+                            .map(({ classeId }) => String(classeId))
+                        );
+                        const options = classesPoolTriees.filter(cl =>
+                          !classesDejaAttribuees.has(String(cl.id)) || String(cl.id) === selectedClasseId
+                        );
+                        return (
+                          <td key={`titulariat-${slot}-${prof.id}`} style={{...styles.td,padding:'8px 4px',background:'#fff',textAlign:'center'}}>
+                            <select
+                              style={styles.cellSel}
+                              value={selectedClasseId}
+                              onChange={e => {
+                                const classeId = String(e.target.value || '');
+                                setTitulariatsDraftByProf(prev => {
+                                  const next = { ...prev };
+                                  // Retirer cette classe des autres professeurs / autres slots
+                                  Object.keys(next).forEach((pid) => {
+                                    const arr = getTitulariatsProf(next, pid);
+                                    let changed = false;
+                                    if (classeId) {
+                                      arr.forEach((cid, idx) => {
+                                        if (String(cid) === classeId && !(String(pid) === String(prof.id) && idx === slot)) {
+                                          arr[idx] = '';
+                                          changed = true;
+                                        }
+                                      });
+                                    }
+                                    if (String(pid) === String(prof.id)) {
+                                      arr[slot] = classeId;
+                                      // Éviter le doublon sur les 2 slots du même prof
+                                      if (classeId && slot === 0 && arr[1] === classeId) arr[1] = '';
+                                      if (classeId && slot === 1 && arr[0] === classeId) arr[0] = '';
+                                      changed = true;
+                                    }
+                                    if (changed) next[String(pid)] = arr;
+                                  });
+                                  if (!Object.prototype.hasOwnProperty.call(next, String(prof.id))) {
+                                    const arr = ['', ''];
+                                    arr[slot] = classeId;
+                                    next[String(prof.id)] = arr;
                                   }
+                                  return next;
                                 });
-                                next[String(prof.id)] = classeId;
-                                return next;
-                              });
-                              setHasAffectationsUnsaved(true);
-                            }}
-                            disabled={!isAdmin()}
-                          >
-                            <option value="">—</option>
-                            {options.map(cl => (
-                              <option key={`titulariat-option-${prof.id}-${cl.id}`} value={String(cl.id)}>
-                                {cl.nom}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      );
-                    })}
-                  </tr>
+                                setHasAffectationsUnsaved(true);
+                              }}
+                              disabled={!isAdmin()}
+                            >
+                              <option value="">—</option>
+                              {options.map(cl => (
+                                <option key={`titulariat-option-${slot}-${prof.id}-${cl.id}`} value={String(cl.id)}>
+                                  {cl.nom}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               {JOURS.map(jour => {
