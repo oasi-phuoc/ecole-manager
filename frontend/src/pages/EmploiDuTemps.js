@@ -105,6 +105,7 @@ export default function EmploiDuTemps() {
   const [planningProf, setPlanningProf] = useState(null);
   const [profPlanningId, setProfPlanningId] = useState('');
   const [planningClasse, setPlanningClasse] = useState(null);
+  const [planningClasseLoading, setPlanningClasseLoading] = useState(false);
   const [classePlanningId, setClassePlanningId] = useState('');
   const [classePlanningPoolId, setClassePlanningPoolId] = useState('');
   const [sallesLieuTravailId, setSallesLieuTravailId] = useState('');
@@ -461,10 +462,23 @@ export default function EmploiDuTemps() {
   };
 
   const chargerPlanningClasse = async (id, pool_id) => {
-    const url = API + '/planning/classe/' + id + (pool_id ? '?pool_id='+pool_id : '');
-    const r = await axios.get(url, { headers });
-    setPlanningClasse(r.data);
-    chargerPlanningBranches(pool_id);
+    if (!id) {
+      setPlanningClasse(null);
+      setPlanningClasseLoading(false);
+      return;
+    }
+    setPlanningClasseLoading(true);
+    try {
+      const url = API + '/planning/classe/' + id + (pool_id ? '?pool_id=' + pool_id : '');
+      const r = await axios.get(url, { headers });
+      setPlanningClasse(r.data || null);
+      if (pool_id) chargerPlanningBranches(pool_id);
+    } catch (err) {
+      setPlanningClasse(null);
+      showToast(err.response?.data?.message || err.message || 'Erreur lors du chargement du planning de la classe.', 'error');
+    } finally {
+      setPlanningClasseLoading(false);
+    }
   };
 
   const poolSelectionne = pools.find(p => p.id == poolAffId);
@@ -536,9 +550,18 @@ export default function EmploiDuTemps() {
   const classesToutesTriees = [...classes].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
   const niveauxPoolPlanning = parseNiveaux(poolClasseP?.niveau).map(n => String(n).toUpperCase());
-  const matieresPourPlanningClasse = matieres.filter(m =>
-    niveauxPoolPlanning.length > 0 && niveauxPoolPlanning.includes(String(m.niveau || '').toUpperCase())
-  );
+  const classePlanningObj = classes.find(c => String(c.id) === String(classePlanningId))
+    || classesPoolP.find(c => String(c.id) === String(classePlanningId));
+  const niveauClassePlanning = String(
+    classePlanningObj?.niveau
+    || (niveauxPoolPlanning.length === 1 ? niveauxPoolPlanning[0] : '')
+    || ''
+  ).toUpperCase();
+  const matieresPourPlanningClasse = matieres.filter(m => {
+    const nivM = String(m.niveau || '').toUpperCase();
+    if (niveauClassePlanning) return nivM === niveauClassePlanning;
+    return niveauxPoolPlanning.length > 0 && niveauxPoolPlanning.includes(nivM);
+  });
   const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
     const key = String(a.id);
@@ -1237,7 +1260,13 @@ export default function EmploiDuTemps() {
     });
 
     setAffectationsDraft(nextDraft);
-    setAffectationModes(nextModes);
+    setAffectationModes((prev) => {
+      const next = { ...(prev || {}) };
+      (affectationsDraft || []).forEach((a) => {
+        if (profsPoolIds.has(String(a.prof_id)) && a?.id != null) delete next[String(a.id)];
+      });
+      return { ...next, ...nextModes };
+    });
     setTitulariatsDraftByProf((prev) => {
       const next = { ...prev };
       profsPoolIds.forEach((pid) => { delete next[String(pid)]; });
@@ -1265,6 +1294,214 @@ export default function EmploiDuTemps() {
   const abandonnerBranchesNonSauvegardees = () => {
     setBranchesMatiereDraftMap({});
     setHasBranchesUnsaved(false);
+  };
+
+  const estBrancheFrancais = (m) => {
+    const txt = `${m?.nom || ''} ${m?.designation_courte || ''}`.toLowerCase();
+    return /fran[cç]ais|\bfr\b/.test(txt);
+  };
+  const estBrancheMath = (m) => {
+    const txt = `${m?.nom || ''} ${m?.designation_courte || ''}`.toLowerCase();
+    return /math/.test(txt);
+  };
+
+  const resetAffectationsBranchesTableau = () => {
+    if (!isAdmin()) return;
+    if (!classePlanningId || !planningClasse) {
+      showToast('Sélectionnez d\'abord une classe.', 'info');
+      return;
+    }
+    const ok = window.confirm(
+      'Vider toutes les branches de ce planning ?\n\nLe tableau sera remis à zéro. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+    const next = {};
+    (planningClasse.affectations || []).forEach((a) => {
+      if (a?.id != null) next[String(a.id)] = '';
+    });
+    setBranchesMatiereDraftMap(next);
+    setHasBranchesUnsaved(true);
+    setPlanningClasse((prev) => (prev ? { ...prev } : prev));
+    showToast('Branches vidées. Pensez à sauvegarder.');
+  };
+
+  const proposerAffectationsBranches = () => {
+    if (!isAdmin()) return;
+    if (!classePlanningId || !planningClasse) {
+      showToast('Sélectionnez d\'abord une classe.', 'info');
+      return;
+    }
+    const slots = planningClasseAffectationsActives
+      .map((a) => {
+        const cr = creneauxPlanningParId.get(String(a.creneau_id));
+        if (!cr) return null;
+        return { aff: a, cr };
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const dj = JOURS.indexOf(a.cr.jour) - JOURS.indexOf(b.cr.jour);
+        if (dj !== 0) return dj;
+        const dp = String(a.cr.periode || '').localeCompare(String(b.cr.periode || ''), 'fr');
+        if (dp !== 0) return dp;
+        return Number(a.cr.ordre || 0) - Number(b.cr.ordre || 0);
+      });
+
+    if (!slots.length) {
+      showToast('Aucune période avec professeur affecté à planifier.', 'info');
+      return;
+    }
+    if (!matieresPourPlanningClasse.length) {
+      showToast('Aucune branche disponible pour ce niveau.', 'error');
+      return;
+    }
+
+    const ok = window.confirm(
+      'Générer une proposition de branches pour cette classe ?\n\n' +
+      'Règles : max 2 fois la même branche à la suite ; Français et Math 1 fois/jour si possible.\n\n' +
+      'Les branches actuelles seront remplacées. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+
+    const requis = Object.fromEntries(
+      matieresPourPlanningClasse.map((m) => [String(m.id), parseInt(m.periodes_semaine, 10) || 0])
+    );
+    const compte = Object.fromEntries(matieresPourPlanningClasse.map((m) => [String(m.id), 0]));
+    const assignment = {}; // affId -> matiereId
+    const byJour = {};
+    slots.forEach((s) => {
+      const j = s.cr.jour;
+      if (!byJour[j]) byJour[j] = [];
+      byJour[j].push(s);
+    });
+
+    const matiereFr = matieresPourPlanningClasse.find(estBrancheFrancais) || null;
+    const matiereMa = matieresPourPlanningClasse.find(estBrancheMath) || null;
+
+    const peutEncher = (matiereId, sequencePrecedente) => {
+      const mid = String(matiereId);
+      if ((compte[mid] || 0) >= (requis[mid] || 0)) return false;
+      // max 2 à la suite
+      if (sequencePrecedente.length >= 2
+        && String(sequencePrecedente[sequencePrecedente.length - 1]) === mid
+        && String(sequencePrecedente[sequencePrecedente.length - 2]) === mid) {
+        return false;
+      }
+      return true;
+    };
+
+    const scoreCandidat = (m, slot, sequencePrecedente, dejaFrJour, dejaMaJour) => {
+      const mid = String(m.id);
+      if (!peutEncher(mid, sequencePrecedente)) return -9999;
+      let score = 0;
+      const restant = (requis[mid] || 0) - (compte[mid] || 0);
+      score += restant * 10;
+      // Préférence prof
+      const prof = (profs || []).find((p) => String(p.id) === String(slot.aff.prof_id));
+      const prefs = normaliserIdsPrefBranches(prof?.branches_specialites);
+      if (prefs.includes(mid)) score += 25;
+      // Éviter 2e consécutive sauf si utile
+      if (sequencePrecedente.length && String(sequencePrecedente[sequencePrecedente.length - 1]) === mid) {
+        score -= 5;
+      }
+      // Bonus FR/MA une fois par jour
+      if (matiereFr && mid === String(matiereFr.id) && !dejaFrJour) score += 40;
+      if (matiereMa && mid === String(matiereMa.id) && !dejaMaJour) score += 40;
+      // Pénalité si déjà placé FR/MA ce jour et on en remet
+      if (matiereFr && mid === String(matiereFr.id) && dejaFrJour) score -= 30;
+      if (matiereMa && mid === String(matiereMa.id) && dejaMaJour) score -= 30;
+      return score;
+    };
+
+    JOURS.forEach((jour) => {
+      const daySlots = byJour[jour] || [];
+      if (!daySlots.length) return;
+      const sequence = [];
+      let dejaFr = false;
+      let dejaMa = false;
+
+      // Passe 1 : essayer de placer FR et MA tôt dans la journée
+      const prioritaires = [matiereFr, matiereMa].filter(Boolean);
+      daySlots.forEach((slot) => {
+        let meilleur = null;
+        let meilleurScore = -9999;
+        // d'abord candidats prioritaires du jour si pas encore placés
+        const candidats = [
+          ...prioritaires.filter((m) => {
+            if (estBrancheFrancais(m) && dejaFr) return false;
+            if (estBrancheMath(m) && dejaMa) return false;
+            return true;
+          }),
+          ...matieresPourPlanningClasse,
+        ];
+        // unique by id preserving order
+        const seen = new Set();
+        candidats.forEach((m) => {
+          const mid = String(m.id);
+          if (seen.has(mid)) return;
+          seen.add(mid);
+          const sc = scoreCandidat(m, slot, sequence, dejaFr, dejaMa);
+          if (sc > meilleurScore) {
+            meilleurScore = sc;
+            meilleur = m;
+          }
+        });
+        if (!meilleur || meilleurScore <= -9999) {
+          sequence.push(null);
+          return;
+        }
+        const mid = String(meilleur.id);
+        assignment[String(slot.aff.id)] = mid;
+        compte[mid] = (compte[mid] || 0) + 1;
+        sequence.push(mid);
+        if (matiereFr && mid === String(matiereFr.id)) dejaFr = true;
+        if (matiereMa && mid === String(matiereMa.id)) dejaMa = true;
+      });
+    });
+
+    // Remplir les slots non assignés (si FR/MA n'ont rien trouvé etc.)
+    slots.forEach((slot) => {
+      const key = String(slot.aff.id);
+      if (assignment[key]) return;
+      const jourSlots = byJour[slot.cr.jour] || [];
+      const idx = jourSlots.findIndex((s) => String(s.aff.id) === key);
+      const sequence = jourSlots.slice(0, idx).map((s) => assignment[String(s.aff.id)] || null).filter(Boolean);
+      let meilleur = null;
+      let meilleurScore = -9999;
+      matieresPourPlanningClasse.forEach((m) => {
+        const sc = scoreCandidat(m, slot, sequence, false, false);
+        // ignore daily FR/MA bonus recalculation for fill — use restant mainly
+        const mid = String(m.id);
+        if (!peutEncher(mid, sequence)) return;
+        const restant = (requis[mid] || 0) - (compte[mid] || 0);
+        const fillScore = restant * 10 + (sc > -9999 ? 1 : 0);
+        if (fillScore > meilleurScore) {
+          meilleurScore = fillScore;
+          meilleur = m;
+        }
+      });
+      if (!meilleur) return;
+      const mid = String(meilleur.id);
+      assignment[key] = mid;
+      compte[mid] = (compte[mid] || 0) + 1;
+    });
+
+    const next = { ...branchesMatiereDraftMap };
+    (planningClasse.affectations || []).forEach((a) => {
+      if (a?.id == null) return;
+      next[String(a.id)] = assignment[String(a.id)] || '';
+    });
+    setBranchesMatiereDraftMap(next);
+    setHasBranchesUnsaved(true);
+    setPlanningClasse((prev) => (prev ? { ...prev } : prev));
+
+    const incompletes = matieresPourPlanningClasse
+      .filter((m) => (compte[String(m.id)] || 0) < (requis[String(m.id)] || 0))
+      .map((m) => `${m.nom} ${compte[String(m.id)] || 0}/${requis[String(m.id)] || 0}`);
+    if (incompletes.length) {
+      showToast(`Proposition générée. Branches incomplètes : ${incompletes.join(', ')}.`, 'info');
+    } else {
+      showToast('Proposition de branches générée. Pensez à sauvegarder.');
+    }
   };
   const abandonnerChangementsAffectationsCourants = () => {
     if (sousOngletAff === 'classes' && hasClassesUnsaved) {
@@ -2077,6 +2314,36 @@ export default function EmploiDuTemps() {
                 </button>
               </>
             )}
+            {sousOngletAff === 'branches' && isAdmin() && (
+              <>
+                <button
+                  type="button"
+                  title="Réinitialiser les branches"
+                  aria-label="Réinitialiser les branches"
+                  onClick={resetAffectationsBranchesTableau}
+                  style={styles.btnResetAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="1 4 1 10 7 10" />
+                    <polyline points="23 20 23 14 17 14" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Proposer les branches"
+                  aria-label="Proposer les branches"
+                  onClick={proposerAffectationsBranches}
+                  style={styles.btnProposeAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                    <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
+                    <path d="M5 15l.6 1.6L7 17.2l-1.4.6L5 19.4l-.6-1.6L3 17.2l1.4-.6L5 15z" />
+                  </svg>
+                </button>
+              </>
+            )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
@@ -2691,25 +2958,36 @@ export default function EmploiDuTemps() {
                   style={styles.selAff}
                   value={classePlanningPoolId || ''}
                   placeholder="Choisir un pool..."
-                  options={pools.map(p => ({value: String(p.id), label: p.nom}))}
+                  options={pools.map(p => ({
+                    value: String(p.id),
+                    label: p.site ? `${p.nom} (${p.site})` : p.nom,
+                  }))}
                   onChange={(poolId) => {
                     if (String(classePlanningPoolId) === String(poolId)) return;
                     if (hasBranchesUnsaved && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de pool sans sauvegarder ?")) return;
                     if (hasBranchesUnsaved) abandonnerBranchesNonSauvegardees();
-                    setClassePlanningPoolId(String(poolId)); setClassePlanningId(''); setPlanningClasse(null);
+                    setClassePlanningPoolId(String(poolId || ''));
+                    setClassePlanningId('');
+                    setPlanningClasse(null);
+                    setPlanningClasseLoading(false);
                   }}
                 />
                 <CustomSelect
                   style={styles.selAff}
-                  value={classePlanningId || ''}
+                  value={classePlanningId ? String(classePlanningId) : ''}
                   disabled={!classePlanningPoolId}
                   placeholder={classePlanningPoolId ? 'Choisir une classe' : "Choisir d'abord un pool"}
-                  options={classesPoolP.map(c => ({value: c.id, label: c.nom}))}
+                  options={classesPoolP.map(c => ({value: String(c.id), label: c.nom}))}
                   onChange={(classeId) => {
-                    if (hasBranchesUnsaved && classeId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
-                    if (hasBranchesUnsaved && classeId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
-                    setClassePlanningId(classeId);
-                    if (classeId) chargerPlanningClasse(classeId, classePlanningPoolId); else setPlanningClasse(null);
+                    const nextId = classeId ? String(classeId) : '';
+                    if (hasBranchesUnsaved && nextId !== String(classePlanningId || '') && !window.confirm("Des changements dans Affectations > Branches ne sont pas sauvegardés. Changer de classe sans sauvegarder ?")) return;
+                    if (hasBranchesUnsaved && nextId !== String(classePlanningId || '')) abandonnerBranchesNonSauvegardees();
+                    setClassePlanningId(nextId);
+                    if (nextId) chargerPlanningClasse(nextId, classePlanningPoolId);
+                    else {
+                      setPlanningClasse(null);
+                      setPlanningClasseLoading(false);
+                    }
                   }}
                 />
               </>
@@ -3429,8 +3707,14 @@ export default function EmploiDuTemps() {
               {classePlanningPoolId && !classePlanningId && (
                 <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher les branches.</div>
               )}
+              {classePlanningPoolId && classePlanningId && planningClasseLoading && (
+                <div style={styles.msgVide}>Chargement du planning de la classe…</div>
+              )}
+              {classePlanningPoolId && classePlanningId && !planningClasseLoading && !planningClasse && (
+                <div style={styles.msgVide}>Impossible de charger le planning de cette classe. Réessayez ou vérifiez les affectations professeurs / horaires.</div>
+              )}
 
-              {planningClasse && classePlanningId && (
+              {planningClasse && classePlanningId && !planningClasseLoading && (
                 <div>
                   <div style={{marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleurs</h3>
@@ -3535,6 +3819,16 @@ export default function EmploiDuTemps() {
                     )}
                   </div>
                   <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>{planningClasse.classe?.nom}{planningClasse.classe?.titulaire_nom ? ` — Titulaire : ${planningClasse.classe.titulaire_nom}` : ''}</div>
+                  {!(planningClasse.horaires || []).length && (
+                    <div style={{...styles.msgVide, marginBottom:12}}>
+                      Aucun horaire défini pour cette classe. Allez dans Affectations → Classes pour choisir Matin / Après-midi.
+                    </div>
+                  )}
+                  {!(planningClasse.creneaux || []).length && (
+                    <div style={{...styles.msgVide, marginBottom:12}}>
+                      Aucun créneau trouvé. Vérifiez la configuration des horaires.
+                    </div>
+                  )}
 
                   <div style={{overflowX:'auto'}}>
                     <table style={{...styles.tbl,width:'100%',tableLayout:'fixed'}}>
@@ -3546,20 +3840,26 @@ export default function EmploiDuTemps() {
                       </thead>
                       <tbody>
                         {['Matin','Après-midi'].map(periode => {
-                          const crsBase = (planningClasse.creneaux||[]).filter(c => c.jour==='Lundi'&&c.periode===periode);
+                          const allCrs = planningClasse.creneaux || [];
+                          let crsBase = allCrs.filter(c => c.jour === 'Lundi' && c.periode === periode);
+                          if (!crsBase.length) {
+                            const jourRef = JOURS.find(j => allCrs.some(c => c.jour === j && c.periode === periode));
+                            if (jourRef) crsBase = allCrs.filter(c => c.jour === jourRef && c.periode === periode);
+                          }
+                          crsBase = [...crsBase].sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
                           if (!crsBase.length) return null;
                           return [
                             <tr key={periode}><td colSpan={6} style={styles.periodeBande}>{periode}</td></tr>,
                             ...crsBase.map((crBase,idx) => (
-                              <tr key={crBase.id} style={styles.tr}>
+                              <tr key={`${periode}-${crBase.ordre || idx}`} style={styles.tr}>
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
                                   P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
                                 </td>
                                 {JOURS.map(jour => {
-                                  const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
+                                  const cr = allCrs.find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
                                   if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                                   const aCours = classeAHorairePlanning(jour, periode);
-                                  const aff = aCours ? planningClasseAffectations.find(a=>a.creneau_id===cr.id) : null;
+                                  const aff = aCours ? planningClasseAffectations.find(a=>String(a.creneau_id)===String(cr.id)) : null;
                                   const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                                   const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                                   return (
@@ -3578,8 +3878,6 @@ export default function EmploiDuTemps() {
                                                 const valeur = ev.target.value || '';
                                                 setBranchesMatiereDraftMap(prev => ({ ...prev, [String(aff.id)]: valeur }));
                                                 setHasBranchesUnsaved(true);
-                                                // Force un rerender immédiat pour refléter le suivi des branches
-                                                // (comptes/préférences) sans attendre la sauvegarde.
                                                 setPlanningClasse(prev => (prev ? { ...prev } : prev));
                                               }}>
                                               <option value="">— Branche —</option>
