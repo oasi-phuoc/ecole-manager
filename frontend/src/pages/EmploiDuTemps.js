@@ -36,7 +36,7 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
   Matin: { debut: '09:45', fin: '10:05' },
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
-const PERIODES_PAR_NIVEAU = { CSC: 24, CAL: 24, CFR: 20, EPL: 20 };
+const PERIODES_PAR_NIVEAU = { CSC: 24, CAL: 24, APL: 28, CFR: 20, EPL: 20 };
 /** Niveaux avec 20 périodes normales + 4 de soutien (comme CSC). */
 const NIVEAUX_AVEC_SOUTIEN = new Set(['CSC', 'CAL']);
 const niveauAvecSoutien = (niveau) => NIVEAUX_AVEC_SOUTIEN.has(String(niveau || '').toUpperCase());
@@ -45,11 +45,12 @@ const getRequisPeriodesNiveau = (niveau) => {
   if (niveauAvecSoutien(niv)) return { normales: 20, soutien: 4 };
   return { normales: PERIODES_PAR_NIVEAU[niv] || 0, soutien: 0 };
 };
-/** Déduit le niveau (CSC/CAL/CFR/EPL) depuis le nom de classe si besoin. */
+/** Déduit le niveau (CSC/CAL/APL/CFR/EPL) depuis le nom de classe si besoin. */
 const infererNiveauDepuisNom = (nom) => {
   const n = String(nom || '').toUpperCase();
   if (/\bCAL\b/.test(n) || n.startsWith('CAL')) return 'CAL';
   if (/\bCSC\b/.test(n) || n.startsWith('CSC')) return 'CSC';
+  if (/\bAPL\b/.test(n) || n.startsWith('APL')) return 'APL';
   if (/\bCFR\b/.test(n) || n.startsWith('CFR')) return 'CFR';
   if (/\bEPL\b/.test(n) || n.startsWith('EPL')) return 'EPL';
   return '';
