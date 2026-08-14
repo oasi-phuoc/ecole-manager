@@ -4088,13 +4088,17 @@ export default function EmploiDuTemps() {
                     {suiviBranchesClasse.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune branche trouvée pour ce niveau.</div>
                     ) : (
-                      <div style={{display:'flex',gap:8,width:'100%'}}>
+                      <div style={{
+                        display:'grid',
+                        gridTemplateColumns:`repeat(${Math.max(1, Math.ceil(suiviBranchesClasse.length / 2))}, minmax(0, 1fr))`,
+                        gap:8,
+                        width:'100%'
+                      }}>
                         {suiviBranchesClasse.map(b => {
                           const ok = b.affectees === b.requises;
                           return (
                             <div key={b.id} style={{
                               ...styles.suiviBrancheChip,
-                              flex:1,
                               width:'auto',
                               minWidth:0,
                               maxWidth:'none',
