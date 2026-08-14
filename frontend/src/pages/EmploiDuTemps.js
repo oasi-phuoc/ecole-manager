@@ -4880,4 +4880,17 @@ const styles = {
   badge:{display:'inline-block',padding:'3px 10px',borderRadius:12,fontSize:12,fontWeight:600,margin:'2px 3px 2px 0'},
   aucun:{color:'#ccc',fontSize:12},
   cellSel:{width:'100%',padding:'5px 6px',border:'1px solid #e0e0e0',borderRadius:6,fontSize:12,textAlign:'center',textAlignLast:'center'},
+  pastillePeriodeOk:{
+    display:'inline-flex',
+    alignItems:'center',
+    justifyContent:'center',
+    width:22,
+    height:22,
+    borderRadius:'50%',
+    background:'#16a34a',
+    color:'#ffffff',
+    fontSize:12,
+    fontWeight:800,
+    lineHeight:1,
+  },
 };
