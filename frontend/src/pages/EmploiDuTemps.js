@@ -1005,6 +1005,37 @@ export default function EmploiDuTemps() {
     setTitulariatsDraftByProf(init);
     setHasAffectationsUnsaved(false);
   };
+
+  const resetAffectationsProfsTableau = () => {
+    if (!isAdmin()) return;
+    if (!poolAffId) {
+      showToast('Sélectionnez d\'abord un pool.', 'info');
+      return;
+    }
+    const ok = window.confirm(
+      'Vider toutes les affectations professeurs de ce pool ?\n\nLe tableau sera remis à zéro. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+
+    const idsAffectationsSupprimees = new Set();
+    setAffectationsDraft((prev) => (prev || []).filter((a) => {
+      const dansPool = profsPoolIds.has(String(a.prof_id));
+      if (dansPool && a?.id != null) idsAffectationsSupprimees.add(String(a.id));
+      return !dansPool;
+    }));
+    setAffectationModes((prev) => {
+      const next = { ...prev };
+      idsAffectationsSupprimees.forEach((id) => { delete next[id]; });
+      return next;
+    });
+    setTitulariatsDraftByProf((prev) => {
+      const next = { ...prev };
+      profsPoolIds.forEach((pid) => { delete next[String(pid)]; });
+      return next;
+    });
+    setHasAffectationsUnsaved(true);
+    showToast('Tableau des affectations vidé. Pensez à sauvegarder.');
+  };
   const abandonnerClassesNonSauvegardees = () => {
     setClasseHoraires(classeHorairesSaved || []);
     setHasClassesUnsaved(false);
@@ -1794,6 +1825,21 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {sousOngletAff === 'profs' && isAdmin() && (
+              <button
+                type="button"
+                title="Réinitialiser le tableau"
+                aria-label="Réinitialiser le tableau"
+                onClick={resetAffectationsProfsTableau}
+                style={styles.btnResetAff}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="1 4 1 10 7 10" />
+                  <polyline points="23 20 23 14 17 14" />
+                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                </svg>
+              </button>
+            )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
@@ -3757,6 +3803,7 @@ const styles = {
   affTabBtn:{padding:'8px 14px',borderRadius:'10px 10px 0 0',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#ede9fe',color:'#5b21b6',lineHeight:1,position:'relative',zIndex:1,outline:'none',boxShadow:'none'},
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
   btnSauvegarderAff:{padding:'8px 16px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
+  btnResetAff:{width:36,height:36,padding:0,borderRadius:8,border:'1px solid #e2e8f0',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#ffffff',color:'#64748b',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   msgVide:{background:'white',borderRadius:12,padding:'20px 24px',marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',color:'#64748b',fontSize:12,fontStyle:'italic',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
