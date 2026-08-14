@@ -37,6 +37,10 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
 const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
+const trierClassesParNom = (liste) =>
+  [...(liste || [])].sort((a, b) =>
+    String(a.nom || '').localeCompare(String(b.nom || ''), 'fr', { numeric: true, sensitivity: 'base' })
+  );
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 const formaterNomComplet = (s) => String(s || '').replace(/(^|\s)(\S*?)-\S+$/, '$1$2').trim();
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
@@ -242,10 +246,13 @@ export default function EmploiDuTemps() {
         axios.get(API + '/planning/branche-couleurs', { headers }),
       ]);
       setProfs(p.data.filter(x => x.actif !== false));
-      setClasses(cl.data);
+      setClasses(trierClassesParNom(cl.data));
       setMatieres(m.data);
       setCreneaux(cr.data);
-      setPools(po.data);
+      setPools((po.data || []).map((pool) => ({
+        ...pool,
+        classes: trierClassesParNom(pool.classes),
+      })));
       setAffectations(af.data);
       setAffectationsDraft(af.data || []);
       setClasseHoraires(ch.data);
@@ -514,9 +521,9 @@ export default function EmploiDuTemps() {
 
   const poolSelectionne = pools.find(p => p.id == poolAffId);
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
-  const classesPool = poolSelectionne ? poolSelectionne.classes : classes;
+  const classesPool = trierClassesParNom(poolSelectionne ? poolSelectionne.classes : classes);
   const classesParId = new Map(classes.map(c => [String(c.id), c]));
-  const classesPoolTriees = [...classesPool].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+  const classesPoolTriees = classesPool;
   const niveauxPoolSelectionne = parseNiveaux(poolSelectionne?.niveau);
   const poolEstCSC = niveauxPoolSelectionne.some(n => String(n).toUpperCase() === 'CSC');
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
@@ -595,8 +602,8 @@ export default function EmploiDuTemps() {
   }, [sousOngletAff, poolAffId, classes, pools, profs]);
 
   const poolClasseP = pools.find(p => p.id == classePlanningPoolId);
-  const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
-  const classesToutesTriees = [...classes].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+  const classesPoolP = trierClassesParNom(poolClasseP ? poolClasseP.classes : classes);
+  const classesToutesTriees = trierClassesParNom(classes);
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
   const niveauxPoolPlanning = parseNiveaux(poolClasseP?.niveau).map(n => String(n).toUpperCase());
   const classePlanningObj = classes.find(c => String(c.id) === String(classePlanningId))
@@ -2894,12 +2901,12 @@ export default function EmploiDuTemps() {
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
                       <label style={styles.lbl}>Classes</label>
                       <div style={{display:'grid',gridTemplateColumns:'repeat(6, minmax(0, 1fr))',gap:8,marginTop:6}}>
-                        {classes.filter(c => {
+                        {trierClassesParNom(classes.filter(c => {
                           const niveaux = parseNiveaux(poolForm.niveau);
                           if (!niveaux.length) return true;
                           if (!c.niveau) return true;
                           return niveaux.some(n => String(c.niveau).toUpperCase() === String(n).toUpperCase());
-                        }).map(c => (
+                        })).map(c => (
                           <label
                             key={c.id}
                             style={{
@@ -3087,7 +3094,7 @@ export default function EmploiDuTemps() {
                 <div style={{marginTop:14}}>
                   <div style={styles.poolLabel}>Classes</div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                    {pool.classes.map(c => (
+                    {trierClassesParNom(pool.classes).map(c => (
                       <span
                         key={c.id}
                         style={{
