@@ -36,7 +36,29 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
   Matin: { debut: '09:45', fin: '10:05' },
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
-const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
+const PERIODES_PAR_NIVEAU = { CSC: 24, CAL: 24, CFR: 20, EPL: 20 };
+/** Niveaux avec 20 périodes normales + 4 de soutien (comme CSC). */
+const NIVEAUX_AVEC_SOUTIEN = new Set(['CSC', 'CAL']);
+const niveauAvecSoutien = (niveau) => NIVEAUX_AVEC_SOUTIEN.has(String(niveau || '').toUpperCase());
+const getRequisPeriodesNiveau = (niveau) => {
+  const niv = String(niveau || '').toUpperCase();
+  if (niveauAvecSoutien(niv)) return { normales: 20, soutien: 4 };
+  return { normales: PERIODES_PAR_NIVEAU[niv] || 0, soutien: 0 };
+};
+/** Déduit le niveau (CSC/CAL/CFR/EPL) depuis le nom de classe si besoin. */
+const infererNiveauDepuisNom = (nom) => {
+  const n = String(nom || '').toUpperCase();
+  if (/\bCAL\b/.test(n) || n.startsWith('CAL')) return 'CAL';
+  if (/\bCSC\b/.test(n) || n.startsWith('CSC')) return 'CSC';
+  if (/\bCFR\b/.test(n) || n.startsWith('CFR')) return 'CFR';
+  if (/\bEPL\b/.test(n) || n.startsWith('EPL')) return 'EPL';
+  return '';
+};
+const resoudreNiveauClasse = (cl, fallbackNiveau = '') => {
+  const direct = String(cl?.niveau || fallbackNiveau || '').toUpperCase();
+  if (direct) return direct;
+  return infererNiveauDepuisNom(cl?.nom);
+};
 const trierClassesParNom = (liste) =>
   [...(liste || [])].sort((a, b) =>
     String(a.nom || '').localeCompare(String(b.nom || ''), 'fr', { numeric: true, sensitivity: 'base' })
@@ -560,7 +582,8 @@ export default function EmploiDuTemps() {
   const classesParId = new Map(classes.map(c => [String(c.id), c]));
   const classesPoolTriees = classesPool;
   const niveauxPoolSelectionne = parseNiveaux(poolSelectionne?.niveau);
-  const poolEstCSC = niveauxPoolSelectionne.some(n => String(n).toUpperCase() === 'CSC');
+  const poolAvecSoutien = niveauxPoolSelectionne.some(n => niveauAvecSoutien(n))
+    || classesPool.some(cl => niveauAvecSoutien(resoudreNiveauClasse(cl)));
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
   const affectationsPourProfs = hasAffectationsUnsaved ? affectationsDraft : affectations;
@@ -570,23 +593,22 @@ export default function EmploiDuTemps() {
   );
   const suiviClasses = classesPool.map(cl => {
     const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
-    const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
+    const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
     const affectationsClasse = affectationsPool.filter(a => String(a.classe_id) === String(cl.id));
     const periodesNormalesAffectees = affectationsClasse.filter(a => !estAffectationSoutien(a) && !estAffectationSpecialSansClasse(a)).length;
     const periodesSoutienAffectees = affectationsClasse.filter(a => estAffectationSoutien(a)).length;
-    const periodesNormalesRequises = niveauClasse === 'CSC' ? 20 : (PERIODES_PAR_NIVEAU[niveauClasse] || 0);
-    const periodesSoutienRequises = niveauClasse === 'CSC' ? 4 : 0;
+    const requis = getRequisPeriodesNiveau(niveauClasse);
     return {
       ...cl,
       niveauClasse,
       periodesNormalesAffectees,
       periodesSoutienAffectees,
-      periodesNormalesRequises,
-      periodesSoutienRequises
+      periodesNormalesRequises: requis.normales,
+      periodesSoutienRequises: requis.soutien
     };
   });
   const suiviClassesIncompletes = suiviClasses.filter(c =>
-    c.niveauClasse === 'CSC'
+    niveauAvecSoutien(c.niveauClasse)
       ? (c.periodesNormalesAffectees < c.periodesNormalesRequises || c.periodesSoutienAffectees < c.periodesSoutienRequises)
       : (c.periodesNormalesAffectees < c.periodesNormalesRequises)
   );
@@ -1190,9 +1212,9 @@ export default function EmploiDuTemps() {
     const isProfDispo = (profId, creneauId) => disposAffectations[`${profId}-${creneauId}`] !== false;
     const getRequisClasse = (cl) => {
       const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
-      const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
-      if (niveauClasse === 'CSC') return { normales: 20, soutien: 4, niveauClasse };
-      return { normales: PERIODES_PAR_NIVEAU[niveauClasse] || 0, soutien: 0, niveauClasse };
+      const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
+      const requis = getRequisPeriodesNiveau(niveauClasse);
+      return { ...requis, niveauClasse };
     };
 
     const totalRequisPool = classesPool.reduce((sum, cl) => {
@@ -1475,7 +1497,7 @@ export default function EmploiDuTemps() {
 
     assignerBesoinParTours([4, 2, 1]);
 
-    // Phase 4 — soutien CSC (paires puis unités)
+    // Phase 4 — soutien CSC/CAL (paires puis unités)
     classesPool.forEach((cl) => {
       const cid = String(cl.id);
       let besoinSoutien = (requisParClasse[cid]?.soutien || 0) - (loadSoutien[cid] || 0);
@@ -1990,7 +2012,7 @@ export default function EmploiDuTemps() {
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
   const totalPeriodesCoursForm = classesSelectionneesForm.reduce((sum, c) => {
     const fallbackNiv = niveauxPoolForm.length === 1 ? niveauxPoolForm[0] : '';
-    const niv = String(c.niveau || fallbackNiv || '').toUpperCase();
+    const niv = resoudreNiveauClasse(c, fallbackNiv);
     const nb = PERIODES_PAR_NIVEAU[niv] || 0;
     return sum + nb;
   }, 0);
@@ -3520,7 +3542,8 @@ export default function EmploiDuTemps() {
                 <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Suivi</h3>
                 <div style={{display:'flex',gap:8,width:'100%'}}>
                   {suiviClasses.map(cl => {
-                    const classeOk = cl.niveauClasse === 'CSC'
+                    const avecSoutien = niveauAvecSoutien(cl.niveauClasse);
+                    const classeOk = avecSoutien
                       ? (cl.periodesNormalesAffectees === cl.periodesNormalesRequises && cl.periodesSoutienAffectees === cl.periodesSoutienRequises)
                       : (cl.periodesNormalesAffectees === cl.periodesNormalesRequises);
                     return (
@@ -3535,13 +3558,13 @@ export default function EmploiDuTemps() {
                         color: classeOk ? '#3730a3' : '#0f172a'
                       }}>
                         <div style={styles.suiviClasseNom}>{cl.nom}</div>
-                        {cl.niveauClasse === 'CSC' && (
+                        {avecSoutien && (
                           <>
                             <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
                             <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
                           </>
                         )}
-                        {cl.niveauClasse !== 'CSC' && (
+                        {!avecSoutien && (
                           <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
                         )}
                       </div>
@@ -3827,7 +3850,7 @@ export default function EmploiDuTemps() {
                                       <optgroup label="Classes">
                                         {classesCours.map(cl => <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>)}
                                       </optgroup>
-                                      {poolEstCSC && (
+                                      {poolAvecSoutien && (
                                         <optgroup label="Soutien">
                                           {classesCours.map(cl => (
                                             <option key={`soutien-${cl.id}`} value={`soutien:${cl.id}`}>
