@@ -2149,16 +2149,9 @@ export default function EmploiDuTemps() {
       if (getCellData) return getCellData(cr, jour, periode) || { text: '' };
       return { text: getCellText ? getCellText(cr, jour, periode) : '' };
     };
-    const countParJour = (jour) => (creneauxListe || []).reduce((acc, cr) => {
-      if (cr.jour !== jour) return acc;
-      const data = fetchCellData(cr, jour, cr.periode);
-      return data && data.text ? acc + 1 : acc;
-    }, 0);
-
-    const headerDays = JOURS.map((j) => {
-      const eff = countParJour(j);
-      return `<th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">${escapeHtml(j)} <span style="display:inline-block;min-width:16px;padding:0 5px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #c7d2fe;margin-left:4px;">${eff}</span></th>`;
-    }).join('');
+    const headerDays = JOURS.map((j) =>
+      `<th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">${escapeHtml(j)}</th>`
+    ).join('');
 
     const rows = [];
     ['Matin', 'Après-midi'].forEach((periode, periodeIdx) => {
