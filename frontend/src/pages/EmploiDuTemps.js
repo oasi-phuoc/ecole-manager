@@ -537,8 +537,8 @@ export default function EmploiDuTemps() {
     const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
     const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
     const affectationsClasse = affectationsPool.filter(a => String(a.classe_id) === String(cl.id));
-    const periodesNormalesAffectees = affectationsClasse.filter(a => affectationModes[a.id] !== 'soutien').length;
-    const periodesSoutienAffectees = affectationsClasse.filter(a => affectationModes[a.id] === 'soutien').length;
+    const periodesNormalesAffectees = affectationsClasse.filter(a => !estAffectationSoutien(a) && !estAffectationSpecialSansClasse(a)).length;
+    const periodesSoutienAffectees = affectationsClasse.filter(a => estAffectationSoutien(a)).length;
     const periodesNormalesRequises = niveauClasse === 'CSC' ? 20 : (PERIODES_PAR_NIVEAU[niveauClasse] || 0);
     const periodesSoutienRequises = niveauClasse === 'CSC' ? 4 : 0;
     return {
@@ -1021,7 +1021,17 @@ export default function EmploiDuTemps() {
     if (t === 'titulariat') return 'Titulariat';
     if (t === 'atelier') return 'Atelier';
     if (t === 'autre') return 'Autre';
+    if (t === 'soutien') return 'Soutien';
     return t;
+  };
+  const estAffectationSoutien = (aff) => {
+    if (!aff) return false;
+    if (String(aff.type_special || '').toLowerCase() === 'soutien') return true;
+    return affectationModes[aff.id] === 'soutien';
+  };
+  const estAffectationSpecialSansClasse = (aff) => {
+    const t = String(aff?.type_special || '').toLowerCase();
+    return t === 'titulariat' || t === 'atelier' || t === 'autre';
   };
   const sauverCouleurBranche = async (matiereId, couleur) => {
     if (!isAdmin()) return;
@@ -1219,35 +1229,39 @@ export default function EmploiDuTemps() {
     let nextDraft = (affectationsDraft || []).filter((a) => !profsPoolIds.has(String(a.prof_id)));
     const nextModes = {};
     const occupiedProf = new Set();
-    const occupiedClasse = new Set();
+    const occupiedClasse = new Set(); // clé: classeId|creneauId|classe|soutien
     const loadProf = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
     const loadClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
     const loadSoutien = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
     const quotaProf = Object.fromEntries(profsPool.map((p) => [String(p.id), getQuotaProf(p)]));
     const requisParClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), getRequisClasse(c)]));
+    const cleOccupationClasse = (classeId, creneauId, mode = 'classe') =>
+      `${String(classeId)}|${String(creneauId)}|${mode === 'soutien' ? 'soutien' : 'classe'}`;
 
     const ajouterAffectation = ({ profId, creneauId, classeId = null, typeSpecial = null, mode = 'classe' }) => {
       const pid = String(profId);
       const cid = classeId != null ? String(classeId) : null;
       const crid = String(creneauId);
+      const modeOcc = mode === 'soutien' || typeSpecial === 'soutien' ? 'soutien' : 'classe';
       if (loadProf[pid] >= (quotaProf[pid] || 0)) return false;
       if (occupiedProf.has(`${pid}|${crid}`)) return false;
       if (!isProfDispo(pid, crid)) return false;
-      if (cid && occupiedClasse.has(`${cid}|${crid}`)) return false;
+      if (cid && occupiedClasse.has(cleOccupationClasse(cid, crid, modeOcc))) return false;
       const id = draftId();
+      const typeSpecialFinal = modeOcc === 'soutien' ? 'soutien' : (typeSpecial || null);
       nextDraft.push({
         id,
         prof_id: Number.isFinite(Number(profId)) ? Number(profId) : profId,
         classe_id: cid ? (Number.isFinite(Number(cid)) ? Number(cid) : cid) : null,
         matiere_id: null,
         creneau_id: Number.isFinite(Number(creneauId)) ? Number(creneauId) : creneauId,
-        type_special: typeSpecial || null,
+        type_special: typeSpecialFinal,
       });
-      nextModes[id] = typeSpecial ? 'special' : mode;
+      nextModes[id] = typeSpecialFinal === 'soutien' ? 'soutien' : (typeSpecialFinal ? 'special' : mode);
       occupiedProf.add(`${pid}|${crid}`);
-      if (cid) occupiedClasse.add(`${cid}|${crid}`);
+      if (cid) occupiedClasse.add(cleOccupationClasse(cid, crid, modeOcc));
       loadProf[pid] += 1;
-      if (cid && mode === 'soutien') loadSoutien[cid] += 1;
+      if (cid && modeOcc === 'soutien') loadSoutien[cid] += 1;
       else if (cid) {
         loadClasse[cid] += 1;
         const cleTit = `${pid}|${cid}`;
@@ -1297,7 +1311,7 @@ export default function EmploiDuTemps() {
       return bloc.crs.every((cr) =>
         isProfDispo(pid, cr.id)
         && !occupiedProf.has(`${pid}|${cr.id}`)
-        && !occupiedClasse.has(`${cid}|${cr.id}`)
+        && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'classe'))
       );
     };
 
@@ -1453,7 +1467,7 @@ export default function EmploiDuTemps() {
             return b.crs.every((cr) =>
               isProfDispo(pid, cr.id)
               && !occupiedProf.has(`${pid}|${cr.id}`)
-              && !occupiedClasse.has(`${cid}|${cr.id}`)
+              && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'soutien'))
             ) && (loadProf[pid] || 0) + 2 <= (quotaProf[pid] || 0);
           });
           if (!bloc) continue;
@@ -1475,7 +1489,7 @@ export default function EmploiDuTemps() {
 
       // unités restantes
       const slots = creneauxTries.filter((cr) =>
-        classeAHoraire(cid, cr.jour, cr.periode) && !occupiedClasse.has(`${cid}|${cr.id}`)
+        classeAHoraire(cid, cr.jour, cr.periode) && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'soutien'))
       );
       for (const cr of slots) {
         if (besoinSoutien <= 0) break;
@@ -2142,7 +2156,7 @@ export default function EmploiDuTemps() {
         if (!aCours) return { text: '', bg: '#f8fafc' };
         const aff = (affectationsListe || []).find(a => String(a.creneau_id) === String(cr.id));
         if (!aff) return { text: 'Aucun professeur affecté', color: '#dc2626' };
-        if (aff.type_special) {
+        if (estAffectationSpecialSansClasse(aff)) {
           return {
             text: getLibelleTypeSpecial(aff.type_special),
             bg: '#000000',
@@ -2150,8 +2164,9 @@ export default function EmploiDuTemps() {
           };
         }
         const bg = toPrintColor(getCouleurProf(aff.prof_id)) || '#e8f5e9';
+        const suffixeSoutien = estAffectationSoutien(aff) ? '\nSoutien' : '';
         return {
-          text: `${formaterNomComplet(aff.prof_nom || '')}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+          text: `${formaterNomComplet(aff.prof_nom || '')}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}${suffixeSoutien}`,
           bg,
           color: getCouleurTexteSurFond(bg),
         };
@@ -2183,10 +2198,14 @@ export default function EmploiDuTemps() {
             const indispo = dispo && !dispo.disponible;
             let bg = '#fff', content = '';
             if (aff) {
-              const estSpecial = !!aff.type_special;
+              const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
+              const estSpecial = !!aff.type_special && !estSoutien;
               bg = estSpecial ? '#000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
               const fg = estSpecial ? '#fff' : getCouleurTexteSurFond(bg);
-              const ligne1 = estSpecial ? getLibelleTypeSpecial(aff.type_special) : escapeHtml(aff.classe_nom || '');
+              const nomClasse = escapeHtml(aff.classe_nom || '');
+              const ligne1 = estSpecial
+                ? getLibelleTypeSpecial(aff.type_special)
+                : (estSoutien ? `${nomClasse} - Soutien` : nomClasse);
               const ligne2 = estSpecial ? '' : (aff.matiere_nom ? `<div style="font-size:8pt;margin-top:2px;">${escapeHtml(aff.matiere_nom)}</div>` : '');
               content = `<div style="font-weight:700;color:${fg};font-size:9pt;">${ligne1}</div>${ligne2}`;
             } else if (indispo) {
@@ -2248,7 +2267,7 @@ export default function EmploiDuTemps() {
           titreBanniere: nomProf || 'Professeur',
           getCellData: (cr) => {
             const aff = (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
-            if (aff?.type_special) {
+            if (estAffectationSpecialSansClasse(aff)) {
               return {
                 text: getLibelleTypeSpecial(aff.type_special),
                 bg: '#000000',
@@ -2259,8 +2278,11 @@ export default function EmploiDuTemps() {
               const bg = aff.matiere_id
                 ? getCouleurBranche(aff.matiere_id)
                 : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+              const nomClasse = estAffectationSoutien(aff)
+                ? `${aff.classe_nom || ''} - Soutien`
+                : (aff.classe_nom || '');
               return {
-                text: `${aff.classe_nom || ''}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
                 bg,
                 color: getCouleurTexteSurFond(bg),
               };
@@ -2293,9 +2315,13 @@ export default function EmploiDuTemps() {
             if (!cl) return { text: '' };
             const aff = (affectations || []).find(a =>
               String(a.classe_id) === String(cl.id) &&
+              String(a.creneau_id) === String(cr.id) &&
+              String(a.type_special || '').toLowerCase() !== 'soutien'
+            ) || (affectations || []).find(a =>
+              String(a.classe_id) === String(cl.id) &&
               String(a.creneau_id) === String(cr.id)
             );
-            if (aff?.type_special) {
+            if (estAffectationSpecialSansClasse(aff)) {
               return {
                 text: `${cl.nom}\n${getLibelleTypeSpecial(aff.type_special)}`,
                 bg: '#000000',
@@ -2303,8 +2329,9 @@ export default function EmploiDuTemps() {
               };
             }
             const bg = getCouleurClasse(cl.id);
+            const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
             return {
-              text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
+              text: `${nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
               bg,
               color: getCouleurTexteSurFond(bg)
             };
@@ -2365,7 +2392,7 @@ export default function EmploiDuTemps() {
             showPauseRows: true,
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
-              if (aff?.type_special) {
+              if (estAffectationSpecialSansClasse(aff)) {
                 return {
                   text: getLibelleTypeSpecial(aff.type_special),
                   bg: '#000000',
@@ -2376,8 +2403,11 @@ export default function EmploiDuTemps() {
                 const bg = aff.matiere_id
                   ? getCouleurBranche(aff.matiere_id)
                   : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+                const nomClasse = estAffectationSoutien(aff)
+                  ? `${aff.classe_nom || ''} - Soutien`
+                  : (aff.classe_nom || '');
                 return {
-                  text: `${aff.classe_nom || ''}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                  text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
                   bg,
                   color: getCouleurTexteSurFond(bg)
                 };
@@ -2415,9 +2445,13 @@ export default function EmploiDuTemps() {
               if (!cl) return { text: '' };
               const aff = (affectations || []).find(a =>
                 String(a.classe_id) === String(cl.id) &&
+                String(a.creneau_id) === String(cr.id) &&
+                String(a.type_special || '').toLowerCase() !== 'soutien'
+              ) || (affectations || []).find(a =>
+                String(a.classe_id) === String(cl.id) &&
                 String(a.creneau_id) === String(cr.id)
               );
-              if (aff?.type_special) {
+              if (estAffectationSpecialSansClasse(aff)) {
                 return {
                   text: `${cl.nom}\n${getLibelleTypeSpecial(aff.type_special)}`,
                   bg: '#000000',
@@ -2425,8 +2459,9 @@ export default function EmploiDuTemps() {
                 };
               }
               const bg = getCouleurClasse(cl.id);
+              const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
               return {
-                text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
+                text: `${nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
                 bg,
                 color: getCouleurTexteSurFond(bg)
               };
@@ -3620,12 +3655,12 @@ export default function EmploiDuTemps() {
                                 const classeAffecteeVisible = aff && aff.classe_id
                                   ? classesCours.some(cl => String(cl.id) === String(aff.classe_id))
                                   : false;
-                                const affAffichable = aff && (aff.type_special || classeAffecteeVisible);
-                                const modeAffectation = affAffichable ? (affectationModes[aff.id] || 'classe') : 'classe';
+                                const affAffichable = aff && (estAffectationSpecialSansClasse(aff) || classeAffecteeVisible);
+                                const estSoutienAff = affAffichable && estAffectationSoutien(aff);
                                 const valeurSelect = affAffichable
-                                  ? (aff.type_special
+                                  ? (estAffectationSpecialSansClasse(aff)
                                       ? `special:${aff.type_special}`
-                                      : (modeAffectation === 'soutien' ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
+                                      : (estSoutienAff ? `soutien:${aff.classe_id}` : String(aff.classe_id)))
                                   : '';
                                 const classeIdCouleur = getClasseIdDepuisValeurAffectation(valeurSelect);
                                 const estSpecialSelectionne = String(valeurSelect || '').startsWith('special:');
@@ -3655,19 +3690,26 @@ export default function EmploiDuTemps() {
                                         } else {
                                           const estSpecial = valeur.startsWith('special:');
                                           const estSoutien = valeur.startsWith('soutien:');
-                                          const typeSpecial = estSpecial ? valeur.split(':')[1] : null;
-                                          const classe_id = estSoutien ? valeur.split(':')[1] : (estSpecial ? null : valeur);
+                                          const typeSpecial = estSoutien ? 'soutien' : (estSpecial ? valeur.split(':')[1] : null);
+                                          const classe_id = estSpecial ? null : (estSoutien ? valeur.split(':')[1] : valeur);
                                           const ancienne = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
-                                          // Vérifier si cette classe est déjà prise sur ce horaire par un autre prof
+                                          // Conflit seulement si même mode (normal/normal ou soutien/soutien)
                                           const conflit = !estSpecial
-                                            ? affectationsDraft.find(x => x.classe_id==classe_id && x.creneau_id==cr.id && x.prof_id!=prof.id)
+                                            ? affectationsDraft.find(x => {
+                                                if (String(x.classe_id) !== String(classe_id)) return false;
+                                                if (String(x.creneau_id) !== String(cr.id)) return false;
+                                                if (String(x.prof_id) === String(prof.id)) return false;
+                                                const xSoutien = estAffectationSoutien(x);
+                                                return estSoutien ? xSoutien : !xSoutien;
+                                              })
                                             : null;
                                           if (conflit) {
                                             const profConflit = profsPool.find(p => p.id === conflit.prof_id);
                                             const nomProfConflit = profConflit ? `${profConflit.prenom} ${nomSansSuffixe(profConflit.nom)}` : 'un autre professeur';
                                             const classeNom = (classesPool.find(c => String(c.id) === String(classe_id)) || {}).nom || classe_id;
+                                            const libelleConflit = estSoutien ? `${classeNom} - Soutien` : classeNom;
                                             const confirmer = window.confirm(
-                                              `La classe ${classeNom} est déjà affectée à ${nomProfConflit} sur cet horaire.\n\nVoulez-vous échanger ces périodes ?`
+                                              `${libelleConflit} est déjà affecté à ${nomProfConflit} sur cet horaire.\n\nVoulez-vous échanger ces périodes ?`
                                             );
                                             if (!confirmer) return;
 
@@ -3676,7 +3718,10 @@ export default function EmploiDuTemps() {
                                               const idxConflit = next.findIndex(x => x.id === conflit.id);
                                               const idxAncienne = ancienne ? next.findIndex(x => x.id === ancienne.id) : -1;
                                               if (idxConflit >= 0) {
-                                                if (ancienne && String(ancienne.classe_id || '') !== String(classe_id || '')) {
+                                                if (ancienne && (
+                                                  String(ancienne.classe_id || '') !== String(classe_id || '')
+                                                  || String(ancienne.type_special || '') !== String(typeSpecial || '')
+                                                )) {
                                                   next[idxConflit].classe_id = ancienne.classe_id || null;
                                                   next[idxConflit].type_special = ancienne.type_special || null;
                                                   next[idxConflit].matiere_id = ancienne.matiere_id || null;
@@ -3685,16 +3730,14 @@ export default function EmploiDuTemps() {
                                                 }
                                               }
                                               if (idxAncienne >= 0) {
-                                                next[idxAncienne].classe_id = estSpecial ? null : classe_id;
+                                                next[idxAncienne].classe_id = classe_id;
                                                 next[idxAncienne].type_special = typeSpecial;
-                                                if (estSpecial || estSoutien || String(ancienne.classe_id || '') !== String(classe_id || '')) {
-                                                  next[idxAncienne].matiere_id = null;
-                                                }
+                                                next[idxAncienne].matiere_id = null;
                                               } else {
                                                 next.push({
                                                   id: draftId(),
                                                   prof_id: prof.id,
-                                                  classe_id: estSpecial ? null : classe_id,
+                                                  classe_id,
                                                   matiere_id: null,
                                                   creneau_id: cr.id,
                                                   type_special: typeSpecial,
@@ -3704,7 +3747,11 @@ export default function EmploiDuTemps() {
                                             });
                                             setAffectationModes(prev => {
                                               const next = { ...prev };
-                                              if (ancienne) next[ancienne.id] = estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe');
+                                              if (ancienne) next[ancienne.id] = estSoutien ? 'soutien' : (estSpecial ? 'special' : 'classe');
+                                              if (conflit?.id) {
+                                                next[conflit.id] = estAffectationSoutien(ancienne) ? 'soutien'
+                                                  : (estAffectationSpecialSansClasse(ancienne) ? 'special' : 'classe');
+                                              }
                                               return next;
                                             });
                                             setHasAffectationsUnsaved(true);
@@ -3715,16 +3762,15 @@ export default function EmploiDuTemps() {
                                             const next = prev.map(a => ({ ...a }));
                                             const idxAncienne = next.findIndex(x => ancienne && x.id === ancienne.id);
                                             if (idxAncienne >= 0) {
-                                              next[idxAncienne].classe_id = estSpecial ? null : classe_id;
+                                              next[idxAncienne].classe_id = classe_id;
                                               next[idxAncienne].type_special = typeSpecial;
-                                              if (estSpecial || estSoutien || String(ancienne.classe_id || '') !== String(classe_id || '')) {
-                                                next[idxAncienne].matiere_id = null;
-                                              }
+                                              next[idxAncienne].matiere_id = null;
                                             } else {
+                                              const newId = draftId();
                                               next.push({
-                                                id: draftId(),
+                                                id: newId,
                                                 prof_id: prof.id,
-                                                classe_id: estSpecial ? null : classe_id,
+                                                classe_id,
                                                 matiere_id: null,
                                                 creneau_id: cr.id,
                                                 type_special: typeSpecial,
@@ -3734,8 +3780,8 @@ export default function EmploiDuTemps() {
                                           });
                                           setAffectationModes(prev => {
                                             const next = { ...prev };
-                                            const key = ancienne?.id || '';
-                                            if (key) next[key] = estSpecial ? 'special' : (estSoutien ? 'soutien' : 'classe');
+                                            const key = ancienne?.id;
+                                            if (key) next[key] = estSoutien ? 'soutien' : (estSpecial ? 'special' : 'classe');
                                             return next;
                                           });
                                           setHasAffectationsUnsaved(true);
@@ -4532,18 +4578,22 @@ export default function EmploiDuTemps() {
                                 const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
                                 const dispo = planningGeneral.dispos.find(d=>d.prof_id===p.id&&d.creneau_id===cr.id);
                                 const indispo = dispo&&!dispo.disponible;
-                                const estSpecial = !!aff?.type_special;
+                                const estSoutien = String(aff?.type_special || '').toLowerCase() === 'soutien';
+                                const estSpecial = !!aff?.type_special && !estSoutien;
                                 const couleurFond = aff
                                   ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
                                   : (indispo ? '#eeeeee' : '#fff');
                                 const couleurTexte = aff
                                   ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
                                   : '#111827';
+                                const libelleAff = estSpecial
+                                  ? getLibelleTypeSpecial(aff.type_special)
+                                  : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : aff.classe_nom);
                                 return (
                                   <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                     background:couleurFond,color:couleurTexte}}>
                                     {aff ? <>
-                                      <b style={{color:couleurTexte,fontSize:12}}>{estSpecial ? getLibelleTypeSpecial(aff.type_special) : aff.classe_nom}</b>
+                                      <b style={{color:couleurTexte,fontSize:12}}>{libelleAff}</b>
                                       {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null)}
                                     </> : ''}
                                   </td>

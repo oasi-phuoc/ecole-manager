@@ -244,15 +244,35 @@ const getAffectations = async (req, res) => {
 
 const saveAffectation = async (req, res) => {
   const { prof_id, classe_id, matiere_id, creneau_id, type_special } = req.body;
-  const specialValide = ['titulariat', 'atelier', 'autre'].includes(type_special) ? type_special : null;
-  const classeIdFinal = specialValide ? null : (classe_id || null);
+  const specialSansClasse = ['titulariat', 'atelier', 'autre'].includes(type_special);
+  const estSoutien = type_special === 'soutien';
+  const typeFinal = specialSansClasse || estSoutien ? type_special : null;
+  const classeIdFinal = specialSansClasse ? null : (classe_id || null);
   try {
+    // Remplace uniquement le même « mode » (normal ou soutien) pour cette classe+créneau
+    if (classeIdFinal != null) {
+      await pool.query(`
+        DELETE FROM affectations
+        WHERE creneau_id = $1
+          AND classe_id = $2
+          AND (
+            ($3::boolean AND type_special = 'soutien')
+            OR (NOT $3::boolean AND (type_special IS NULL OR type_special = ''))
+          )
+      `, [creneau_id, classeIdFinal, estSoutien]);
+    }
+    // Un professeur = une seule affectation par créneau
+    if (prof_id != null) {
+      await pool.query(
+        'DELETE FROM affectations WHERE prof_id = $1 AND creneau_id = $2',
+        [prof_id, creneau_id]
+      );
+    }
     const r = await pool.query(`
       INSERT INTO affectations (prof_id, classe_id, matiere_id, creneau_id, type_special)
       VALUES ($1,$2,$3,$4,$5)
-      ON CONFLICT (classe_id, creneau_id) DO UPDATE SET prof_id=$1, matiere_id=$3, type_special=$5
       RETURNING *
-    `, [prof_id||null, classeIdFinal, matiere_id||null, creneau_id, specialValide]);
+    `, [prof_id||null, classeIdFinal, matiere_id||null, creneau_id, typeFinal]);
     res.json(r.rows[0]);
   } catch(err) { res.status(500).json({ message: err.message }); }
 };
