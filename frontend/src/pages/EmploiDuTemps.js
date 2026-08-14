@@ -36,14 +36,14 @@ const PAUSES_PAR_PERIODE_DEFAUT = {
   Matin: { debut: '09:45', fin: '10:05' },
   'Après-midi': { debut: '15:00', fin: '15:20' },
 };
-const PERIODES_PAR_NIVEAU = { CSC: 24, CAL: 24, APL: 28, CFR: 20, EPL: 20 };
-/** Niveaux avec 20 périodes normales + 4 de soutien (comme CSC). */
-const NIVEAUX_AVEC_SOUTIEN = new Set(['CSC', 'CAL']);
-const niveauAvecSoutien = (niveau) => NIVEAUX_AVEC_SOUTIEN.has(String(niveau || '').toUpperCase());
-const getRequisPeriodesNiveau = (niveau) => {
-  const niv = String(niveau || '').toUpperCase();
-  if (niveauAvecSoutien(niv)) return { normales: 20, soutien: 4 };
-  return { normales: PERIODES_PAR_NIVEAU[niv] || 0, soutien: 0 };
+/** Valeurs de repli si un niveau n'est pas encore configuré en Structure. */
+const REQUIS_PERIODES_DEFAUT = {
+  CSC: { normales: 20, soutien: 4 },
+  CAL: { normales: 20, soutien: 4 },
+  APL: { normales: 28, soutien: 0 },
+  CFR: { normales: 20, soutien: 0 },
+  EPL: { normales: 20, soutien: 0 },
+  CPR: { normales: 20, soutien: 0 },
 };
 /** Déduit le niveau (CSC/CAL/APL/CFR/EPL) depuis le nom de classe si besoin. */
 const infererNiveauDepuisNom = (nom) => {
@@ -184,6 +184,26 @@ export default function EmploiDuTemps() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast({ message: '', type: 'success' }), 2200);
+  };
+
+  const getRequisPeriodesNiveau = (niveau) => {
+    const niv = String(niveau || '').toUpperCase();
+    if (!niv) return { normales: 0, soutien: 0 };
+    const row = (niveauxDB || []).find((n) => String(n.nom || '').toUpperCase() === niv);
+    if (row) {
+      const normales = Number(row.periodes_normales);
+      const soutien = Number(row.periodes_soutien);
+      return {
+        normales: Number.isFinite(normales) && normales >= 0 ? normales : 0,
+        soutien: Number.isFinite(soutien) && soutien >= 0 ? soutien : 0,
+      };
+    }
+    return REQUIS_PERIODES_DEFAUT[niv] || { normales: 0, soutien: 0 };
+  };
+  const niveauAvecSoutien = (niveau) => (getRequisPeriodesNiveau(niveau).soutien || 0) > 0;
+  const totalPeriodesNiveau = (niveau) => {
+    const r = getRequisPeriodesNiveau(niveau);
+    return (r.normales || 0) + (r.soutien || 0);
   };
 
   useEffect(() => { chargerTout(); chargerDonnees(); }, []);
@@ -2014,7 +2034,7 @@ export default function EmploiDuTemps() {
   const totalPeriodesCoursForm = classesSelectionneesForm.reduce((sum, c) => {
     const fallbackNiv = niveauxPoolForm.length === 1 ? niveauxPoolForm[0] : '';
     const niv = resoudreNiveauClasse(c, fallbackNiv);
-    const nb = PERIODES_PAR_NIVEAU[niv] || 0;
+    const nb = totalPeriodesNiveau(niv);
     return sum + nb;
   }, 0);
   const totalPeriodesTitulariatForm = classesSelectionneesForm.length;

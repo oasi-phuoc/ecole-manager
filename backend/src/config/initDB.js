@@ -385,16 +385,46 @@ const initDB = async () => {
 
     // Tables données de référence (niveaux, lieux de travail, salles)
     await pool.query(`CREATE TABLE IF NOT EXISTS niveaux (id SERIAL PRIMARY KEY, nom VARCHAR(50) NOT NULL UNIQUE, ordre INTEGER DEFAULT 0)`);
+    await pool.query(`ALTER TABLE niveaux ADD COLUMN IF NOT EXISTS periodes_normales INTEGER`);
+    await pool.query(`ALTER TABLE niveaux ADD COLUMN IF NOT EXISTS periodes_soutien INTEGER`);
     await pool.query(`CREATE TABLE IF NOT EXISTS lieux_travail (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE, ordre INTEGER DEFAULT 0)`);
     await pool.query(`ALTER TABLE lieux_travail ADD COLUMN IF NOT EXISTS ordre INTEGER DEFAULT 0`);
     await pool.query(`CREATE TABLE IF NOT EXISTS salles (id SERIAL PRIMARY KEY, nom VARCHAR(100) NOT NULL, lieu_travail_id INTEGER REFERENCES lieux_travail(id) ON DELETE CASCADE)`);
     // Seed niveaux si vide
     const nbNiv = await pool.query('SELECT COUNT(*)::int as nb FROM niveaux');
     if ((nbNiv.rows[0]?.nb || 0) === 0) {
-      for (const [nom, ordre] of [['CSC',1],['CFR',2],['EPL',3],['CPR',4]]) {
-        await pool.query('INSERT INTO niveaux (nom, ordre) VALUES ($1,$2) ON CONFLICT (nom) DO NOTHING', [nom, ordre]);
+      for (const [nom, ordre, periodesNormales, periodesSoutien] of [
+        ['CSC', 1, 20, 4],
+        ['CFR', 2, 20, 0],
+        ['EPL', 3, 20, 0],
+        ['CPR', 4, 20, 0],
+        ['CAL', 5, 20, 4],
+        ['APL', 6, 28, 0],
+      ]) {
+        await pool.query(
+          'INSERT INTO niveaux (nom, ordre, periodes_normales, periodes_soutien) VALUES ($1,$2,$3,$4) ON CONFLICT (nom) DO NOTHING',
+          [nom, ordre, periodesNormales, periodesSoutien]
+        );
       }
     }
+    // Backfill périodes uniquement si encore NULL (migration one-shot)
+    await pool.query(`
+      UPDATE niveaux SET periodes_normales = CASE UPPER(TRIM(nom))
+        WHEN 'APL' THEN 28
+        ELSE 20
+      END
+      WHERE periodes_normales IS NULL
+    `);
+    await pool.query(`
+      UPDATE niveaux SET periodes_soutien = CASE UPPER(TRIM(nom))
+        WHEN 'CSC' THEN 4
+        WHEN 'CAL' THEN 4
+        ELSE 0
+      END
+      WHERE periodes_soutien IS NULL
+    `);
+    await pool.query(`ALTER TABLE niveaux ALTER COLUMN periodes_normales SET DEFAULT 20`);
+    await pool.query(`ALTER TABLE niveaux ALTER COLUMN periodes_soutien SET DEFAULT 0`);
     // Seed lieux_travail si vide
     const nbLieux = await pool.query('SELECT COUNT(*)::int as nb FROM lieux_travail');
     if ((nbLieux.rows[0]?.nb || 0) === 0) {
