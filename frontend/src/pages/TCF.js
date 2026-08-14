@@ -6,6 +6,7 @@ import TimePicker from '../components/TimePicker';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { listerNomsResponsablesEcole } from '../utils/responsablesEcole';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -363,8 +364,7 @@ export default function TCF() {
       setClasses((rClasses.data || []).filter(c => c.actif !== false));
       setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
       setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
-      const respFields = ['responsable_langues_jeunes', 'responsable_niveau', 'responsable_niveau_csc', 'responsable_niveau_cfr', 'responsable_niveau_epl'];
-      const respNames = respFields.map(f => rParametres?.data?.[f]).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      const respNames = listerNomsResponsablesEcole(rParametres?.data || {});
       setResponsablesTCF(respNames.map((name, i) => ({ id: `resp_${i}`, nom: name, prenom: '' })));
       setNiveauxDB(rNiveaux.data || []);
 

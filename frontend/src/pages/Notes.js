@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { getResponsableNiveauEcole } from '../utils/responsablesEcole';
 import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -500,7 +501,7 @@ export default function Notes() {
       const dotH = (v) => v ? `<span style="width:11px;height:11px;border-radius:50%;display:inline-block;border:2px solid ${v==='vert'?'#22c55e':v==='orange'?'#f97316':'#ef4444'}"></span>` : `<span style="color:#aaa">—</span>`;
       const niv = String(classeObj?.niveau||'').toUpperCase();
       const cleNiv = niv.includes('CSC')?'CSC':niv.includes('CFR')?'CFR':niv.includes('EPL')?'EPL':'';
-      const respNiveauNom = cleNiv==='CSC'?(ecoleParams.responsable_niveau_csc||''):cleNiv==='CFR'?(ecoleParams.responsable_niveau_cfr||''):cleNiv==='EPL'?(ecoleParams.responsable_niveau_epl||''):'';
+      const respNiveauNom = getResponsableNiveauEcole(ecoleParams, cleNiv || niv).nom;
       const respCoursNom = ecoleParams.responsable_langues_jeunes||'';
       const titulaire = [classeObj?.prof_prenom, classeObj?.prof_nom].filter(Boolean).join(' ');
       const blockBorder = '1px solid #cbd5e1';
@@ -1269,9 +1270,10 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           const font = 'Century Gothic, CenturyGothic, AppleGothic, sans-serif';
           const articleSexe = (sexe) => String(sexe || '').toUpperCase() === 'F' ? 'de la' : 'du';
           const niveauCl = String(classeObj?.niveau || '').toUpperCase();
-          const cleNiv = niveauCl.includes('CSC') ? 'CSC' : niveauCl.includes('CFR') ? 'CFR' : niveauCl.includes('EPL') ? 'EPL' : '';
-          const respNiveauNom = cleNiv === 'CSC' ? (ecoleParams.responsable_niveau_csc || '') : cleNiv === 'CFR' ? (ecoleParams.responsable_niveau_cfr || '') : cleNiv === 'EPL' ? (ecoleParams.responsable_niveau_epl || '') : '';
-          const respNiveauSexe = cleNiv === 'CSC' ? ecoleParams.sexe_responsable_niveau_csc : cleNiv === 'CFR' ? ecoleParams.sexe_responsable_niveau_cfr : cleNiv === 'EPL' ? ecoleParams.sexe_responsable_niveau_epl : null;
+          const cleNiv = niveauCl.includes('CSC') ? 'CSC' : niveauCl.includes('CFR') ? 'CFR' : niveauCl.includes('EPL') ? 'EPL' : niveauCl;
+          const respNiveauInfo = getResponsableNiveauEcole(ecoleParams, cleNiv);
+          const respNiveauNom = respNiveauInfo.nom || '';
+          const respNiveauSexe = respNiveauInfo.sexe;
           const respCoursNom = ecoleParams.responsable_langues_jeunes || '';
           const respCoursSexe = ecoleParams.sexe_responsable_langues_jeunes;
           return (
@@ -1716,15 +1718,10 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
     const cleNiveau =
       niveauClasse.includes('CSC') ? 'CSC' :
       niveauClasse.includes('CFR') ? 'CFR' :
-      niveauClasse.includes('EPL') ? 'EPL' : '';
-    const responsableNiveauNom =
-      cleNiveau === 'CSC' ? (ecoleParams.responsable_niveau_csc || '') :
-      cleNiveau === 'CFR' ? (ecoleParams.responsable_niveau_cfr || '') :
-      cleNiveau === 'EPL' ? (ecoleParams.responsable_niveau_epl || '') : '';
-    const responsableNiveauSexe =
-      cleNiveau === 'CSC' ? ecoleParams.sexe_responsable_niveau_csc :
-      cleNiveau === 'CFR' ? ecoleParams.sexe_responsable_niveau_cfr :
-      cleNiveau === 'EPL' ? ecoleParams.sexe_responsable_niveau_epl : null;
+      niveauClasse.includes('EPL') ? 'EPL' : niveauClasse;
+    const responsableNiveauInfo = getResponsableNiveauEcole(ecoleParams, cleNiveau);
+    const responsableNiveauNom = responsableNiveauInfo.nom || '';
+    const responsableNiveauSexe = responsableNiveauInfo.sexe;
     const responsableCoursNom = ecoleParams.responsable_langues_jeunes || '';
     const responsableCoursSexe = ecoleParams.sexe_responsable_langues_jeunes;
     const bulletinsAImprimer = bulletinMode === 'tous'

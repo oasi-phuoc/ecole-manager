@@ -43,48 +43,100 @@ const getParametresEcole = async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
+const normaliserResponsablesNiveaux = (valeur) => {
+  let list = valeur;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list); } catch { list = []; }
+  }
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => ({
+      nom: String(item?.nom || '').trim(),
+      sexe: String(item?.sexe || 'M').toUpperCase() === 'F' ? 'F' : 'M',
+      niveaux: Array.isArray(item?.niveaux)
+        ? Array.from(new Set(item.niveaux.map((n) => String(n).trim()).filter(Boolean)))
+        : String(item?.niveaux || '').split(',').map((n) => n.trim()).filter(Boolean),
+    }))
+    .filter((item) => item.nom || item.niveaux.length);
+};
+
+const syncLegacyDepuisResponsables = (list) => {
+  const out = {
+    responsable_niveau: null,
+    responsable_niveau_csc: null,
+    responsable_niveau_cfr: null,
+    responsable_niveau_epl: null,
+    sexe_responsable_niveau_csc: null,
+    sexe_responsable_niveau_cfr: null,
+    sexe_responsable_niveau_epl: null,
+  };
+  if (list[0]?.nom) out.responsable_niveau = list[0].nom;
+  for (const cle of ['CSC', 'CFR', 'EPL']) {
+    const found = list.find((r) => (r.niveaux || []).some((n) => String(n).toUpperCase() === cle));
+    if (!found) continue;
+    const key = cle.toLowerCase();
+    out[`responsable_niveau_${key}`] = found.nom || null;
+    out[`sexe_responsable_niveau_${key}`] = found.sexe || 'M';
+  }
+  return out;
+};
+
 const modifierParametresEcole = async (req, res) => {
   const {
     nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee, date_fin_annee,
     responsable_langues_jeunes, responsable_niveau,
     responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl,
     sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl,
-    horaires
+    responsables_niveaux, horaires
   } = req.body;
   try {
+    const responsablesNormalises = normaliserResponsablesNiveaux(responsables_niveaux);
+    const legacy = Object.keys(req.body).includes('responsables_niveaux')
+      ? syncLegacyDepuisResponsables(responsablesNormalises)
+      : {
+          responsable_niveau: responsable_niveau || null,
+          responsable_niveau_csc: responsable_niveau_csc || null,
+          responsable_niveau_cfr: responsable_niveau_cfr || null,
+          responsable_niveau_epl: responsable_niveau_epl || null,
+          sexe_responsable_niveau_csc: sexe_responsable_niveau_csc || null,
+          sexe_responsable_niveau_cfr: sexe_responsable_niveau_cfr || null,
+          sexe_responsable_niveau_epl: sexe_responsable_niveau_epl || null,
+        };
     const existe = await pool.query('SELECT id FROM parametres_ecole LIMIT 1');
     if (existe.rows.length > 0) {
       await pool.query(
-        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, date_debut_annee=$6, date_fin_annee=$7, responsable_langues_jeunes=$8, responsable_niveau=$9, responsable_niveau_csc=$10, responsable_niveau_cfr=$11, responsable_niveau_epl=$12, sexe_responsable_langues_jeunes=$13, sexe_responsable_niveau_csc=$14, sexe_responsable_niveau_cfr=$15, sexe_responsable_niveau_epl=$16, horaires=$17::jsonb WHERE id=$18',
+        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, date_debut_annee=$6, date_fin_annee=$7, responsable_langues_jeunes=$8, responsable_niveau=$9, responsable_niveau_csc=$10, responsable_niveau_cfr=$11, responsable_niveau_epl=$12, sexe_responsable_langues_jeunes=$13, sexe_responsable_niveau_csc=$14, sexe_responsable_niveau_cfr=$15, sexe_responsable_niveau_epl=$16, responsables_niveaux=$17::jsonb, horaires=$18::jsonb WHERE id=$19',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee || null, date_fin_annee || null,
           responsable_langues_jeunes || null,
-          responsable_niveau || null,
-          responsable_niveau_csc || null,
-          responsable_niveau_cfr || null,
-          responsable_niveau_epl || null,
+          legacy.responsable_niveau,
+          legacy.responsable_niveau_csc,
+          legacy.responsable_niveau_cfr,
+          legacy.responsable_niveau_epl,
           sexe_responsable_langues_jeunes || null,
-          sexe_responsable_niveau_csc || null,
-          sexe_responsable_niveau_cfr || null,
-          sexe_responsable_niveau_epl || null,
+          legacy.sexe_responsable_niveau_csc,
+          legacy.sexe_responsable_niveau_cfr,
+          legacy.sexe_responsable_niveau_epl,
+          JSON.stringify(responsablesNormalises),
           horaires ? JSON.stringify(horaires) : '{}',
           existe.rows[0].id
         ]
       );
     } else {
       await pool.query(
-        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee, date_fin_annee, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl, horaires) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb)',
+        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee, date_fin_annee, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl, responsables_niveaux, horaires) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee || null, date_fin_annee || null,
           responsable_langues_jeunes || null,
-          responsable_niveau || null,
-          responsable_niveau_csc || null,
-          responsable_niveau_cfr || null,
-          responsable_niveau_epl || null,
+          legacy.responsable_niveau,
+          legacy.responsable_niveau_csc,
+          legacy.responsable_niveau_cfr,
+          legacy.responsable_niveau_epl,
           sexe_responsable_langues_jeunes || null,
-          sexe_responsable_niveau_csc || null,
-          sexe_responsable_niveau_cfr || null,
-          sexe_responsable_niveau_epl || null,
+          legacy.sexe_responsable_niveau_csc,
+          legacy.sexe_responsable_niveau_cfr,
+          legacy.sexe_responsable_niveau_epl,
+          JSON.stringify(responsablesNormalises),
           horaires ? JSON.stringify(horaires) : '{}'
         ]
       );
