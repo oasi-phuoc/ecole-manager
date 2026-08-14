@@ -2,6 +2,14 @@ const pool = require('../config/database');
 
 const ORDRE_JOURS = "CASE jour WHEN 'Lundi' THEN 1 WHEN 'Mardi' THEN 2 WHEN 'Mercredi' THEN 3 WHEN 'Jeudi' THEN 4 WHEN 'Vendredi' THEN 5 END";
 
+const normaliserNiveauxPool = (niveau) => {
+  if (niveau == null || niveau === '') return null;
+  const list = Array.isArray(niveau)
+    ? niveau.map((v) => String(v).trim()).filter(Boolean)
+    : String(niveau).split(',').map((v) => v.trim()).filter(Boolean);
+  return list.length ? list.join(',') : null;
+};
+
 const getCreneaux = async (req, res) => {
   const r = await pool.query('SELECT * FROM creneaux ORDER BY ' + ORDRE_JOURS + ', ordre');
   res.json(r.rows);
@@ -71,7 +79,8 @@ const getPools = async (req, res) => {
 const createPool = async (req, res) => {
   const { nom, site, couleur, prof_ids, classe_ids, branche_ids, horaires, niveau } = req.body;
   try {
-    const r = await pool.query('INSERT INTO pools (nom, site, couleur, horaires, niveau) VALUES ($1,$2,$3,$4,$5) RETURNING *', [nom, site||'', couleur||'#6366f1', JSON.stringify(horaires||[]), niveau||null]);
+    const niveauNormalise = normaliserNiveauxPool(niveau);
+    const r = await pool.query('INSERT INTO pools (nom, site, couleur, horaires, niveau) VALUES ($1,$2,$3,$4,$5) RETURNING *', [nom, site||'', couleur||'#6366f1', JSON.stringify(horaires||[]), niveauNormalise]);
     const newPool = r.rows[0];
     for (const pid of (prof_ids||[])) await pool.query('INSERT INTO pool_profs (pool_id, prof_id) VALUES ($1,$2)', [newPool.id, pid]);
     for (const cid of (classe_ids||[])) await pool.query('INSERT INTO pool_classes (pool_id, classe_id) VALUES ($1,$2)', [newPool.id, cid]);
@@ -98,7 +107,8 @@ const updatePool = async (req, res) => {
       );
     }
 
-    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5, ordre=$6 WHERE id=$7', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveau||null, ordre !== undefined ? ordre : 0, id]);
+    const niveauNormalise = normaliserNiveauxPool(niveau);
+    await pool.query('UPDATE pools SET nom=$1, site=$2, couleur=$3, horaires=$4, niveau=$5, ordre=$6 WHERE id=$7', [nom, site||'', couleur, JSON.stringify(horaires||[]), niveauNormalise, ordre !== undefined ? ordre : 0, id]);
     await pool.query('DELETE FROM pool_profs WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_classes WHERE pool_id=$1', [id]);
     await pool.query('DELETE FROM pool_branches WHERE pool_id=$1', [id]);
