@@ -341,28 +341,74 @@ const deletePlanningBranche = async (req, res) => {
 };
 
 const getPlanningGeneral = async (req, res) => {
-  const { pool_id } = req.query;
-  let profsQ = "SELECT id, nom, prenom FROM utilisateurs WHERE role='prof' ORDER BY nom";
-  let profsP = [];
-  if (pool_id) { profsQ = "SELECT u.id,u.nom,u.prenom FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1 ORDER BY u.nom"; profsP=[pool_id]; }
-  const profs = await pool.query(profsQ, profsP);
-  const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
-  const affectations = await pool.query(`
-    SELECT a.prof_id, a.creneau_id, a.matiere_id, a.classe_id, a.type_special,
-      COALESCE(c.nom, CASE
-        WHEN a.type_special='titulariat' THEN 'Titulariat'
-        WHEN a.type_special='atelier' THEN 'Atelier'
-        WHEN a.type_special='autre' THEN 'Autre'
-        ELSE NULL
-      END) as classe_nom,
-      m.nom as matiere_nom
-    FROM affectations a
-    LEFT JOIN classes c ON c.id=a.classe_id
-    LEFT JOIN matieres m ON m.id=a.matiere_id
-  `);
-  const dispos = await pool.query('SELECT prof_id,creneau_id,disponible FROM disponibilites');
-  const titulaires = await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
-  res.json({ profs:profs.rows, creneaux:creneaux.rows, affectations:affectations.rows, dispos:dispos.rows, titulaires:titulaires.rows });
+  try {
+    const { pool_id } = req.query;
+    let profsQ = "SELECT id, nom, prenom FROM utilisateurs WHERE role='prof' ORDER BY nom";
+    let profsP = [];
+    if (pool_id) {
+      profsQ = "SELECT u.id,u.nom,u.prenom FROM utilisateurs u JOIN pool_profs pp ON pp.prof_id=u.id WHERE pp.pool_id=$1 ORDER BY u.nom";
+      profsP = [pool_id];
+    }
+    const profs = await pool.query(profsQ, profsP);
+    const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
+    let affectations;
+    let dispos;
+    if (pool_id) {
+      affectations = await pool.query(`
+        SELECT a.prof_id, a.creneau_id, a.matiere_id, a.classe_id, a.type_special,
+          COALESCE(c.nom, CASE
+            WHEN a.type_special='titulariat' THEN 'Titulariat'
+            WHEN a.type_special='atelier' THEN 'Atelier'
+            WHEN a.type_special='autre' THEN 'Autre'
+            ELSE NULL
+          END) as classe_nom,
+          m.nom as matiere_nom
+        FROM affectations a
+        JOIN pool_profs pp ON pp.prof_id = a.prof_id AND pp.pool_id = $1
+        LEFT JOIN classes c ON c.id=a.classe_id
+        LEFT JOIN matieres m ON m.id=a.matiere_id
+      `, [pool_id]);
+      dispos = await pool.query(`
+        SELECT d.prof_id, d.creneau_id, d.disponible
+        FROM disponibilites d
+        JOIN pool_profs pp ON pp.prof_id = d.prof_id AND pp.pool_id = $1
+      `, [pool_id]);
+    } else {
+      affectations = await pool.query(`
+        SELECT a.prof_id, a.creneau_id, a.matiere_id, a.classe_id, a.type_special,
+          COALESCE(c.nom, CASE
+            WHEN a.type_special='titulariat' THEN 'Titulariat'
+            WHEN a.type_special='atelier' THEN 'Atelier'
+            WHEN a.type_special='autre' THEN 'Autre'
+            ELSE NULL
+          END) as classe_nom,
+          m.nom as matiere_nom
+        FROM affectations a
+        LEFT JOIN classes c ON c.id=a.classe_id
+        LEFT JOIN matieres m ON m.id=a.matiere_id
+      `);
+      dispos = await pool.query('SELECT prof_id,creneau_id,disponible FROM disponibilites');
+    }
+    const titulaires = pool_id
+      ? await pool.query(`
+          SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom
+          FROM classes c
+          JOIN pool_classes pc ON pc.classe_id = c.id AND pc.pool_id = $1
+          LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id
+          ORDER BY c.nom
+        `, [pool_id])
+      : await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
+    res.json({
+      profs: profs.rows || [],
+      creneaux: creneaux.rows || [],
+      affectations: affectations.rows || [],
+      dispos: dispos.rows || [],
+      titulaires: titulaires.rows || [],
+    });
+  } catch (e) {
+    console.error('getPlanningGeneral:', e);
+    res.status(500).json({ message: e.message || 'Erreur planning général' });
+  }
 };
 
 const getPlanningProf = async (req, res) => {
