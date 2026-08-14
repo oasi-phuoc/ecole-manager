@@ -1036,6 +1036,228 @@ export default function EmploiDuTemps() {
     setHasAffectationsUnsaved(true);
     showToast('Tableau des affectations vidé. Pensez à sauvegarder.');
   };
+
+  const proposerAffectationsProfs = () => {
+    if (!isAdmin()) return;
+    if (!poolAffId) {
+      showToast('Sélectionnez d\'abord un pool.', 'info');
+      return;
+    }
+    if (!profsPool.length || !classesPool.length) {
+      showToast('Le pool doit contenir des professeurs et des classes.', 'error');
+      return;
+    }
+    const ok = window.confirm(
+      'Générer une proposition d\'affectations pour ce pool ?\n\n' +
+      'Règles : 1 période de titulariat + 8 à 12 périodes dans la classe titulaire, selon les disponibilités et le quota de chaque professeur.\n\n' +
+      'Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+
+    const draftId = () => `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const ordreJour = Object.fromEntries(JOURS.map((j, i) => [j, i]));
+    const creneauxTries = [...(creneaux || [])].sort((a, b) => {
+      const dj = (ordreJour[a.jour] ?? 99) - (ordreJour[b.jour] ?? 99);
+      if (dj !== 0) return dj;
+      const dp = String(a.periode || '').localeCompare(String(b.periode || ''), 'fr');
+      if (dp !== 0) return dp;
+      return Number(a.ordre || 0) - Number(b.ordre || 0);
+    });
+
+    const isProfDispo = (profId, creneauId) => disposAffectations[`${profId}-${creneauId}`] !== false;
+    const getQuotaProf = (p) => {
+      const ps = parseInt(p?.periodes_semaine, 10);
+      if (Number.isFinite(ps) && ps > 0) return ps;
+      return getPeriodesRequisesPourTaux(p) || 0;
+    };
+    const getRequisClasse = (cl) => {
+      const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
+      const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
+      if (niveauClasse === 'CSC') return { normales: 20, soutien: 4, niveauClasse };
+      return { normales: PERIODES_PAR_NIVEAU[niveauClasse] || 0, soutien: 0, niveauClasse };
+    };
+    const slotsClasse = (classeId) => creneauxTries.filter((cr) => classeAHoraire(classeId, cr.jour, cr.periode));
+
+    // Titulariats de départ (draft actuel + principaux déjà connus)
+    const titulariats = {};
+    Object.entries(titulariatsDraftByProf || {}).forEach(([pid, cid]) => {
+      if (profsPoolIds.has(String(pid)) && cid && classesPoolIds.has(String(cid))) {
+        titulariats[String(pid)] = String(cid);
+      }
+    });
+    classesPool.forEach((cl) => {
+      const classeComplete = classesParId.get(String(cl.id));
+      const profId = classeComplete?.prof_principal_id;
+      if (!profId || !profsPoolIds.has(String(profId))) return;
+      const dejaPris = Object.values(titulariats).includes(String(cl.id));
+      if (dejaPris) return;
+      if (!titulariats[String(profId)]) titulariats[String(profId)] = String(cl.id);
+    });
+    // Classes restantes → professeurs sans titulariat
+    const classesSansTitulaire = classesPool
+      .map((cl) => String(cl.id))
+      .filter((cid) => !Object.values(titulariats).includes(cid));
+    const profsSansTitulaire = profsPool
+      .map((p) => String(p.id))
+      .filter((pid) => !titulariats[pid]);
+    classesSansTitulaire.forEach((cid, idx) => {
+      if (idx < profsSansTitulaire.length) titulariats[profsSansTitulaire[idx]] = cid;
+    });
+
+    let nextDraft = (affectationsDraft || []).filter((a) => !profsPoolIds.has(String(a.prof_id)));
+    const nextModes = {};
+    const occupiedProf = new Set();
+    const occupiedClasse = new Set();
+    const loadProf = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
+    const loadClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
+    const loadSoutien = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
+    const quotaProf = Object.fromEntries(profsPool.map((p) => [String(p.id), getQuotaProf(p)]));
+    const requisParClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), getRequisClasse(c)]));
+
+    const ajouterAffectation = ({ profId, creneauId, classeId = null, typeSpecial = null, mode = 'classe' }) => {
+      const pid = String(profId);
+      const cid = classeId != null ? String(classeId) : null;
+      const crid = String(creneauId);
+      if (loadProf[pid] >= (quotaProf[pid] || 0)) return false;
+      if (occupiedProf.has(`${pid}|${crid}`)) return false;
+      if (!isProfDispo(pid, crid)) return false;
+      if (cid && occupiedClasse.has(`${cid}|${crid}`)) return false;
+      const id = draftId();
+      nextDraft.push({
+        id,
+        prof_id: Number.isFinite(Number(profId)) ? Number(profId) : profId,
+        classe_id: cid ? (Number.isFinite(Number(cid)) ? Number(cid) : cid) : null,
+        matiere_id: null,
+        creneau_id: Number.isFinite(Number(creneauId)) ? Number(creneauId) : creneauId,
+        type_special: typeSpecial || null,
+      });
+      nextModes[id] = typeSpecial ? 'special' : mode;
+      occupiedProf.add(`${pid}|${crid}`);
+      if (cid) occupiedClasse.add(`${cid}|${crid}`);
+      loadProf[pid] += 1;
+      if (cid && mode === 'soutien') loadSoutien[cid] += 1;
+      else if (cid) loadClasse[cid] += 1;
+      return true;
+    };
+
+    // Phase 1 — 1 période de titulariat par professeur titulaire
+    Object.entries(titulariats).forEach(([profId, classeId]) => {
+      const slotsPref = slotsClasse(classeId).filter((cr) =>
+        isProfDispo(profId, cr.id) && !occupiedProf.has(`${profId}|${cr.id}`)
+      );
+      const slotsAutres = creneauxTries.filter((cr) =>
+        isProfDispo(profId, cr.id) && !occupiedProf.has(`${profId}|${cr.id}`) && !slotsPref.some((s) => String(s.id) === String(cr.id))
+      );
+      const candidat = slotsPref[0] || slotsAutres[0];
+      if (candidat) {
+        ajouterAffectation({ profId, creneauId: candidat.id, typeSpecial: 'titulariat' });
+      }
+    });
+
+    // Phase 2 — 8 à 12 périodes dans la classe titulaire
+    Object.entries(titulariats).forEach(([profId, classeId]) => {
+      const quotaRestant = Math.max(0, (quotaProf[profId] || 0) - (loadProf[profId] || 0));
+      const requisRestants = Math.max(0, (requisParClasse[classeId]?.normales || 0) - (loadClasse[classeId] || 0));
+      let cible = Math.min(12, quotaRestant);
+      if (quotaRestant >= 8) {
+        cible = Math.min(12, Math.max(8, Math.min(10, quotaRestant)));
+      }
+      if (requisRestants > 0) cible = Math.min(cible, requisRestants);
+      else cible = 0;
+
+      const slots = slotsClasse(classeId).filter((cr) =>
+        isProfDispo(profId, cr.id)
+        && !occupiedProf.has(`${profId}|${cr.id}`)
+        && !occupiedClasse.has(`${classeId}|${cr.id}`)
+      );
+      let poses = 0;
+      for (const cr of slots) {
+        if (poses >= cible) break;
+        if (ajouterAffectation({ profId, creneauId: cr.id, classeId })) poses += 1;
+      }
+    });
+
+    // Phase 3 — compléter les périodes normales des classes
+    const classesParBesoin = [...classesPool].sort((a, b) => {
+      const ra = (requisParClasse[String(a.id)]?.normales || 0) - (loadClasse[String(a.id)] || 0);
+      const rb = (requisParClasse[String(b.id)]?.normales || 0) - (loadClasse[String(b.id)] || 0);
+      return rb - ra;
+    });
+    classesParBesoin.forEach((cl) => {
+      const cid = String(cl.id);
+      const besoin = (requisParClasse[cid]?.normales || 0) - (loadClasse[cid] || 0);
+      if (besoin <= 0) return;
+      const slots = slotsClasse(cid).filter((cr) => !occupiedClasse.has(`${cid}|${cr.id}`));
+      let poses = 0;
+      for (const cr of slots) {
+        if (poses >= besoin) break;
+        const candidats = [...profsPool]
+          .map((p) => String(p.id))
+          .filter((pid) =>
+            (loadProf[pid] || 0) < (quotaProf[pid] || 0)
+            && isProfDispo(pid, cr.id)
+            && !occupiedProf.has(`${pid}|${cr.id}`)
+          )
+          .sort((a, b) => {
+            // Préférer le titulaire s'il n'a pas encore 12 dans sa classe
+            const titA = titulariats[a] === cid ? 0 : 1;
+            const titB = titulariats[b] === cid ? 0 : 1;
+            if (titA !== titB) return titA - titB;
+            const restA = (quotaProf[a] || 0) - (loadProf[a] || 0);
+            const restB = (quotaProf[b] || 0) - (loadProf[b] || 0);
+            return restB - restA;
+          });
+        const choisi = candidats[0];
+        if (!choisi) continue;
+        if (ajouterAffectation({ profId: choisi, creneauId: cr.id, classeId: cid })) poses += 1;
+      }
+    });
+
+    // Phase 4 — soutien CSC
+    classesPool.forEach((cl) => {
+      const cid = String(cl.id);
+      const besoinSoutien = (requisParClasse[cid]?.soutien || 0) - (loadSoutien[cid] || 0);
+      if (besoinSoutien <= 0) return;
+      const slots = slotsClasse(cid).filter((cr) => !occupiedClasse.has(`${cid}|${cr.id}`));
+      let poses = 0;
+      for (const cr of slots) {
+        if (poses >= besoinSoutien) break;
+        const candidats = [...profsPool]
+          .map((p) => String(p.id))
+          .filter((pid) =>
+            (loadProf[pid] || 0) < (quotaProf[pid] || 0)
+            && isProfDispo(pid, cr.id)
+            && !occupiedProf.has(`${pid}|${cr.id}`)
+          )
+          .sort((a, b) => ((quotaProf[b] || 0) - (loadProf[b] || 0)) - ((quotaProf[a] || 0) - (loadProf[a] || 0)));
+        const choisi = candidats[0];
+        if (!choisi) continue;
+        if (ajouterAffectation({ profId: choisi, creneauId: cr.id, classeId: cid, mode: 'soutien' })) poses += 1;
+      }
+    });
+
+    setAffectationsDraft(nextDraft);
+    setAffectationModes(nextModes);
+    setTitulariatsDraftByProf((prev) => {
+      const next = { ...prev };
+      profsPoolIds.forEach((pid) => { delete next[String(pid)]; });
+      Object.entries(titulariats).forEach(([pid, cid]) => { next[pid] = cid; });
+      return next;
+    });
+    setHasAffectationsUnsaved(true);
+
+    const totalPosees = Object.values(loadProf).reduce((s, n) => s + n, 0);
+    const classesIncompletes = classesPool.filter((cl) => {
+      const cid = String(cl.id);
+      const req = requisParClasse[cid] || { normales: 0, soutien: 0 };
+      return (loadClasse[cid] || 0) < req.normales || (loadSoutien[cid] || 0) < req.soutien;
+    }).map((cl) => cl.nom);
+    if (classesIncompletes.length) {
+      showToast(`Proposition générée (${totalPosees} périodes). Classes incomplètes : ${classesIncompletes.join(', ')}.`, 'info');
+    } else {
+      showToast(`Proposition générée (${totalPosees} périodes). Pensez à sauvegarder.`);
+    }
+  };
   const abandonnerClassesNonSauvegardees = () => {
     setClasseHoraires(classeHorairesSaved || []);
     setHasClassesUnsaved(false);
@@ -1826,19 +2048,34 @@ export default function EmploiDuTemps() {
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             {sousOngletAff === 'profs' && isAdmin() && (
-              <button
-                type="button"
-                title="Réinitialiser le tableau"
-                aria-label="Réinitialiser le tableau"
-                onClick={resetAffectationsProfsTableau}
-                style={styles.btnResetAff}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="1 4 1 10 7 10" />
-                  <polyline points="23 20 23 14 17 14" />
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                </svg>
-              </button>
+              <>
+                <button
+                  type="button"
+                  title="Réinitialiser le tableau"
+                  aria-label="Réinitialiser le tableau"
+                  onClick={resetAffectationsProfsTableau}
+                  style={styles.btnResetAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="1 4 1 10 7 10" />
+                    <polyline points="23 20 23 14 17 14" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Proposer les affectations"
+                  aria-label="Proposer les affectations"
+                  onClick={proposerAffectationsProfs}
+                  style={styles.btnProposeAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                    <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
+                    <path d="M5 15l.6 1.6L7 17.2l-1.4.6L5 19.4l-.6-1.6L3 17.2l1.4-.6L5 15z" />
+                  </svg>
+                </button>
+              </>
             )}
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
@@ -3804,6 +4041,7 @@ const styles = {
   affTabBtnActif:{background:'#6366f1',color:'white',border:'none',marginBottom:-1,zIndex:2,boxShadow:'0 -1px 6px rgba(99,102,241,0.22)'},
   btnSauvegarderAff:{padding:'8px 16px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:13,background:'#6366f1',color:'#ffffff',alignSelf:'center'},
   btnResetAff:{width:36,height:36,padding:0,borderRadius:8,border:'1px solid #e2e8f0',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#ffffff',color:'#64748b',alignSelf:'center'},
+  btnProposeAff:{width:36,height:36,padding:0,borderRadius:8,border:'1px solid #c7d2fe',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#eef2ff',color:'#4338ca',alignSelf:'center'},
   card:{background:'white',borderRadius:12,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'},
   msgVide:{background:'white',borderRadius:12,padding:'20px 24px',marginBottom:20,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',color:'#64748b',fontSize:12,fontStyle:'italic',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12},
