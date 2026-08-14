@@ -366,10 +366,16 @@ export default function EmploiDuTemps() {
   const toggleArr = (arr, id) => arr.includes(id) ? arr.filter(x=>x!==id) : [...arr, id];
 
   // Classe horaires helpers
+  const estClasseAPL = (cl) => {
+    const niveau = String(cl?.niveau || '').toUpperCase();
+    const nom = String(cl?.nom || '').toUpperCase();
+    return niveau.includes('APL') || /(^|[^A-Z])APL([^A-Z]|$)/.test(nom);
+  };
+
   const classeAHoraire = (classe_id, jour, periode) =>
     classeHoraires.some(h => h.classe_id==classe_id && h.jour===jour && h.periode===periode);
 
-  // Premier clic depuis vide -> Matin, puis alternance Matin <-> Après-midi
+  // Premier clic depuis vide -> Matin, puis alternance Matin <-> Après-midi (classes hors APL)
   const toggleClasseHoraire = async (classe_id, jour) => {
     if (!isAdmin()) return;
     const actuel = classeHoraires.find(h => h.classe_id==classe_id && h.jour===jour);
@@ -379,6 +385,17 @@ export default function EmploiDuTemps() {
       : 'Matin';
     let nouveaux = classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour));
     nouveaux = [...nouveaux, {classe_id, jour, periode: nouvellePeriode}];
+    setClasseHoraires(nouveaux);
+    setHasClassesUnsaved(true);
+  };
+
+  // Pour APL : Matin et Après-midi sont indépendants (peuvent coexister le même jour)
+  const toggleClasseHorairePeriode = (classe_id, jour, periode) => {
+    if (!isAdmin()) return;
+    const existe = classeAHoraire(classe_id, jour, periode);
+    const nouveaux = existe
+      ? classeHoraires.filter(h => !(h.classe_id==classe_id && h.jour===jour && h.periode===periode))
+      : [...classeHoraires, { classe_id, jour, periode }];
     setClasseHoraires(nouveaux);
     setHasClassesUnsaved(true);
   };
@@ -494,9 +511,8 @@ export default function EmploiDuTemps() {
     let matin = 0;
     let apresMidi = 0;
     classesPool.forEach(cl => {
-      const periode = getHoraireJourClasse(cl.id, jour);
-      if (periode === 'Matin') matin += 1;
-      if (periode === 'Après-midi') apresMidi += 1;
+      if (classeAHoraire(cl.id, jour, 'Matin')) matin += 1;
+      if (classeAHoraire(cl.id, jour, 'Après-midi')) apresMidi += 1;
     });
     acc[jour] = { matin, apresMidi };
     return acc;
@@ -2528,29 +2544,68 @@ export default function EmploiDuTemps() {
                     </tr>
                   </thead>
                   <tbody>
-                    {classesPool.map((cl) => (
-                      <tr key={cl.id} style={{background:'white',borderBottom:'1px solid #e2e8f0'}}>
-                        <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180}}>
-                          {cl.nom}
-                        </td>
-                        {JOURS.map(jour => {
-                          const periode = getHoraireJourClasse(cl.id, jour);
-                          return (
-                            <td key={jour} style={{padding:'10px 8px',textAlign:'center'}}>
-                              <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={{
-                                padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
-                                cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
-                                border: periode==='Matin' ? '2px solid #3b82f6' : periode==='Après-midi' ? '2px solid #f59e0b' : '2px solid #e2e8f0',
-                                background: periode==='Matin' ? '#dbeafe' : periode==='Après-midi' ? '#fef3c7' : '#f8fafc',
-                                color: periode==='Matin' ? '#1d4ed8' : periode==='Après-midi' ? '#92400e' : '#94a3b8',
-                              }}>
-                                {periode==='Matin' ? 'Matin' : periode==='Après-midi' ? 'Après-midi' : '-'}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                    {classesPool.flatMap((cl) => {
+                      const styleBtnPeriode = (periode, actif) => ({
+                        padding:'6px 12px', borderRadius:20, fontWeight:700, fontSize:12,
+                        cursor:isAdmin()?'pointer':'default', width:120, transition:'all 0.15s',
+                        border: actif && periode==='Matin' ? '2px solid #3b82f6'
+                          : actif && periode==='Après-midi' ? '2px solid #f59e0b'
+                          : '2px solid #e2e8f0',
+                        background: actif && periode==='Matin' ? '#dbeafe'
+                          : actif && periode==='Après-midi' ? '#fef3c7'
+                          : '#f8fafc',
+                        color: actif && periode==='Matin' ? '#1d4ed8'
+                          : actif && periode==='Après-midi' ? '#92400e'
+                          : '#94a3b8',
+                      });
+
+                      if (estClasseAPL(cl)) {
+                        return ['Matin', 'Après-midi'].map((periodeFixe, idx) => (
+                          <tr key={`${cl.id}-${periodeFixe}`} style={{background:'white',borderBottom: idx === 1 ? '1px solid #e2e8f0' : '1px solid #f1f5f9'}}>
+                            {idx === 0 ? (
+                              <td rowSpan={2} style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180,verticalAlign:'middle'}}>
+                                <div>{cl.nom}</div>
+                                <div style={{fontSize:11,fontWeight:600,color:'#64748b',marginTop:4}}>Matin + Après-midi</div>
+                              </td>
+                            ) : null}
+                            {JOURS.map(jour => {
+                              const actif = classeAHoraire(cl.id, jour, periodeFixe);
+                              return (
+                                <td key={`${cl.id}-${periodeFixe}-${jour}`} style={{padding:'10px 8px',textAlign:'center'}}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleClasseHorairePeriode(cl.id, jour, periodeFixe)}
+                                    disabled={!isAdmin()}
+                                    style={styleBtnPeriode(periodeFixe, actif)}
+                                    title={actif ? `${periodeFixe} — cliquer pour retirer` : `Cliquer pour activer ${periodeFixe}`}
+                                  >
+                                    {actif ? periodeFixe : '-'}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ));
+                      }
+
+                      return [(
+                        <tr key={cl.id} style={{background:'white',borderBottom:'1px solid #e2e8f0'}}>
+                          <td style={{...styles.td,fontWeight:800,fontSize:14,color:'#0f172a',width:180}}>
+                            {cl.nom}
+                          </td>
+                          {JOURS.map(jour => {
+                            const periode = getHoraireJourClasse(cl.id, jour);
+                            return (
+                              <td key={jour} style={{padding:'10px 8px',textAlign:'center'}}>
+                                <button onClick={() => toggleClasseHoraire(cl.id, jour)} disabled={!isAdmin()} style={styleBtnPeriode(periode, !!periode)}>
+                                  {periode==='Matin' ? 'Matin' : periode==='Après-midi' ? 'Après-midi' : '-'}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      )];
+                    })}
                   </tbody>
                 </table>
               </div>
