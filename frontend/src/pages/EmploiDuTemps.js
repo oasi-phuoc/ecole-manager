@@ -343,9 +343,23 @@ export default function EmploiDuTemps() {
 
   const getPeriodesRequisesPourTaux = (prof) => {
     const taux = parseFloat(prof?.taux_activite);
-    if (!Number.isFinite(taux)) return parseInt(prof?.periodes_semaine) || 0;
-    // Règle métier : base 42, puis arrondi inférieur au pair pour rester cohérent avec les grilles de périodes.
+    if (!Number.isFinite(taux)) return parseInt(prof?.periodes_semaine, 10) || 0;
+    // Règle métier : base 40, puis arrondi inférieur au pair pour rester cohérent avec les grilles de périodes.
     return Math.max(0, Math.floor(((BASE_PERIODES_TAUX * taux) / 100) / 2) * 2);
+  };
+
+  /** Quota effectif d'un professeur : periodes_semaine, sinon taux, sinon 0 */
+  const getQuotaEffectifProf = (prof) => {
+    const complet = (() => {
+      if (!prof) return null;
+      const fromList = (profs || []).find((x) => String(x.id) === String(prof.id));
+      return fromList ? { ...fromList, ...prof } : prof;
+    })();
+    const ps = parseInt(complet?.periodes_semaine, 10);
+    if (Number.isFinite(ps) && ps > 0) return ps;
+    const viaTaux = getPeriodesRequisesPourTaux(complet);
+    if (viaTaux > 0) return viaTaux;
+    return 0;
   };
 
   // Horaires du pool sélectionné ou défaut
@@ -536,6 +550,19 @@ export default function EmploiDuTemps() {
   );
   const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
     acc[p.id] = affectationsPool.filter(a => String(a.prof_id) === String(p.id)).length;
+    return acc;
+  }, {});
+  const totalRequisClassesPool = suiviClasses.reduce(
+    (sum, c) => sum + (c.periodesNormalesRequises || 0) + (c.periodesSoutienRequises || 0),
+    0
+  );
+  const quotaDefautPool = Math.max(
+    2,
+    Math.ceil(totalRequisClassesPool / Math.max(1, profsPool.length) / 2) * 2
+  );
+  const quotaAffichageParProf = profsPool.reduce((acc, p) => {
+    const q = getQuotaEffectifProf(p);
+    acc[p.id] = q > 0 ? q : quotaDefautPool;
     return acc;
   }, {});
   const resumePeriodesParJour = JOURS.reduce((acc, jour) => {
@@ -1099,7 +1126,8 @@ export default function EmploiDuTemps() {
     }
     const ok = window.confirm(
       'Générer une proposition d\'affectations pour ce pool ?\n\n' +
-      'Règles : blocs de demi-journée (4 périodes) dans la même classe, sinon 2 périodes à la suite ; ' +
+      'Règles : blocs de demi-journée (4 périodes) dans la même classe, sinon 2, sinon 1 ; ' +
+      'répartition entre tous les professeurs (titulaire prioritaire, puis les moins chargés) ; ' +
       '1 période de titulariat par classe titulaire (max 2) ; 8 à 12 périodes par classe titulaire selon disponibilités/quota.\n\n' +
       'Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
     );
@@ -1116,16 +1144,25 @@ export default function EmploiDuTemps() {
     });
 
     const isProfDispo = (profId, creneauId) => disposAffectations[`${profId}-${creneauId}`] !== false;
-    const getQuotaProf = (p) => {
-      const ps = parseInt(p?.periodes_semaine, 10);
-      if (Number.isFinite(ps) && ps > 0) return ps;
-      return getPeriodesRequisesPourTaux(p) || 0;
-    };
     const getRequisClasse = (cl) => {
       const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
       const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
       if (niveauClasse === 'CSC') return { normales: 20, soutien: 4, niveauClasse };
       return { normales: PERIODES_PAR_NIVEAU[niveauClasse] || 0, soutien: 0, niveauClasse };
+    };
+
+    const totalRequisPool = classesPool.reduce((sum, cl) => {
+      const r = getRequisClasse(cl);
+      return sum + (r.normales || 0) + (r.soutien || 0);
+    }, 0);
+    // Si aucun quota n'est renseigné, répartir équitablement la charge du pool
+    const quotaPartageDefaut = Math.max(
+      2,
+      Math.ceil(totalRequisPool / Math.max(1, profsPool.length) / 2) * 2
+    );
+    const getQuotaProf = (p) => {
+      const q = getQuotaEffectifProf(p);
+      return q > 0 ? q : quotaPartageDefaut;
     };
 
     // Titulariats de départ (jusqu'à 2 classes par professeur)
@@ -1214,7 +1251,7 @@ export default function EmploiDuTemps() {
       return true;
     };
 
-    // Blocs d'une demi-journée : 4 périodes, sinon paires de 2 à la suite
+    // Blocs d'une demi-journée : 4 périodes, sinon paires de 2, sinon unités
     const listerBlocs = (taille) => {
       const blocs = [];
       JOURS.forEach((jour) => {
@@ -1224,12 +1261,15 @@ export default function EmploiDuTemps() {
             .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
           if (crs.length < taille) return;
           if (taille === 4 && crs.length >= 4) {
-            // Demi-journée complète (prendre les 4 premières / toutes si exactement 4)
             blocs.push({ jour, periode, crs: crs.slice(0, 4), taille: 4 });
           } else if (taille === 2) {
             for (let i = 0; i <= crs.length - 2; i += 1) {
               blocs.push({ jour, periode, crs: crs.slice(i, i + 2), taille: 2 });
             }
+          } else if (taille === 1) {
+            crs.forEach((cr) => {
+              blocs.push({ jour, periode, crs: [cr], taille: 1 });
+            });
           }
         });
       });
@@ -1237,6 +1277,7 @@ export default function EmploiDuTemps() {
     };
     const blocs4 = listerBlocs(4);
     const blocs2 = listerBlocs(2);
+    const blocs1 = listerBlocs(1);
 
     const blocCompatibleClasse = (bloc, classeId) =>
       classeAHoraire(classeId, bloc.jour, bloc.periode);
@@ -1266,7 +1307,7 @@ export default function EmploiDuTemps() {
     };
 
     const trouverBloc = (profId, classeId, taille, exclureKeys = new Set()) => {
-      const source = taille === 4 ? blocs4 : blocs2;
+      const source = taille === 4 ? blocs4 : (taille === 2 ? blocs2 : blocs1);
       return source.find((bloc) => {
         const key = `${bloc.jour}|${bloc.periode}|${bloc.crs.map((c) => c.id).join('-')}`;
         if (exclureKeys.has(key)) return false;
@@ -1274,8 +1315,29 @@ export default function EmploiDuTemps() {
       }) || null;
     };
 
+    /** Classe les candidats : titulaire d'abord, puis les moins chargés (répartition), léger aléa */
+    const trierCandidatsRepartis = (candidats, classeId) => {
+      const cleTitPour = (pid) => `${pid}|${classeId}`;
+      return [...candidats].sort((a, b) => {
+        const titA = estTitulaireDe(a, classeId) ? 0 : 1;
+        const titB = estTitulaireDe(b, classeId) ? 0 : 1;
+        if (titA !== titB) return titA - titB;
+        if (estTitulaireDe(a, classeId) && (loadTitulaireParClasse[cleTitPour(a)] || 0) >= 12) return 1;
+        if (estTitulaireDe(b, classeId) && (loadTitulaireParClasse[cleTitPour(b)] || 0) >= 12) return -1;
+        const loadA = loadProf[a] || 0;
+        const loadB = loadProf[b] || 0;
+        if (loadA !== loadB) return loadA - loadB;
+        const ratioA = loadA / Math.max(1, quotaProf[a] || 1);
+        const ratioB = loadB / Math.max(1, quotaProf[b] || 1);
+        if (ratioA !== ratioB) return ratioA - ratioB;
+        return Math.random() - 0.5;
+      });
+    };
+
     // Phase 1 — classe(s) titulaire(s) en blocs 4 puis 2 (cible 8–12 par classe)
-    titulariatsPairs.forEach(({ profId, classeId }) => {
+    // Ordre mélangé pour ne pas toujours prioriser le même professeur
+    const titulariatsPairsMelanges = [...titulariatsPairs].sort(() => Math.random() - 0.5);
+    titulariatsPairsMelanges.forEach(({ profId, classeId }) => {
       const nbTitulariatsProf = (titulariatsParProf[profId] || []).length;
       const quotaPourClasse = Math.max(0, (quotaProf[profId] || 0) - nbTitulariatsProf);
       const requisRestants = Math.max(0, (requisParClasse[classeId]?.normales || 0) - (loadClasse[classeId] || 0));
@@ -1298,7 +1360,7 @@ export default function EmploiDuTemps() {
     });
 
     // Phase 2 — 1 période de titulariat par classe titulaire
-    titulariatsPairs.forEach(({ profId, classeId }) => {
+    titulariatsPairsMelanges.forEach(({ profId, classeId }) => {
       const dejaTitulariat = nextDraft.some((a) =>
         String(a.prof_id) === String(profId)
         && a.type_special === 'titulariat'
@@ -1319,58 +1381,51 @@ export default function EmploiDuTemps() {
       if (candidat) ajouterAffectation({ profId, creneauId: candidat.id, classeId, typeSpecial: 'titulariat' });
     });
 
-    // Phase 3 — compléter les classes (blocs 4 puis 2, tous profs)
-    const classesParBesoin = [...classesPool].sort((a, b) => {
-      const ra = (requisParClasse[String(a.id)]?.normales || 0) - (loadClasse[String(a.id)] || 0);
-      const rb = (requisParClasse[String(b.id)]?.normales || 0) - (loadClasse[String(b.id)] || 0);
-      return rb - ra;
-    });
-
-    const assignerBesoinParBlocs = (classeId, besoin, tailles = [4, 2]) => {
-      let restant = besoin;
+    // Phase 3 — compléter les classes en tours (répartition entre professeurs), blocs 4 → 2 → 1
+    const assignerBesoinParTours = (tailles = [4, 2, 1]) => {
       tailles.forEach((taille) => {
-        if (restant < taille) return;
+        let progres = true;
         let gardeFou = 0;
-        while (restant >= taille && gardeFou < 40) {
+        while (progres && gardeFou < 300) {
+          progres = false;
           gardeFou += 1;
-          const cleTitPour = (pid) => `${pid}|${classeId}`;
-          const candidats = [...profsPool]
-            .map((p) => String(p.id))
-            .filter((pid) => (loadProf[pid] || 0) + taille <= (quotaProf[pid] || 0))
+          const classesNeeding = [...classesPool]
+            .map((cl) => String(cl.id))
+            .filter((cid) => ((requisParClasse[cid]?.normales || 0) - (loadClasse[cid] || 0)) >= taille)
             .sort((a, b) => {
-              const titA = estTitulaireDe(a, classeId) ? 0 : 1;
-              const titB = estTitulaireDe(b, classeId) ? 0 : 1;
-              if (titA !== titB) return titA - titB;
-              if (estTitulaireDe(a, classeId) && (loadTitulaireParClasse[cleTitPour(a)] || 0) >= 12) return 1;
-              if (estTitulaireDe(b, classeId) && (loadTitulaireParClasse[cleTitPour(b)] || 0) >= 12) return -1;
-              const restA = (quotaProf[a] || 0) - (loadProf[a] || 0);
-              const restB = (quotaProf[b] || 0) - (loadProf[b] || 0);
-              return restB - restA;
+              const ra = (requisParClasse[a]?.normales || 0) - (loadClasse[a] || 0);
+              const rb = (requisParClasse[b]?.normales || 0) - (loadClasse[b] || 0);
+              if (rb !== ra) return rb - ra;
+              return Math.random() - 0.5;
             });
 
-          let assigne = false;
-          for (const pid of candidats) {
-            if (estTitulaireDe(pid, classeId) && (loadTitulaireParClasse[cleTitPour(pid)] || 0) + taille > 12) continue;
-            const bloc = trouverBloc(pid, classeId, taille);
-            if (!bloc) continue;
-            if (assignerBloc(pid, classeId, bloc)) {
-              restant -= taille;
-              assigne = true;
-              break;
+          classesNeeding.forEach((classeId) => {
+            const cleTitPour = (pid) => `${pid}|${classeId}`;
+            const candidats = trierCandidatsRepartis(
+              [...profsPool]
+                .map((p) => String(p.id))
+                .filter((pid) => (loadProf[pid] || 0) + taille <= (quotaProf[pid] || 0)),
+              classeId
+            );
+
+            for (const pid of candidats) {
+              if (estTitulaireDe(pid, classeId) && (loadTitulaireParClasse[cleTitPour(pid)] || 0) + taille > 12) {
+                // Le titulaire a atteint son plafond dans cette classe : laisser les autres
+                continue;
+              }
+              const bloc = trouverBloc(pid, classeId, taille);
+              if (!bloc) continue;
+              if (assignerBloc(pid, classeId, bloc)) {
+                progres = true;
+                break; // 1 bloc max par classe et par tour → répartit entre les profs
+              }
             }
-          }
-          if (!assigne) break;
+          });
         }
       });
-      return restant;
     };
 
-    classesParBesoin.forEach((cl) => {
-      const cid = String(cl.id);
-      const besoin = (requisParClasse[cid]?.normales || 0) - (loadClasse[cid] || 0);
-      if (besoin <= 0) return;
-      assignerBesoinParBlocs(cid, besoin, [4, 2]);
-    });
+    assignerBesoinParTours([4, 2, 1]);
 
     // Phase 4 — soutien CSC (paires puis unités)
     classesPool.forEach((cl) => {
@@ -1383,7 +1438,7 @@ export default function EmploiDuTemps() {
         const candidats = [...profsPool]
           .map((p) => String(p.id))
           .filter((pid) => (loadProf[pid] || 0) + 2 <= (quotaProf[pid] || 0))
-          .sort((a, b) => ((quotaProf[b] || 0) - (loadProf[b] || 0)) - ((quotaProf[a] || 0) - (loadProf[a] || 0)));
+          .sort((a, b) => (loadProf[a] || 0) - (loadProf[b] || 0) || Math.random() - 0.5);
         let assigne = false;
         for (const pid of candidats) {
           const bloc = (blocs2 || []).find((b) => {
@@ -1424,7 +1479,7 @@ export default function EmploiDuTemps() {
             && isProfDispo(pid, cr.id)
             && !occupiedProf.has(`${pid}|${cr.id}`)
           )
-          .sort((a, b) => ((quotaProf[b] || 0) - (loadProf[b] || 0)) - ((quotaProf[a] || 0) - (loadProf[a] || 0)));
+          .sort((a, b) => (loadProf[a] || 0) - (loadProf[b] || 0) || Math.random() - 0.5);
         const choisi = candidats[0];
         if (!choisi) continue;
         if (ajouterAffectation({ profId: choisi, creneauId: cr.id, classeId: cid, mode: 'soutien' })) {
@@ -1458,9 +1513,9 @@ export default function EmploiDuTemps() {
       return (loadClasse[cid] || 0) < req.normales || (loadSoutien[cid] || 0) < req.soutien;
     }).map((cl) => cl.nom);
     if (classesIncompletes.length) {
-      showToast(`Proposition générée (${totalPosees} périodes, blocs demi-journée). Classes incomplètes : ${classesIncompletes.join(', ')}.`, 'info');
+      showToast(`Proposition générée (${totalPosees} périodes). Classes incomplètes : ${classesIncompletes.join(', ')}.`, 'info');
     } else {
-      showToast(`Proposition générée (${totalPosees} périodes, blocs demi-journée). Pensez à sauvegarder.`);
+      showToast(`Proposition générée (${totalPosees} périodes). Pensez à sauvegarder.`);
     }
   };
   const abandonnerClassesNonSauvegardees = () => {
@@ -3427,7 +3482,7 @@ export default function EmploiDuTemps() {
                   <tr style={styles.theadRow}>
                     <th style={{...styles.th,width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU,textAlign:'center'}}>Horaire</th>
                     {profsPool.map(p => {
-                      const totalProf = parseInt(p.periodes_semaine) || 0;
+                      const totalProf = quotaAffichageParProf[p.id] || 0;
                       const totalAffecte = periodesAffecteesParProf[p.id] || 0;
                       const couleurProf = getCouleurProf(p.id);
                       const couleurTexteProf = getCouleurTexteSurFond(couleurProf);
