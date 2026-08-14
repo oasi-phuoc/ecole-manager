@@ -17,6 +17,54 @@ const normaliserBranchesSpecialites = (valeur) => {
   return brut.split(',').map(v => v.trim()).filter(Boolean);
 };
 
+const creerLigneResponsableNiveau = (overrides = {}) => ({
+  nom: '',
+  sexe: 'M',
+  niveaux: [],
+  ...overrides,
+});
+
+const normaliserListeResponsablesNiveaux = (valeur) => {
+  let list = valeur;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list); } catch { list = []; }
+  }
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => creerLigneResponsableNiveau({
+    nom: String(item?.nom || '').trim(),
+    sexe: String(item?.sexe || 'M').toUpperCase() === 'F' ? 'F' : 'M',
+    niveaux: Array.isArray(item?.niveaux)
+      ? Array.from(new Set(item.niveaux.map((n) => String(n).trim()).filter(Boolean)))
+      : String(item?.niveaux || '').split(',').map((n) => n.trim()).filter(Boolean),
+  }));
+};
+
+const migrerResponsablesDepuisLegacy = (data = {}) => {
+  const existants = normaliserListeResponsablesNiveaux(data.responsables_niveaux);
+  if (existants.some((r) => r.nom || r.niveaux.length)) return existants;
+
+  const map = new Map();
+  const ajouter = (niveau, nom, sexe) => {
+    const name = String(nom || '').trim();
+    if (!name || !niveau) return;
+    if (!map.has(name)) map.set(name, creerLigneResponsableNiveau({ nom: name, sexe: sexe === 'F' ? 'F' : 'M', niveaux: [] }));
+    const row = map.get(name);
+    if (!row.niveaux.includes(niveau)) row.niveaux.push(niveau);
+    if (sexe === 'F' || sexe === 'M') row.sexe = sexe;
+  };
+  ajouter('CSC', data.responsable_niveau_csc, data.sexe_responsable_niveau_csc);
+  ajouter('CFR', data.responsable_niveau_cfr, data.sexe_responsable_niveau_cfr);
+  ajouter('EPL', data.responsable_niveau_epl, data.sexe_responsable_niveau_epl);
+  if (!map.size && data.responsable_niveau) {
+    map.set(String(data.responsable_niveau).trim(), creerLigneResponsableNiveau({
+      nom: String(data.responsable_niveau).trim(),
+      sexe: 'M',
+      niveaux: [],
+    }));
+  }
+  return Array.from(map.values());
+};
+
 const HORAIRE_DEFAUT = {
   matin: [
     { label: 'P1', debut: '08:20', fin: '09:05' },
@@ -62,7 +110,8 @@ export default function Parametres() {
     nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', date_debut_annee: '', date_fin_annee: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
     responsable_niveau_csc: '', responsable_niveau_cfr: '', responsable_niveau_epl: '',
-    sexe_responsable_langues_jeunes: 'M', sexe_responsable_niveau_csc: 'M', sexe_responsable_niveau_cfr: 'M', sexe_responsable_niveau_epl: 'M'
+    sexe_responsable_langues_jeunes: 'M', sexe_responsable_niveau_csc: 'M', sexe_responsable_niveau_cfr: 'M', sexe_responsable_niveau_epl: 'M',
+    responsables_niveaux: [creerLigneResponsableNiveau()],
   });
   const [mdp, setMdp] = useState({ ancien: '', nouveau: '', confirmation: '' });
   const [profs, setProfs] = useState([]);
@@ -209,6 +258,7 @@ export default function Parametres() {
     try {
       const res = await axios.get(API + '/parametres/ecole', { headers });
       if (res.data) {
+        const responsables = migrerResponsablesDepuisLegacy(res.data);
         setEcole(prev => ({
           ...prev,
           ...res.data,
@@ -216,6 +266,7 @@ export default function Parametres() {
           sexe_responsable_niveau_csc: res.data.sexe_responsable_niveau_csc || 'M',
           sexe_responsable_niveau_cfr: res.data.sexe_responsable_niveau_cfr || 'M',
           sexe_responsable_niveau_epl: res.data.sexe_responsable_niveau_epl || 'M',
+          responsables_niveaux: responsables.length ? responsables : [creerLigneResponsableNiveau()],
         }));
         if (res.data.horaires != null) {
           const h = typeof res.data.horaires === 'string' ? JSON.parse(res.data.horaires) : res.data.horaires;
@@ -392,10 +443,46 @@ export default function Parametres() {
     e.preventDefault();
     try {
       const horairesData = Object.keys(horairesEcole).length > 0 ? horairesEcole : (ecole.horaires || {});
-      await axios.put(API + '/parametres/ecole', { ...ecole, horaires: horairesData }, { headers });
+      const responsables_niveaux = normaliserListeResponsablesNiveaux(ecole.responsables_niveaux)
+        .filter((r) => r.nom || r.niveaux.length);
+      await axios.put(API + '/parametres/ecole', { ...ecole, responsables_niveaux, horaires: horairesData }, { headers });
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
+  };
+
+  const mettreAJourResponsableNiveau = (index, patch) => {
+    setEcole((prev) => {
+      const list = [...(prev.responsables_niveaux || [])];
+      list[index] = { ...creerLigneResponsableNiveau(list[index]), ...patch };
+      return { ...prev, responsables_niveaux: list };
+    });
+  };
+
+  const toggleNiveauResponsable = (index, niveauNom) => {
+    setEcole((prev) => {
+      const list = [...(prev.responsables_niveaux || [])];
+      const row = creerLigneResponsableNiveau(list[index]);
+      const selected = row.niveaux.includes(niveauNom);
+      row.niveaux = selected ? row.niveaux.filter((n) => n !== niveauNom) : [...row.niveaux, niveauNom];
+      list[index] = row;
+      return { ...prev, responsables_niveaux: list };
+    });
+  };
+
+  const ajouterResponsableNiveau = () => {
+    setEcole((prev) => ({
+      ...prev,
+      responsables_niveaux: [...(prev.responsables_niveaux || []), creerLigneResponsableNiveau()],
+    }));
+  };
+
+  const supprimerResponsableNiveau = (index) => {
+    setEcole((prev) => {
+      const list = [...(prev.responsables_niveaux || [])];
+      list.splice(index, 1);
+      return { ...prev, responsables_niveaux: list.length ? list : [creerLigneResponsableNiveau()] };
+    });
   };
 
   const ouvrirPermissions = (prof) => {
@@ -950,8 +1037,8 @@ export default function Parametres() {
 
                 {/* Section Responsables */}
                 {sousOngletEcole === 'responsables' && <div>
-                <div style={styles.formGrid}>
-                  <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div style={styles.formChamp}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span>Responsable des cours de langues jeunes</span>
                       <span style={{ display: 'inline-flex', gap: 4 }}>
@@ -972,68 +1059,121 @@ export default function Parametres() {
                       onChange={(v) => setEcole({ ...ecole, responsable_langues_jeunes: v })}
                     />
                   </div>
-                  <div style={styles.formChamp}>
-                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>Responsable de niveau - CSC</span>
-                      <span style={{ display: 'inline-flex', gap: 4 }}>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_csc: 'M' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_csc: 'F' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_csc === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
-                      </span>
-                    </label>
-                    <CustomSelect
-                      style={styles.input}
-                      value={ecole.responsable_niveau_csc || ''}
-                      placeholder="— Choisir —"
-                      options={employesResponsablesListe.map(emp => {
-                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return {value: label, label: label};
-                      })}
-                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_csc: v })}
-                    />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>Responsable de niveau - CFR</span>
-                      <span style={{ display: 'inline-flex', gap: 4 }}>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_cfr: 'M' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_cfr: 'F' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_cfr === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
-                      </span>
-                    </label>
-                    <CustomSelect
-                      style={styles.input}
-                      value={ecole.responsable_niveau_cfr || ''}
-                      placeholder="— Choisir —"
-                      options={employesResponsablesListe.map(emp => {
-                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return {value: label, label: label};
-                      })}
-                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_cfr: v })}
-                    />
-                  </div>
-                  <div style={styles.formChamp}>
-                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>Responsable de niveau - EPL</span>
-                      <span style={{ display: 'inline-flex', gap: 4 }}>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_epl: 'M' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
-                        <button type="button" onClick={() => setEcole({ ...ecole, sexe_responsable_niveau_epl: 'F' })}
-                          style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: ecole.sexe_responsable_niveau_epl === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
-                      </span>
-                    </label>
-                    <CustomSelect
-                      style={styles.input}
-                      value={ecole.responsable_niveau_epl || ''}
-                      placeholder="— Choisir —"
-                      options={employesResponsablesListe.map(emp => {
-                        const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
-                        return {value: label, label: label};
-                      })}
-                      onChange={(v) => setEcole({ ...ecole, responsable_niveau_epl: v })}
-                    />
+
+                  <div>
+                    <div style={{ ...styles.label, marginBottom: 10 }}>Responsables de niveau</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {(ecole.responsables_niveaux || []).map((row, index) => (
+                        <div
+                          key={`resp-niv-${index}`}
+                          style={{
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 12,
+                            padding: 14,
+                            background: '#f8fafc',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div style={{ flex: '1 1 240px', minWidth: 200 }}>
+                              <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <span>Responsable</span>
+                                <span style={{ display: 'inline-flex', gap: 4 }}>
+                                  <button type="button" onClick={() => mettreAJourResponsableNiveau(index, { sexe: 'M' })}
+                                    style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: row.sexe === 'M' ? '#dbeafe' : 'white', color: '#1e3a8a', fontWeight: 700 }}>♂</button>
+                                  <button type="button" onClick={() => mettreAJourResponsableNiveau(index, { sexe: 'F' })}
+                                    style={{ padding: '2px 8px', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', background: row.sexe === 'F' ? '#fce7f3' : 'white', color: '#9d174d', fontWeight: 700 }}>♀</button>
+                                </span>
+                              </label>
+                              <CustomSelect
+                                style={styles.input}
+                                value={row.nom || ''}
+                                placeholder="— Choisir —"
+                                options={employesResponsablesListe.map(emp => {
+                                  const label = `${emp.prenom || ''} ${emp.nom || ''}`.trim();
+                                  return { value: label, label };
+                                })}
+                                onChange={(v) => {
+                                  const emp = employesResponsablesListe.find(e => `${e.prenom || ''} ${e.nom || ''}`.trim() === v);
+                                  const sexeEmp = String(emp?.sexe || '').toUpperCase();
+                                  mettreAJourResponsableNiveau(index, {
+                                    nom: v,
+                                    sexe: sexeEmp === 'F' || sexeEmp === 'M' ? sexeEmp : row.sexe || 'M',
+                                  });
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => supprimerResponsableNiveau(index)}
+                              title="Supprimer"
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                border: '1px solid #fecaca',
+                                background: '#fff1f2',
+                                color: '#b91c1c',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: 13,
+                              }}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Niveaux définis</div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {niveauxDB.map((niv) => {
+                                const n = niv.nom;
+                                const selected = (row.niveaux || []).includes(n);
+                                return (
+                                  <button
+                                    key={`${index}-${n}`}
+                                    type="button"
+                                    onClick={() => toggleNiveauResponsable(index, n)}
+                                    style={{
+                                      padding: '8px 14px',
+                                      borderRadius: 8,
+                                      border: '2px solid ' + (selected ? '#6366f1' : '#e2e8f0'),
+                                      background: selected ? '#e0e7ff' : 'white',
+                                      color: selected ? '#3730a3' : '#64748b',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      fontSize: 13,
+                                    }}
+                                  >
+                                    {n}
+                                  </button>
+                                );
+                              })}
+                              {niveauxDB.length === 0 && (
+                                <span style={{ fontSize: 12, color: '#94a3b8' }}>Aucun niveau configuré dans Structure.</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={ajouterResponsableNiveau}
+                      style={{
+                        marginTop: 12,
+                        padding: '9px 14px',
+                        borderRadius: 8,
+                        border: '1px dashed #94a3b8',
+                        background: 'white',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                    >
+                      + Ajouter un responsable de niveau
+                    </button>
                   </div>
                 </div>
                 </div>}
