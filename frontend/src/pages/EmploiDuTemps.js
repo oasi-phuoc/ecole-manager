@@ -3852,7 +3852,9 @@ export default function EmploiDuTemps() {
                                       </optgroup>
                                       {poolAvecSoutien && (
                                         <optgroup label="Soutien">
-                                          {classesCours.map(cl => (
+                                          {classesCours
+                                            .filter(cl => niveauAvecSoutien(resoudreNiveauClasse(cl, niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '')))
+                                            .map(cl => (
                                             <option key={`soutien-${cl.id}`} value={`soutien:${cl.id}`}>
                                               {cl.nom} - Soutien
                                             </option>
