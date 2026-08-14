@@ -296,6 +296,7 @@ export default function EmploiDuTemps() {
 
   const sauverDispos = async () => {
     if (!profSelectionne) { showToast('Sélectionner d\'abord un professeur.', 'error'); return; }
+    if (!isAdmin()) { showToast('Action réservée aux administrateurs.', 'error'); return; }
     const prof = profs.find(p => p.id == profSelectionne);
     const periodesRequises = getPeriodesRequisesPourTaux(prof);
     const periodesSelectionnees = Object.values(dispos).filter(v => v !== false).length;
@@ -310,6 +311,10 @@ export default function EmploiDuTemps() {
       axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
       axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
     ]);
+    try {
+      const rAll = await axios.get(API + '/planning/disponibilites', { headers });
+      setAllDispos(rAll.data || []);
+    } catch {}
     chargerDisposAffectations(poolAffId);
     showToast('Disponibilités et remarque sauvegardées.');
   };
@@ -1766,7 +1771,11 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
           </div>
         )}
-        {onglet === 'disponibilites' && null}
+        {onglet === 'disponibilites' && profSelectionne && isAdmin() && (
+          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            <button type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos}>Sauvegarder</button>
+          </div>
+        )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
@@ -2013,8 +2022,13 @@ export default function EmploiDuTemps() {
                                 if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
                                 const ok = dispos[cr.id] !== false;
                                 return (
-                                  <td key={jour} style={{...styles.tdDispo, cursor:'default', textAlign:'center', verticalAlign:'middle'}}>
-                                    <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle'}} />
+                                  <td
+                                    key={jour}
+                                    style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default', textAlign:'center', verticalAlign:'middle'}}
+                                    onClick={() => { if (isAdmin()) toggleDispo(cr.id); }}
+                                    title={isAdmin() ? (ok ? 'Disponible — cliquer pour basculer' : 'Indisponible — cliquer pour basculer') : (ok ? 'Disponible' : 'Indisponible')}
+                                  >
+                                    <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle',pointerEvents:'none'}} />
                                   </td>
                                 );
                               })}
