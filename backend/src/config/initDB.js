@@ -159,16 +159,20 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS type_special VARCHAR(30)`);
     // Autoriser cours normal + soutien de la même classe sur le même créneau
     await pool.query(`ALTER TABLE affectations DROP CONSTRAINT IF EXISTS affectations_classe_id_creneau_id_key`);
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS affectations_classe_creneau_normale_uidx
-      ON affectations (classe_id, creneau_id)
-      WHERE classe_id IS NOT NULL AND (type_special IS NULL OR type_special = '')
-    `);
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS affectations_classe_creneau_soutien_uidx
-      ON affectations (classe_id, creneau_id)
-      WHERE classe_id IS NOT NULL AND type_special = 'soutien'
-    `);
+    try {
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS affectations_classe_creneau_normale_uidx
+        ON affectations (classe_id, creneau_id)
+        WHERE classe_id IS NOT NULL AND (type_special IS NULL OR type_special = '')
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS affectations_classe_creneau_soutien_uidx
+        ON affectations (classe_id, creneau_id)
+        WHERE classe_id IS NOT NULL AND type_special = 'soutien'
+      `);
+    } catch (idxErr) {
+      console.error('Index affectations normal/soutien (doublons possibles):', idxErr.message);
+    }
     await pool.query(`CREATE TABLE IF NOT EXISTS planning_branches (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id) ON DELETE CASCADE, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, UNIQUE(classe_id, matiere_id, pool_id));`);
     await pool.query(`CREATE TABLE IF NOT EXISTS classe_couleurs (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE UNIQUE, couleur VARCHAR(20) NOT NULL, updated_at TIMESTAMP DEFAULT NOW());`);
     await pool.query(`CREATE TABLE IF NOT EXISTS prof_couleurs (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE UNIQUE, couleur VARCHAR(20) NOT NULL, updated_at TIMESTAMP DEFAULT NOW());`);

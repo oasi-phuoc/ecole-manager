@@ -489,9 +489,21 @@ export default function EmploiDuTemps() {
   };
 
   const chargerPlanningGeneral = async (pid) => {
-    const url = API + '/planning/general' + (pid ? '?pool_id='+pid : '');
-    const r = await axios.get(url, { headers });
-    setPlanningGeneral(r.data);
+    try {
+      const url = API + '/planning/general' + (pid ? '?pool_id=' + pid : '');
+      const r = await axios.get(url, { headers });
+      const d = r?.data && typeof r.data === 'object' ? r.data : {};
+      setPlanningGeneral({
+        profs: Array.isArray(d.profs) ? d.profs : [],
+        creneaux: Array.isArray(d.creneaux) ? d.creneaux : [],
+        affectations: Array.isArray(d.affectations) ? d.affectations : [],
+        dispos: Array.isArray(d.dispos) ? d.dispos : [],
+        titulaires: Array.isArray(d.titulaires) ? d.titulaires : [],
+      });
+    } catch (err) {
+      setPlanningGeneral(null);
+      showToast(err.response?.data?.message || err.message || 'Erreur lors du chargement du planning général.', 'error');
+    }
   };
 
   const chargerPlanningProf = async (id) => {
@@ -535,6 +547,11 @@ export default function EmploiDuTemps() {
   const estAffectationSpecialSansClasse = (aff) => {
     const t = String(aff?.type_special || '').toLowerCase();
     return t === 'titulariat' || t === 'atelier' || t === 'autre';
+  };
+  const formaterPrenomEntete = (prenom) => {
+    const brut = String(prenom || '').trim();
+    if (!brut) return '';
+    return brut.charAt(0).toUpperCase() + brut.slice(1).toLowerCase();
   };
 
   const poolSelectionne = pools.find(p => p.id == poolAffId);
@@ -2015,11 +2032,6 @@ export default function EmploiDuTemps() {
     const c = String(val || '').trim();
     if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
     return '';
-  };
-  const formaterPrenomEntete = (prenom) => {
-    const brut = String(prenom || '').trim();
-    if (!brut) return '';
-    return brut.charAt(0).toUpperCase() + brut.slice(1).toLowerCase();
   };
   const baseCreneauxPeriode = (liste, periode) =>
     (liste || [])
@@ -4595,15 +4607,24 @@ export default function EmploiDuTemps() {
           )}
           {planningPoolId && planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
-              {(jourPlanningFiltre === 'tous' ? JOURS : JOURS.filter(j => j === jourPlanningFiltre)).map(jour => {
-                const crs = planningGeneral.creneaux.filter(c=>c.jour===jour);
+              {(() => {
+                const genProfs = Array.isArray(planningGeneral.profs) ? planningGeneral.profs : [];
+                const genCreneaux = Array.isArray(planningGeneral.creneaux) ? planningGeneral.creneaux : [];
+                const genAffectations = Array.isArray(planningGeneral.affectations) ? planningGeneral.affectations : [];
+                const genDispos = Array.isArray(planningGeneral.dispos) ? planningGeneral.dispos : [];
+                const joursAffiches = jourPlanningFiltre === 'tous' ? JOURS : JOURS.filter(j => j === jourPlanningFiltre);
+                if (!genProfs.length) {
+                  return <div style={styles.msgVide}>Aucun professeur dans ce pool.</div>;
+                }
+                return joursAffiches.map(jour => {
+                const crs = genCreneaux.filter(c=>c.jour===jour);
                 if (!crs.length) return null;
-                const nCols = planningGeneral.profs.length + 1;
+                const nCols = genProfs.length + 1;
                 return (
-                  <table key={`gen-${jour}`} style={{...styles.tbl,tableLayout:'fixed',width:'100%',minWidth:LARGEUR_COLONNE_CRENEAU+planningGeneral.profs.length*120,marginBottom:20,border:'none',boxShadow:'none'}}>
+                  <table key={`gen-${jour}`} style={{...styles.tbl,tableLayout:'fixed',width:'100%',minWidth:LARGEUR_COLONNE_CRENEAU+genProfs.length*120,marginBottom:20,border:'none',boxShadow:'none'}}>
                     <colgroup>
                       <col style={{width:LARGEUR_COLONNE_CRENEAU}} />
-                      {planningGeneral.profs.map(p => <col key={`col-gen-${jour}-${p.id}`} />)}
+                      {genProfs.map(p => <col key={`col-gen-${jour}-${p.id}`} />)}
                     </colgroup>
                     <tbody>
                       <tr>
@@ -4615,7 +4636,7 @@ export default function EmploiDuTemps() {
                       </tr>
                       <tr style={{...styles.theadRow, background:'#ede9fe'}}>
                         <th style={{...styles.th,...STYLE_COLONNE_CRENEAU,textAlign:'center',color:'#5b21b6'}}>Horaire</th>
-                        {planningGeneral.profs.map(p => (
+                        {genProfs.map(p => (
                           <th key={p.id} style={{...styles.th,textAlign:'center',color:'#5b21b6'}}>
                             {nomSansSuffixe(p.nom)}<br/>
                             <span style={{fontWeight:400,fontSize:11}}>{formaterPrenomEntete(p.prenom)}</span>
@@ -4634,9 +4655,9 @@ export default function EmploiDuTemps() {
                               <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
                                 {cr.heure_debut}–{cr.heure_fin}
                               </td>
-                              {planningGeneral.profs.map(p => {
-                                const aff = planningGeneral.affectations.find(a=>a.prof_id===p.id&&a.creneau_id===cr.id);
-                                const dispo = planningGeneral.dispos.find(d=>d.prof_id===p.id&&d.creneau_id===cr.id);
+                              {genProfs.map(p => {
+                                const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
+                                const dispo = genDispos.find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
                                 const indispo = dispo&&!dispo.disponible;
                                 const estSoutien = String(aff?.type_special || '').toLowerCase() === 'soutien';
                                 const estSpecial = !!aff?.type_special && !estSoutien;
@@ -4666,7 +4687,8 @@ export default function EmploiDuTemps() {
                     </tbody>
                   </table>
                 );
-              })}
+              });
+              })()}
             </div>
           )}
         </div>
