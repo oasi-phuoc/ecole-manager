@@ -164,7 +164,7 @@ export default function Parametres() {
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [sallesDB, setSallesDB] = useState([]);
-  const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '' });
+  const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '', periodes_normales: '20', periodes_soutien: '0' });
   const [donneesLieuForm, setDonneesLieuForm] = useState({ nom: '' });
   const [donneesSalleForm, setDonneesSalleForm] = useState({ nom: '', lieu_travail_id: '' });
   const [donneesNiveauEdit, setDonneesNiveauEdit] = useState(null);
@@ -184,7 +184,12 @@ export default function Parametres() {
     const [moved] = list.splice(from, 1);
     list.splice(to, 0, moved);
     setNiveauxDB(list);
-    await Promise.all(list.map((n, i) => axios.put(API + '/donnees/niveaux/' + n.id, { nom: n.nom, ordre: i + 1 }, { headers })));
+    await Promise.all(list.map((n, i) => axios.put(API + '/donnees/niveaux/' + n.id, {
+      nom: n.nom,
+      ordre: i + 1,
+      periodes_normales: n.periodes_normales,
+      periodes_soutien: n.periodes_soutien,
+    }, { headers })));
   };
   const reorderLieux = async (from, to) => {
     if (from === to) return;
@@ -1185,24 +1190,51 @@ export default function Parametres() {
                 <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
                   {/* Niveaux */}
-                  <div style={{ flex: '1 1 220px' }}>
+                  <div style={{ flex: '1 1 320px' }}>
                     <div style={styles.label}>Niveaux de classes</div>
                     <form onSubmit={async e => {
                       e.preventDefault();
                       try {
+                        const payload = {
+                          nom: donneesNiveauForm.nom,
+                          periodes_normales: parseInt(donneesNiveauForm.periodes_normales, 10) || 0,
+                          periodes_soutien: parseInt(donneesNiveauForm.periodes_soutien, 10) || 0,
+                        };
                         if (donneesNiveauEdit) {
-                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, { nom: donneesNiveauForm.nom, ordre: donneesNiveauEdit.ordre }, { headers });
+                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, { ...payload, ordre: donneesNiveauEdit.ordre }, { headers });
                         } else {
-                          await axios.post(API + '/donnees/niveaux', { nom: donneesNiveauForm.nom, ordre: niveauxDB.length + 1 }, { headers });
+                          await axios.post(API + '/donnees/niveaux', { ...payload, ordre: niveauxDB.length + 1 }, { headers });
                         }
-                        setDonneesNiveauForm({ nom: '' });
+                        setDonneesNiveauForm({ nom: '', periodes_normales: '20', periodes_soutien: '0' });
                         setDonneesNiveauEdit(null);
                         chargerDonnees();
                       } catch(err) { alert(err.response?.data?.message || err.message); }
-                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: CSC)" value={donneesNiveauForm.nom} onChange={e => setDonneesNiveauForm(f => ({ ...f, nom: e.target.value }))} required />
-                      <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesNiveauEdit ? '✓' : '+'}</button>
-                      {donneesNiveauEdit && <button type="button" onClick={() => { setDonneesNiveauEdit(null); setDonneesNiveauForm({ nom: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                    }} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                      <input style={{ ...styles.input, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: CSC)" value={donneesNiveauForm.nom} onChange={e => setDonneesNiveauForm(f => ({ ...f, nom: e.target.value }))} required />
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input
+                          style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }}
+                          type="number"
+                          min="0"
+                          placeholder="Périodes"
+                          title="Périodes normales"
+                          value={donneesNiveauForm.periodes_normales}
+                          onChange={e => setDonneesNiveauForm(f => ({ ...f, periodes_normales: e.target.value }))}
+                          required
+                        />
+                        <input
+                          style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }}
+                          type="number"
+                          min="0"
+                          placeholder="Soutien"
+                          title="Périodes de soutien"
+                          value={donneesNiveauForm.periodes_soutien}
+                          onChange={e => setDonneesNiveauForm(f => ({ ...f, periodes_soutien: e.target.value }))}
+                        />
+                        <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesNiveauEdit ? '✓' : '+'}</button>
+                        {donneesNiveauEdit && <button type="button" onClick={() => { setDonneesNiveauEdit(null); setDonneesNiveauForm({ nom: '', periodes_normales: '20', periodes_soutien: '0' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Périodes normales · Soutien (0 si aucun)</div>
                     </form>
                     {niveauxDB.map((n, idx) => (
                       <div key={n.id}
@@ -1215,7 +1247,11 @@ export default function Parametres() {
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: dragOverNiveau === idx ? '#e0e7ff' : '#f8fafc', borderRadius: 7, border: '1px solid ' + (dragOverNiveau === idx ? '#6366f1' : '#e2e8f0'), marginBottom: 5, cursor: 'grab' }}>
                         <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{n.nom}</span>
-                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
+                        <span style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {Number(n.periodes_normales) || 0} pér.
+                          {(Number(n.periodes_soutien) || 0) > 0 ? ` + ${Number(n.periodes_soutien)} sout.` : ''}
+                        </span>
+                        <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom, periodes_normales: String(n.periodes_normales ?? 20), periodes_soutien: String(n.periodes_soutien ?? 0) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
                         <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
