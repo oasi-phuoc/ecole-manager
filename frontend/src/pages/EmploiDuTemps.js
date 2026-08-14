@@ -648,12 +648,21 @@ export default function EmploiDuTemps() {
       matiere_nom: matiereDraft?.nom || null
     };
   });
+  const estAffSoutienPlanning = (a) => String(a?.type_special || '').toLowerCase() === 'soutien';
+  const planningClasseAffectationsNormales = planningClasseAffectations.filter((a) => !estAffSoutienPlanning(a));
+  const creneauxAvecSoutienClasse = new Set(
+    planningClasseAffectations
+      .filter((a) => estAffSoutienPlanning(a))
+      .map((a) => String(a.creneau_id))
+  );
+  const getAffectationNormaleCreneau = (creneauId) =>
+    planningClasseAffectationsNormales.find((a) => String(a.creneau_id) === String(creneauId)) || null;
   const classePlanningHorairesSet = new Set(
     (planningClasse?.horaires || []).map(h => `${h.jour}|${h.periode}`)
   );
   const classeAHorairePlanning = (jour, periode) => classePlanningHorairesSet.has(`${jour}|${periode}`);
   const creneauxPlanningParId = new Map((planningClasse?.creneaux || []).map((c) => [String(c.id), c]));
-  const planningClasseAffectationsActives = planningClasseAffectations.filter((a) => {
+  const planningClasseAffectationsActives = planningClasseAffectationsNormales.filter((a) => {
     const cr = creneauxPlanningParId.get(String(a.creneau_id));
     if (!cr) return false;
     return classeAHorairePlanning(cr.jour, cr.periode);
@@ -1569,7 +1578,7 @@ export default function EmploiDuTemps() {
     );
     if (!ok) return;
     const next = {};
-    (planningClasse.affectations || []).forEach((a) => {
+    planningClasseAffectationsNormales.forEach((a) => {
       if (a?.id != null) next[String(a.id)] = '';
     });
     setBranchesMatiereDraftMap(next);
@@ -1739,7 +1748,7 @@ export default function EmploiDuTemps() {
     });
 
     const next = { ...branchesMatiereDraftMap };
-    (planningClasse.affectations || []).forEach((a) => {
+    planningClasseAffectationsNormales.forEach((a) => {
       if (a?.id == null) return;
       next[String(a.id)] = assignment[String(a.id)] || '';
     });
@@ -2146,8 +2155,11 @@ export default function EmploiDuTemps() {
 
   const buildPlanningTableHtml = (args) => buildPlanningSemainePrintHtml(args);
 
-  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '' }) => {
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', creneauxAvecSoutien = null }) => {
     const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
+    const soutienSet = creneauxAvecSoutien instanceof Set
+      ? creneauxAvecSoutien
+      : new Set((creneauxAvecSoutien || []).map(String));
     return buildPlanningSemainePrintHtml({
       creneauxListe,
       showPauseRows: true,
@@ -2155,7 +2167,10 @@ export default function EmploiDuTemps() {
       getCellData: (cr) => {
         const aCours = horairesSet.has(`${cr.jour}|${cr.periode}`);
         if (!aCours) return { text: '', bg: '#f8fafc' };
-        const aff = (affectationsListe || []).find(a => String(a.creneau_id) === String(cr.id));
+        const aff = (affectationsListe || []).find(a =>
+          String(a.creneau_id) === String(cr.id)
+          && String(a.type_special || '').toLowerCase() !== 'soutien'
+        );
         if (!aff) return { text: 'Aucun professeur affecté', color: '#dc2626' };
         if (estAffectationSpecialSansClasse(aff)) {
           return {
@@ -2165,9 +2180,9 @@ export default function EmploiDuTemps() {
           };
         }
         const bg = toPrintColor(getCouleurProf(aff.prof_id)) || '#e8f5e9';
-        const suffixeSoutien = estAffectationSoutien(aff) ? '\nSoutien' : '';
+        const badgeS = soutienSet.has(String(cr.id)) ? ' (S)' : '';
         return {
-          text: `${formaterNomComplet(aff.prof_nom || '')}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}${suffixeSoutien}`,
+          text: `${formaterNomComplet(aff.prof_nom || '')}${badgeS}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
           bg,
           color: getCouleurTexteSurFond(bg),
         };
@@ -2252,9 +2267,10 @@ export default function EmploiDuTemps() {
         const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
         const table = buildPlanningClassesPrintTableHtml({
           creneauxListe: planningClasse.creneaux || [],
-          affectationsListe: planningClasseAffectations || [],
+          affectationsListe: planningClasseAffectationsNormales || [],
           horairesListe: planningClasse.horaires || [],
           titreBanniere: nomClasse || 'Classe',
+          creneauxAvecSoutien: creneauxAvecSoutienClasse,
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
       }
@@ -2367,13 +2383,19 @@ export default function EmploiDuTemps() {
           const data = rep.data;
           const nomClasse = data?.classe?.nom || '';
           const titulaireClasse = data?.classe?.titulaire_nom || '';
+          const affs = data?.affectations || [];
+          const affsNormales = affs.filter((a) => String(a.type_special || '').toLowerCase() !== 'soutien');
+          const creneauxSoutien = affs
+            .filter((a) => String(a.type_special || '').toLowerCase() === 'soutien')
+            .map((a) => String(a.creneau_id));
           const table = buildPlanningClassesPrintTableHtml({
             creneauxListe: data?.creneaux || [],
-            affectationsListe: data?.affectations || [],
+            affectationsListe: affsNormales,
             horairesListe: data?.horaires || [],
             titreBanniere: nomClasse
               ? `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`
               : 'Classe',
+            creneauxAvecSoutien: creneauxSoutien,
           });
           return `<div class="section">${table}</div>`;
         });
@@ -4155,13 +4177,38 @@ export default function EmploiDuTemps() {
                                   const cr = allCrs.find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
                                   if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                                   const aCours = classeAHorairePlanning(jour, periode);
-                                  const aff = aCours ? planningClasseAffectations.find(a=>String(a.creneau_id)===String(cr.id)) : null;
+                                  const aff = aCours ? getAffectationNormaleCreneau(cr.id) : null;
+                                  const aSoutien = aCours && creneauxAvecSoutienClasse.has(String(cr.id));
                                   const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                                   const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                                   return (
                                     <td key={jour} style={{...styles.td,textAlign:'center',fontSize:12,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                       background:aff?couleurFondProf:(aCours?'#fff':'#f5f5f5'),
-                                      color: aff ? couleurTexteProf : undefined}}>
+                                      color: aff ? couleurTexteProf : undefined,
+                                      position:'relative'}}>
+                                      {aSoutien && (
+                                        <span
+                                          title="Soutien sur cette période"
+                                          style={{
+                                            position:'absolute',
+                                            top:4,
+                                            right:4,
+                                            minWidth:18,
+                                            height:18,
+                                            padding:'0 4px',
+                                            borderRadius:999,
+                                            background:'#312e81',
+                                            color:'#ffffff',
+                                            fontSize:10,
+                                            fontWeight:800,
+                                            lineHeight:'18px',
+                                            textAlign:'center',
+                                            zIndex:1
+                                          }}
+                                        >
+                                          (S)
+                                        </span>
+                                      )}
                                       {aff ? (
                                         <div>
                                           <b style={{color:couleurTexteProf,fontSize:12}}>{formaterNomComplet(aff.prof_nom)}</b>
@@ -4440,13 +4487,21 @@ export default function EmploiDuTemps() {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
                               if (!cr) return <td key={`classe-tab-${periode}-${jour}`} style={{...styles.td,background:'#f5f5f5',height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR}}></td>;
                               const aCours = classeAHorairePlanning(jour, periode);
-                              const aff = aCours ? (planningClasse.affectations||[]).find(a=>a.creneau_id===cr.id) : null;
+                              const aff = aCours ? getAffectationNormaleCreneau(cr.id) : null;
+                              const aSoutien = aCours && creneauxAvecSoutienClasse.has(String(cr.id));
                               const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
                               return (
                                 <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                  background:aCours?'#fff':'#f5f5f5'}}>
+                                  background:aCours?'#fff':'#f5f5f5', position:'relative'}}>
+                                  {aSoutien && (
+                                    <span title="Soutien sur cette période" style={{
+                                      position:'absolute', top:4, right:4, minWidth:18, height:18, padding:'0 4px',
+                                      borderRadius:999, background:'#312e81', color:'#fff', fontSize:10, fontWeight:800,
+                                      lineHeight:'18px', textAlign:'center', zIndex:1
+                                    }}>(S)</span>
+                                  )}
                                   {aff ? (
                                     <>
                                       <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{formaterNomComplet(aff.prof_nom)}</div>

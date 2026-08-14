@@ -394,11 +394,13 @@ const getPlanningClasse = async (req, res) => {
   const classe = await pool.query(`SELECT c.id, c.nom, u.prenom||' '||u.nom as titulaire_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id WHERE c.id=$1`, [classe_id]);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
   const affectations = await pool.query(`
-    SELECT a.id, a.creneau_id, a.prof_id, a.matiere_id, u.prenom||' '||u.nom as prof_nom, m.nom as matiere_nom
+    SELECT a.id, a.creneau_id, a.prof_id, a.matiere_id, a.type_special,
+      u.prenom||' '||u.nom as prof_nom, m.nom as matiere_nom
     FROM affectations a
     JOIN utilisateurs u ON u.id=a.prof_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
     WHERE a.classe_id=$1
+    ORDER BY CASE WHEN a.type_special = 'soutien' THEN 1 ELSE 0 END, a.id
   `, [classe_id]);
   const horaires = await pool.query('SELECT jour,periode FROM classe_horaires WHERE classe_id=$1', [classe_id]);
   let branches = [];
