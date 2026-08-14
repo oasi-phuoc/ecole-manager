@@ -1902,25 +1902,23 @@ export default function EmploiDuTemps() {
               print-color-adjust: exact !important;
             }
           }
-          h1 { margin: 0 0 24px; font-size: 40px; }
-          h2 { margin: 18px 0 8px; font-size: 16px; }
+          h1 { margin: 0 0 18px; font-size: 28px; }
+          h2 { margin: 14px 0 8px; font-size: 15px; }
           table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; table-layout: fixed; }
-          th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
-          th { background: #f3f4f6; }
+          th, td { border: 1px solid #e2e8f0; padding: 5px 4px; font-size: 9pt; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
+          th { background: #f8fafc; font-weight: 700; }
           col.creneau-col { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; }
           col.day-col { width: auto; }
-          .creneau { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; text-align: left; white-space: nowrap; background: #f9fafb; font-weight: 700; }
-          .periode { background: #000000; color: #ffffff; font-weight: 700; text-align: left; }
-          .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; }
-          .section:last-child { page-break-after: auto; }
-          .section { break-inside: avoid; break-after: page; }
-          .section:last-child { break-after: auto; }
+          .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
+          .section:last-child { page-break-after: auto; break-after: auto; }
+          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:11pt;padding:5px 14px;text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
+          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:left;border:none; }
+          .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:center;border:1px solid #111827; }
           ${compactClasses ? `
-          h1 { margin-bottom: 18px; font-size: 36px; }
-          h2 { margin: 10px 0 6px; font-size: 14px; }
+          h1 { margin-bottom: 14px; font-size: 24px; }
+          h2 { margin: 10px 0 6px; font-size: 13px; }
           table { margin: 4px 0 10px; }
-          th, td { padding: 4px; font-size: 10px; line-height: 1.15; }
-          .creneau { font-size: 10px; }
+          th, td { padding: 3px; font-size: 8pt; line-height: 1.15; }
           ` : ''}
         </style>
       </head>
@@ -1931,9 +1929,11 @@ export default function EmploiDuTemps() {
     </html>
   `;
   };
-  const buildPlanningTableHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = false }) => {
-    const HAUTEUR_LIGNE_COURS = 56;
-    const HAUTEUR_LIGNE_PAUSE = 42;
+
+  /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
+  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '' }) => {
+    const ROW_H = 52;
+    const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const fetchCellData = (cr, jour, periode) => {
       if (!cr) return { text: '' };
       if (getCellData) return getCellData(cr, jour, periode) || { text: '' };
@@ -1944,140 +1944,103 @@ export default function EmploiDuTemps() {
       const data = fetchCellData(cr, jour, cr.periode);
       return data && data.text ? acc + 1 : acc;
     }, 0);
-    const lignes = [];
+
+    const headerDays = JOURS.map((j) => {
+      const eff = countParJour(j);
+      return `<th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">${escapeHtml(j)} <span style="display:inline-block;min-width:16px;padding:0 5px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #c7d2fe;margin-left:4px;">${eff}</span></th>`;
+    }).join('');
+
+    const rows = [];
     ['Matin', 'Après-midi'].forEach((periode, periodeIdx) => {
       const base = baseCreneauxPeriode(creneauxListe, periode);
       if (!base.length) return;
-      const numRows = base.length + (showPauseRows ? 1 : 0);
+      rows.push(`<tr><td colspan="6" class="periode-banner">${escapeHtml(periode)}</td></tr>`);
       base.forEach((crBase, idx) => {
-        const isFirstRow = idx === 0;
-        const isLastRow = idx === base.length - 1;
-        const topEdge = isFirstRow ? 'border-top:2px solid #a5b4fc;' : '';
-        const bottomEdge = isLastRow ? 'border-bottom:2px solid #a5b4fc;' : '';
-        const cellules = JOURS.map((jour, jdx) => {
-          const isLastCol = jdx === JOURS.length - 1;
-          const rightEdge = isLastCol ? 'border-right:2px solid #a5b4fc;' : '';
+        const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}"></td>`;
+          if (!cr) {
+            return `<td style="background:#f8fafc;height:${ROW_H}px;border:1px solid #e2e8f0;"></td>`;
+          }
           const raw = fetchCellData(cr, jour, periode) || { text: '' };
-          const texte = escapeHtml(raw.text || '').replace(/\n/g, '<br/>');
-          const bg = toPrintColor(raw.bg) || '#ffffff';
-          const fg = toPrintColor(raw.color) || '#1e293b';
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}font-size:9pt;line-height:1.25;">${texte}</td>`;
+          const texteBrut = String(raw.text || '');
+          const isIndispo = /indispo/i.test(texteBrut);
+          let bg = toPrintColor(raw.bg) || (isIndispo ? '#eeeeee' : '#ffffff');
+          let fg = toPrintColor(raw.color) || (isIndispo ? '#9ca3af' : '#1e293b');
+          if (isIndispo && !raw.bg) {
+            bg = '#eeeeee';
+            fg = '#9ca3af';
+          }
+          const lignes = escapeHtml(texteBrut).split('\n').filter(Boolean);
+          const content = lignes.length
+            ? `<div style="font-weight:700;color:${fg};font-size:9pt;line-height:1.25;">${lignes[0]}</div>${lignes.slice(1).map(l => `<div style="color:${fg};font-size:8pt;margin-top:2px;line-height:1.2;">${l}</div>`).join('')}`
+            : '';
+          return `<td style="background:${bg};color:${fg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 4px;">${content}</td>`;
         }).join('');
-        const periodeCell = idx === 0
-          ? `<td rowspan="${numRows}" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:2px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>`
-          : '';
-        lignes.push(
-          `<tr>${periodeCell}<td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;${topEdge}${bottomEdge}text-align:center;font-size:9pt;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+        rows.push(
+          `<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
-          const pause = pausesParPeriode[periode];
-          lignes.push(
-            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;border-right:2px solid #a5b4fc;">PAUSE</td></tr>`
+          const pause = pausesParPeriode[periode] || { debut: '', fin: '' };
+          rows.push(
+            `<tr><td class="pause-banner" style="white-space:nowrap;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" class="pause-banner">PAUSE</td></tr>`
           );
         }
       });
       if (periodeIdx === 0) {
-        lignes.push(`<tr><td colspan="7" style="height:${HAUTEUR_LIGNE_PAUSE}px;background:#ffffff;border:none;padding:0;"></td></tr>`);
+        rows.push(`<tr><td colspan="6" style="height:10px;background:#ffffff;border:none;padding:0;"></td></tr>`);
       }
     });
-    const headerDaysCells = JOURS.map(j => {
-      const eff = countParJour(j);
-      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap;"><span style="display:inline-block;min-width:18px;height:18px;line-height:16px;padding:0 4px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:5px;vertical-align:middle;">${eff}</span><span style="vertical-align:middle;">${escapeHtml(j)}</span></th>`;
-    }).join('');
+
+    const banniere = titreBanniere
+      ? `<tr><td colspan="6" style="padding:0;border:none;background:transparent;"><div class="day-banner">${escapeHtml(titreBanniere)}</div></td></tr>`
+      : '';
+
     return `
-      <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
+      <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:16px;">
         <colgroup>
-          <col style="width:28px;min-width:28px;max-width:28px;" />
           <col class="creneau-col" />
           ${JOURS.map(() => '<col class="day-col" />').join('')}
         </colgroup>
-        <thead>
-          <tr>
-            <th colspan="2" style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
-            ${headerDaysCells}
-          </tr>
-        </thead>
-        <tbody>${lignes.join('')}</tbody>
-      </table>
-    `;
-  };
-  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe }) => {
-    const HAUTEUR_LIGNE_COURS = 56;
-    const HAUTEUR_LIGNE_PAUSE = 42;
-    const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
-    const countAffectationsParJour = (jour) => (creneauxListe || []).reduce((acc, cr) => {
-      if (cr.jour !== jour) return acc;
-      const aCours = horairesSet.has(`${jour}|${cr.periode}`);
-      const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
-      return aff ? acc + 1 : acc;
-    }, 0);
-    const renderPeriodeRows = (periode) => {
-      const base = baseCreneauxPeriode(creneauxListe, periode);
-      if (!base.length) return '';
-      const rows = [];
-      base.forEach((crBase, idx) => {
-        const isFirstRow = idx === 0;
-        const isLastRow = idx === base.length - 1;
-        const topEdge = isFirstRow ? 'border-top:2px solid #a5b4fc;' : '';
-        const bottomEdge = isLastRow ? 'border-bottom:2px solid #a5b4fc;' : '';
-        const cellulesJours = JOURS.map((jour, jdx) => {
-          const isLastCol = jdx === JOURS.length - 1;
-          const rightEdge = isLastCol ? 'border-right:2px solid #a5b4fc;' : '';
-          const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
-          if (!cr) return `<td style="background:#f8fafc;height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}"></td>`;
-          const aCours = horairesSet.has(`${jour}|${periode}`);
-          const aff = aCours ? (affectationsListe || []).find(a => a.creneau_id === cr.id) : null;
-          const bg = aff ? toPrintColor(getCouleurProf(aff.prof_id)) : (aCours ? '#ffffff' : '#f8fafc');
-          const fg = aff ? toPrintColor(getCouleurTexteSurFond(bg)) : '#1e293b';
-          const contenu = aff
-            ? `<div style="font-weight:700;color:${fg};font-size:10pt;line-height:1.25;">${escapeHtml(formaterNomComplet(aff.prof_nom || ''))}</div>${aff.matiere_nom ? `<div style="color:${fg};font-size:9pt;margin-top:3px;line-height:1.2;">${escapeHtml(aff.matiere_nom)}</div>` : ''}`
-            : (aCours ? '<span style="color:#dc2626;font-size:9pt;font-weight:700;">Aucun professeur affecté</span>' : '');
-          return `<td style="background:${bg};color:${fg};height:${HAUTEUR_LIGNE_COURS}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;${topEdge}${bottomEdge}${rightEdge}">${contenu}</td>`;
-        }).join('');
-        rows.push(
-          `<tr>
-            ${idx === 0 ? `<td rowspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;font-size:9pt;padding:4px 2px;border:2px solid #a5b4fc;text-align:center;vertical-align:middle;width:28px;min-width:28px;max-width:28px;"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;white-space:nowrap;">${escapeHtml(periode)}</span></td>` : ''}
-            <td class="creneau" style="height:${HAUTEUR_LIGNE_COURS}px;background:#f8fafc;color:#1e293b;border:1px solid #e2e8f0;${topEdge}${bottomEdge}text-align:center;font-size:9pt;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>
-            ${cellulesJours}
-          </tr>`
-        );
-        if (idx === 1) {
-          const pause = pausesParPeriode[periode];
-          rows.push(
-            `<tr><td style="background:#eef2ff;color:#4338ca;font-weight:700;white-space:nowrap;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" style="background:#eef2ff;color:#4338ca;font-weight:700;text-align:center;font-size:9pt;height:${HAUTEUR_LIGNE_PAUSE}px;border:1px solid #a5b4fc;border-top:2px solid #a5b4fc;border-bottom:2px solid #a5b4fc;border-right:2px solid #a5b4fc;">PAUSE</td></tr>`
-          );
-        }
-      });
-      return rows.join('');
-    };
-    const headerDaysCells = JOURS.map(j => {
-      const eff = countAffectationsParJour(j);
-      return `<th style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap;"><span style="display:inline-block;min-width:18px;height:18px;line-height:16px;padding:0 4px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:8pt;font-weight:700;border:1px solid #a5b4fc;margin-right:5px;vertical-align:middle;">${eff}</span><span style="vertical-align:middle;">${escapeHtml(j)}</span></th>`;
-    }).join('');
-    return `
-      <table style="border-collapse:collapse;width:100%;table-layout:fixed;">
-        <colgroup>
-          <col style="width:28px;min-width:28px;max-width:28px;" />
-          <col class="creneau-col" />
-          ${JOURS.map(() => '<col class="day-col" />').join('')}
-        </colgroup>
-        <thead>
-          <tr>
-            <th colspan="2" style="background:#f8fafc;color:#64748b;font-size:9pt;font-weight:600;padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">Horaire</th>
-            ${headerDaysCells}
-          </tr>
-        </thead>
         <tbody>
-          ${renderPeriodeRows('Matin')}
+          ${banniere}
           <tr>
-            <td colspan="7" style="height:${HAUTEUR_LIGNE_PAUSE}px;background:#ffffff;border:none;"></td>
+            <th style="text-align:center;font-size:9pt;padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Horaire</th>
+            ${headerDays}
           </tr>
-          ${renderPeriodeRows('Après-midi')}
+          ${rows.join('')}
         </tbody>
       </table>
     `;
+  };
+
+  const buildPlanningTableHtml = (args) => buildPlanningSemainePrintHtml(args);
+
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '' }) => {
+    const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
+    return buildPlanningSemainePrintHtml({
+      creneauxListe,
+      showPauseRows: true,
+      titreBanniere,
+      getCellData: (cr) => {
+        const aCours = horairesSet.has(`${cr.jour}|${cr.periode}`);
+        if (!aCours) return { text: '', bg: '#f8fafc' };
+        const aff = (affectationsListe || []).find(a => String(a.creneau_id) === String(cr.id));
+        if (!aff) return { text: 'Aucun professeur affecté', color: '#dc2626' };
+        if (aff.type_special) {
+          return {
+            text: getLibelleTypeSpecial(aff.type_special),
+            bg: '#000000',
+            color: '#ffffff',
+          };
+        }
+        const bg = toPrintColor(getCouleurProf(aff.prof_id)) || '#e8f5e9';
+        return {
+          text: `${formaterNomComplet(aff.prof_nom || '')}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+          bg,
+          color: getCouleurTexteSurFond(bg),
+        };
+      },
+    });
   };
   const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
@@ -2155,28 +2118,39 @@ export default function EmploiDuTemps() {
           creneauxListe: planningClasse.creneaux || [],
           affectationsListe: planningClasseAffectations || [],
           horairesListe: planningClasse.horaires || [],
+          titreBanniere: nomClasse || 'Classe',
         });
         return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert("Sélectionnez d'abord un professeur.");
-        const titre = `Plannings professeur — ${planningProf?.prof?.prenom || ''} ${nomSansSuffixe(planningProf?.prof?.nom || '')}`.trim();
+        const nomProf = `${planningProf?.prof?.prenom || ''} ${nomSansSuffixe(planningProf?.prof?.nom || '')}`.trim();
+        const titre = `Plannings professeur — ${nomProf}`;
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
-          repeatPeriodeOnDays: true,
           showPauseRows: true,
+          titreBanniere: nomProf || 'Professeur',
           getCellData: (cr) => {
-            const aff = (planningProf.affectations || []).find(a => a.creneau_id === cr.id);
-            if (hasBrancheAffectee(aff)) {
-              const bg = getCouleurBranche(aff.matiere_id);
+            const aff = (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
+            if (aff?.type_special) {
               return {
-                text: `${aff.classe_nom}\n${aff.matiere_nom}`,
-                bg,
-                color: getCouleurTexteSurFond(bg)
+                text: getLibelleTypeSpecial(aff.type_special),
+                bg: '#000000',
+                color: '#ffffff',
               };
             }
-            const dispo = (planningProf.dispos || []).find(d => d.creneau_id === cr.id);
-            if (dispo && !dispo.disponible) return { text: 'Indisponible' };
+            if (hasBrancheAffectee(aff) || aff?.classe_nom) {
+              const bg = aff.matiere_id
+                ? getCouleurBranche(aff.matiere_id)
+                : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+              return {
+                text: `${aff.classe_nom || ''}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                bg,
+                color: getCouleurTexteSurFond(bg),
+              };
+            }
+            const dispo = (planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id));
+            if (dispo && !dispo.disponible) return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
             return { text: '' };
           }
         });
@@ -2188,8 +2162,8 @@ export default function EmploiDuTemps() {
         const titre = `Plannings salles — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
-          repeatPeriodeOnDays: true,
           showPauseRows: true,
+          titreBanniere: salleSelectionnee,
           getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
@@ -2205,6 +2179,13 @@ export default function EmploiDuTemps() {
               String(a.classe_id) === String(cl.id) &&
               String(a.creneau_id) === String(cr.id)
             );
+            if (aff?.type_special) {
+              return {
+                text: `${cl.nom}\n${getLibelleTypeSpecial(aff.type_special)}`,
+                bg: '#000000',
+                color: '#ffffff'
+              };
+            }
             const bg = getCouleurClasse(cl.id);
             return {
               text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
@@ -2246,8 +2227,11 @@ export default function EmploiDuTemps() {
             creneauxListe: data?.creneaux || [],
             affectationsListe: data?.affectations || [],
             horairesListe: data?.horaires || [],
+            titreBanniere: nomClasse
+              ? `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`
+              : 'Classe',
           });
-          return `<div class="section"><h2>${escapeHtml(nomClasse)}${titulaireClasse ? ` — Titulaire : ${escapeHtml(titulaireClasse)}` : ''}</h2>${table}</div>`;
+          return `<div class="section">${table}</div>`;
         });
         return openPrintWindow('Plannings classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true });
       }
@@ -2261,24 +2245,35 @@ export default function EmploiDuTemps() {
           const nom = `${data?.prof?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || '')}`.trim();
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
-            repeatPeriodeOnDays: true,
+            titreBanniere: nom || 'Professeur',
             showPauseRows: true,
             getCellData: (cr) => {
-              const aff = (data?.affectations || []).find(a => a.creneau_id === cr.id);
-              if (hasBrancheAffectee(aff)) {
-                const bg = getCouleurBranche(aff.matiere_id);
+              const aff = (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
+              if (aff?.type_special) {
                 return {
-                  text: `${aff.classe_nom}\n${aff.matiere_nom}`,
+                  text: getLibelleTypeSpecial(aff.type_special),
+                  bg: '#000000',
+                  color: '#ffffff'
+                };
+              }
+              if (hasBrancheAffectee(aff) || aff?.classe_nom) {
+                const bg = aff.matiere_id
+                  ? getCouleurBranche(aff.matiere_id)
+                  : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+                return {
+                  text: `${aff.classe_nom || ''}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
                   bg,
                   color: getCouleurTexteSurFond(bg)
                 };
               }
-              const dispo = (data?.dispos || []).find(d => d.creneau_id === cr.id);
-              if (dispo && !dispo.disponible) return { text: 'Indisponible' };
+              const dispo = (data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id));
+              if (dispo && !dispo.disponible) {
+                return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
+              }
               return { text: '' };
             }
           });
-          return `<div class="section"><h2>Professeur : ${escapeHtml(nom)}</h2>${table}</div>`;
+          return `<div class="section">${table}</div>`;
         });
         return openPrintWindow('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true });
       }
@@ -2289,7 +2284,7 @@ export default function EmploiDuTemps() {
         const sections = sallesDisponiblesLieu.map((salle) => {
           const table = buildPlanningTableHtml({
             creneauxListe: creneaux || [],
-            repeatPeriodeOnDays: true,
+            titreBanniere: `Salle ${salle}`,
             showPauseRows: true,
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
@@ -2306,6 +2301,13 @@ export default function EmploiDuTemps() {
                 String(a.classe_id) === String(cl.id) &&
                 String(a.creneau_id) === String(cr.id)
               );
+              if (aff?.type_special) {
+                return {
+                  text: `${cl.nom}\n${getLibelleTypeSpecial(aff.type_special)}`,
+                  bg: '#000000',
+                  color: '#ffffff'
+                };
+              }
               const bg = getCouleurClasse(cl.id);
               return {
                 text: `${cl.nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
@@ -2314,42 +2316,21 @@ export default function EmploiDuTemps() {
               };
             }
           });
-          return `<div class="section"><h2>Salle : ${escapeHtml(salle)}</h2>${table}</div>`;
+          return `<div class="section">${table}</div>`;
         });
         return openPrintWindow(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true });
       }
-      const rep = await axios.get(API + '/planning/general', { headers });
+      const poolId = planningPoolId || '';
+      const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
+      const rep = await axios.get(url, { headers });
       const data = rep.data;
-      const table = buildPlanningTableHtml({
-        creneauxListe: data?.creneaux || [],
-        repeatPeriodeOnDays: true,
-        getCellData: (cr) => {
-          const affectes = (data?.affectations || []).filter(a => a.creneau_id === cr.id);
-          if (!affectes.length) return { text: '' };
-          if (affectes.length === 1) {
-            const a = affectes[0];
-            if (a.type_special) {
-              return {
-                text: `${formaterNomComplet(a.prof_nom)}\n${getLibelleTypeSpecial(a.type_special)}`,
-                bg: '#000000',
-                color: '#ffffff'
-              };
-            }
-            const bg = a.classe_id ? getCouleurClasse(a.classe_id) : getCouleurBranche(a.matiere_id);
-            return {
-              text: `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`,
-              bg,
-              color: getCouleurTexteSurFond(bg)
-            };
-          }
-          return {
-            text: affectes
-              .map(a => `${formaterNomComplet(a.prof_nom)}\n${a.matiere_nom ? `${a.classe_nom} — ${a.matiere_nom}` : a.classe_nom}`)
-              .join('\n\n')
-          };
-        }
+      const contenu = buildPlanningGeneralPrintHtml({
+        creneaux: data?.creneaux || [],
+        profs: data?.profs || [],
+        affectations: data?.affectations || [],
+        dispos: data?.dispos || [],
       });
-      return openPrintWindow('Plannings général — complet', `<div class="section">${table}</div>`);
+      return openPrintWindow('Plannings général — complet', contenu, { paysage: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression globale.");
     }
