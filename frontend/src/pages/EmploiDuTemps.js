@@ -519,6 +519,24 @@ export default function EmploiDuTemps() {
     }
   };
 
+  const getLibelleTypeSpecial = (typeSpecial) => {
+    const t = String(typeSpecial || '').trim().toLowerCase();
+    if (t === 'titulariat') return 'Titulariat';
+    if (t === 'atelier') return 'Atelier';
+    if (t === 'autre') return 'Autre';
+    if (t === 'soutien') return 'Soutien';
+    return t;
+  };
+  const estAffectationSoutien = (aff) => {
+    if (!aff) return false;
+    if (String(aff.type_special || '').toLowerCase() === 'soutien') return true;
+    return affectationModes[aff.id] === 'soutien';
+  };
+  const estAffectationSpecialSansClasse = (aff) => {
+    const t = String(aff?.type_special || '').toLowerCase();
+    return t === 'titulariat' || t === 'atelier' || t === 'autre';
+  };
+
   const poolSelectionne = pools.find(p => p.id == poolAffId);
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
   const classesPool = trierClassesParNom(poolSelectionne ? poolSelectionne.classes : classes);
@@ -1015,23 +1033,6 @@ export default function EmploiDuTemps() {
     const idOk = String(aff.matiere_id || '').trim() !== '';
     const nomOk = String(aff.matiere_nom || '').trim() !== '';
     return idOk || nomOk;
-  };
-  const getLibelleTypeSpecial = (typeSpecial) => {
-    const t = String(typeSpecial || '').trim().toLowerCase();
-    if (t === 'titulariat') return 'Titulariat';
-    if (t === 'atelier') return 'Atelier';
-    if (t === 'autre') return 'Autre';
-    if (t === 'soutien') return 'Soutien';
-    return t;
-  };
-  const estAffectationSoutien = (aff) => {
-    if (!aff) return false;
-    if (String(aff.type_special || '').toLowerCase() === 'soutien') return true;
-    return affectationModes[aff.id] === 'soutien';
-  };
-  const estAffectationSpecialSansClasse = (aff) => {
-    const t = String(aff?.type_special || '').toLowerCase();
-    return t === 'titulariat' || t === 'atelier' || t === 'autre';
   };
   const sauverCouleurBranche = async (matiereId, couleur) => {
     if (!isAdmin()) return;
