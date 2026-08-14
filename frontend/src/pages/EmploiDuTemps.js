@@ -143,6 +143,8 @@ export default function EmploiDuTemps() {
   const [dispos, setDispos] = useState({});
   const [disposAffectations, setDisposAffectations] = useState({});
   const [planningGeneral, setPlanningGeneral] = useState(null);
+  const [planningGeneralLoading, setPlanningGeneralLoading] = useState(false);
+  const [planningGeneralError, setPlanningGeneralError] = useState('');
   const [planningPoolId, setPlanningPoolId] = useState('');
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
@@ -532,10 +534,19 @@ export default function EmploiDuTemps() {
   };
 
   const chargerPlanningGeneral = async (pid) => {
+    const poolId = pid ? String(pid) : '';
+    if (!poolId) {
+      setPlanningGeneral(null);
+      setPlanningGeneralError('');
+      setPlanningGeneralLoading(false);
+      return;
+    }
+    setPlanningGeneralLoading(true);
+    setPlanningGeneralError('');
     try {
-      const url = API + '/planning/general' + (pid ? '?pool_id=' + pid : '');
+      const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
       const r = await axios.get(url, { headers });
-      const d = r?.data && typeof r.data === 'object' ? r.data : {};
+      const d = r?.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {};
       setPlanningGeneral({
         profs: Array.isArray(d.profs) ? d.profs : [],
         creneaux: Array.isArray(d.creneaux) ? d.creneaux : [],
@@ -545,7 +556,11 @@ export default function EmploiDuTemps() {
       });
     } catch (err) {
       setPlanningGeneral(null);
-      showToast(err.response?.data?.message || err.message || 'Erreur lors du chargement du planning général.', 'error');
+      const msg = err.response?.data?.message || err.message || 'Erreur lors du chargement du planning général.';
+      setPlanningGeneralError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setPlanningGeneralLoading(false);
     }
   };
 
@@ -2699,7 +2714,10 @@ export default function EmploiDuTemps() {
           <div style={styles.toggleGroup}>
             {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
               <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
-                onClick={() => { setSousOngletPlanning(o.id); if (o.id==='general') chargerPlanningGeneral(planningPoolId||''); }}>
+                onClick={() => {
+                  setSousOngletPlanning(o.id);
+                  if (o.id === 'general' && planningPoolId) chargerPlanningGeneral(planningPoolId);
+                }}>
                 {o.label}
               </button>
             ))}
@@ -3705,13 +3723,33 @@ export default function EmploiDuTemps() {
               {JOURS.map(jour => {
                 const crs = creneaux.filter(c => c.jour===jour);
                 if (!crs.length) return null;
-                const nColsJour = profsPool.length + 2; // horaire + profs + pastille
+                const nColsJour = profsPool.length + 1; // horaire + profs
+                const pastilleMeta = [];
+                pastilleMeta.push({ type: 'banner' });
+                ['Matin', 'Après-midi'].forEach((per) => {
+                  const crsPer = crs.filter(c => c.periode === per);
+                  if (!crsPer.length) return;
+                  const classesCours = classesPool.filter(cl => classeAHoraire(cl.id, jour, per));
+                  if (!classesCours.length) {
+                    pastilleMeta.push({ type: 'bande' });
+                    return;
+                  }
+                  pastilleMeta.push({ type: 'bande' });
+                  crsPer.forEach((cr) => {
+                    pastilleMeta.push({
+                      type: 'row',
+                      complete: periodeClassesNormalesCompletes(cr.id, classesCours),
+                      crId: cr.id,
+                    });
+                  });
+                });
                 return (
-                  <table key={`jour-${jour}`} style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140+36,marginTop:30,border:'none',boxShadow:'none'}}>
+                  <div key={`jour-${jour}`} style={{display:'flex', gap:8, marginTop:30, alignItems:'flex-start'}}>
+                  <div style={{overflowX:'auto', flex:1, minWidth:0}}>
+                  <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,border:'none',boxShadow:'none'}}>
                     <colgroup>
                       <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
                       {profsPool.map(p => <col key={`col-${jour}-${p.id}`} />)}
-                      <col style={{width: 36}} />
                     </colgroup>
                     <tbody>
                       <tr>
@@ -3734,7 +3772,6 @@ export default function EmploiDuTemps() {
                         return [
                           <tr key={jour+per+'_ph'}><td colSpan={nColsJour} style={styles.periodeBande}>{per}</td></tr>,
                           ...crsPer.map((cr, idx) => {
-                            const periodeComplete = periodeClassesNormalesCompletes(cr.id, classesCours);
                             return (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
@@ -3903,25 +3940,6 @@ export default function EmploiDuTemps() {
                                   </td>
                                 );
                               })}
-                              <td
-                                className="no-print-aff-ok"
-                                style={{
-                                  ...styles.td,
-                                  width: 36,
-                                  minWidth: 36,
-                                  maxWidth: 36,
-                                  padding: '4px 2px',
-                                  background: 'transparent',
-                                  border: 'none',
-                                  textAlign: 'center',
-                                  verticalAlign: 'middle',
-                                }}
-                                title={periodeComplete ? 'Toutes les classes sont affectées' : undefined}
-                              >
-                                {periodeComplete ? (
-                                  <span style={styles.pastillePeriodeOk} aria-label="Période complète">✓</span>
-                                ) : null}
-                              </td>
                             </tr>
                             );
                           })
@@ -3929,6 +3947,29 @@ export default function EmploiDuTemps() {
                       })}
                     </tbody>
                   </table>
+                  </div>
+                  <div className="no-print-aff-ok" style={{width:28, flexShrink:0, display:'flex', flexDirection:'column'}}>
+                    {pastilleMeta.map((slot, i) => {
+                      if (slot.type === 'banner') {
+                        return <div key={`ps-${jour}-b-${i}`} style={{height:32, flexShrink:0}} />;
+                      }
+                      if (slot.type === 'bande') {
+                        return <div key={`ps-${jour}-d-${i}`} style={{height:30, flexShrink:0}} />;
+                      }
+                      return (
+                        <div
+                          key={`ps-${jour}-r-${slot.crId || i}`}
+                          style={{height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}
+                          title={slot.complete ? 'Toutes les classes sont affectées' : undefined}
+                        >
+                          {slot.complete ? (
+                            <span style={styles.pastillePeriodeOk} aria-label="Période complète">✓</span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  </div>
                 );
               })}
               <style>{`
@@ -4643,30 +4684,33 @@ export default function EmploiDuTemps() {
               Sélectionnez d'abord un pool pour afficher le planning général.
             </div>
           )}
+          {planningPoolId && planningGeneralLoading && (
+            <div style={styles.msgVide}>Chargement du planning général…</div>
+          )}
+          {planningPoolId && !planningGeneralLoading && planningGeneralError && (
+            <div style={styles.msgVide}>{planningGeneralError}</div>
+          )}
 
-          {planningPoolId && planningGeneral && (
+          {planningPoolId && !planningGeneralLoading && planningGeneral && (
             <div style={{marginBottom:16}}>
               <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Classes et titulaires</h3>
-              <div style={{display:'flex',gap:8,width:'100%'}}>
-                {(planningGeneral.titulaires||[])
-                  .filter(t=>t.classe_nom)
-                  .filter(t => {
-                    if (!planningPoolId) return true;
-                    const poolSel = pools.find(p => String(p.id) === String(planningPoolId));
-                    const ids = new Set((poolSel?.classes || []).map(c => String(c.id)));
-                    return ids.has(String(t.classe_id));
-                  })
+              <div style={{display:'flex',gap:8,width:'100%',flexWrap:'wrap'}}>
+                {(Array.isArray(planningGeneral.titulaires) ? planningGeneral.titulaires : [])
+                  .filter(t => t && t.classe_nom)
                   .sort((a,b) => String(a.classe_nom||'').localeCompare(String(b.classe_nom||''), 'fr', {numeric:true, sensitivity:'base'}))
                   .map((t,i) => (
-                  <div key={i} style={{flex:1,minWidth:0,background:'#ffffff',borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
+                  <div key={String(t.classe_id || i)} style={{flex:'1 1 120px',minWidth:120,background:'#ffffff',borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
                     <div style={{fontWeight:700,fontSize:14,color:'#0f172a'}}>{t.classe_nom}</div>
                     <div style={{fontSize:12,color:'#475569',marginTop:4}}>{t.prof_nom ? formaterNomComplet(t.prof_nom) : <span style={{color:'#94a3b8'}}>Pas de titulaire</span>}</div>
                   </div>
                 ))}
+                {(Array.isArray(planningGeneral.titulaires) ? planningGeneral.titulaires : []).filter(t => t && t.classe_nom).length === 0 && (
+                  <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune classe dans ce pool.</div>
+                )}
               </div>
             </div>
           )}
-          {planningPoolId && planningGeneral && (
+          {planningPoolId && !planningGeneralLoading && planningGeneral && (
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
               {!showJoursFiltres ? (
                 <button onClick={() => setShowJoursFiltres(true)}
@@ -4688,9 +4732,10 @@ export default function EmploiDuTemps() {
               )}
             </div>
           )}
-          {planningPoolId && planningGeneral && (
+          {planningPoolId && !planningGeneralLoading && planningGeneral && (
             <div style={{overflowX:'auto',marginTop:0}}>
               {(() => {
+                try {
                 const genProfs = Array.isArray(planningGeneral.profs) ? planningGeneral.profs : [];
                 const genCreneaux = Array.isArray(planningGeneral.creneaux) ? planningGeneral.creneaux : [];
                 const genAffectations = Array.isArray(planningGeneral.affectations) ? planningGeneral.affectations : [];
@@ -4699,8 +4744,11 @@ export default function EmploiDuTemps() {
                 if (!genProfs.length) {
                   return <div style={styles.msgVide}>Aucun professeur dans ce pool.</div>;
                 }
+                if (!genCreneaux.length) {
+                  return <div style={styles.msgVide}>Aucun créneau horaire défini.</div>;
+                }
                 return joursAffiches.map(jour => {
-                const crs = genCreneaux.filter(c=>c.jour===jour);
+                const crs = genCreneaux.filter(c => c && c.jour === jour);
                 if (!crs.length) return null;
                 const nCols = genProfs.length + 1;
                 return (
@@ -4727,7 +4775,7 @@ export default function EmploiDuTemps() {
                         ))}
                       </tr>
                       {['Matin','Après-midi'].flatMap(per => {
-                        const crsPer = crs.filter(c=>c.periode===per);
+                        const crsPer = crs.filter(c => c.periode === per);
                         if (!crsPer.length) return [];
                         return [
                           <tr key={jour+per+'_ph'}>
@@ -4741,18 +4789,27 @@ export default function EmploiDuTemps() {
                               {genProfs.map(p => {
                                 const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
                                 const dispo = genDispos.find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
-                                const indispo = dispo&&!dispo.disponible;
+                                const indispo = dispo && !dispo.disponible;
                                 const estSoutien = String(aff?.type_special || '').toLowerCase() === 'soutien';
                                 const estSpecial = !!aff?.type_special && !estSoutien;
-                                const couleurFond = aff
-                                  ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
-                                  : (indispo ? '#eeeeee' : '#fff');
-                                const couleurTexte = aff
-                                  ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
-                                  : '#111827';
-                                const libelleAff = estSpecial
-                                  ? getLibelleTypeSpecial(aff.type_special)
-                                  : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : aff.classe_nom);
+                                let couleurFond = '#fff';
+                                let couleurTexte = '#111827';
+                                let libelleAff = '';
+                                try {
+                                  couleurFond = aff
+                                    ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
+                                    : (indispo ? '#eeeeee' : '#fff');
+                                  couleurTexte = aff
+                                    ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
+                                    : '#111827';
+                                  libelleAff = estSpecial
+                                    ? getLibelleTypeSpecial(aff.type_special)
+                                    : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : (aff.classe_nom || ''));
+                                } catch (_) {
+                                  couleurFond = indispo ? '#eeeeee' : '#fff';
+                                  couleurTexte = '#111827';
+                                  libelleAff = aff?.classe_nom || '';
+                                }
                                 return (
                                   <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                     background:couleurFond,color:couleurTexte}}>
@@ -4771,6 +4828,10 @@ export default function EmploiDuTemps() {
                   </table>
                 );
               });
+                } catch (err) {
+                  console.error('rendu planning général:', err);
+                  return <div style={styles.msgVide}>Impossible d&apos;afficher le planning général ({String(err?.message || err)}).</div>;
+                }
               })()}
             </div>
           )}
