@@ -40,6 +40,16 @@ const PERIODES_PAR_NIVEAU = { CSC: 24, CFR: 20, EPL: 20 };
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 const formaterNomComplet = (s) => String(s || '').replace(/(^|\s)(\S*?)-\S+$/, '$1$2').trim();
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
+const parseNiveaux = (valeur) => {
+  if (!valeur) return [];
+  if (Array.isArray(valeur)) return valeur.map(v => String(v).trim()).filter(Boolean);
+  return String(valeur).split(',').map(v => v.trim()).filter(Boolean);
+};
+const niveauxSeChevauchent = (a, b) => {
+  const setA = new Set(parseNiveaux(a).map(n => n.toUpperCase()));
+  if (!setA.size) return false;
+  return parseNiveaux(b).some(n => setA.has(n.toUpperCase()));
+};
 const normaliserIdsPrefBranches = (valeur) => {
   if (!valeur) return [];
   if (Array.isArray(valeur)) return valeur.map(v => String(v).trim()).filter(Boolean);
@@ -324,7 +334,8 @@ export default function EmploiDuTemps() {
 
   const handleSavePool = async () => {
     try {
-      if (!poolForm.niveau) { alert('Veuillez sélectionner un niveau.'); return; }
+      const niveauxSelectionnes = parseNiveaux(poolForm.niveau);
+      if (!niveauxSelectionnes.length) { alert('Veuillez sélectionner au moins un niveau.'); return; }
       if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
       if (totalPeriodesRequisesFormTotal !== 0 && totalPeriodesProfsForm !== 0 && totalPeriodesRequisesFormTotal < totalPeriodesProfsForm) {
         window.alert("Attention : les périodes professeurs dépassent le total requis (cours + titulariat).");
@@ -332,15 +343,16 @@ export default function EmploiDuTemps() {
         const manque = totalPeriodesRequisesFormTotal - totalPeriodesProfsForm;
         window.alert(`Attention : il manque ${manque} période(s) professeur par rapport au total requis.`);
       }
+      const payload = { ...poolForm, niveau: niveauxSelectionnes.join(',') };
       if (poolEdit) {
-        await axios.put(API + '/planning/pools/' + poolEdit.id, poolForm, { headers });
+        await axios.put(API + '/planning/pools/' + poolEdit.id, payload, { headers });
       } else {
-        await axios.post(API + '/planning/pools', poolForm, { headers });
+        await axios.post(API + '/planning/pools', payload, { headers });
       }
       setPausesParPeriode(clonePausesParPeriode(pausesParPeriodeForm));
       setShowPoolForm(false);
       setPoolEdit(null);
-      setPoolForm({nom:'',site:'',couleur:'#6366f1',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
+      setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
       await chargerTout();
       showToast('Pool sauvegardé.');
     } catch(err) { showToast(err.response?.data?.message || err.message, 'error'); }
@@ -438,7 +450,8 @@ export default function EmploiDuTemps() {
   const classesPool = poolSelectionne ? poolSelectionne.classes : classes;
   const classesParId = new Map(classes.map(c => [String(c.id), c]));
   const classesPoolTriees = [...classesPool].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
-  const poolEstCSC = String(poolSelectionne?.niveau || '').toUpperCase() === 'CSC';
+  const niveauxPoolSelectionne = parseNiveaux(poolSelectionne?.niveau);
+  const poolEstCSC = niveauxPoolSelectionne.some(n => String(n).toUpperCase() === 'CSC');
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
   const affectationsPourProfs = hasAffectationsUnsaved ? affectationsDraft : affectations;
@@ -447,7 +460,8 @@ export default function EmploiDuTemps() {
     (classesPoolIds.has(String(a.classe_id)) || !!a.type_special)
   );
   const suiviClasses = classesPool.map(cl => {
-    const niveauClasse = String(cl.niveau || poolSelectionne?.niveau || '').toUpperCase();
+    const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
+    const niveauClasse = String(cl.niveau || fallbackNiveau || '').toUpperCase();
     const affectationsClasse = affectationsPool.filter(a => String(a.classe_id) === String(cl.id));
     const periodesNormalesAffectees = affectationsClasse.filter(a => affectationModes[a.id] !== 'soutien').length;
     const periodesSoutienAffectees = affectationsClasse.filter(a => affectationModes[a.id] === 'soutien').length;
@@ -500,9 +514,9 @@ export default function EmploiDuTemps() {
   const classesPoolP = poolClasseP ? poolClasseP.classes : classes;
   const classesToutesTriees = [...classes].sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
   const profsPoolP = poolClasseP ? poolClasseP.profs : profs;
-  const niveauPoolPlanning = String(poolClasseP?.niveau || '').toUpperCase();
+  const niveauxPoolPlanning = parseNiveaux(poolClasseP?.niveau).map(n => String(n).toUpperCase());
   const matieresPourPlanningClasse = matieres.filter(m =>
-    niveauPoolPlanning && String(m.niveau || '').toUpperCase() === niveauPoolPlanning
+    niveauxPoolPlanning.length > 0 && niveauxPoolPlanning.includes(String(m.niveau || '').toUpperCase())
   );
   const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
@@ -542,7 +556,7 @@ export default function EmploiDuTemps() {
     const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites)
       .filter(id => {
         const m = matieresParId.get(String(id));
-        return m && (!niveauPoolPlanning || String(m.niveau || '').toUpperCase() === niveauPoolPlanning);
+        return m && (!niveauxPoolPlanning.length || niveauxPoolPlanning.includes(String(m.niveau || '').toUpperCase()));
       });
     const affectationsProf = planningClasseAffectationsActives.filter(a => String(a.prof_id) === String(profId));
     const compteurParBranche = affectationsProf.reduce((acc, a) => {
@@ -1183,10 +1197,11 @@ export default function EmploiDuTemps() {
     return { salle, coursSalle, complet };
   });
 
-  const niveauPool = String(poolForm.niveau || '').toUpperCase();
+  const niveauxPoolForm = parseNiveaux(poolForm.niveau);
   const classesSelectionneesForm = classes.filter(c => poolForm.classe_ids.includes(c.id));
   const totalPeriodesCoursForm = classesSelectionneesForm.reduce((sum, c) => {
-    const niv = String(c.niveau || niveauPool || '').toUpperCase();
+    const fallbackNiv = niveauxPoolForm.length === 1 ? niveauxPoolForm[0] : '';
+    const niv = String(c.niveau || fallbackNiv || '').toUpperCase();
     const nb = PERIODES_PAR_NIVEAU[niv] || 0;
     return sum + nb;
   }, 0);
@@ -2030,14 +2045,38 @@ export default function EmploiDuTemps() {
                       <input style={styles.inp} value={poolForm.nom} onChange={e => setPoolForm({...poolForm,nom:e.target.value})} />
                     </div>
                     <div style={styles.fc}>
-                      <label style={styles.lbl}>Niveau <span style={{color:'#ef4444'}}>*</span></label>
-                      <CustomSelect
-                        style={{...styles.inp, width:'100%'}}
-                        value={poolForm.niveau}
-                        placeholder="Choisir"
-                        options={niveauxDB.map(n => ({value: n.nom, label: n.nom}))}
-                        onChange={(v) => setPoolForm({...poolForm,niveau:v})}
-                      />
+                      <label style={styles.lbl}>Niveaux <span style={{color:'#ef4444'}}>*</span></label>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                        {niveauxDB.map(niv => {
+                          const n = niv.nom;
+                          const niveaux = parseNiveaux(poolForm.niveau);
+                          const selected = niveaux.includes(n);
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => {
+                                const curr = parseNiveaux(poolForm.niveau);
+                                const newNiv = selected ? curr.filter(x => x !== n) : [...curr, n];
+                                setPoolForm({ ...poolForm, niveau: newNiv.join(',') });
+                              }}
+                              style={{
+                                padding:'8px 16px',
+                                borderRadius:8,
+                                border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
+                                background:selected?'#e0e7ff':'white',
+                                color:selected?'#3730a3':'#64748b',
+                                cursor:'pointer',
+                                fontWeight:700,
+                                fontSize:13,
+                                transition:'all 0.15s'
+                              }}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
                       <div style={{marginTop:6,fontSize:12,fontWeight:700,color:couleurPeriodesRequises}}>
                         Périodes de cours : {totalPeriodesCoursForm}
                       </div>
@@ -2064,7 +2103,12 @@ export default function EmploiDuTemps() {
                     <div style={{...styles.fc, gridColumn:'1/-1'}}>
                       <label style={styles.lbl}>Classes</label>
                       <div style={{display:'grid',gridTemplateColumns:'repeat(6, minmax(0, 1fr))',gap:8,marginTop:6}}>
-                        {classes.filter(c => !poolForm.niveau || c.niveau === poolForm.niveau || !c.niveau).map(c => (
+                        {classes.filter(c => {
+                          const niveaux = parseNiveaux(poolForm.niveau);
+                          if (!niveaux.length) return true;
+                          if (!c.niveau) return true;
+                          return niveaux.some(n => String(c.niveau).toUpperCase() === String(n).toUpperCase());
+                        }).map(c => (
                           <label
                             key={c.id}
                             style={{
@@ -2086,18 +2130,19 @@ export default function EmploiDuTemps() {
                       </div>
                     </div>
                     {(() => {
-                      const niveauSel = poolForm.niveau || '';
+                      const niveauxSel = parseNiveaux(poolForm.niveau);
+                      const niveauSelLabel = niveauxSel.length ? niveauxSel.join(', ') : '';
                       const siteSel = poolForm.site || '';
-                      const respecteNiveau = (p) => !!niveauSel && (p.niveau_prefere || '') === niveauSel;
+                      const respecteNiveau = (p) => niveauxSel.length > 0 && niveauxSeChevauchent(p.niveau_prefere, niveauxSel);
                       const respecteLieu = (p) => !!siteSel && (p.lieu_travail_prefere || '') === siteSel;
                       const sortAlpha = (a, b) => (a.prenom || '').localeCompare(b.prenom || '') || (a.nom || '').localeCompare(b.nom || '');
                       const blocsProfs = [
                         {
-                          label: `✅ Respecte les deux critères (${niveauSel || '?'} / ${siteSel || '?'})`,
+                          label: `✅ Respecte les deux critères (${niveauSelLabel || '?'} / ${siteSel || '?'})`,
                           items: profs.filter(p => respecteNiveau(p) && respecteLieu(p)).sort(sortAlpha)
                         },
                         {
-                          label: `🎯 A une préférence pour ce niveau (${niveauSel || '?'})`,
+                          label: `🎯 A une préférence pour ${niveauxSel.length > 1 ? 'ces niveaux' : 'ce niveau'} (${niveauSelLabel || '?'})`,
                           items: profs.filter(p => respecteNiveau(p) && !respecteLieu(p)).sort(sortAlpha)
                         },
                         {
@@ -2215,7 +2260,7 @@ export default function EmploiDuTemps() {
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     <div style={{fontWeight:700,fontSize:16,color:'#0f172a'}}>{pool.nom}</div>
                     <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:2}}>
-                      {pool.niveau && <span style={{color:'#0f172a',fontSize:13,fontWeight:400}}>Niveau : {pool.niveau}</span>}
+                      {pool.niveau && <span style={{color:'#0f172a',fontSize:13,fontWeight:400}}>{parseNiveaux(pool.niveau).length > 1 ? 'Niveaux' : 'Niveau'} : {parseNiveaux(pool.niveau).join(', ')}</span>}
                       {pool.site && <span style={{color:'#0f172a',fontSize:13,fontWeight:400}}>Lieu : {pool.site}</span>}
                     </div>
                   </div>

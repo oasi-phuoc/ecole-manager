@@ -45,6 +45,11 @@ const getRolesColonne = (n) => {
 };
 
 const normaliserNiveau = (niveau) => String(niveau || '').trim().toUpperCase();
+const parseNiveauxPool = (valeur) => {
+  if (!valeur) return [];
+  if (Array.isArray(valeur)) return valeur.map(v => normaliserNiveau(v)).filter(Boolean);
+  return String(valeur).split(',').map(v => normaliserNiveau(v)).filter(Boolean);
+};
 const clampNote = (value, min = 0, max = 25) => {
   if (value === '') return '';
   const n = Number(value);
@@ -475,22 +480,25 @@ export default function TCF() {
     const byLevel = {};
     const seen = {};
     for (const pool of pools) {
-      const niveau = normaliserNiveau(pool.niveau) || 'SANS NIVEAU';
-      if (!byLevel[niveau]) {
-        byLevel[niveau] = [];
-        seen[niveau] = new Set();
-      }
+      const niveaux = parseNiveauxPool(pool.niveau);
+      const niveauxCibles = niveaux.length ? niveaux : ['SANS NIVEAU'];
 
       const profsPool = Array.isArray(pool.profs) ? pool.profs : [];
-      for (const p of profsPool) {
-        const pid = String(p.id);
-        if (seen[niveau].has(pid)) continue;
-        seen[niveau].add(pid);
-        byLevel[niveau].push({
-          id: pid,
-          nom: p.nom || profMap[pid]?.nom || '',
-          prenom: p.prenom || profMap[pid]?.prenom || '',
-        });
+      for (const niveau of niveauxCibles) {
+        if (!byLevel[niveau]) {
+          byLevel[niveau] = [];
+          seen[niveau] = new Set();
+        }
+        for (const p of profsPool) {
+          const pid = String(p.id);
+          if (seen[niveau].has(pid)) continue;
+          seen[niveau].add(pid);
+          byLevel[niveau].push({
+            id: pid,
+            nom: p.nom || profMap[pid]?.nom || '',
+            prenom: p.prenom || profMap[pid]?.prenom || '',
+          });
+        }
       }
     }
 
@@ -515,8 +523,7 @@ export default function TCF() {
   const niveauxDisponibles = useMemo(() => {
     const set = new Set(niveaux);
     for (const p of pools) {
-      const n = normaliserNiveau(p.niveau);
-      if (n) set.add(n);
+      for (const n of parseNiveauxPool(p.niveau)) set.add(n);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
   }, [niveaux, pools]);
