@@ -4322,33 +4322,14 @@ export default function EmploiDuTemps() {
               {JOURS.map(jour => {
                 const crs = creneaux.filter(c => c.jour===jour);
                 if (!crs.length) return null;
-                const nColsJour = profsPool.length + 1; // horaire + profs
-                const pastilleMeta = [];
-                pastilleMeta.push({ type: 'banner' });
-                ['Matin', 'Après-midi'].forEach((per) => {
-                  const crsPer = crs.filter(c => c.periode === per);
-                  if (!crsPer.length) return;
-                  const classesCours = classesPool.filter(cl => classeAHoraire(cl.id, jour, per));
-                  if (!classesCours.length) {
-                    pastilleMeta.push({ type: 'bande' });
-                    return;
-                  }
-                  pastilleMeta.push({ type: 'bande' });
-                  crsPer.forEach((cr) => {
-                    pastilleMeta.push({
-                      type: 'row',
-                      complete: periodeClassesNormalesCompletes(cr.id, classesCours),
-                      crId: cr.id,
-                    });
-                  });
-                });
+                const nColsJour = profsPool.length + 2; // horaire + profs + pastille
                 return (
-                  <div key={`jour-${jour}`} style={{display:'flex', gap:8, marginTop:30, alignItems:'flex-start'}}>
-                  <div style={{overflowX:'auto', flex:1, minWidth:0}}>
-                  <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,border:'none',boxShadow:'none'}}>
+                  <div key={`jour-${jour}`} style={{overflowX:'auto', marginTop:30}}>
+                  <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140+36,border:'none',boxShadow:'none'}}>
                     <colgroup>
                       <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
                       {profsPool.map(p => <col key={`col-${jour}-${p.id}`} />)}
+                      <col className="no-print-aff-ok" style={{width:36, minWidth:36, maxWidth:36}} />
                     </colgroup>
                     <tbody>
                       <tr>
@@ -4371,6 +4352,7 @@ export default function EmploiDuTemps() {
                         return [
                           <tr key={jour+per+'_ph'}><td colSpan={nColsJour} style={styles.periodeBande}>{per}</td></tr>,
                           ...crsPer.map((cr, idx) => {
+                            const periodeComplete = periodeClassesNormalesCompletes(cr.id, classesCours);
                             return (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
@@ -4560,6 +4542,27 @@ export default function EmploiDuTemps() {
                                   </td>
                                 );
                               })}
+                              <td
+                                className="no-print-aff-ok"
+                                style={{
+                                  ...styles.td,
+                                  width:36,
+                                  minWidth:36,
+                                  maxWidth:36,
+                                  padding:0,
+                                  border:'none',
+                                  background:'transparent',
+                                  verticalAlign:'middle',
+                                  textAlign:'center',
+                                }}
+                                title={periodeComplete ? 'Toutes les classes sont affectées' : undefined}
+                              >
+                                <div style={{display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%',minHeight:32}}>
+                                  {periodeComplete ? (
+                                    <span style={styles.pastillePeriodeOk} aria-label="Période complète">✓</span>
+                                  ) : null}
+                                </div>
+                              </td>
                             </tr>
                             );
                           })
@@ -4567,28 +4570,6 @@ export default function EmploiDuTemps() {
                       })}
                     </tbody>
                   </table>
-                  </div>
-                  <div className="no-print-aff-ok" style={{width:28, flexShrink:0, display:'flex', flexDirection:'column'}}>
-                    {pastilleMeta.map((slot, i) => {
-                      if (slot.type === 'banner') {
-                        return <div key={`ps-${jour}-b-${i}`} style={{height:32, flexShrink:0}} />;
-                      }
-                      if (slot.type === 'bande') {
-                        return <div key={`ps-${jour}-d-${i}`} style={{height:30, flexShrink:0}} />;
-                      }
-                      return (
-                        <div
-                          key={`ps-${jour}-r-${slot.crId || i}`}
-                          style={{height:42, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}
-                          title={slot.complete ? 'Toutes les classes sont affectées' : undefined}
-                        >
-                          {slot.complete ? (
-                            <span style={styles.pastillePeriodeOk} aria-label="Période complète">✓</span>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
                   </div>
                 );
               })}
