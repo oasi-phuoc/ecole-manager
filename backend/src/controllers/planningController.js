@@ -227,6 +227,7 @@ const getAffectations = async (req, res) => {
       COALESCE(c.nom, CASE
         WHEN a.type_special='titulariat' THEN 'Titulariat'
         WHEN a.type_special='atelier' THEN 'Atelier'
+        WHEN a.type_special='mediation' THEN 'Médiation'
         WHEN a.type_special='autre' THEN 'Autre'
         ELSE NULL
       END) as classe_nom,
@@ -244,7 +245,7 @@ const getAffectations = async (req, res) => {
 
 const saveAffectation = async (req, res) => {
   const { prof_id, classe_id, matiere_id, creneau_id, type_special } = req.body;
-  const specialSansClasse = ['titulariat', 'atelier', 'autre'].includes(type_special);
+  const specialSansClasse = ['titulariat', 'atelier', 'mediation', 'autre'].includes(type_special);
   const estSoutien = type_special === 'soutien';
   const typeFinal = specialSansClasse || estSoutien ? type_special : null;
   const classeIdFinal = specialSansClasse ? null : (classe_id || null);
@@ -457,6 +458,7 @@ const getPlanningProf = async (req, res) => {
       COALESCE(c.nom, CASE
         WHEN a.type_special='titulariat' THEN 'Titulariat'
         WHEN a.type_special='atelier' THEN 'Atelier'
+        WHEN a.type_special='mediation' THEN 'Médiation'
         WHEN a.type_special='autre' THEN 'Autre'
         ELSE NULL
       END) as classe_nom,

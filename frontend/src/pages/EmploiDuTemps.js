@@ -597,6 +597,7 @@ export default function EmploiDuTemps() {
     const t = String(typeSpecial || '').trim().toLowerCase();
     if (t === 'titulariat') return 'Titulariat';
     if (t === 'atelier') return 'Atelier';
+    if (t === 'mediation') return 'Médiation';
     if (t === 'autre') return 'Autre';
     if (t === 'soutien') return 'Soutien';
     return t;
@@ -608,7 +609,7 @@ export default function EmploiDuTemps() {
   };
   const estAffectationSpecialSansClasse = (aff) => {
     const t = String(aff?.type_special || '').toLowerCase();
-    return t === 'titulariat' || t === 'atelier' || t === 'autre';
+    return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
   };
   /** True si chaque classe (hors soutien) a une affectation normale sur ce créneau. */
   const periodeClassesNormalesCompletes = (creneauId, classesListe) => {
@@ -4547,6 +4548,7 @@ export default function EmploiDuTemps() {
                                       <optgroup label="Spécial">
                                         <option value="special:titulariat">Titulariat</option>
                                         <option value="special:atelier">Atelier</option>
+                                        <option value="special:mediation">Médiation</option>
                                         <option value="special:autre">Autre</option>
                                       </optgroup>
                                     </select>
