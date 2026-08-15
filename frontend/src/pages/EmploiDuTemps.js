@@ -2601,6 +2601,14 @@ export default function EmploiDuTemps() {
       const rootFolderName = `Plannings_EDT_${dateTag}`;
       const poolsExport = Array.isArray(pools) ? pools : [];
       const nomPoolSafe = (pool) => sanitizeFilename(pool?.nom || `Pool_${pool?.id || 'x'}`, 'Pool');
+      /** Nom du site (lieu) pour préfixer les PDF : BOTZA_CSC1.pdf, etc. */
+      const nomSiteSafe = (poolOrSite) => {
+        if (poolOrSite && typeof poolOrSite === 'object') {
+          return sanitizeFilename(poolOrSite.site || poolOrSite.nom || 'Site', 'Site');
+        }
+        return sanitizeFilename(poolOrSite || 'Site', 'Site');
+      };
+      const pdfNomAvecSite = (site, suffixe) => `${site}_${sanitizeFilename(suffixe, 'doc')}.pdf`;
       const checkCancel = () => exportPdfAnnulerRef.current;
 
       // Index : classeId -> pools, profId -> pools
@@ -2651,8 +2659,9 @@ export default function EmploiDuTemps() {
           const poolsClasse = poolsParClasse.get(classeId) || [];
           if (poolsClasse.length) {
             poolsClasse.forEach((pool) => {
+              const site = nomSiteSafe(pool);
               documents.push({
-                relativePath: `Classes/${nomPoolSafe(pool)}/${sanitizeFilename(nomClasse)}.pdf`,
+                relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
                 html,
                 pdfOptions,
               });
@@ -2711,8 +2720,9 @@ export default function EmploiDuTemps() {
           const poolsProf = poolsParProf.get(profId) || [];
           if (poolsProf.length) {
             poolsProf.forEach((pool) => {
+              const site = nomSiteSafe(pool);
               documents.push({
-                relativePath: `Professeurs/${nomPoolSafe(pool)}/${sanitizeFilename(nom)}.pdf`,
+                relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
                 html,
                 pdfOptions,
               });
@@ -2787,7 +2797,7 @@ export default function EmploiDuTemps() {
             },
           });
           documents.push({
-            relativePath: `Salles/${sanitizeFilename(lieu)}/${sanitizeFilename(salle)}.pdf`,
+            relativePath: `Salles/${sanitizeFilename(lieu)}/${pdfNomAvecSite(nomSiteSafe(lieu), salle)}`,
             html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, { paysage: true }),
             pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
           });
@@ -2800,6 +2810,7 @@ export default function EmploiDuTemps() {
         const poolId = String(pool.id);
         const poolNom = pool.nom || `Pool_${poolId}`;
         const poolFolder = nomPoolSafe(pool);
+        const site = nomSiteSafe(pool);
         try {
           const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
           const rep = await axios.get(url, { headers });
@@ -2812,7 +2823,7 @@ export default function EmploiDuTemps() {
             poolId,
           });
           documents.push({
-            relativePath: `General/${poolFolder}/Planning_general_par_jours.pdf`,
+            relativePath: `General/${poolFolder}/${site}_Planning-jours.pdf`,
             html: buildHtmlPrintDoc(`Planning général — ${poolNom}`, contenuJours, { paysage: true }),
             pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
           });
@@ -2825,7 +2836,7 @@ export default function EmploiDuTemps() {
             poolId,
           });
           documents.push({
-            relativePath: `General/${poolFolder}/Planning_general_A3_semaine.pdf`,
+            relativePath: `General/${poolFolder}/${site}_Planning-général.pdf`,
             html: buildHtmlPrintDoc(
               `Planning général — semaine — ${poolNom}`,
               contenuA3,
