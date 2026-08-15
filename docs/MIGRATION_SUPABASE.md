@@ -76,6 +76,18 @@ Le fichier `backend/src/config/initDB.js` reste un filet de sécurité au boot (
 - `migrations/20260815080000_initial_schema.sql` — schéma consolidé (initDB + tables lazy)
 - `seed.sql` — niveaux, lieux, créneaux (dev)
 
+## Cutover Render (après restore OK)
+
+Sur le service backend Render → **Environment** → remplacer `DATABASE_URL` par le **session pooler** Supabase (région du projet, ex. `eu-west-2`) :
+
+```text
+postgresql://postgres.[PROJECT_REF]:[DB_PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
+```
+
+Optionnel (phase 2) : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+Puis **Manual Deploy** / redémarrer le service. Garder Neon intact quelques jours.
+
 ## Vérifications post-cutover
 
 1. Connexion DB au démarrage backend (`✅ Base de données connectée`)
