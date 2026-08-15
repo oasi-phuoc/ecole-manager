@@ -391,13 +391,18 @@ const getPlanningGeneral = async (req, res) => {
     }
     const titulaires = pool_id
       ? await pool.query(`
-          SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom
+          SELECT c.id as classe_id, c.nom as classe_nom, u.id as prof_id, u.prenom||' '||u.nom as prof_nom
           FROM classes c
           JOIN pool_classes pc ON pc.classe_id = c.id AND pc.pool_id = $1
           LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id
           ORDER BY c.nom
         `, [pool_id])
-      : await pool.query(`SELECT c.id as classe_id, c.nom as classe_nom, u.prenom||' '||u.nom as prof_nom FROM classes c LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id`);
+      : await pool.query(`
+          SELECT c.id as classe_id, c.nom as classe_nom, u.id as prof_id, u.prenom||' '||u.nom as prof_nom
+          FROM classes c
+          LEFT JOIN utilisateurs u ON u.id=c.prof_principal_id
+          ORDER BY c.nom
+        `);
     res.json({
       profs: profs.rows || [],
       creneaux: creneaux.rows || [],

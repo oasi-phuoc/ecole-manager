@@ -2111,34 +2111,45 @@ export default function EmploiDuTemps() {
       .filter(c => c.jour === 'Lundi' && c.periode === periode)
       .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
   const withPrintLayout = (titre, contenu, options = {}) => {
-    const pageSize = options?.paysage ? 'A4 landscape' : 'A4 portrait';
+    const format = String(options?.format || 'A4').toUpperCase() === 'A3' ? 'A3' : 'A4';
+    const pageSize = options?.pageSize
+      || (format === 'A3'
+        ? (options?.paysage ? 'A3 landscape' : 'A3 portrait')
+        : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
     const compactClasses = !!options?.compactClasses;
+    const a3Semaine = !!options?.a3Semaine;
+    const marginCss = options?.margin || (a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
     return `
     <html>
       <head>
         <meta charset="utf-8" />
         <title>${escapeHtml(titre)}</title>
         <style>
-          @page { size: ${pageSize}; margin: 12mm 20mm; }
-          body { font-family: Arial, sans-serif; margin: 16px; color: #111827; }
+          @page { size: ${pageSize}; margin: ${marginCss}; }
+          body { font-family: Arial, sans-serif; margin: ${a3Semaine ? '4px' : '16px'}; color: #111827; }
           @media print {
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
           }
-          h1 { margin: 0 0 18px; font-size: 28px; }
+          h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; }
           h2 { margin: 14px 0 8px; font-size: 15px; }
-          table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; table-layout: fixed; }
-          th, td { border: 1px solid #e2e8f0; padding: 5px 4px; font-size: 9pt; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
+          table { width: 100%; border-collapse: collapse; margin: ${a3Semaine ? '0' : '8px 0 18px'}; table-layout: fixed; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '5px 4px'}; font-size: ${a3Semaine ? '7pt' : '9pt'}; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f8fafc; font-weight: 700; }
-          col.creneau-col { width: ${LARGEUR_COLONNE_CRENEAU}px; min-width: ${LARGEUR_COLONNE_CRENEAU}px; max-width: ${LARGEUR_COLONNE_CRENEAU}px; }
+          col.creneau-col { width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; min-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; max-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; }
           col.day-col { width: auto; }
+          col.spacer-col { width: 10px; min-width: 8px; max-width: 14px; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
           .section:last-child { page-break-after: auto; break-after: auto; }
-          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:11pt;padding:5px 14px;text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
-          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:left;border:none; }
+          .section-a3 { page-break-inside: avoid; page-break-after: auto; break-inside: avoid; margin: 0; }
+          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? '8pt' : '11pt'};padding:${a3Semaine ? '3px 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
+          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${a3Semaine ? '7pt' : '9pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
           .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:center;border:1px solid #111827; }
+          .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine ? '8px' : '14px'}; padding: 0 !important; }
+          .spacer-cell { border: none !important; background: transparent !important; padding: 0 !important; width: 10px; }
+          .titulaire-label { display:block; margin-top:2px; font-size:6pt; font-weight:600; color:#64748b; line-height:1.15; }
           ${compactClasses ? `
           h1 { margin-bottom: 14px; font-size: 24px; }
           h2 { margin: 10px 0 6px; font-size: 13px; }
@@ -2329,12 +2340,184 @@ export default function EmploiDuTemps() {
     });
     return parts.join('');
   };
+  /** Planning général A3 paysage : semaine entière sur une page, colonnes vides entre profs, ligne vide entre jours. */
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires }) => {
+    const listeProfs = Array.isArray(profs) ? profs : [];
+    const listeCrs = Array.isArray(allCrs) ? allCrs : [];
+    const listeAff = Array.isArray(affectations) ? affectations : [];
+    const listeDispos = Array.isArray(dispos) ? dispos : [];
+    const listeTit = Array.isArray(titulaires) ? titulaires : [];
+    const classesParProf = {};
+    listeTit.forEach((t) => {
+      const pid = t?.prof_id != null ? String(t.prof_id) : '';
+      const nomClasse = String(t?.classe_nom || '').trim();
+      if (!pid || !nomClasse) return;
+      if (!classesParProf[pid]) classesParProf[pid] = [];
+      if (!classesParProf[pid].includes(nomClasse)) classesParProf[pid].push(nomClasse);
+    });
+    // Fallback si pas de prof_id : rapprochement par nom complet
+    if (Object.keys(classesParProf).length === 0) {
+      listeTit.forEach((t) => {
+        const nomTit = formaterNomComplet(t?.prof_nom || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        if (!nomTit || !t?.classe_nom) return;
+        const prof = listeProfs.find((p) => {
+          const n = formaterNomComplet(`${p.prenom || ''} ${nomSansSuffixe(p.nom || '')}`).toLowerCase().replace(/\s+/g, ' ').trim();
+          return n && n === nomTit;
+        });
+        if (!prof) return;
+        const pid = String(prof.id);
+        if (!classesParProf[pid]) classesParProf[pid] = [];
+        const cn = String(t.classe_nom).trim();
+        if (cn && !classesParProf[pid].includes(cn)) classesParProf[pid].push(cn);
+      });
+    }
+
+    const nProfs = listeProfs.length;
+    // Horaire + (prof + spacer) * (n-1) + dernier prof
+    const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
+    const CRENEAU_W = 72;
+    const ROW_H = 28;
+    const spacerTd = '<td class="spacer-cell"></td>';
+
+    const withSpacers = (cellsHtmlArr) => {
+      const out = [];
+      cellsHtmlArr.forEach((cell, i) => {
+        out.push(cell);
+        if (i < cellsHtmlArr.length - 1) out.push(spacerTd);
+      });
+      return out.join('');
+    };
+
+    const profHeaders = withSpacers(listeProfs.map((p) => {
+      const nomAffiche = `${formaterPrenomEntete(p.prenom || '')} ${nomSansSuffixe(p.nom || '')}`.trim()
+        || nomSansSuffixe(p.nom || '')
+        || 'Professeur';
+      const classesTit = (classesParProf[String(p.id)] || []).join(', ');
+      const titulaireHtml = classesTit
+        ? `<span class="titulaire-label">Tit. ${escapeHtml(classesTit)}</span>`
+        : '';
+      return `<th style="text-align:center;font-size:7.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;">${escapeHtml(nomAffiche)}${titulaireHtml}</th>`;
+    }));
+
+    const colgroup = `<colgroup>
+      <col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>
+      ${listeProfs.map((_, i) =>
+        `<col />${i < nProfs - 1 ? '<col class="spacer-col" />' : ''}`
+      ).join('')}
+    </colgroup>`;
+
+    const rows = [];
+    JOURS.forEach((jour, jourIdx) => {
+      const crs = listeCrs.filter((c) => c.jour === jour);
+      if (!crs.length) return;
+      if (jourIdx > 0) {
+        rows.push(`<tr class="day-gap"><td colspan="${nCols}"></td></tr>`);
+      }
+      rows.push(
+        `<tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;"><div class="day-banner">${escapeHtml(jour)}</div></td></tr>`
+      );
+      ['Matin', 'Après-midi'].forEach((per) => {
+        const crsPer = crs
+          .filter((c) => c.periode === per)
+          .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+        if (!crsPer.length) return;
+        rows.push(
+          `<tr><td colspan="${nCols}" class="periode-banner">${escapeHtml(per)}</td></tr>`
+        );
+        crsPer.forEach((cr) => {
+          const cells = listeProfs.map((p) => {
+            const aff = listeAff.find(
+              (a) => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id)
+            );
+            const dispo = listeDispos.find(
+              (d) => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id)
+            );
+            const indispo = dispo && !dispo.disponible;
+            let bg = '#fff';
+            let content = '';
+            if (aff) {
+              const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
+              const estSpecial = !!aff.type_special && !estSoutien;
+              bg = estSpecial ? '#000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+              const fg = estSpecial ? '#fff' : getCouleurTexteSurFond(bg);
+              const nomClasse = escapeHtml(aff.classe_nom || '');
+              const ligne1 = estSpecial
+                ? getLibelleTypeSpecial(aff.type_special)
+                : (estSoutien ? `${nomClasse} - Soutien` : nomClasse);
+              content = `<div style="font-weight:700;color:${fg};font-size:7pt;line-height:1.15;">${ligne1}</div>`;
+            } else if (indispo) {
+              bg = '#eee';
+              content = '<span style="color:#9ca3af;font-size:6.5pt;">Indispo</span>';
+            }
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;">${content}</td>`;
+          });
+          rows.push(
+            `<tr><td style="background:#f8fafc;font-weight:700;font-size:6.5pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;">${escapeHtml(cr.heure_debut)}–${escapeHtml(cr.heure_fin)}</td>${withSpacers(cells)}</tr>`
+          );
+        });
+      });
+    });
+
+    return `
+      <div class="section-a3">
+        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
+          ${colgroup}
+          <thead>
+            <tr>
+              <th style="text-align:center;font-size:7.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Horaire</th>
+              ${profHeaders}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
   const openPrintWindow = (titre, contenu, options = {}) => {
     const html = withPrintLayout(titre, contenu, options);
-    const pageSize = options?.paysage ? 'A4 landscape' : 'A4 portrait';
-    const finalHtml = injectForcedPrintCss(html, pageSize, '12mm 20mm');
-    const popup = openPrintPopup(finalHtml, { title: titre, width: 1200, height: 820 });
+    const format = String(options?.format || 'A4').toUpperCase() === 'A3' ? 'A3' : 'A4';
+    const pageSize = options?.pageSize
+      || (format === 'A3'
+        ? (options?.paysage ? 'A3 landscape' : 'A3 portrait')
+        : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
+    const margin = options?.margin || (options?.a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
+    const finalHtml = injectForcedPrintCss(html, pageSize, margin);
+    const popup = openPrintPopup(finalHtml, {
+      title: titre,
+      width: format === 'A3' ? 1600 : 1200,
+      height: format === 'A3' ? 1000 : 820,
+    });
     if (!popup) alert("Impossible d'ouvrir la fenêtre d'impression. Autorisez les popups.");
+  };
+  const imprimerPlanningGeneralA3Semaine = async () => {
+    try {
+      if (!planningPoolId) return alert("Sélectionnez d'abord un pool.");
+      let data = planningGeneral;
+      if (!data) {
+        const url = API + '/planning/general?pool_id=' + encodeURIComponent(planningPoolId);
+        const rep = await axios.get(url, { headers });
+        data = rep.data;
+      }
+      const contenu = buildPlanningGeneralA3SemainePrintHtml({
+        creneaux: data?.creneaux || [],
+        profs: data?.profs || [],
+        affectations: data?.affectations || [],
+        dispos: data?.dispos || [],
+        titulaires: data?.titulaires || [],
+      });
+      const poolNom = pools.find((p) => String(p.id) === String(planningPoolId))?.nom || '';
+      const titre = `Planning général — semaine${poolNom ? ` — ${poolNom}` : ''}`;
+      return openPrintWindow(titre, contenu, {
+        paysage: true,
+        format: 'A3',
+        a3Semaine: true,
+        margin: '6mm 8mm',
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'impression A3.");
+    }
   };
   const imprimerPlanningSelection = async () => {
     try {
@@ -2626,9 +2809,19 @@ export default function EmploiDuTemps() {
           </div>
         )}
         {onglet === 'plannings' && (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto',flexWrap:'wrap'}}>
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
+            {sousOngletPlanning === 'general' && (
+              <button
+                type="button"
+                style={styles.btnImprimer}
+                onClick={imprimerPlanningGeneralA3Semaine}
+                title="Imprimer toute la semaine sur une page A3 paysage"
+              >
+                Imprimer A3 semaine
+              </button>
+            )}
           </div>
         )}
         {onglet === 'disponibilites' && profSelectionne && isAdmin() && (
