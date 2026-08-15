@@ -607,6 +607,27 @@ export default function EmploiDuTemps() {
     if (String(aff.type_special || '').toLowerCase() === 'soutien') return true;
     return affectationModes[aff.id] === 'soutien';
   };
+  /** Ligne « Prénom Nom Matière » du cours normal lié à une période de soutien. */
+  const formatLigneSoutienLie = (aff) => {
+    if (!estAffectationSoutien(aff)) return '';
+    const prenom = String(aff.soutien_prof_prenom || '').trim();
+    const nom = nomSansSuffixe(aff.soutien_prof_nom || '');
+    const matiere = String(aff.soutien_matiere_nom || '').trim();
+    const personne = [prenom, nom].filter(Boolean).join(' ');
+    return [personne, matiere].filter(Boolean).join(' ');
+  };
+  /** Texte cellule planning professeur (écran / PDF) : soutien = classe + prof/branche liés. */
+  const texteCellulePlanningProf = (aff) => {
+    if (!aff) return '';
+    const estSoutien = estAffectationSoutien(aff);
+    const nomClasse = estSoutien
+      ? `${aff.classe_nom || ''} - Soutien`
+      : (aff.classe_nom || '');
+    const ligneSoutien = formatLigneSoutienLie(aff);
+    if (estSoutien && ligneSoutien) return `${nomClasse}\n${ligneSoutien}`;
+    if (aff.matiere_nom) return `${nomClasse}\n${aff.matiere_nom}`;
+    return nomClasse;
+  };
   const estAffectationSpecialSansClasse = (aff) => {
     const t = String(aff?.type_special || '').toLowerCase();
     return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
@@ -2702,11 +2723,8 @@ export default function EmploiDuTemps() {
                 const bg = aff.matiere_id
                   ? getCouleurBranche(aff.matiere_id)
                   : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-                const nomClasse = estAffectationSoutien(aff)
-                  ? `${aff.classe_nom || ''} - Soutien`
-                  : (aff.classe_nom || '');
                 return {
-                  text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                  text: texteCellulePlanningProf(aff),
                   bg,
                   color: getCouleurTexteSurFond(bg),
                 };
@@ -2925,11 +2943,8 @@ export default function EmploiDuTemps() {
               const bg = aff.matiere_id
                 ? getCouleurBranche(aff.matiere_id)
                 : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-              const nomClasse = estAffectationSoutien(aff)
-                ? `${aff.classe_nom || ''} - Soutien`
-                : (aff.classe_nom || '');
               return {
-                text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                text: texteCellulePlanningProf(aff),
                 bg,
                 color: getCouleurTexteSurFond(bg),
               };
@@ -3057,11 +3072,8 @@ export default function EmploiDuTemps() {
                 const bg = aff.matiere_id
                   ? getCouleurBranche(aff.matiere_id)
                   : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-                const nomClasse = estAffectationSoutien(aff)
-                  ? `${aff.classe_nom || ''} - Soutien`
-                  : (aff.classe_nom || '');
                 return {
-                  text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                  text: texteCellulePlanningProf(aff),
                   bg,
                   color: getCouleurTexteSurFond(bg)
                 };
@@ -5143,16 +5155,24 @@ export default function EmploiDuTemps() {
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
                             const indispo = dispo && !dispo.disponible;
                             const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
+                            const estSoutienAff = classeAffectee && estAffectationSoutien(aff);
                             const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
                             const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
+                            const ligneSoutienLie = estSoutienAff ? formatLigneSoutienLie(aff) : '';
                             return (
                               <td key={jour} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                 background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
                                 {classeAffectee ? (
                                   <>
-                                    <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.classe_nom}</div>
+                                    <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>
+                                      {estSoutienAff ? `${aff.classe_nom} - Soutien` : aff.classe_nom}
+                                    </div>
                                     {aff.pool_nom ? <div style={{color:'#6366f1',fontWeight:600,fontSize:10,marginTop:2,textAlign:'center'}}>{aff.pool_nom}</div> : null}
-                                    {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                    {ligneSoutienLie ? (
+                                      <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{ligneSoutienLie}</div>
+                                    ) : (
+                                      aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>
+                                    )}
                                   </>
                                 ) : ''}
                               </td>

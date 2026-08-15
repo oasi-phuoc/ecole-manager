@@ -476,7 +476,49 @@ const getPlanningProf = async (req, res) => {
         FROM pools p
         JOIN pool_profs pp ON pp.pool_id = p.id
         WHERE pp.prof_id = $1
-      ) AS pools_prof
+      ) AS pools_prof,
+      -- Pour le soutien : prof + branche du cours normal parallèle (même classe / créneau)
+      CASE WHEN a.type_special = 'soutien' THEN (
+        SELECT u2.prenom
+        FROM affectations a2
+        JOIN utilisateurs u2 ON u2.id = a2.prof_id
+        WHERE a2.classe_id = a.classe_id
+          AND a2.creneau_id = a.creneau_id
+          AND (a2.type_special IS NULL OR a2.type_special = '')
+          AND a2.prof_id IS DISTINCT FROM a.prof_id
+        ORDER BY a2.id
+        LIMIT 1
+      ) ELSE NULL END AS soutien_prof_prenom,
+      CASE WHEN a.type_special = 'soutien' THEN (
+        SELECT u2.nom
+        FROM affectations a2
+        JOIN utilisateurs u2 ON u2.id = a2.prof_id
+        WHERE a2.classe_id = a.classe_id
+          AND a2.creneau_id = a.creneau_id
+          AND (a2.type_special IS NULL OR a2.type_special = '')
+          AND a2.prof_id IS DISTINCT FROM a.prof_id
+        ORDER BY a2.id
+        LIMIT 1
+      ) ELSE NULL END AS soutien_prof_nom,
+      CASE WHEN a.type_special = 'soutien' THEN (
+        SELECT COALESCE(m2.nom, m2b.nom)
+        FROM affectations a2
+        LEFT JOIN matieres m2 ON m2.id = a2.matiere_id
+        LEFT JOIN LATERAL (
+          SELECT m.nom
+          FROM planning_branches pb
+          JOIN matieres m ON m.id = pb.matiere_id
+          WHERE pb.classe_id = a2.classe_id AND pb.prof_id = a2.prof_id
+          ORDER BY pb.id
+          LIMIT 1
+        ) m2b ON true
+        WHERE a2.classe_id = a.classe_id
+          AND a2.creneau_id = a.creneau_id
+          AND (a2.type_special IS NULL OR a2.type_special = '')
+          AND a2.prof_id IS DISTINCT FROM a.prof_id
+        ORDER BY a2.id
+        LIMIT 1
+      ) ELSE NULL END AS soutien_matiere_nom
     FROM affectations a
     LEFT JOIN classes c ON c.id=a.classe_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
