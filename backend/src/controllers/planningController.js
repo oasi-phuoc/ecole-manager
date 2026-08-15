@@ -360,6 +360,7 @@ const getPlanningGeneral = async (req, res) => {
           COALESCE(c.nom, CASE
             WHEN a.type_special='titulariat' THEN 'Titulariat'
             WHEN a.type_special='atelier' THEN 'Atelier'
+            WHEN a.type_special='mediation' THEN 'Médiation'
             WHEN a.type_special='autre' THEN 'Autre'
             ELSE NULL
           END) as classe_nom,
@@ -398,6 +399,7 @@ const getPlanningGeneral = async (req, res) => {
           COALESCE(c.nom, CASE
             WHEN a.type_special='titulariat' THEN 'Titulariat'
             WHEN a.type_special='atelier' THEN 'Atelier'
+            WHEN a.type_special='mediation' THEN 'Médiation'
             WHEN a.type_special='autre' THEN 'Autre'
             ELSE NULL
           END) as classe_nom,
