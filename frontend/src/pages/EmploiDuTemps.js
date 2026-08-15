@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { demanderDossierExport, exporterDocumentsPdf, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -145,6 +146,8 @@ export default function EmploiDuTemps() {
   const [planningGeneral, setPlanningGeneral] = useState(null);
   const [planningGeneralLoading, setPlanningGeneralLoading] = useState(false);
   const [planningGeneralError, setPlanningGeneralError] = useState('');
+  const [exportPdfEnCours, setExportPdfEnCours] = useState(false);
+  const [exportPdfProgress, setExportPdfProgress] = useState('');
   const [planningPoolId, setPlanningPoolId] = useState('');
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
@@ -2519,6 +2522,268 @@ export default function EmploiDuTemps() {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression A3.");
     }
   };
+
+  const buildHtmlPrintDoc = (titre, contenu, options = {}) =>
+    injectForcedPrintCss(withPrintLayout(titre, contenu, options),
+      options?.pageSize
+        || (String(options?.format || 'A4').toUpperCase() === 'A3'
+          ? (options?.paysage ? 'A3 landscape' : 'A3 portrait')
+          : (options?.paysage ? 'A4 landscape' : 'A4 portrait')),
+      options?.margin || (options?.a3Semaine ? '6mm 8mm' : '12mm 20mm'));
+
+  /** Exporte tous les PDF (classes, salles, professeurs, général) dans un dossier + sous-dossiers. */
+  const exporterTousPlanningsPdf = async () => {
+    if (exportPdfEnCours) return;
+    try {
+      setExportPdfEnCours(true);
+      setExportPdfProgress('Préparation…');
+
+      const messageChoix =
+        "Les plannings seront enregistrés en PDF dans un dossier avec sous-dossiers :\n"
+        + "• Classes\n• Professeurs\n• Salles\n• General\n\n"
+        + "Choisissez le dossier d'enregistrement (recommandé : Bureau).\n\n"
+        + "Continuer ?";
+
+      let dirHandle = null;
+      const choix = await demanderDossierExport(messageChoix);
+      if (choix?.cancelled) {
+        setExportPdfEnCours(false);
+        setExportPdfProgress('');
+        return;
+      }
+      if (choix?.handle) {
+        dirHandle = choix.handle;
+      } else {
+        const okZip = window.confirm(
+          "Votre navigateur ne permet pas d'écrire directement dans un dossier.\n"
+          + "Un fichier ZIP contenant tous les PDF (avec sous-dossiers) sera téléchargé.\n"
+          + "Enregistrez-le sur le Bureau puis décompressez-le.\n\nContinuer ?"
+        );
+        if (!okZip) {
+          setExportPdfEnCours(false);
+          setExportPdfProgress('');
+          return;
+        }
+      }
+
+      const documents = [];
+      const dateTag = new Date().toISOString().slice(0, 10);
+      const rootFolderName = `Plannings_EDT_${dateTag}`;
+
+      // —— Classes ——
+      setExportPdfProgress('Chargement des classes…');
+      const classesExport = classesToutesTriees.length ? classesToutesTriees : classes;
+      if (classesExport.length) {
+        const reps = await Promise.all(
+          classesExport.map((cl) => axios.get(API + '/planning/classe/' + cl.id, { headers }).catch(() => null))
+        );
+        reps.forEach((rep, idx) => {
+          if (!rep?.data) return;
+          const data = rep.data;
+          const nomClasse = data?.classe?.nom || classesExport[idx]?.nom || `Classe_${idx + 1}`;
+          const titulaireClasse = data?.classe?.titulaire_nom || '';
+          const affs = data?.affectations || [];
+          const affsNormales = affs.filter((a) => String(a.type_special || '').toLowerCase() !== 'soutien');
+          const creneauxSoutien = affs
+            .filter((a) => String(a.type_special || '').toLowerCase() === 'soutien')
+            .map((a) => String(a.creneau_id));
+          const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
+          const table = buildPlanningClassesPrintTableHtml({
+            creneauxListe: data?.creneaux || [],
+            affectationsListe: affsNormales,
+            horairesListe: data?.horaires || [],
+            titreBanniere: titre || 'Classe',
+            creneauxAvecSoutien: creneauxSoutien,
+          });
+          documents.push({
+            relativePath: `Classes/${sanitizeFilename(nomClasse)}.pdf`,
+            html: buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true }),
+            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+          });
+        });
+      }
+
+      // —— Professeurs ——
+      setExportPdfProgress('Chargement des professeurs…');
+      const profsExport = (profs || []).filter((p) => p && p.actif !== false);
+      if (profsExport.length) {
+        const reps = await Promise.all(
+          profsExport.map((p) => axios.get(API + '/planning/prof/' + p.id, { headers }).catch(() => null))
+        );
+        reps.forEach((rep, idx) => {
+          if (!rep?.data) return;
+          const data = rep.data;
+          const nom = `${data?.prof?.prenom || profsExport[idx]?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || profsExport[idx]?.nom || '')}`.trim() || `Prof_${idx + 1}`;
+          const table = buildPlanningTableHtml({
+            creneauxListe: data?.creneaux || [],
+            titreBanniere: nom,
+            showPauseRows: true,
+            getCellData: (cr) => {
+              const aff = (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id));
+              if (estAffectationSpecialSansClasse(aff)) {
+                return { text: getLibelleTypeSpecial(aff.type_special), bg: '#000000', color: '#ffffff' };
+              }
+              if (hasBrancheAffectee(aff) || aff?.classe_nom) {
+                const bg = aff.matiere_id
+                  ? getCouleurBranche(aff.matiere_id)
+                  : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+                const nomClasse = estAffectationSoutien(aff)
+                  ? `${aff.classe_nom || ''} - Soutien`
+                  : (aff.classe_nom || '');
+                return {
+                  text: `${nomClasse}${aff.matiere_nom ? `\n${aff.matiere_nom}` : ''}`,
+                  bg,
+                  color: getCouleurTexteSurFond(bg),
+                };
+              }
+              const dispo = (data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id));
+              if (dispo && !dispo.disponible) return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
+              return { text: '' };
+            },
+          });
+          documents.push({
+            relativePath: `Professeurs/${sanitizeFilename(nom)}.pdf`,
+            html: buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true }),
+            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+          });
+        });
+      }
+
+      // —— Salles (tous les lieux) ——
+      setExportPdfProgress('Préparation des salles…');
+      const lieuxExport = (lieuxTravailOptions || []).length
+        ? lieuxTravailOptions
+        : Array.from(new Set((sallesDB || []).map((s) => s.lieu_nom).filter(Boolean)));
+      for (const lieu of lieuxExport) {
+        const lieuNorm = normaliserLieuTravail(lieu);
+        const poolsLieu = pools.filter((p) => normaliserLieuTravail(p.site || '') === lieuNorm);
+        const idsClassesLieu = new Set();
+        poolsLieu.forEach((p) => (p.classes || []).forEach((c) => idsClassesLieu.add(String(c.id))));
+        // Si aucun pool lié : toutes les classes
+        if (!idsClassesLieu.size) classes.forEach((c) => idsClassesLieu.add(String(c.id)));
+
+        const sallesLieu = (sallesDB || [])
+          .filter((s) => normaliserLieuTravail(s.lieu_nom || '') === lieuNorm)
+          .map((s) => s.nom);
+        const sallesFixes = SALLES_FIXES_PAR_LIEU[lieuNorm] || [];
+        const sallesListe = (sallesLieu.length ? sallesLieu : sallesFixes)
+          .filter(Boolean)
+          .sort((a, b) => String(a).localeCompare(String(b), 'fr'));
+
+        sallesListe.forEach((salle) => {
+          const table = buildPlanningTableHtml({
+            creneauxListe: creneaux || [],
+            titreBanniere: `${lieu} — ${salle}`,
+            showPauseRows: true,
+            getCellData: (cr) => {
+              const cours = (coursEmploiDuTemps || []).find((c) =>
+                c.jour === cr.jour
+                && normaliserHeureCreneau(c.heure_debut) === normaliserHeureCreneau(cr.heure_debut)
+                && normaliserHeureCreneau(c.heure_fin) === normaliserHeureCreneau(cr.heure_fin)
+                && String((c.salle || '').trim()) === String((salle || '').trim())
+                && idsClassesLieu.has(String(c.classe_id))
+              );
+              if (!cours) return { text: '' };
+              const cl = classes.find((x) => String(x.id) === String(cours.classe_id));
+              if (!cl) return { text: '' };
+              const aff = (affectations || []).find((a) =>
+                String(a.classe_id) === String(cl.id)
+                && String(a.creneau_id) === String(cr.id)
+                && String(a.type_special || '').toLowerCase() !== 'soutien'
+              ) || (affectations || []).find((a) =>
+                String(a.classe_id) === String(cl.id) && String(a.creneau_id) === String(cr.id)
+              );
+              if (estAffectationSpecialSansClasse(aff)) {
+                return {
+                  text: `${cl.nom}\n${getLibelleTypeSpecial(aff.type_special)}`,
+                  bg: '#000000',
+                  color: '#ffffff',
+                };
+              }
+              const bg = getCouleurClasse(cl.id);
+              const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
+              return {
+                text: `${nom}\n${aff?.prof_nom ? formaterNomComplet(aff.prof_nom) : 'Aucun professeur affecté'}`,
+                bg,
+                color: getCouleurTexteSurFond(bg),
+              };
+            },
+          });
+          documents.push({
+            relativePath: `Salles/${sanitizeFilename(lieu)}/${sanitizeFilename(salle)}.pdf`,
+            html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, { paysage: true }),
+            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+          });
+        });
+      }
+
+      // —— Général (pool sélectionné si possible, sinon premier pool) ——
+      setExportPdfProgress('Chargement du planning général…');
+      const poolIdExport = planningPoolId || (pools[0] ? String(pools[0].id) : '');
+      if (poolIdExport) {
+        const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolIdExport);
+        const rep = await axios.get(url, { headers });
+        const data = rep.data || {};
+        const poolNom = pools.find((p) => String(p.id) === String(poolIdExport))?.nom || '';
+        const contenuJours = buildPlanningGeneralPrintHtml({
+          creneaux: data.creneaux || [],
+          profs: data.profs || [],
+          affectations: data.affectations || [],
+          dispos: data.dispos || [],
+        });
+        documents.push({
+          relativePath: `General/Planning_general${poolNom ? '_' + sanitizeFilename(poolNom) : ''}.pdf`,
+          html: buildHtmlPrintDoc(`Planning général${poolNom ? ' — ' + poolNom : ''}`, contenuJours, { paysage: true }),
+          pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+        });
+        const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
+          creneaux: data.creneaux || [],
+          profs: data.profs || [],
+          affectations: data.affectations || [],
+          dispos: data.dispos || [],
+          titulaires: data.titulaires || [],
+        });
+        documents.push({
+          relativePath: `General/Planning_general_A3_semaine${poolNom ? '_' + sanitizeFilename(poolNom) : ''}.pdf`,
+          html: buildHtmlPrintDoc(
+            `Planning général — semaine${poolNom ? ' — ' + poolNom : ''}`,
+            contenuA3,
+            { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
+          ),
+          pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
+        });
+      }
+
+      if (!documents.length) {
+        alert('Aucun planning à exporter.');
+        setExportPdfEnCours(false);
+        setExportPdfProgress('');
+        return;
+      }
+
+      const resultat = await exporterDocumentsPdf({
+        dirHandle,
+        rootFolderName,
+        documents,
+        onProgress: (done, total, label) => {
+          setExportPdfProgress(`${done}/${total} — ${label}`);
+        },
+      });
+
+      if (resultat.mode === 'folder') {
+        showToast(`${resultat.count} PDF enregistrés dans « ${rootFolderName} ».`, 'success');
+      } else {
+        showToast(`${resultat.count} PDF téléchargés dans le ZIP « ${rootFolderName}.zip ».`, 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || err.message || "Erreur lors de l'export PDF.");
+    } finally {
+      setExportPdfEnCours(false);
+      setExportPdfProgress('');
+    }
+  };
+
   const imprimerPlanningSelection = async () => {
     try {
       if (sousOngletPlanning === 'classes') {
@@ -2813,14 +3078,25 @@ export default function EmploiDuTemps() {
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
             <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
             {sousOngletPlanning === 'general' && (
-              <button
-                type="button"
-                style={styles.btnImprimer}
-                onClick={imprimerPlanningGeneralA3Semaine}
-                title="Imprimer toute la semaine sur une page A3 paysage"
-              >
-                Imprimer A3 semaine
-              </button>
+              <>
+                <button
+                  type="button"
+                  style={styles.btnImprimer}
+                  onClick={imprimerPlanningGeneralA3Semaine}
+                  title="Imprimer toute la semaine sur une page A3 paysage"
+                >
+                  Imprimer A3 semaine
+                </button>
+                <button
+                  type="button"
+                  style={{...styles.btnImprimer, opacity: exportPdfEnCours ? 0.7 : 1}}
+                  onClick={exporterTousPlanningsPdf}
+                  disabled={exportPdfEnCours}
+                  title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                >
+                  {exportPdfEnCours ? (exportPdfProgress || 'Export…') : 'Exporter tous les PDF'}
+                </button>
+              </>
             )}
           </div>
         )}
