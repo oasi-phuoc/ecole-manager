@@ -1,5 +1,7 @@
 const { Pool } = require('pg');
 
+// Avec Supabase : utiliser le Session pooler (ou direct :5432).
+// Le Transaction pooler (:6543) casse souvent les prepared statements de node-pg.
 const pool = new Pool(
   process.env.DATABASE_URL
     ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
