@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const storage = require('../services/storageService');
 
 const getEleves = async (req, res) => {
   try {
@@ -15,7 +16,7 @@ const getEleves = async (req, res) => {
       LEFT JOIN classes c ON e.classe_id = c.id
       ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `);
-    res.json(result.rows);
+    res.json(await storage.hydrateElevesPhotos(result.rows));
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
   }
@@ -161,12 +162,20 @@ const supprimerEleve = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const eleveResult = await client.query('SELECT utilisateur_id FROM eleves WHERE id=$1', [req.params.id]);
+    const eleveResult = await client.query(
+      'SELECT utilisateur_id, photo_storage_path FROM eleves WHERE id=$1',
+      [req.params.id]
+    );
     if (eleveResult.rows.length === 0) return res.status(404).json({ message: 'Eleve non trouve' });
     const userId = eleveResult.rows[0].utilisateur_id;
+    const photoPath = eleveResult.rows[0].photo_storage_path;
 
-    // Vider photo
-    await client.query('UPDATE eleves SET photo=null WHERE id=$1', [req.params.id]);
+    const docs = await client.query(
+      'SELECT storage_path FROM documents_eleves WHERE eleve_id=$1 AND storage_path IS NOT NULL',
+      [req.params.id]
+    );
+
+    await client.query('UPDATE eleves SET photo=null, photo_storage_path=null WHERE id=$1', [req.params.id]);
 
     // Supprimer TOUTES les dépendances élève
     await client.query('DELETE FROM presences WHERE eleve_id=$1', [req.params.id]);
@@ -187,6 +196,12 @@ const supprimerEleve = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    await storage.removeObject(storage.BUCKETS.elevesPhotos, photoPath);
+    for (const d of docs.rows) {
+      await storage.removeObject(storage.BUCKETS.documentsEleves, d.storage_path);
+    }
+
     res.json({ message: 'Eleve supprime' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -205,9 +220,38 @@ const updatePhoto = async (req, res) => {
         return res.status(400).json({ message: 'Le fichier doit etre une image' });
       }
     }
-    await pool.query('UPDATE eleves SET photo=$1 WHERE id=$2', [photo, req.params.id]);
+
+    const current = await pool.query(
+      'SELECT photo_storage_path FROM eleves WHERE id=$1',
+      [req.params.id]
+    );
+    if (!current.rows.length) return res.status(404).json({ message: 'Eleve non trouve' });
+    const oldPath = current.rows[0].photo_storage_path;
+
+    if (photo === null || photo === undefined) {
+      await storage.removeObject(storage.BUCKETS.elevesPhotos, oldPath);
+      await pool.query(
+        'UPDATE eleves SET photo=NULL, photo_storage_path=NULL WHERE id=$1',
+        [req.params.id]
+      );
+      return res.json({ message: 'Photo mise à jour' });
+    }
+
+    if (storage.isSupabaseConfigured()) {
+      const path = `eleves/${req.params.id}/photo_${Date.now()}.jpg`;
+      await storage.uploadDataUrl(storage.BUCKETS.elevesPhotos, path, photo);
+      await pool.query(
+        'UPDATE eleves SET photo=NULL, photo_storage_path=$1 WHERE id=$2',
+        [path, req.params.id]
+      );
+      if (oldPath && oldPath !== path) {
+        await storage.removeObject(storage.BUCKETS.elevesPhotos, oldPath);
+      }
+    } else {
+      await pool.query('UPDATE eleves SET photo=$1, photo_storage_path=NULL WHERE id=$2', [photo, req.params.id]);
+    }
     res.json({ message: 'Photo mise à jour' });
-  } catch(err) { res.status(500).json({ message: err.message }); }
+  } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 const getElevesOASI = async (req, res) => {
@@ -243,6 +287,24 @@ const getDocumentsEleve = async (req, res) => {
 const uploadDocumentEleve = async (req, res) => {
   const { nom, type, contenu, taille } = req.body;
   try {
+    if (!contenu) return res.status(400).json({ message: 'Contenu manquant' });
+    if (storage.isSupabaseConfigured()) {
+      const inserted = await pool.query(
+        `INSERT INTO documents_eleves (eleve_id, nom, type, contenu, taille, storage_path)
+         VALUES ($1,$2,$3,NULL,$4,NULL) RETURNING id, nom, type, taille, created_at`,
+        [req.params.id, nom, type || 'Autre', taille || null]
+      );
+      const doc = inserted.rows[0];
+      const path = `eleves/${req.params.id}/${doc.id}_${storage.safeFileName(nom)}`;
+      try {
+        await storage.uploadDataUrl(storage.BUCKETS.documentsEleves, path, contenu);
+        await pool.query('UPDATE documents_eleves SET storage_path=$1 WHERE id=$2', [path, doc.id]);
+      } catch (upErr) {
+        await pool.query('DELETE FROM documents_eleves WHERE id=$1', [doc.id]);
+        throw upErr;
+      }
+      return res.status(201).json(doc);
+    }
     const result = await pool.query(
       'INSERT INTO documents_eleves (eleve_id, nom, type, contenu, taille) VALUES ($1,$2,$3,$4,$5) RETURNING id, nom, type, taille, created_at',
       [req.params.id, nom, type || 'Autre', contenu, taille || null]
@@ -254,16 +316,25 @@ const uploadDocumentEleve = async (req, res) => {
 const telechargerDocumentEleve = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT nom, contenu FROM documents_eleves WHERE id=$1 AND eleve_id=$2',
+      'SELECT nom, contenu, storage_path FROM documents_eleves WHERE id=$1 AND eleve_id=$2',
       [req.params.docId, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Document non trouvé' });
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+    const dataUrl = await storage.resolveContenu(row, storage.BUCKETS.documentsEleves);
+    if (!dataUrl) return res.status(404).json({ message: 'Fichier introuvable' });
+    res.json({ nom: row.nom, contenu: dataUrl });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const supprimerDocumentEleve = async (req, res) => {
   try {
+    const cur = await pool.query(
+      'SELECT storage_path FROM documents_eleves WHERE id=$1 AND eleve_id=$2',
+      [req.params.docId, req.params.id]
+    );
+    if (!cur.rows.length) return res.status(404).json({ message: 'Document non trouvé' });
+    await storage.removeObject(storage.BUCKETS.documentsEleves, cur.rows[0].storage_path);
     await pool.query('DELETE FROM documents_eleves WHERE id=$1 AND eleve_id=$2', [req.params.docId, req.params.id]);
     res.json({ message: 'Document supprimé' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

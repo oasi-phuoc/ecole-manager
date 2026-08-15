@@ -6,8 +6,8 @@ Remplacer **Neon** par **Supabase Postgres** en drop-in : le backend Express con
 
 | Phase | Contenu |
 |-------|---------|
-| **1 (cette PR)** | Projet Supabase, schéma versionné, scripts dump/restore, variables d’env |
-| **2** | Supabase Storage (docs / photos actuellement en base64 TEXT) |
+| **1** | Projet Supabase, schéma versionné, dump/restore, `DATABASE_URL` |
+| **2 (cette PR Storage)** | Supabase Storage (docs / photos) |
 | **3 (optionnel)** | Supabase Auth à la place du JWT maison |
 
 ## Prérequis
@@ -75,6 +75,29 @@ Le fichier `backend/src/config/initDB.js` reste un filet de sécurité au boot (
 - `config.toml` — config CLI locale
 - `migrations/20260815080000_initial_schema.sql` — schéma consolidé (initDB + tables lazy)
 - `seed.sql` — niveaux, lieux, créneaux (dev)
+
+## Statut transfert (août 2026)
+
+- **Phase 1** : données Neon → Supabase Postgres (resync, counts alignés), `DATABASE_URL` Render = session pooler
+- **Phase 2** : buckets Storage créés ; fichiers existants migrés (`storage_path`) ; code upload/download Storage
+- **Render (obligatoire pour Storage)** : ajouter `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (sinon fallback base64)
+
+## Phase 2 — Supabase Storage (docs / photos)
+
+Quand `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` sont définis sur Render :
+
+- Upload docs/photos → buckets privés (`eleves-photos`, `documents-eleves`, `documents-profs`, `documents-admin`)
+- Colonnes `storage_path` / `photo_storage_path` ; `contenu` / `photo` base64 vidés
+- Téléchargement : le backend renvoie encore un data URL (compat frontend)
+- Listes élèves : `photo` = URL signée (1 h)
+
+Migrer les fichiers déjà en base :
+
+```bash
+cd backend
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... DATABASE_URL=... \
+  node scripts/migrate-files-to-storage.js
+```
 
 ## Cutover Render (après restore OK)
 

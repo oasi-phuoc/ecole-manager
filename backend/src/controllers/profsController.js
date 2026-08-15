@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../services/mailer');
+const storage = require('../services/storageService');
 
 const CHAMPS = 'id, nom, prenom, email, actif, created_at, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis, niveau_prefere, branches_specialites, lieu_travail_prefere, remarque_lieu_travail, priorite_pref, type_prof, identifiant';
 
@@ -176,6 +177,24 @@ const getDocuments = async (req, res) => {
 const uploadDocument = async (req, res) => {
   const { nom, type, contenu, taille } = req.body;
   try {
+    if (!contenu) return res.status(400).json({ message: 'Contenu manquant' });
+    if (storage.isSupabaseConfigured()) {
+      const inserted = await pool.query(
+        `INSERT INTO documents_profs (prof_id, nom, type, contenu, taille, storage_path)
+         VALUES ($1,$2,$3,NULL,$4,NULL) RETURNING id, nom, type, taille, created_at`,
+        [req.params.id, nom, type || 'Autre', taille || null]
+      );
+      const doc = inserted.rows[0];
+      const path = `profs/${req.params.id}/${doc.id}_${storage.safeFileName(nom)}`;
+      try {
+        await storage.uploadDataUrl(storage.BUCKETS.documentsProfs, path, contenu);
+        await pool.query('UPDATE documents_profs SET storage_path=$1 WHERE id=$2', [path, doc.id]);
+      } catch (upErr) {
+        await pool.query('DELETE FROM documents_profs WHERE id=$1', [doc.id]);
+        throw upErr;
+      }
+      return res.status(201).json(doc);
+    }
     const result = await pool.query(
       'INSERT INTO documents_profs (prof_id, nom, type, contenu, taille) VALUES ($1,$2,$3,$4,$5) RETURNING id, nom, type, taille, created_at',
       [req.params.id, nom, type || 'Autre', contenu, taille || null]
@@ -186,14 +205,26 @@ const uploadDocument = async (req, res) => {
 
 const telechargerDocument = async (req, res) => {
   try {
-    const result = await pool.query('SELECT nom, contenu FROM documents_profs WHERE id=$1 AND prof_id=$2', [req.params.docId, req.params.id]);
+    const result = await pool.query(
+      'SELECT nom, contenu, storage_path FROM documents_profs WHERE id=$1 AND prof_id=$2',
+      [req.params.docId, req.params.id]
+    );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Document non trouvé' });
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+    const dataUrl = await storage.resolveContenu(row, storage.BUCKETS.documentsProfs);
+    if (!dataUrl) return res.status(404).json({ message: 'Fichier introuvable' });
+    res.json({ nom: row.nom, contenu: dataUrl });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 
 const supprimerDocument = async (req, res) => {
   try {
+    const cur = await pool.query(
+      'SELECT storage_path FROM documents_profs WHERE id=$1 AND prof_id=$2',
+      [req.params.docId, req.params.id]
+    );
+    if (!cur.rows.length) return res.status(404).json({ message: 'Document non trouvé' });
+    await storage.removeObject(storage.BUCKETS.documentsProfs, cur.rows[0].storage_path);
     await pool.query('DELETE FROM documents_profs WHERE id=$1 AND prof_id=$2', [req.params.docId, req.params.id]);
     res.json({ message: 'Document supprimé' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

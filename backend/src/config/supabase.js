@@ -14,8 +14,7 @@ function getSupabaseAdmin() {
   }
   if (client) return client;
   try {
-    // Dépendance optionnelle : npm i @supabase/supabase-js (phase 2)
-    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    // Dépendance : @supabase/supabase-js
     const { createClient } = require('@supabase/supabase-js');
     client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },

@@ -612,6 +612,57 @@ const initDB = async () => {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_sondage_reponses_sondage ON sondage_reponses(sondage_id)`);
 
+    // Phase 2 Supabase Storage — chemins objets (contenu base64 optionnel)
+    await pool.query(`ALTER TABLE documents_eleves ADD COLUMN IF NOT EXISTS storage_path TEXT`);
+    await pool.query(`ALTER TABLE documents_profs ADD COLUMN IF NOT EXISTS storage_path TEXT`);
+    await pool.query(`ALTER TABLE documents_administratifs ADD COLUMN IF NOT EXISTS storage_path TEXT`);
+    await pool.query(`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS photo_storage_path TEXT`);
+    try {
+      await pool.query(`ALTER TABLE documents_eleves ALTER COLUMN contenu DROP NOT NULL`);
+      await pool.query(`ALTER TABLE documents_profs ALTER COLUMN contenu DROP NOT NULL`);
+      await pool.query(`ALTER TABLE documents_administratifs ALTER COLUMN contenu DROP NOT NULL`);
+    } catch (alterErr) {
+      console.warn('ALTER contenu nullable:', alterErr.message);
+    }
+
+    // Tables présentes en prod (compta / périodes) — filet de sécurité
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS classe_periodes (
+        id SERIAL PRIMARY KEY,
+        classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE,
+        type_cours VARCHAR(50) DEFAULT 'cours'
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS commandes (
+        id SERIAL PRIMARY KEY,
+        article VARCHAR(255),
+        quantite INTEGER DEFAULT 1,
+        fournisseur VARCHAR(255),
+        prix_unitaire DECIMAL(10,2),
+        statut VARCHAR(50) DEFAULT 'en_attente',
+        remarques TEXT,
+        valide BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        numero_commande VARCHAR(20),
+        date_commande DATE DEFAULT CURRENT_DATE
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS commandes_lignes (
+        id SERIAL PRIMARY KEY,
+        commande_id INTEGER REFERENCES commandes(id) ON DELETE CASCADE,
+        article VARCHAR(255) NOT NULL,
+        quantite INTEGER NOT NULL DEFAULT 1,
+        ref VARCHAR(100),
+        prix_unitaire DECIMAL(10,2),
+        remarques TEXT,
+        statut VARCHAR(20) DEFAULT 'en_attente',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

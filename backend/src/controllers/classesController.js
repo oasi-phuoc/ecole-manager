@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const storage = require('../services/storageService');
 
 const getClasses = async (req, res) => {
   try {
@@ -40,7 +41,7 @@ const getElevesClasse = async (req, res) => {
       WHERE e.classe_id=$1
       ORDER BY COALESCE(u.nom, e.nom), COALESCE(u.prenom, e.prenom)
     `, [req.params.id]);
-    res.json(eleves.rows);
+    res.json(await storage.hydrateElevesPhotos(eleves.rows));
   } catch(err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
 

@@ -50,7 +50,7 @@ app.use(helmet({
       frameAncestors: ["'none'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://*.supabase.co'],
       connectSrc: cspConnectSrc,
       upgradeInsecureRequests: [],
     },
@@ -97,7 +97,16 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 const initDB = require('./src/config/initDB');
-initDB();
+initDB().then(() => {
+  try {
+    const { ensureBuckets, isSupabaseConfigured } = require('./src/services/storageService');
+    if (isSupabaseConfigured()) {
+      ensureBuckets().catch((err) => console.warn('Storage buckets:', err.message));
+    }
+  } catch (err) {
+    console.warn('Storage init:', err.message);
+  }
+});
 
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/eleves', require('./src/routes/eleves'));
