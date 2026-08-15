@@ -362,7 +362,25 @@ const getPlanningGeneral = async (req, res) => {
             WHEN a.type_special='autre' THEN 'Autre'
             ELSE NULL
           END) as classe_nom,
-          m.nom as matiere_nom
+          m.nom as matiere_nom,
+          (
+            SELECT p.nom FROM pools p
+            JOIN pool_classes pc ON pc.pool_id = p.id
+            WHERE pc.classe_id = a.classe_id
+            ORDER BY CASE WHEN p.id = $1::int THEN 0 ELSE 1 END, p.id
+            LIMIT 1
+          ) AS pool_nom,
+          (
+            SELECT p.id FROM pools p
+            JOIN pool_classes pc ON pc.pool_id = p.id
+            WHERE pc.classe_id = a.classe_id
+            ORDER BY CASE WHEN p.id = $1::int THEN 0 ELSE 1 END, p.id
+            LIMIT 1
+          ) AS pool_id_aff,
+          EXISTS (
+            SELECT 1 FROM pool_classes pc
+            WHERE pc.classe_id = a.classe_id AND pc.pool_id = $1::int
+          ) AS dans_pool_courant
         FROM affectations a
         JOIN pool_profs pp ON pp.prof_id = a.prof_id AND pp.pool_id = $1
         LEFT JOIN classes c ON c.id=a.classe_id
@@ -382,7 +400,20 @@ const getPlanningGeneral = async (req, res) => {
             WHEN a.type_special='autre' THEN 'Autre'
             ELSE NULL
           END) as classe_nom,
-          m.nom as matiere_nom
+          m.nom as matiere_nom,
+          (
+            SELECT p.nom FROM pools p
+            JOIN pool_classes pc ON pc.pool_id = p.id
+            WHERE pc.classe_id = a.classe_id
+            ORDER BY p.id LIMIT 1
+          ) AS pool_nom,
+          (
+            SELECT p.id FROM pools p
+            JOIN pool_classes pc ON pc.pool_id = p.id
+            WHERE pc.classe_id = a.classe_id
+            ORDER BY p.id LIMIT 1
+          ) AS pool_id_aff,
+          true AS dans_pool_courant
         FROM affectations a
         LEFT JOIN classes c ON c.id=a.classe_id
         LEFT JOIN matieres m ON m.id=a.matiere_id
@@ -422,21 +453,47 @@ const getPlanningProf = async (req, res) => {
   const classesTitulaire = await pool.query('SELECT nom FROM classes WHERE prof_principal_id=$1', [prof_id]);
   const creneaux = await pool.query('SELECT * FROM creneaux ORDER BY '+ORDRE_JOURS+', ordre');
   const affectations = await pool.query(`
-    SELECT a.creneau_id, a.matiere_id,
+    SELECT a.creneau_id, a.matiere_id, a.classe_id, a.type_special,
       COALESCE(c.nom, CASE
         WHEN a.type_special='titulariat' THEN 'Titulariat'
         WHEN a.type_special='atelier' THEN 'Atelier'
         WHEN a.type_special='autre' THEN 'Autre'
         ELSE NULL
       END) as classe_nom,
-      m.nom as matiere_nom
+      m.nom as matiere_nom,
+      (
+        SELECT string_agg(p.nom, ', ' ORDER BY p.nom)
+        FROM pools p
+        JOIN pool_classes pc ON pc.pool_id = p.id
+        WHERE pc.classe_id = a.classe_id
+      ) AS pool_nom,
+      (
+        SELECT string_agg(p.nom, ', ' ORDER BY p.nom)
+        FROM pools p
+        JOIN pool_profs pp ON pp.pool_id = p.id
+        WHERE pp.prof_id = $1
+      ) AS pools_prof
     FROM affectations a
     LEFT JOIN classes c ON c.id=a.classe_id
     LEFT JOIN matieres m ON m.id=a.matiere_id
     WHERE a.prof_id=$1
   `, [prof_id]);
+  const poolsProf = await pool.query(`
+    SELECT p.id, p.nom, p.site
+    FROM pools p
+    JOIN pool_profs pp ON pp.pool_id = p.id
+    WHERE pp.prof_id = $1
+    ORDER BY p.nom
+  `, [prof_id]);
   const dispos = await pool.query('SELECT creneau_id,disponible FROM disponibilites WHERE prof_id=$1', [prof_id]);
-  res.json({ prof:prof.rows[0], creneaux:creneaux.rows, affectations:affectations.rows, dispos:dispos.rows, classesTitulaire:classesTitulaire.rows });
+  res.json({
+    prof: prof.rows[0],
+    creneaux: creneaux.rows,
+    affectations: affectations.rows,
+    dispos: dispos.rows,
+    classesTitulaire: classesTitulaire.rows,
+    pools: poolsProf.rows,
+  });
 };
 
 const getPlanningClasse = async (req, res) => {

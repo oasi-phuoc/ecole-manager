@@ -20,13 +20,9 @@ export function sanitizeFilename(name, fallback = 'document') {
  * Sur Chrome/Edge : sélecteur de dossier (choisir le Bureau).
  * Sinon : null → l'appelant peut basculer sur un ZIP téléchargeable.
  */
-export async function demanderDossierExport(message) {
+export async function demanderDossierExport() {
   if (typeof window.showDirectoryPicker !== 'function') {
     return null;
-  }
-  if (message) {
-    const ok = window.confirm(message);
-    if (!ok) return { cancelled: true };
   }
   try {
     const handle = await window.showDirectoryPicker({
@@ -127,27 +123,26 @@ function downloadBlob(blob, fileName) {
 }
 
 /**
- * Exporte une liste de documents { relativePath, html, pdfOptions }.
- * - Si dirHandle est fourni : écrit dans le dossier (avec sous-dossiers).
- * - Sinon : télécharge un ZIP.
- *
  * @param {object} params
  * @param {FileSystemDirectoryHandle} [params.dirHandle]
  * @param {string} params.rootFolderName
  * @param {Array<{ relativePath: string, html: string, pdfOptions?: object }>} params.documents
  * @param {(done:number,total:number,label:string)=>void} [params.onProgress]
+ * @param {() => boolean} [params.shouldCancel] — si true, stoppe l'export
  */
 export async function exporterDocumentsPdf({
   dirHandle = null,
   rootFolderName = 'Plannings_EDT',
   documents = [],
   onProgress = null,
+  shouldCancel = null,
 }) {
   const total = documents.length;
   let done = 0;
   const report = (label) => {
     if (typeof onProgress === 'function') onProgress(done, total, label);
   };
+  const cancelled = () => (typeof shouldCancel === 'function' ? !!shouldCancel() : false);
 
   if (dirHandle) {
     const root = await getOrCreateDir(dirHandle, sanitizeFilename(rootFolderName, 'Plannings_EDT'));
@@ -173,6 +168,7 @@ export async function exporterDocumentsPdf({
     };
 
     for (const doc of documents) {
+      if (cancelled()) return { mode: 'folder', rootFolderName, count: done, cancelled: true };
       const rel = String(doc.relativePath || 'document.pdf').replace(/^\/+/, '');
       const segments = rel.split('/').filter(Boolean);
       const fileName = sanitizeFilename(segments.pop() || 'document', 'document');
@@ -181,6 +177,7 @@ export async function exporterDocumentsPdf({
       const folder = await ensurePath(folderParts);
       report(`PDF : ${[...folderParts, finalName].join('/')}`);
       const blob = await htmlDocumentToPdfBlob(doc.html, doc.pdfOptions || {});
+      if (cancelled()) return { mode: 'folder', rootFolderName, count: done, cancelled: true };
       await writeBlobToDir(folder, finalName, blob);
       done += 1;
       report(`Enregistré : ${[...folderParts, finalName].join('/')}`);
@@ -192,6 +189,7 @@ export async function exporterDocumentsPdf({
   const zip = new JSZip();
   const root = zip.folder(sanitizeFilename(rootFolderName, 'Plannings_EDT'));
   for (const doc of documents) {
+    if (cancelled()) return { mode: 'zip', rootFolderName, count: done, cancelled: true };
     const rel = String(doc.relativePath || 'document.pdf').replace(/^\/+/, '');
     const segments = rel.split('/').filter(Boolean);
     const fileName = sanitizeFilename(segments.pop() || 'document', 'document');
@@ -199,6 +197,7 @@ export async function exporterDocumentsPdf({
     const folderParts = segments.map((s) => sanitizeFilename(s, 'dossier'));
     report(`PDF : ${[...folderParts, finalName].join('/')}`);
     const blob = await htmlDocumentToPdfBlob(doc.html, doc.pdfOptions || {});
+    if (cancelled()) return { mode: 'zip', rootFolderName, count: done, cancelled: true };
     const buf = await blob.arrayBuffer();
     let folder = root;
     folderParts.forEach((p) => {

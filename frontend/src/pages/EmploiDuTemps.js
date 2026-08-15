@@ -148,6 +148,7 @@ export default function EmploiDuTemps() {
   const [planningGeneralError, setPlanningGeneralError] = useState('');
   const [exportPdfEnCours, setExportPdfEnCours] = useState(false);
   const [exportPdfProgress, setExportPdfProgress] = useState('');
+  const exportPdfAnnulerRef = useRef(false);
   const [planningPoolId, setPlanningPoolId] = useState('');
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
@@ -631,6 +632,26 @@ export default function EmploiDuTemps() {
   };
 
   const poolSelectionne = pools.find(p => p.id == poolAffId);
+  const trouverPoolParClasseId = (classeId) => {
+    if (classeId == null || classeId === '') return null;
+    return pools.find((p) => (p.classes || []).some((c) => String(c.id) === String(classeId))) || null;
+  };
+  const estAffectationHorsPool = (aff, poolCourant) => {
+    if (!aff || !poolCourant || !aff.classe_id) return false;
+    if (aff.dans_pool_courant === false) return true;
+    if (aff.dans_pool_courant === true) return false;
+    const poolClasse = trouverPoolParClasseId(aff.classe_id);
+    if (!poolClasse) return false;
+    return String(poolClasse.id) !== String(poolCourant.id);
+  };
+  const nomPoolAffectationExterne = (aff, poolCourant) => {
+    if (aff?.pool_nom && aff.dans_pool_courant === false) return String(aff.pool_nom);
+    const poolClasse = trouverPoolParClasseId(aff?.classe_id);
+    if (poolClasse && poolCourant && String(poolClasse.id) !== String(poolCourant.id)) {
+      return poolClasse.nom || 'Autre pool';
+    }
+    return aff?.pool_nom || 'Autre pool';
+  };
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
   const classesPool = trierClassesParNom(poolSelectionne ? poolSelectionne.classes : classes);
   const classesParId = new Map(classes.map(c => [String(c.id), c]));
@@ -2129,16 +2150,18 @@ export default function EmploiDuTemps() {
         <title>${escapeHtml(titre)}</title>
         <style>
           @page { size: ${pageSize}; margin: ${marginCss}; }
-          body { font-family: Arial, sans-serif; margin: ${a3Semaine ? '4px' : '16px'}; color: #111827; }
+          body { font-family: Arial, sans-serif; margin: ${a3Semaine ? '4px' : '16px'}; color: #111827; text-align: center; }
           @media print {
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
           }
-          h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; }
-          h2 { margin: 14px 0 8px; font-size: 15px; }
-          table { width: 100%; border-collapse: collapse; margin: ${a3Semaine ? '0' : '8px 0 18px'}; table-layout: fixed; }
+          h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; }
+          h2 { margin: 14px 0 8px; font-size: 15px; text-align: center; }
+          table { border-collapse: collapse; margin: ${a3Semaine ? '0 auto' : '8px auto 18px'}; table-layout: fixed; ${a3Semaine ? 'width: 100%;' : 'width: auto; max-width: 100%;'} }
+          .section, .section-a3 { text-align: center; }
+          .section table, .section-a3 table { margin-left: auto; margin-right: auto; }
           th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '5px 4px'}; font-size: ${a3Semaine ? '7pt' : '9pt'}; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f8fafc; font-weight: 700; }
           col.creneau-col { width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; min-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; max-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; }
@@ -2281,9 +2304,10 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos }) => {
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const ROW_H = 52;
+    const poolCourant = poolId ? pools.find((p) => String(p.id) === String(poolId)) : null;
     const parts = [];
     JOURS.forEach(jour => {
       const crs = (allCrs || []).filter(c => c.jour === jour);
@@ -2301,11 +2325,15 @@ export default function EmploiDuTemps() {
         rows.push(`<tr><td colspan="${nCols}" style="background:#000;color:#fff;font-weight:700;font-size:9pt;padding:4px 8px;text-align:left;border:none;">${escapeHtml(per)}</td></tr>`);
         crsPer.forEach(cr => {
           const cells = (profs || []).map(p => {
-            const aff = (affectations || []).find(a => a.prof_id === p.id && a.creneau_id === cr.id);
-            const dispo = (dispos || []).find(d => d.prof_id === p.id && d.creneau_id === cr.id);
+            const aff = (affectations || []).find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
+            const dispo = (dispos || []).find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
             const indispo = dispo && !dispo.disponible;
             let bg = '#fff', content = '';
-            if (aff) {
+            if (aff && estAffectationHorsPool(aff, poolCourant)) {
+              bg = '#e2e8f0';
+              const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolCourant));
+              content = `<div style="font-weight:700;color:#475569;font-size:8pt;line-height:1.2;">${nomPool}</div>`;
+            } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
               bg = estSpecial ? '#000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
@@ -2328,7 +2356,7 @@ export default function EmploiDuTemps() {
       const colgroup = `<colgroup><col style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>${(profs || []).map(() => '<col/>').join('')}</colgroup>`;
       parts.push(`
         <div class="section">
-          <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:20px;">
+          <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0 auto 20px;">
             ${colgroup}
             <tbody>
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;">
@@ -2343,13 +2371,19 @@ export default function EmploiDuTemps() {
     });
     return parts.join('');
   };
-  /** Planning général A3 paysage : semaine entière sur une page, colonnes vides entre profs, ligne vide entre jours. */
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires }) => {
-    const listeProfs = Array.isArray(profs) ? profs : [];
+  /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
+  const A3_NB_COLONNES_PROF = 10;
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null }) => {
+    const listeProfsReels = Array.isArray(profs) ? profs : [];
+    const listeProfs = [...listeProfsReels];
+    while (listeProfs.length < A3_NB_COLONNES_PROF) {
+      listeProfs.push({ id: `__fake_${listeProfs.length}`, _fake: true, nom: '', prenom: '' });
+    }
     const listeCrs = Array.isArray(allCrs) ? allCrs : [];
     const listeAff = Array.isArray(affectations) ? affectations : [];
     const listeDispos = Array.isArray(dispos) ? dispos : [];
     const listeTit = Array.isArray(titulaires) ? titulaires : [];
+    const poolCourant = poolId ? pools.find((p) => String(p.id) === String(poolId)) : null;
     const classesParProf = {};
     listeTit.forEach((t) => {
       const pid = t?.prof_id != null ? String(t.prof_id) : '';
@@ -2358,12 +2392,11 @@ export default function EmploiDuTemps() {
       if (!classesParProf[pid]) classesParProf[pid] = [];
       if (!classesParProf[pid].includes(nomClasse)) classesParProf[pid].push(nomClasse);
     });
-    // Fallback si pas de prof_id : rapprochement par nom complet
     if (Object.keys(classesParProf).length === 0) {
       listeTit.forEach((t) => {
         const nomTit = formaterNomComplet(t?.prof_nom || '').toLowerCase().replace(/\s+/g, ' ').trim();
         if (!nomTit || !t?.classe_nom) return;
-        const prof = listeProfs.find((p) => {
+        const prof = listeProfsReels.find((p) => {
           const n = formaterNomComplet(`${p.prenom || ''} ${nomSansSuffixe(p.nom || '')}`).toLowerCase().replace(/\s+/g, ' ').trim();
           return n && n === nomTit;
         });
@@ -2375,11 +2408,11 @@ export default function EmploiDuTemps() {
       });
     }
 
-    const nProfs = listeProfs.length;
-    // Horaire + (prof + spacer) * (n-1) + dernier prof
+    const nProfs = listeProfs.length; // toujours A3_NB_COLONNES_PROF
     const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
     const CRENEAU_W = 72;
     const ROW_H = 28;
+    const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
     const withSpacers = (cellsHtmlArr) => {
@@ -2392,6 +2425,9 @@ export default function EmploiDuTemps() {
     };
 
     const profHeaders = withSpacers(listeProfs.map((p) => {
+      if (p._fake) {
+        return `<th style="text-align:center;font-size:7.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;width:${PROF_COL_W};">&nbsp;</th>`;
+      }
       const nomAffiche = `${formaterPrenomEntete(p.prenom || '')} ${nomSansSuffixe(p.nom || '')}`.trim()
         || nomSansSuffixe(p.nom || '')
         || 'Professeur';
@@ -2399,13 +2435,13 @@ export default function EmploiDuTemps() {
       const titulaireHtml = classesTit
         ? `<span class="titulaire-label">Tit. ${escapeHtml(classesTit)}</span>`
         : '';
-      return `<th style="text-align:center;font-size:7.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;">${escapeHtml(nomAffiche)}${titulaireHtml}</th>`;
+      return `<th style="text-align:center;font-size:7.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;width:${PROF_COL_W};">${escapeHtml(nomAffiche)}${titulaireHtml}</th>`;
     }));
 
     const colgroup = `<colgroup>
       <col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>
       ${listeProfs.map((_, i) =>
-        `<col />${i < nProfs - 1 ? '<col class="spacer-col" />' : ''}`
+        `<col style="width:${PROF_COL_W};" />${i < nProfs - 1 ? '<col class="spacer-col" />' : ''}`
       ).join('')}
     </colgroup>`;
 
@@ -2429,6 +2465,9 @@ export default function EmploiDuTemps() {
         );
         crsPer.forEach((cr) => {
           const cells = listeProfs.map((p) => {
+            if (p._fake) {
+              return `<td style="background:#fff;height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;"></td>`;
+            }
             const aff = listeAff.find(
               (a) => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id)
             );
@@ -2438,7 +2477,10 @@ export default function EmploiDuTemps() {
             const indispo = dispo && !dispo.disponible;
             let bg = '#fff';
             let content = '';
-            if (aff) {
+            if (aff && estAffectationHorsPool(aff, poolCourant)) {
+              bg = '#e2e8f0';
+              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;">${escapeHtml(nomPoolAffectationExterne(aff, poolCourant))}</div>`;
+            } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
               bg = estSpecial ? '#000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
@@ -2463,7 +2505,7 @@ export default function EmploiDuTemps() {
 
     return `
       <div class="section-a3">
-        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
+        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0 auto;">
           ${colgroup}
           <thead>
             <tr>
@@ -2509,6 +2551,7 @@ export default function EmploiDuTemps() {
         affectations: data?.affectations || [],
         dispos: data?.dispos || [],
         titulaires: data?.titulaires || [],
+        poolId: planningPoolId,
       });
       const poolNom = pools.find((p) => String(p.id) === String(planningPoolId))?.nom || '';
       const titre = `Planning général — semaine${poolNom ? ` — ${poolNom}` : ''}`;
@@ -2535,18 +2578,13 @@ export default function EmploiDuTemps() {
   const exporterTousPlanningsPdf = async () => {
     if (exportPdfEnCours) return;
     try {
+      exportPdfAnnulerRef.current = false;
       setExportPdfEnCours(true);
-      setExportPdfProgress('Préparation…');
-
-      const messageChoix =
-        "Les plannings seront enregistrés en PDF dans un dossier avec sous-dossiers :\n"
-        + "• Classes / {pool}\n• Professeurs / {pool}\n• Salles / {lieu}\n• General / {pool}\n\n"
-        + "Choisissez le dossier d'enregistrement (recommandé : Bureau).\n\n"
-        + "Continuer ?";
+      setExportPdfProgress('Choix du dossier…');
 
       let dirHandle = null;
-      const choix = await demanderDossierExport(messageChoix);
-      if (choix?.cancelled) {
+      const choix = await demanderDossierExport();
+      if (choix?.cancelled || exportPdfAnnulerRef.current) {
         setExportPdfEnCours(false);
         setExportPdfProgress('');
         return;
@@ -2554,16 +2592,8 @@ export default function EmploiDuTemps() {
       if (choix?.handle) {
         dirHandle = choix.handle;
       } else {
-        const okZip = window.confirm(
-          "Votre navigateur ne permet pas d'écrire directement dans un dossier.\n"
-          + "Un fichier ZIP contenant tous les PDF (avec sous-dossiers) sera téléchargé.\n"
-          + "Enregistrez-le sur le Bureau puis décompressez-le.\n\nContinuer ?"
-        );
-        if (!okZip) {
-          setExportPdfEnCours(false);
-          setExportPdfProgress('');
-          return;
-        }
+        // Navigateur sans File System Access → ZIP, sans popup bloquant : le statut reste sur le bouton
+        setExportPdfProgress('Mode ZIP…');
       }
 
       const documents = [];
@@ -2571,6 +2601,7 @@ export default function EmploiDuTemps() {
       const rootFolderName = `Plannings_EDT_${dateTag}`;
       const poolsExport = Array.isArray(pools) ? pools : [];
       const nomPoolSafe = (pool) => sanitizeFilename(pool?.nom || `Pool_${pool?.id || 'x'}`, 'Pool');
+      const checkCancel = () => exportPdfAnnulerRef.current;
 
       // Index : classeId -> pools, profId -> pools
       const poolsParClasse = new Map();
@@ -2590,6 +2621,7 @@ export default function EmploiDuTemps() {
 
       // —— Classes (sous-dossier par pool) ——
       setExportPdfProgress('Chargement des classes…');
+      if (checkCancel()) throw Object.assign(new Error('annulé'), { cancelled: true });
       const classesExport = classesToutesTriees.length ? classesToutesTriees : classes;
       if (classesExport.length) {
         const reps = await Promise.all(
@@ -2777,6 +2809,7 @@ export default function EmploiDuTemps() {
             profs: data.profs || [],
             affectations: data.affectations || [],
             dispos: data.dispos || [],
+            poolId,
           });
           documents.push({
             relativePath: `General/${poolFolder}/Planning_general_par_jours.pdf`,
@@ -2789,6 +2822,7 @@ export default function EmploiDuTemps() {
             affectations: data.affectations || [],
             dispos: data.dispos || [],
             titulaires: data.titulaires || [],
+            poolId,
           });
           documents.push({
             relativePath: `General/${poolFolder}/Planning_general_A3_semaine.pdf`,
@@ -2815,22 +2849,30 @@ export default function EmploiDuTemps() {
         dirHandle,
         rootFolderName,
         documents,
+        shouldCancel: checkCancel,
         onProgress: (done, total, label) => {
           setExportPdfProgress(`${done}/${total} — ${label}`);
         },
       });
 
-      if (resultat.mode === 'folder') {
+      if (resultat.cancelled || checkCancel()) {
+        showToast(`Export annulé (${resultat.count || 0} PDF).`, 'info');
+      } else if (resultat.mode === 'folder') {
         showToast(`${resultat.count} PDF enregistrés dans « ${rootFolderName} ».`, 'success');
       } else {
         showToast(`${resultat.count} PDF téléchargés dans le ZIP « ${rootFolderName}.zip ».`, 'success');
       }
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || err.message || "Erreur lors de l'export PDF.");
+      if (err?.cancelled || exportPdfAnnulerRef.current) {
+        showToast('Export annulé.', 'info');
+      } else {
+        console.error(err);
+        alert(err.response?.data?.message || err.message || "Erreur lors de l'export PDF.");
+      }
     } finally {
       setExportPdfEnCours(false);
       setExportPdfProgress('');
+      exportPdfAnnulerRef.current = false;
     }
   };
 
@@ -2942,6 +2984,7 @@ export default function EmploiDuTemps() {
         profs: data?.profs || [],
         affectations: data?.affectations || [],
         dispos: data?.dispos || [],
+        poolId,
       });
       return openPrintWindow(titre, contenu, { paysage: true });
     } catch (err) {
@@ -3079,6 +3122,7 @@ export default function EmploiDuTemps() {
         profs: data?.profs || [],
         affectations: data?.affectations || [],
         dispos: data?.dispos || [],
+        poolId,
       });
       return openPrintWindow('Plannings général — complet', contenu, { paysage: true });
     } catch (err) {
@@ -3137,15 +3181,38 @@ export default function EmploiDuTemps() {
                 >
                   Imprimer A3 semaine
                 </button>
-                <button
-                  type="button"
-                  style={{...styles.btnImprimer, opacity: exportPdfEnCours ? 0.7 : 1}}
-                  onClick={exporterTousPlanningsPdf}
-                  disabled={exportPdfEnCours}
-                  title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
-                >
-                  {exportPdfEnCours ? (exportPdfProgress || 'Export…') : 'Exporter tous les PDF'}
-                </button>
+                {exportPdfEnCours ? (
+                  <div style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'min(520px,70vw)'}}>
+                    <button
+                      type="button"
+                      style={{...styles.btnImprimer, opacity: 0.85, cursor: 'default', maxWidth: 380, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}
+                      disabled
+                      title={exportPdfProgress || 'Export…'}
+                    >
+                      {exportPdfProgress || 'Export…'}
+                    </button>
+                    <button
+                      type="button"
+                      style={{...styles.btnImprimer, background: '#fee2e2', borderColor: '#fecaca', color: '#991b1b'}}
+                      onClick={() => {
+                        exportPdfAnnulerRef.current = true;
+                        setExportPdfProgress('Annulation…');
+                      }}
+                      title="Annuler l'export"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    style={styles.btnImprimer}
+                    onClick={exporterTousPlanningsPdf}
+                    title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                  >
+                    Exporter tous les PDF
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -3612,8 +3679,11 @@ export default function EmploiDuTemps() {
                       ];
                       return (
                         <div style={{...styles.fc, gridColumn:'1/-1'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8,flexWrap:'wrap'}}>
                             <label style={styles.lbl}>Professeurs</label>
+                            <span style={{fontSize:12,color:'#64748b'}}>
+                              Un professeur peut être dans plusieurs pools (période prise ailleurs = nom du pool).
+                            </span>
                           </div>
                           {blocsProfs.map(bloc => bloc.items.length > 0 && (
                             <div key={bloc.label} style={{marginBottom:10}}>
@@ -3636,7 +3706,17 @@ export default function EmploiDuTemps() {
                                   >
                                     <input type="checkbox" checked={poolForm.prof_ids.includes(p.id)} onChange={() => setPoolForm({...poolForm,prof_ids:toggleArr(poolForm.prof_ids,p.id)})} />
                                     <span style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,flexWrap:'nowrap',lineHeight:1.2,width:'100%'}}>
-                                      <span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.prenom} {nomSansSuffixe(p.nom)}</span>
+                                      <span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                        {p.prenom} {nomSansSuffixe(p.nom)}
+                                        {(() => {
+                                          const autres = pools
+                                            .filter((po) => String(po.id) !== String(poolEdit?.id || '') && (po.profs || []).some((pp) => String(pp.id) === String(p.id)))
+                                            .map((po) => po.nom);
+                                          return autres.length
+                                            ? <span style={{marginLeft:6,fontSize:10,fontWeight:700,color:'#6366f1'}}>({autres.join(', ')})</span>
+                                            : null;
+                                        })()}
+                                      </span>
                                       <span style={{display:'inline-flex',alignItems:'center',gap:5,flexShrink:0}}>
                                         {p.taux_activite ? <span style={{opacity:.75,fontSize:10,fontWeight:700}}>{p.taux_activite}%</span> : null}
                                         <span title={`${p.niveau_prefere ? `Niveau: ${p.niveau_prefere}` : ''}${p.lieu_travail_prefere ? `${p.niveau_prefere ? ' • ' : ''}Lieu: ${p.lieu_travail_prefere}` : ''}`}
@@ -4299,6 +4379,21 @@ export default function EmploiDuTemps() {
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
                                 const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
+                                const horsPool = aff && estAffectationHorsPool(aff, poolSelectionne);
+                                if (horsPool) {
+                                  const nomPoolExt = nomPoolAffectationExterne(aff, poolSelectionne);
+                                  return (
+                                    <td key={prof.id} style={{...styles.td,padding:'8px 4px',background:'#e2e8f0',textAlign:'center'}} title={`Affecté sur le pool « ${nomPoolExt} »`}>
+                                      <div style={{
+                                        minHeight:32,display:'flex',alignItems:'center',justifyContent:'center',
+                                        fontSize:11,fontWeight:700,color:'#475569',padding:'4px 6px',
+                                        borderRadius:6,background:'#cbd5e1',lineHeight:1.2
+                                      }}>
+                                        {nomPoolExt}
+                                      </div>
+                                    </td>
+                                  );
+                                }
                                 const classeAffecteeVisible = aff && aff.classe_id
                                   ? classesCours.some(cl => String(cl.id) === String(aff.classe_id))
                                   : false;
@@ -4322,6 +4417,12 @@ export default function EmploiDuTemps() {
                                       value={valeurSelect}
                                       onChange={e => {
                                         if (indispo) return;
+                                        // Empêcher d'écraser une affectation hors pool (déjà affichée ailleurs)
+                                        const affExistante = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
+                                        if (affExistante && estAffectationHorsPool(affExistante, poolSelectionne) && e.target.value) {
+                                          alert(`Ce professeur est déjà affecté sur « ${nomPoolAffectationExterne(affExistante, poolSelectionne)} » à cette période.`);
+                                          return;
+                                        }
                                         const valeur = e.target.value;
                                         const draftId = () => `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                                         if (!valeur) {
@@ -5009,6 +5110,11 @@ export default function EmploiDuTemps() {
                     <span style={{fontWeight:400}}> {planningProf.classesTitulaire.map(c=>c.nom).join(', ')}</span>
                   </>
                 )}
+                {Array.isArray(planningProf.pools) && planningProf.pools.length > 1 && (
+                  <div style={{fontSize:13,fontWeight:600,color:'#6366f1',marginTop:6}}>
+                    Pools : {planningProf.pools.map((p) => p.nom).join(' · ')}
+                  </div>
+                )}
               </div>
               <table style={{...styles.tbl,width:'100%',tableLayout:'fixed',minWidth:200+JOURS.length*140}}>
                 <thead>
@@ -5051,6 +5157,7 @@ export default function EmploiDuTemps() {
                                 {classeAffectee ? (
                                   <>
                                     <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{aff.classe_nom}</div>
+                                    {aff.pool_nom ? <div style={{color:'#6366f1',fontWeight:600,fontSize:10,marginTop:2,textAlign:'center'}}>{aff.pool_nom}</div> : null}
                                     {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
                                   </>
                                 ) : ''}
@@ -5309,21 +5416,29 @@ export default function EmploiDuTemps() {
                                 const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
                                 const dispo = genDispos.find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
                                 const indispo = dispo && !dispo.disponible;
+                                const poolCourantGen = pools.find((pp) => String(pp.id) === String(planningPoolId));
+                                const horsPool = aff && estAffectationHorsPool(aff, poolCourantGen);
                                 const estSoutien = String(aff?.type_special || '').toLowerCase() === 'soutien';
                                 const estSpecial = !!aff?.type_special && !estSoutien;
                                 let couleurFond = '#fff';
                                 let couleurTexte = '#111827';
                                 let libelleAff = '';
                                 try {
-                                  couleurFond = aff
-                                    ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
-                                    : (indispo ? '#eeeeee' : '#fff');
-                                  couleurTexte = aff
-                                    ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
-                                    : '#111827';
-                                  libelleAff = estSpecial
-                                    ? getLibelleTypeSpecial(aff.type_special)
-                                    : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : (aff.classe_nom || ''));
+                                  if (horsPool) {
+                                    couleurFond = '#e2e8f0';
+                                    couleurTexte = '#475569';
+                                    libelleAff = nomPoolAffectationExterne(aff, poolCourantGen);
+                                  } else {
+                                    couleurFond = aff
+                                      ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
+                                      : (indispo ? '#eeeeee' : '#fff');
+                                    couleurTexte = aff
+                                      ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
+                                      : '#111827';
+                                    libelleAff = estSpecial
+                                      ? getLibelleTypeSpecial(aff.type_special)
+                                      : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : (aff.classe_nom || ''));
+                                  }
                                 } catch (_) {
                                   couleurFond = indispo ? '#eeeeee' : '#fff';
                                   couleurTexte = '#111827';
@@ -5334,7 +5449,7 @@ export default function EmploiDuTemps() {
                                     background:couleurFond,color:couleurTexte}}>
                                     {aff ? <>
                                       <b style={{color:couleurTexte,fontSize:12}}>{libelleAff}</b>
-                                      {estSpecial ? null : (aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null)}
+                                      {!horsPool && !estSpecial && aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null}
                                     </> : ''}
                                   </td>
                                 );
