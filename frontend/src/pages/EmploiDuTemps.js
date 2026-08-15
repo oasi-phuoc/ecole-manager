@@ -2540,7 +2540,7 @@ export default function EmploiDuTemps() {
 
       const messageChoix =
         "Les plannings seront enregistrés en PDF dans un dossier avec sous-dossiers :\n"
-        + "• Classes\n• Professeurs\n• Salles\n• General\n\n"
+        + "• Classes / {pool}\n• Professeurs / {pool}\n• Salles / {lieu}\n• General / {pool}\n\n"
         + "Choisissez le dossier d'enregistrement (recommandé : Bureau).\n\n"
         + "Continuer ?";
 
@@ -2569,8 +2569,26 @@ export default function EmploiDuTemps() {
       const documents = [];
       const dateTag = new Date().toISOString().slice(0, 10);
       const rootFolderName = `Plannings_EDT_${dateTag}`;
+      const poolsExport = Array.isArray(pools) ? pools : [];
+      const nomPoolSafe = (pool) => sanitizeFilename(pool?.nom || `Pool_${pool?.id || 'x'}`, 'Pool');
 
-      // —— Classes ——
+      // Index : classeId -> pools, profId -> pools
+      const poolsParClasse = new Map();
+      const poolsParProf = new Map();
+      poolsExport.forEach((pool) => {
+        (pool.classes || []).forEach((cl) => {
+          const key = String(cl.id);
+          if (!poolsParClasse.has(key)) poolsParClasse.set(key, []);
+          poolsParClasse.get(key).push(pool);
+        });
+        (pool.profs || []).forEach((p) => {
+          const key = String(p.id);
+          if (!poolsParProf.has(key)) poolsParProf.set(key, []);
+          poolsParProf.get(key).push(pool);
+        });
+      });
+
+      // —— Classes (sous-dossier par pool) ——
       setExportPdfProgress('Chargement des classes…');
       const classesExport = classesToutesTriees.length ? classesToutesTriees : classes;
       if (classesExport.length) {
@@ -2580,6 +2598,7 @@ export default function EmploiDuTemps() {
         reps.forEach((rep, idx) => {
           if (!rep?.data) return;
           const data = rep.data;
+          const classeId = String(data?.classe?.id || classesExport[idx]?.id || '');
           const nomClasse = data?.classe?.nom || classesExport[idx]?.nom || `Classe_${idx + 1}`;
           const titulaireClasse = data?.classe?.titulaire_nom || '';
           const affs = data?.affectations || [];
@@ -2595,15 +2614,28 @@ export default function EmploiDuTemps() {
             titreBanniere: titre || 'Classe',
             creneauxAvecSoutien: creneauxSoutien,
           });
-          documents.push({
-            relativePath: `Classes/${sanitizeFilename(nomClasse)}.pdf`,
-            html: buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true }),
-            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
-          });
+          const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+          const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
+          const poolsClasse = poolsParClasse.get(classeId) || [];
+          if (poolsClasse.length) {
+            poolsClasse.forEach((pool) => {
+              documents.push({
+                relativePath: `Classes/${nomPoolSafe(pool)}/${sanitizeFilename(nomClasse)}.pdf`,
+                html,
+                pdfOptions,
+              });
+            });
+          } else {
+            documents.push({
+              relativePath: `Classes/_Sans_pool/${sanitizeFilename(nomClasse)}.pdf`,
+              html,
+              pdfOptions,
+            });
+          }
         });
       }
 
-      // —— Professeurs ——
+      // —— Professeurs (sous-dossier par pool) ——
       setExportPdfProgress('Chargement des professeurs…');
       const profsExport = (profs || []).filter((p) => p && p.actif !== false);
       if (profsExport.length) {
@@ -2613,6 +2645,7 @@ export default function EmploiDuTemps() {
         reps.forEach((rep, idx) => {
           if (!rep?.data) return;
           const data = rep.data;
+          const profId = String(data?.prof?.id || profsExport[idx]?.id || '');
           const nom = `${data?.prof?.prenom || profsExport[idx]?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || profsExport[idx]?.nom || '')}`.trim() || `Prof_${idx + 1}`;
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
@@ -2641,11 +2674,24 @@ export default function EmploiDuTemps() {
               return { text: '' };
             },
           });
-          documents.push({
-            relativePath: `Professeurs/${sanitizeFilename(nom)}.pdf`,
-            html: buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true }),
-            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
-          });
+          const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
+          const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
+          const poolsProf = poolsParProf.get(profId) || [];
+          if (poolsProf.length) {
+            poolsProf.forEach((pool) => {
+              documents.push({
+                relativePath: `Professeurs/${nomPoolSafe(pool)}/${sanitizeFilename(nom)}.pdf`,
+                html,
+                pdfOptions,
+              });
+            });
+          } else {
+            documents.push({
+              relativePath: `Professeurs/_Sans_pool/${sanitizeFilename(nom)}.pdf`,
+              html,
+              pdfOptions,
+            });
+          }
         });
       }
 
@@ -2656,10 +2702,9 @@ export default function EmploiDuTemps() {
         : Array.from(new Set((sallesDB || []).map((s) => s.lieu_nom).filter(Boolean)));
       for (const lieu of lieuxExport) {
         const lieuNorm = normaliserLieuTravail(lieu);
-        const poolsLieu = pools.filter((p) => normaliserLieuTravail(p.site || '') === lieuNorm);
+        const poolsLieu = poolsExport.filter((p) => normaliserLieuTravail(p.site || '') === lieuNorm);
         const idsClassesLieu = new Set();
         poolsLieu.forEach((p) => (p.classes || []).forEach((c) => idsClassesLieu.add(String(c.id))));
-        // Si aucun pool lié : toutes les classes
         if (!idsClassesLieu.size) classes.forEach((c) => idsClassesLieu.add(String(c.id)));
 
         const sallesLieu = (sallesDB || [])
@@ -2717,41 +2762,46 @@ export default function EmploiDuTemps() {
         });
       }
 
-      // —— Général (pool sélectionné si possible, sinon premier pool) ——
-      setExportPdfProgress('Chargement du planning général…');
-      const poolIdExport = planningPoolId || (pools[0] ? String(pools[0].id) : '');
-      if (poolIdExport) {
-        const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolIdExport);
-        const rep = await axios.get(url, { headers });
-        const data = rep.data || {};
-        const poolNom = pools.find((p) => String(p.id) === String(poolIdExport))?.nom || '';
-        const contenuJours = buildPlanningGeneralPrintHtml({
-          creneaux: data.creneaux || [],
-          profs: data.profs || [],
-          affectations: data.affectations || [],
-          dispos: data.dispos || [],
-        });
-        documents.push({
-          relativePath: `General/Planning_general${poolNom ? '_' + sanitizeFilename(poolNom) : ''}.pdf`,
-          html: buildHtmlPrintDoc(`Planning général${poolNom ? ' — ' + poolNom : ''}`, contenuJours, { paysage: true }),
-          pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
-        });
-        const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
-          creneaux: data.creneaux || [],
-          profs: data.profs || [],
-          affectations: data.affectations || [],
-          dispos: data.dispos || [],
-          titulaires: data.titulaires || [],
-        });
-        documents.push({
-          relativePath: `General/Planning_general_A3_semaine${poolNom ? '_' + sanitizeFilename(poolNom) : ''}.pdf`,
-          html: buildHtmlPrintDoc(
-            `Planning général — semaine${poolNom ? ' — ' + poolNom : ''}`,
-            contenuA3,
-            { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
-          ),
-          pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
-        });
+      // —— Général : par jours + A3 semaine, un sous-dossier par pool ——
+      setExportPdfProgress('Chargement des plannings généraux…');
+      for (const pool of poolsExport) {
+        const poolId = String(pool.id);
+        const poolNom = pool.nom || `Pool_${poolId}`;
+        const poolFolder = nomPoolSafe(pool);
+        try {
+          const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
+          const rep = await axios.get(url, { headers });
+          const data = rep.data || {};
+          const contenuJours = buildPlanningGeneralPrintHtml({
+            creneaux: data.creneaux || [],
+            profs: data.profs || [],
+            affectations: data.affectations || [],
+            dispos: data.dispos || [],
+          });
+          documents.push({
+            relativePath: `General/${poolFolder}/Planning_general_par_jours.pdf`,
+            html: buildHtmlPrintDoc(`Planning général — ${poolNom}`, contenuJours, { paysage: true }),
+            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+          });
+          const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
+            creneaux: data.creneaux || [],
+            profs: data.profs || [],
+            affectations: data.affectations || [],
+            dispos: data.dispos || [],
+            titulaires: data.titulaires || [],
+          });
+          documents.push({
+            relativePath: `General/${poolFolder}/Planning_general_A3_semaine.pdf`,
+            html: buildHtmlPrintDoc(
+              `Planning général — semaine — ${poolNom}`,
+              contenuA3,
+              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
+            ),
+            pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
+          });
+        } catch (errPool) {
+          console.error('Export général pool', poolId, errPool);
+        }
       }
 
       if (!documents.length) {
