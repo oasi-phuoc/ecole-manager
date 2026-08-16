@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const { getMailSettingsRow, getMailRuntimeConfig, sendEmail } = require('../services/mailer');
 const { encryptText } = require('../utils/crypto');
+const { archiveRentreeZip, verifierArchiveToken } = require('../services/archiveRentree');
 
 const getProfil = async (req, res) => {
   try {
@@ -174,7 +175,7 @@ const getParametresMail = async (req, res) => {
       smtp_port: row?.smtp_port || runtime.port || 587,
       smtp_secure: row ? row.smtp_secure === true : false,
       smtp_user: row?.smtp_user || runtime.user || '',
-      smtp_from_name: row?.smtp_from_name || runtime.fromName || 'Ecole Manager',
+      smtp_from_name: row?.smtp_from_name || runtime.fromName || 'Oasis',
       smtp_from_email: row?.smtp_from_email || runtime.fromEmail || '',
       has_app_password: Boolean(row?.smtp_app_password),
     });
@@ -201,7 +202,7 @@ const modifierParametresMail = async (req, res) => {
     const portValue = Number(smtp_port) || 587;
     const secureValue = smtp_secure === true;
     const userValue = (smtp_user || '').trim();
-    const fromNameValue = (smtp_from_name || 'Ecole Manager').trim();
+    const fromNameValue = (smtp_from_name || 'Oasis').trim();
     const fromEmailValue = (smtp_from_email || userValue).trim();
     const activeValue = smtp_active === true;
     const appPasswordValue = typeof smtp_app_password === 'string' ? smtp_app_password.trim() : '';
@@ -274,7 +275,7 @@ const envoyerMailTest = async (req, res) => {
   try {
     await sendEmail({
       to: destinataire,
-      subject: 'Test configuration email - Ecole Manager',
+      subject: 'Test configuration email - Oasis',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;background:#f8fafc;border-radius:12px">
           <h2 style="margin:0 0 10px;color:#6366f1">Configuration email OK</h2>
@@ -363,7 +364,16 @@ const resetTout = async (req, res) => {
   });
 };
 
+const archiveRentree = archiveRentreeZip;
+
 const resetRentree = async (req, res) => {
+  const archiveToken = req.headers['x-archive-token'] || req.body?.archive_token;
+  if (!verifierArchiveToken(archiveToken, req.user.id)) {
+    return res.status(400).json({
+      message: 'Vous devez d’abord télécharger l’archive de l’année en cours avant de confirmer la réinitialisation.',
+      archive_required: true,
+    });
+  }
   // Ordre important : enfants d'élèves / emploi du temps avant les parents.
   // Tables structurelles conservées : classes, pools, creneaux, matieres, utilisateurs prof/admin,
   // disponibilités, niveaux, lieux, salles, paramètres, etc.
@@ -507,6 +517,7 @@ module.exports = {
   modifierPermissions,
   getClassesProf,
   resetTout,
+  archiveRentree,
   resetRentree,
   getAccesProfs,
   modifierAccesProfs,

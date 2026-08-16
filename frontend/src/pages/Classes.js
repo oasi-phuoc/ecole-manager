@@ -344,7 +344,7 @@ export default function Classes() {
           </thead>
           <tbody>${rows}</tbody>
         </table>
-        <div class="footer">École Manager</div>
+        <div class="footer">Oasis</div>
       </body>
       </html>
     `;

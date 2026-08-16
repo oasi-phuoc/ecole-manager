@@ -141,10 +141,10 @@ const envoyerAcces = async (req, res) => {
     // Envoyer email (configuration depuis Parametres > Envoi des mails)
     await sendEmail({
       to: prof.email,
-      subject: 'Vos accès École Manager',
+      subject: 'Vos accès Oasis',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#f8fafc;border-radius:12px">
-          <h2 style="color:#6366f1">🎓 École Manager</h2>
+          <h2 style="color:#6366f1">Oasis</h2>
           <p>Bonjour <b>${prof.prenom} ${prof.nom}</b>,</p>
           <p>Voici vos accès pour vous connecter à l'application :</p>
           <div style="background:white;padding:20px;border-radius:8px;border-left:4px solid #6366f1;margin:20px 0">
@@ -155,7 +155,7 @@ const envoyerAcces = async (req, res) => {
           <p style="color:#94a3b8;font-size:12px">Ce message a été envoyé automatiquement, merci de ne pas y répondre.</p>
         </div>
       `,
-      text: `Bonjour ${prof.prenom} ${prof.nom}, vos acces Ecole Manager sont prets. Email: ${prof.email}. Mot de passe temporaire: ${mdp}.`
+      text: `Bonjour ${prof.prenom} ${prof.nom}, vos acces Oasis sont prets. Email: ${prof.email}. Mot de passe temporaire: ${mdp}.`
     });
 
     res.json({ message: 'Email envoyé à ' + prof.email });

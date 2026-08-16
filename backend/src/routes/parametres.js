@@ -19,6 +19,7 @@ router.put('/acces-profs', autoriser('admin'), c.modifierAccesProfs);
 router.get('/mes-classes', c.getClassesProf);
 
 router.delete('/reset-tout', autoriser('admin'), c.resetTout);
+router.get('/archive-rentree', autoriser('admin'), c.archiveRentree);
 router.delete('/reset-rentree', autoriser('admin'), c.resetRentree);
 
 module.exports = router;

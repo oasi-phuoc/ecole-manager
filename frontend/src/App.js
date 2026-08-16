@@ -51,6 +51,7 @@ const PrivateRoute = ({ children }) => {
 };
 
 function App() {
+  useEffect(() => { document.title = 'Oasis'; }, []);
   return (
     <BrowserRouter>
       <Routes>

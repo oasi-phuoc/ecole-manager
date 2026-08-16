@@ -82,10 +82,10 @@ const envoyerAcces = async (req, res) => {
     await pool.query('UPDATE utilisateurs SET mot_de_passe=$1, doit_changer_mdp=true WHERE id=$2', [hash, id]);
     await sendEmail({
       to: employe.email,
-      subject: 'Vos accès École Manager',
+      subject: 'Vos accès Oasis',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#f8fafc;border-radius:12px">
-          <h2 style="color:#6366f1">🎓 École Manager</h2>
+          <h2 style="color:#6366f1">Oasis</h2>
           <p>Bonjour <b>${employe.prenom} ${employe.nom}</b>,</p>
           <p>Voici vos accès pour vous connecter à l'application :</p>
           <div style="background:white;padding:20px;border-radius:8px;border-left:4px solid #6366f1;margin:20px 0">
@@ -95,7 +95,7 @@ const envoyerAcces = async (req, res) => {
           <p style="color:#ef4444;font-weight:bold">⚠️ Vous devrez changer ce mot de passe lors de votre première connexion.</p>
         </div>
       `,
-      text: `Bonjour ${employe.prenom} ${employe.nom}, vos acces Ecole Manager sont prets. Email: ${employe.email}. Mot de passe temporaire: ${mdp}.`
+      text: `Bonjour ${employe.prenom} ${employe.nom}, vos acces Oasis sont prets. Email: ${employe.email}. Mot de passe temporaire: ${mdp}.`
     });
     res.json({ message: 'Email envoyé à ' + employe.email });
   } catch (err) {

@@ -193,7 +193,7 @@ const mfaSetup = async (req, res) => {
     const r = await pool.query('SELECT email FROM utilisateurs WHERE id = $1', [req.user.id]);
     const email = r.rows[0]?.email || `user-${req.user.id}`;
     const secret = generateSecret();
-    const issuer = process.env.MFA_ISSUER || 'Ecole Manager';
+    const issuer = process.env.MFA_ISSUER || 'Oasis';
     const otpauth_url = generateOtpAuthUrl({ secret, accountName: email, issuer });
     const setup_token = signerToken({ purpose: 'mfa-setup', id: req.user.id, secret }, '10m');
     return res.json({ secret, otpauth_url, setup_token, issuer, account: email });

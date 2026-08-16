@@ -162,7 +162,7 @@ export default function Parametres() {
     smtp_port: 587,
     smtp_secure: false,
     smtp_user: '',
-    smtp_from_name: 'Ecole Manager',
+    smtp_from_name: 'Oasis',
     smtp_from_email: '',
     smtp_app_password: '',
     has_app_password: false,
@@ -175,6 +175,9 @@ export default function Parametres() {
   const [resetMsg, setResetMsg] = useState('');
   const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetRentreeMsg, setResetRentreeMsg] = useState('');
+  const [archiveToken, setArchiveToken] = useState('');
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveNom, setArchiveNom] = useState('');
   // Données (niveaux, lieux, salles)
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
@@ -799,13 +802,69 @@ export default function Parametres() {
     }
   };
 
+  const handleArchiverRentree = async () => {
+    setArchiveLoading(true);
+    setResetRentreeMsg('');
+    try {
+      const res = await axios.get(API + '/parametres/archive-rentree', {
+        headers,
+        responseType: 'blob',
+        timeout: 300000,
+      });
+      if (res.data && res.data.type && String(res.data.type).includes('application/json')) {
+        const txt = await res.data.text();
+        const parsed = JSON.parse(txt);
+        throw new Error(parsed.message || 'Erreur d’archivage');
+      }
+      const token = res.headers['x-archive-token'] || '';
+      const cd = res.headers['content-disposition'] || '';
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const name = match?.[1] || 'Oasis-archive-rentree.zip';
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      if (!token) throw new Error('Archive téléchargée mais jeton manquant. Réessayez.');
+      setArchiveToken(token);
+      setArchiveNom(name);
+      setResetRentreeMsg('Archive téléchargée. Vous pouvez maintenant confirmer pour continuer.');
+    } catch (err) {
+      setArchiveToken('');
+      setArchiveNom('');
+      let message = err.message || 'Erreur lors de l’archivage';
+      const data = err.response?.data;
+      if (data instanceof Blob) {
+        try { message = JSON.parse(await data.text()).message || message; } catch { /* ignore */ }
+      } else if (data?.message) {
+        message = data.message;
+      }
+      setResetRentreeMsg('Erreur : ' + message);
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
   const handleResetRentree = async () => {
+    if (!archiveToken) {
+      setResetRentreeEtape(1);
+      setResetRentreeMsg('Vous devez d’abord télécharger l’archive avant de continuer.');
+      return;
+    }
     setResetRentreeEtape(3);
     try {
-      const res = await axios.delete(API + '/parametres/reset-rentree', { headers });
+      const res = await axios.delete(API + '/parametres/reset-rentree', {
+        headers: { ...headers, 'X-Archive-Token': archiveToken },
+        data: { archive_token: archiveToken },
+      });
       const data = res.data || {};
       const erreurs = Array.isArray(data.erreurs) ? data.erreurs : [];
       setResetRentreeEtape(4);
+      setArchiveToken('');
+      setArchiveNom('');
       if (erreurs.length) {
         setResetRentreeMsg(
           'Reset partiel : ' + erreurs.slice(0, 5).join(' · ')
@@ -822,8 +881,9 @@ export default function Parametres() {
         );
       }
     } catch (err) {
-      setResetRentreeEtape(0);
       const data = err.response?.data;
+      if (data?.archive_required) setResetRentreeEtape(1);
+      else setResetRentreeEtape(0);
       const detailErr = Array.isArray(data?.erreurs) && data.erreurs.length
         ? data.erreurs.slice(0, 3).join(' · ')
         : (data?.message || err.message);
@@ -1935,7 +1995,7 @@ export default function Parametres() {
 
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Nom expéditeur</label>
-                    <input style={styles.input} type="text" value={mail.smtp_from_name || ''} onChange={e => setMail({ ...mail, smtp_from_name: e.target.value })} placeholder="Ecole Manager" />
+                    <input style={styles.input} type="text" value={mail.smtp_from_name || ''} onChange={e => setMail({ ...mail, smtp_from_name: e.target.value })} placeholder="Oasis" />
                   </div>
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Email expéditeur</label>
@@ -2067,6 +2127,7 @@ export default function Parametres() {
                 </ul>
                 <p style={{color:'#9a3412',fontSize:12,marginBottom:16,lineHeight:1.5}}>
                   Conservés : professeurs, classes, pools (vides), créneaux, branches/matières, disponibilités, paramètres école.
+                  Une archive ZIP (Excel + PDF) de l’année en cours est obligatoire avant la première confirmation.
                 </p>
 
                 {resetRentreeMsg && (
@@ -2084,11 +2145,32 @@ export default function Parametres() {
 
                 {resetRentreeEtape === 1 && (
                   <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:10,padding:20}}>
-                    <p style={{fontWeight:700,color:'#c2410c',marginBottom:16}}>⚠️ Première confirmation — Continuer ?</p>
-                    <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Cette action supprime les données scolaires listées ci-dessus.</p>
+                    <p style={{fontWeight:700,color:'#c2410c',marginBottom:10}}>⚠️ Première confirmation — Archiver avant de continuer</p>
+                    <p style={{fontSize:13,color:'#7c2d12',marginBottom:14,lineHeight:1.55}}>
+                      Vous devez d’abord télécharger l’archive de l’année en cours (ZIP : Excel + PDF des élèves, notes, affectations, plannings, présences et comptabilité). La confirmation n’est possible qu’après ce téléchargement.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleArchiverRentree}
+                      disabled={archiveLoading}
+                      style={{padding:'10px 20px',background:'#0f766e',color:'white',border:'none',borderRadius:8,cursor: archiveLoading ? 'wait' : 'pointer',fontWeight:700,marginBottom:14,width: isMobile ? '100%' : undefined,opacity: archiveLoading ? 0.75 : 1}}
+                    >
+                      {archiveLoading ? '⏳ Archivage en cours…' : (archiveToken ? 'Télécharger à nouveau l’archive' : 'Télécharger l’archive de l’année')}
+                    </button>
+                    {archiveToken && archiveNom && (
+                      <p style={{fontSize:12,color:'#166534',fontWeight:700,marginBottom:14}}>
+                        Archive prête : {archiveNom}
+                      </p>
+                    )}
                     <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
-                      <button onClick={() => setResetRentreeEtape(2)} style={{padding:'10px 20px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,flex: isMobile ? '1 1 140px' : undefined}}>Oui, continuer</button>
+                      <button onClick={() => { setResetRentreeEtape(0); setArchiveToken(''); setArchiveNom(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
+                      <button
+                        onClick={() => archiveToken && setResetRentreeEtape(2)}
+                        disabled={!archiveToken || archiveLoading}
+                        style={{padding:'10px 20px',background: archiveToken ? '#ea580c' : '#fdba74',color:'white',border:'none',borderRadius:8,cursor: archiveToken ? 'pointer' : 'not-allowed',fontWeight:700,flex: isMobile ? '1 1 140px' : undefined}}
+                      >
+                        Oui, continuer
+                      </button>
                     </div>
                   </div>
                 )}

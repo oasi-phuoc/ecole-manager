@@ -18,7 +18,7 @@ function buildRuntimeMailConfig(row) {
   const user = row?.smtp_user || process.env.EMAIL_USER || '';
   const appPassword = decryptText(row?.smtp_app_password || '') || process.env.EMAIL_PASS || '';
   const fromEmail = row?.smtp_from_email || process.env.EMAIL_FROM || user;
-  const fromName = row?.smtp_from_name || process.env.EMAIL_FROM_NAME || 'Ecole Manager';
+  const fromName = row?.smtp_from_name || process.env.EMAIL_FROM_NAME || 'Oasis';
   const enabled = row ? row.smtp_active === true : Boolean(user && appPassword);
 
   return {

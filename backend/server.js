@@ -37,7 +37,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Archive-Token'],
+  exposedHeaders: ['X-Archive-Token', 'Content-Disposition'],
 }));
 const cspConnectSrc = ["'self'", ...allowedOrigins];
 app.use(helmet({
@@ -65,7 +66,7 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.get('/healthz', (req, res) => {
   res.status(200).json({
     ok: true,
-    service: 'ecole-manager-backend',
+    service: 'oasis-backend',
     uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
@@ -73,7 +74,7 @@ app.get('/healthz', (req, res) => {
 app.get('/api/healthz', (req, res) => {
   res.status(200).json({
     ok: true,
-    service: 'ecole-manager-backend',
+    service: 'oasis-backend',
     uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
@@ -139,7 +140,7 @@ app.use('/api/visites-classes', require('./src/routes/visiteClasses'));
 app.use('/api/sondages', require('./src/routes/sondages'));
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Serveur Ecole Manager operationnel !' });
+  res.json({ message: 'Serveur Oasis opérationnel !' });
 });
 
 app.use((err, req, res, next) => {
