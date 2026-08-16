@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { startAuthentication } from '@simplewebauthn/browser';
 import { setSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -13,12 +14,18 @@ const CRITERES = [
   { id: 'special', label: '1 caractère spécial (!@#...)',  test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
+const passkeySupported = () =>
+  typeof window !== 'undefined'
+  && !!window.PublicKeyCredential
+  && typeof window.PublicKeyCredential === 'function';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [mfaToken, setMfaToken] = useState('');
   const [erreur, setErreur] = useState('');
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const navigate = useNavigate();
   const mfaRequired = Boolean(mfaToken);
 
@@ -31,6 +38,15 @@ export default function Login() {
   const [showNewMdp, setShowNewMdp] = useState(false);
   const [showConfirmMdp, setShowConfirmMdp] = useState(false);
 
+  const afterLoginSuccess = (utilisateur) => {
+    setSessionUser(utilisateur);
+    if (utilisateur?.doit_changer_mdp) {
+      setShowChangeMdp(true);
+      return;
+    }
+    navigate('/dashboard');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErreur('');
@@ -42,25 +58,46 @@ export default function Login() {
           setMfaCode('');
           return;
         }
-        const utilisateur = res.data.utilisateur || null;
-        setSessionUser(utilisateur);
-        if (utilisateur?.doit_changer_mdp) {
-          setShowChangeMdp(true);
-          return;
-        }
-        navigate('/dashboard');
+        afterLoginSuccess(res.data.utilisateur || null);
         return;
       }
       const res = await axios.post(API + '/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
-      const utilisateur = res.data.utilisateur || null;
-      setSessionUser(utilisateur);
-      if (utilisateur?.doit_changer_mdp) {
-        setShowChangeMdp(true);
-        return;
-      }
-      navigate('/dashboard');
+      afterLoginSuccess(res.data.utilisateur || null);
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur de connexion');
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setErreur('');
+    if (!passkeySupported()) {
+      setErreur('Les passkeys ne sont pas supportées sur cet appareil / navigateur.');
+      return;
+    }
+    setPasskeyLoading(true);
+    try {
+      const optRes = await axios.post(API + '/auth/login/passkey/options', {
+        email: email.trim() || undefined,
+      });
+      const { options, challenge_token } = optRes.data || {};
+      if (!options || !challenge_token) {
+        setErreur('Impossible de démarrer la connexion passkey.');
+        return;
+      }
+      const credential = await startAuthentication({ optionsJSON: options });
+      const res = await axios.post(API + '/auth/login/passkey/verify', {
+        challenge_token,
+        credential,
+      });
+      afterLoginSuccess(res.data.utilisateur || null);
+    } catch (err) {
+      if (err?.name === 'NotAllowedError') {
+        setErreur('Connexion passkey annulée.');
+      } else {
+        setErreur(err.response?.data?.message || err.message || 'Échec de la connexion passkey');
+      }
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -172,11 +209,12 @@ export default function Login() {
             <input
               style={styles.input}
               type="text"
-              required
+              required={!mfaRequired}
               value={email}
               disabled={mfaRequired}
               onChange={e => setEmail(e.target.value)}
               placeholder="Email ou identifiant"
+              autoComplete="username webauthn"
             />
           </div>
           <div style={styles.champ}>
@@ -184,11 +222,12 @@ export default function Login() {
             <input
               style={styles.input}
               type="password"
-              required
+              required={!mfaRequired}
               value={motDePasse}
               disabled={mfaRequired}
               onChange={e => setMotDePasse(e.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
             />
           </div>
           {mfaRequired && (
@@ -218,6 +257,28 @@ export default function Login() {
             </button>
           )}
         </form>
+
+        {!mfaRequired && passkeySupported() && (
+          <>
+            <div style={styles.separator}>
+              <span style={styles.separatorLine} />
+              <span style={styles.separatorText}>ou</span>
+              <span style={styles.separatorLine} />
+            </div>
+            <button
+              type="button"
+              style={{ ...styles.btnPasskey, opacity: passkeyLoading ? 0.75 : 1 }}
+              onClick={handlePasskeyLogin}
+              disabled={passkeyLoading}
+              title="Connexion biométrique / clé de sécurité (passkey)"
+            >
+              {passkeyLoading ? 'Passkey…' : 'Se connecter avec une passkey'}
+            </button>
+            <p style={styles.passkeyHint}>
+              Astuce : saisissez votre email si vous avez plusieurs comptes, sinon la passkey suffit.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -309,5 +370,41 @@ const styles = {
     cursor: 'pointer',
     marginTop: '8px',
     width: '100%',
+  },
+  separator: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    margin: '18px 0 12px',
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    background: '#e2e8f0',
+  },
+  separatorText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+  },
+  btnPasskey: {
+    padding: '13px 14px',
+    background: '#ffffff',
+    color: '#3730a3',
+    border: '2px solid #c7d2fe',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    width: '100%',
+  },
+  passkeyHint: {
+    margin: '10px 0 0',
+    fontSize: 11,
+    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 1.4,
   },
 };

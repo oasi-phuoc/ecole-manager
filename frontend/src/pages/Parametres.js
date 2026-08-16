@@ -13,10 +13,15 @@ import {
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
+import { startRegistration } from '@simplewebauthn/browser';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
+const passkeySupported = () =>
+  typeof window !== 'undefined'
+  && !!window.PublicKeyCredential
+  && typeof window.PublicKeyCredential === 'function';
 
 const creerLigneResponsableNiveau = (overrides = {}) => ({
   nom: '',
@@ -145,6 +150,10 @@ export default function Parametres() {
   const [mfaBackupRemaining, setMfaBackupRemaining] = useState(0);
   const [msgMfa, setMsgMfa] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [passkeys, setPasskeys] = useState([]);
+  const [passkeyName, setPasskeyName] = useState('');
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [msgPasskey, setMsgPasskey] = useState('');
   const [msgPerms, setMsgPerms] = useState('');
   const [mail, setMail] = useState({
     smtp_active: false,
@@ -208,7 +217,7 @@ export default function Parametres() {
   };
 
   useEffect(() => { chargerProfil(); }, []);
-  useEffect(() => { chargerMfaStatus(); chargerDonnees(); }, []);
+  useEffect(() => { chargerMfaStatus(); chargerPasskeys(); chargerDonnees(); }, []);
   useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
   useEffect(() => { if (onglet === 'ecole' && isAdmin) chargerEcole(); }, [onglet]);
   useEffect(() => {
@@ -448,6 +457,63 @@ export default function Parametres() {
       setMfaEnabled(res.data?.mfa_enabled === true);
       setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || 0));
     } catch {}
+  };
+
+  const chargerPasskeys = async () => {
+    try {
+      const res = await axios.get(API + '/auth/passkeys', { headers });
+      setPasskeys(Array.isArray(res.data?.passkeys) ? res.data.passkeys : []);
+    } catch {
+      setPasskeys([]);
+    }
+  };
+
+  const handleAjouterPasskey = async () => {
+    setMsgPasskey('');
+    if (!passkeySupported()) {
+      setMsgPasskey('Les passkeys ne sont pas supportées sur cet appareil / navigateur.');
+      return;
+    }
+    setPasskeyLoading(true);
+    try {
+      const optRes = await axios.post(API + '/auth/passkeys/register/options', {}, { headers });
+      const { options, challenge_token } = optRes.data || {};
+      if (!options || !challenge_token) {
+        setMsgPasskey('Impossible de démarrer l’enregistrement passkey.');
+        setPasskeyLoading(false);
+        return;
+      }
+      const credential = await startRegistration({ optionsJSON: options });
+      await axios.post(API + '/auth/passkeys/register/verify', {
+        challenge_token,
+        credential,
+        friendly_name: passkeyName.trim() || undefined,
+      }, { headers });
+      setPasskeyName('');
+      setMsgPasskey('Passkey enregistrée. Vous pouvez vous connecter sans mot de passe.');
+      await chargerPasskeys();
+    } catch (err) {
+      if (err?.name === 'NotAllowedError') {
+        setMsgPasskey('Enregistrement passkey annulé.');
+      } else {
+        setMsgPasskey(err.response?.data?.message || err.message || 'Échec de l’enregistrement passkey');
+      }
+    }
+    setPasskeyLoading(false);
+  };
+
+  const handleSupprimerPasskey = async (id) => {
+    if (!window.confirm('Supprimer cette passkey ?')) return;
+    setMsgPasskey('');
+    setPasskeyLoading(true);
+    try {
+      await axios.delete(API + '/auth/passkeys/' + id, { headers });
+      setMsgPasskey('Passkey supprimée.');
+      await chargerPasskeys();
+    } catch (err) {
+      setMsgPasskey(err.response?.data?.message || 'Erreur lors de la suppression');
+    }
+    setPasskeyLoading(false);
   };
 
   const handleGenererMfaSetup = async () => {
@@ -763,6 +829,73 @@ export default function Parametres() {
                             <button type="button" onClick={handleSauverMdp} style={{ ...styles.btnSauver, background: '#ea4335', alignSelf: 'flex-start' }}>Changer</button>
                           </div>
                         )}
+                      </div>
+
+                      {/* Passkeys */}
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginTop: 14 }}>
+                        <div style={{ padding: '11px 16px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Passkeys</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Connexion biométrique ou clé de sécurité, sans mot de passe.</div>
+                          </div>
+                        </div>
+                        <div style={{ padding: 16, background: 'white', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {msgPasskey && (
+                            <div style={{
+                              ...((/enregistrée|supprimée/i.test(msgPasskey)) ? styles.msgSuccess : styles.msgError),
+                            }}>
+                              {msgPasskey}
+                            </div>
+                          )}
+                          {!passkeySupported() ? (
+                            <div style={{ fontSize: 13, color: '#94a3b8' }}>Passkeys non disponibles sur ce navigateur.</div>
+                          ) : (
+                            <>
+                              {passkeys.length === 0 ? (
+                                <div style={{ fontSize: 13, color: '#94a3b8' }}>Aucune passkey enregistrée.</div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                  {passkeys.map((pk) => (
+                                    <div key={pk.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px' }}>
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>{pk.friendly_name || 'Passkey'}</div>
+                                        <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                                          {pk.created_at ? new Date(pk.created_at).toLocaleString('fr-CH') : ''}
+                                          {pk.backed_up ? ' · synchronisée' : ''}
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSupprimerPasskey(pk.id)}
+                                        disabled={passkeyLoading}
+                                        style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+                                      >
+                                        Supprimer
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <input
+                                  style={{ ...styles.input, flex: 1, minWidth: 160, margin: 0 }}
+                                  type="text"
+                                  value={passkeyName}
+                                  onChange={(e) => setPasskeyName(e.target.value)}
+                                  placeholder="Nom (ex. iPhone, YubiKey)"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleAjouterPasskey}
+                                  disabled={passkeyLoading}
+                                  style={{ ...styles.btnSauver, background: '#4f46e5', opacity: passkeyLoading ? 0.7 : 1 }}
+                                >
+                                  {passkeyLoading ? 'En cours…' : 'Ajouter une passkey'}
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

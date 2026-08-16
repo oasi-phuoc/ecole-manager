@@ -23,6 +23,8 @@ const registerLimiter = rateLimit({
 router.post('/register', registerLimiter, authController.register);
 router.post('/login', loginLimiter, authController.login);
 router.post('/login/mfa', loginLimiter, authController.loginMfa);
+router.post('/login/passkey/options', loginLimiter, authController.passkeyLoginOptions);
+router.post('/login/passkey/verify', loginLimiter, authController.passkeyLoginVerify);
 router.post('/logout', authController.logout);
 router.get('/moi', verifierToken, authController.moi);
 router.post('/changer-mdp', verifierToken, authController.changerMdp);
@@ -31,5 +33,9 @@ router.post('/mfa/setup', verifierToken, authController.mfaSetup);
 router.post('/mfa/enable', verifierToken, authController.mfaEnable);
 router.post('/mfa/backup/regenerate', verifierToken, authController.mfaRegenerateBackupCodes);
 router.post('/mfa/disable', verifierToken, authController.mfaDisable);
+router.get('/passkeys', verifierToken, authController.listPasskeys);
+router.post('/passkeys/register/options', verifierToken, authController.passkeyRegisterOptions);
+router.post('/passkeys/register/verify', verifierToken, authController.passkeyRegisterVerify);
+router.delete('/passkeys/:id', verifierToken, authController.deletePasskey);
 
 module.exports = router;

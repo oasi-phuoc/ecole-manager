@@ -2,8 +2,15 @@ const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} = require('@simplewebauthn/server');
 const { encryptText, decryptText } = require('../utils/crypto');
 const { generateSecret, generateOtpAuthUrl, verifyTotp } = require('../utils/totp');
+const { getWebAuthnConfig, toBase64Url, fromBase64Url, userIdBytes } = require('../utils/webauthn');
 
 const ROLES_VALIDES = new Set(['admin', 'prof', 'eleve', 'parent']);
 const emailValide = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
@@ -273,4 +280,302 @@ const moi = async (req, res) => {
   }
 };
 
-module.exports = { register, login, loginMfa, logout, moi, changerMdp, mfaStatus, mfaSetup, mfaEnable, mfaRegenerateBackupCodes, mfaDisable };
+const parseTransports = (raw) => {
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const listPasskeys = async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT id, friendly_name, device_type, backed_up, transports, created_at
+       FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+    return res.json({
+      passkeys: (r.rows || []).map((row) => ({
+        id: row.id,
+        friendly_name: row.friendly_name || 'Passkey',
+        device_type: row.device_type || null,
+        backed_up: row.backed_up === true,
+        transports: parseTransports(row.transports),
+        created_at: row.created_at,
+      })),
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const passkeyRegisterOptions = async (req, res) => {
+  try {
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Configuration de securite manquante' });
+    const { rpID, rpName } = getWebAuthnConfig(req);
+    const u = await pool.query('SELECT id, email, nom, prenom FROM utilisateurs WHERE id=$1 AND actif=true', [req.user.id]);
+    const user = u.rows[0];
+    if (!user) return res.status(401).json({ message: 'Utilisateur introuvable' });
+
+    const existing = await pool.query(
+      'SELECT credential_id, transports FROM webauthn_credentials WHERE user_id=$1',
+      [user.id]
+    );
+    const excludeCredentials = (existing.rows || []).map((row) => ({
+      id: row.credential_id,
+      transports: parseTransports(row.transports),
+    }));
+
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userID: userIdBytes(user.id),
+      userName: String(user.email || `user-${user.id}`),
+      userDisplayName: `${user.prenom || ''} ${user.nom || ''}`.trim() || String(user.email || user.id),
+      attestationType: 'none',
+      excludeCredentials,
+      authenticatorSelection: {
+        residentKey: 'preferred',
+        userVerification: 'preferred',
+      },
+    });
+
+    const challenge_token = signerToken({
+      purpose: 'webauthn-register',
+      id: user.id,
+      challenge: options.challenge,
+    }, '5m');
+
+    return res.json({ options, challenge_token });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const passkeyRegisterVerify = async (req, res) => {
+  const { challenge_token, credential, friendly_name } = req.body || {};
+  if (!challenge_token || !credential) {
+    return res.status(400).json({ message: 'Réponse passkey incomplete' });
+  }
+  try {
+    const decoded = jwt.verify(challenge_token, process.env.JWT_SECRET);
+    if (decoded?.purpose !== 'webauthn-register' || Number(decoded?.id) !== Number(req.user.id) || !decoded?.challenge) {
+      return res.status(401).json({ message: 'Challenge passkey invalide' });
+    }
+    const { rpID, expectedOrigins } = getWebAuthnConfig(req);
+    const verification = await verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge: decoded.challenge,
+      expectedOrigin: expectedOrigins,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+    });
+    if (!verification.verified || !verification.registrationInfo) {
+      return res.status(401).json({ message: 'Enregistrement passkey refusé' });
+    }
+    const info = verification.registrationInfo;
+    const cred = info.credential || {};
+    const credentialId = toBase64Url(cred.id || info.credentialID);
+    const publicKey = toBase64Url(cred.publicKey || info.credentialPublicKey);
+    const counter = Number(cred.counter != null ? cred.counter : info.counter || 0);
+    const deviceType = info.credentialDeviceType || null;
+    const backedUp = info.credentialBackedUp === true;
+    const transports = Array.isArray(credential?.response?.transports)
+      ? credential.response.transports
+      : (Array.isArray(credential?.transports) ? credential.transports : []);
+    const name = String(friendly_name || '').trim().slice(0, 100) || 'Passkey';
+
+    if (!credentialId || !publicKey) {
+      return res.status(400).json({ message: 'Identifiant passkey invalide' });
+    }
+
+    const inserted = await pool.query(
+      `INSERT INTO webauthn_credentials
+        (user_id, credential_id, public_key, counter, transports, device_type, backed_up, friendly_name)
+       VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8)
+       ON CONFLICT (credential_id) DO NOTHING
+       RETURNING id, friendly_name, created_at`,
+      [req.user.id, credentialId, publicKey, counter, JSON.stringify(transports), deviceType, backedUp, name]
+    );
+    if (!inserted.rows[0]) {
+      return res.status(409).json({ message: 'Cette passkey est déjà enregistrée' });
+    }
+    return res.json({
+      message: 'Passkey enregistrée',
+      passkey: {
+        id: inserted.rows[0].id,
+        friendly_name: inserted.rows[0].friendly_name,
+        created_at: inserted.rows[0].created_at,
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Challenge passkey invalide ou expiré' });
+    }
+    return res.status(401).json({ message: err.message || 'Échec de vérification passkey' });
+  }
+};
+
+const passkeyLoginOptions = async (req, res) => {
+  const identifiant = String(req.body?.email || '').trim().toLowerCase();
+  try {
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'Configuration de securite manquante' });
+    const { rpID } = getWebAuthnConfig(req);
+    let allowCredentials;
+    let userId = null;
+    if (identifiant) {
+      const r = await pool.query(
+        `SELECT u.id FROM utilisateurs u
+         WHERE (LOWER(u.email) = $1 OR LOWER(u.identifiant) = $1) AND u.actif = true`,
+        [identifiant]
+      );
+      userId = r.rows[0]?.id || null;
+      if (userId) {
+        const creds = await pool.query(
+          'SELECT credential_id, transports FROM webauthn_credentials WHERE user_id=$1',
+          [userId]
+        );
+        allowCredentials = (creds.rows || []).map((row) => ({
+          id: row.credential_id,
+          transports: parseTransports(row.transports),
+        }));
+        if (!allowCredentials.length) {
+          return res.status(404).json({ message: 'Aucune passkey enregistrée pour ce compte' });
+        }
+      }
+    }
+
+    const options = await generateAuthenticationOptions({
+      rpID,
+      userVerification: 'preferred',
+      allowCredentials,
+    });
+
+    const challenge_token = signerToken({
+      purpose: 'webauthn-login',
+      challenge: options.challenge,
+      id: userId || null,
+    }, '5m');
+
+    return res.json({ options, challenge_token });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+const passkeyLoginVerify = async (req, res) => {
+  const { challenge_token, credential } = req.body || {};
+  if (!challenge_token || !credential) {
+    return res.status(400).json({ message: 'Réponse passkey incomplete' });
+  }
+  try {
+    const decoded = jwt.verify(challenge_token, process.env.JWT_SECRET);
+    if (decoded?.purpose !== 'webauthn-login' || !decoded?.challenge) {
+      return res.status(401).json({ message: 'Challenge passkey invalide' });
+    }
+    const credentialId = toBase64Url(credential?.id || credential?.rawId);
+    if (!credentialId) return res.status(400).json({ message: 'Identifiant passkey manquant' });
+
+    const credRes = await pool.query(
+      `SELECT c.*, u.id AS uid, u.nom, u.prenom, u.email, u.role, u.doit_changer_mdp, u.actif
+       FROM webauthn_credentials c
+       JOIN utilisateurs u ON u.id = c.user_id
+       WHERE c.credential_id = $1`,
+      [credentialId]
+    );
+    const row = credRes.rows[0];
+    if (!row || row.actif === false) {
+      return res.status(401).json({ message: 'Passkey inconnue ou compte inactif' });
+    }
+    if (decoded.id != null && Number(decoded.id) !== Number(row.user_id)) {
+      return res.status(401).json({ message: 'Passkey ne correspond pas au compte' });
+    }
+
+    const { rpID, expectedOrigins } = getWebAuthnConfig(req);
+    const verification = await verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge: decoded.challenge,
+      expectedOrigin: expectedOrigins,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+      credential: {
+        id: row.credential_id,
+        publicKey: fromBase64Url(row.public_key),
+        counter: Number(row.counter || 0),
+        transports: parseTransports(row.transports),
+      },
+    });
+    if (!verification.verified) {
+      return res.status(401).json({ message: 'Authentification passkey refusée' });
+    }
+    const newCounter = Number(verification.authenticationInfo?.newCounter ?? row.counter ?? 0);
+    await pool.query('UPDATE webauthn_credentials SET counter=$1 WHERE id=$2', [newCounter, row.id]);
+
+    const user = {
+      id: row.uid,
+      nom: row.nom,
+      prenom: row.prenom,
+      email: row.email,
+      role: row.role,
+      doit_changer_mdp: row.doit_changer_mdp || false,
+    };
+    writeAuthCookie(res, userPayload(user));
+    return res.json({
+      message: 'Connexion reussie',
+      utilisateur: {
+        id: user.id,
+        nom: user.nom,
+        prenom: user.prenom,
+        email: user.email,
+        role: user.role,
+        doit_changer_mdp: user.doit_changer_mdp,
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Challenge passkey invalide ou expiré' });
+    }
+    return res.status(401).json({ message: err.message || 'Échec de connexion passkey' });
+  }
+};
+
+const deletePasskey = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ message: 'Identifiant invalide' });
+    const r = await pool.query(
+      'DELETE FROM webauthn_credentials WHERE id=$1 AND user_id=$2 RETURNING id',
+      [id, req.user.id]
+    );
+    if (!r.rows[0]) return res.status(404).json({ message: 'Passkey introuvable' });
+    return res.json({ message: 'Passkey supprimée' });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  loginMfa,
+  logout,
+  moi,
+  changerMdp,
+  mfaStatus,
+  mfaSetup,
+  mfaEnable,
+  mfaRegenerateBackupCodes,
+  mfaDisable,
+  listPasskeys,
+  passkeyRegisterOptions,
+  passkeyRegisterVerify,
+  passkeyLoginOptions,
+  passkeyLoginVerify,
+  deletePasskey,
+};

@@ -40,6 +40,21 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_secret TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS webauthn_credentials (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
+        credential_id TEXT NOT NULL UNIQUE,
+        public_key TEXT NOT NULL,
+        counter BIGINT NOT NULL DEFAULT 0,
+        transports JSONB DEFAULT '[]'::jsonb,
+        device_type VARCHAR(50),
+        backed_up BOOLEAN DEFAULT false,
+        friendly_name VARCHAR(100) DEFAULT 'Passkey',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS webauthn_credentials_user_id_idx ON webauthn_credentials (user_id)`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS role_acces VARCHAR(20) DEFAULT 'employe'`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS identifiant VARCHAR(50)`);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS utilisateurs_identifiant_uq ON utilisateurs (LOWER(identifiant)) WHERE identifiant IS NOT NULL`);
