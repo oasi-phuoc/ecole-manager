@@ -677,12 +677,32 @@ export default function Parametres() {
   const handleResetRentree = async () => {
     setResetRentreeEtape(3);
     try {
-      await axios.delete(API + '/parametres/reset-rentree', { headers });
+      const res = await axios.delete(API + '/parametres/reset-rentree', { headers });
+      const data = res.data || {};
+      const erreurs = Array.isArray(data.erreurs) ? data.erreurs : [];
       setResetRentreeEtape(4);
-      setResetRentreeMsg('Reset de rentrée scolaire effectué.');
+      if (erreurs.length) {
+        setResetRentreeMsg(
+          'Reset partiel : ' + erreurs.slice(0, 5).join(' · ')
+          + (erreurs.length > 5 ? ` (+${erreurs.length - 5})` : '')
+        );
+      } else {
+        const skips = Array.isArray(data.details)
+          ? data.details.filter((d) => String(d).startsWith('SKIP:')).length
+          : 0;
+        setResetRentreeMsg(
+          skips
+            ? `Reset de rentrée scolaire effectué (${skips} table(s) absente(s) ignorée(s)).`
+            : 'Reset de rentrée scolaire effectué.'
+        );
+      }
     } catch (err) {
       setResetRentreeEtape(0);
-      setResetRentreeMsg('Erreur : ' + (err.response?.data?.message || err.message));
+      const data = err.response?.data;
+      const detailErr = Array.isArray(data?.erreurs) && data.erreurs.length
+        ? data.erreurs.slice(0, 3).join(' · ')
+        : (data?.message || err.message);
+      setResetRentreeMsg('Erreur : ' + detailErr);
     }
   };
 
@@ -1799,13 +1819,16 @@ export default function Parametres() {
                   Cette option supprime uniquement les données de l'année à réinitialiser :
                 </p>
                 <ul style={{color:'#7c2d12',fontSize:13,lineHeight:1.7,margin:'0 0 16px 18px'}}>
-                  <li>Élèves et toutes leurs données liées</li>
-                  <li>Notes (et évaluations)</li>
-                  <li>Affectations professeurs / classes</li>
-                  <li>Plannings (les disponibilités professeurs sont conservées)</li>
-                  <li>Présences</li>
-                  <li>Comptabilité et facturation</li>
+                  <li>Élèves et toutes leurs données liées (notes, documents, sanctions, enclassement…)</li>
+                  <li>Notes, évaluations et bulletins</li>
+                  <li>Affectations professeurs / classes et composition des pools</li>
+                  <li>Plannings et horaires de classes (les disponibilités professeurs sont conservées)</li>
+                  <li>Présences et absences</li>
+                  <li>Comptabilité, facturation et commandes</li>
                 </ul>
+                <p style={{color:'#9a3412',fontSize:12,marginBottom:16,lineHeight:1.5}}>
+                  Conservés : professeurs, classes, pools (vides), créneaux, branches/matières, disponibilités, paramètres école.
+                </p>
 
                 {resetRentreeMsg && (
                   <div style={{padding:'12px 16px',borderRadius:8,marginBottom:14,fontWeight:600,fontSize:14,background:'#ede9fe',color:'#4c1d95'}}>

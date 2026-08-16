@@ -364,48 +364,114 @@ const resetTout = async (req, res) => {
 };
 
 const resetRentree = async (req, res) => {
+  // Ordre important : enfants d'élèves / emploi du temps avant les parents.
+  // Tables structurelles conservées : classes, pools, creneaux, matieres, utilisateurs prof/admin,
+  // disponibilités, niveaux, lieux, salles, paramètres, etc.
   const tables = [
-    // Présences
-    'presences_v2', 'presences', 'absences',
+    // Présences (avant emploi_du_temps)
+    'presences_v2',
+    'presences',
+    'absences',
 
-    // Notes
-    'notes', 'evaluations',
+    // Notes / évaluations
+    'notes',
+    'evaluations',
+    'bulletin_criteres',
+    'suivi_devoirs',
+    'devoirs',
 
-    // Planification / affectations
-    'affectations', 'planning_branches', 'pool_profs', 'pool_classes', 'pool_branches',
-    'classe_horaires', 'emploi_du_temps', 'plan_classe',
+    // Enclassement (références eleves sans CASCADE)
+    'affectations_eleves_enc',
+    'classes_enclassement',
+    'enclassements',
+
+    // Planification année (dispos conservées)
+    'affectations',
+    'planning_branches',
+    'pool_profs',
+    'pool_classes',
+    'pool_branches',
+    'classe_horaires',
+    'classe_periodes',
+    'emploi_du_temps',
+    'plan_classe',
+    'inventaire_branches',
 
     // Comptabilité / facturation
-    'paiements', 'comptabilite',
+    'paiements',
+    'factures_validations',
+    'factures_references',
+    'commandes_lignes',
+    'commandes',
 
-    // Données liées aux élèves
-    'documents_eleves', 'sanctions_eleves', 'observations',
-    'eleves'
+    // Autres données liées aux élèves / année
+    'documents_eleves',
+    'sanctions_eleves',
+    'observations',
+    'sorties_scolaires',
+
+    // Élèves en dernier parmi les tables métier
+    'eleves',
   ];
 
   const resultats = [];
-  for (const table of tables) {
-    try {
-      const r = await pool.query('DELETE FROM ' + table);
-      resultats.push('OK:' + table + '(' + r.rowCount + ')');
-    } catch (err) {
-      resultats.push('ERR:' + table + ':' + err.message);
-    }
-  }
+  const client = await pool.connect();
+  const fail = async (message) => {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    return res.status(500).json({
+      message,
+      details: resultats,
+      erreurs: resultats.filter((r) => r.startsWith('ERR:')),
+    });
+  };
 
   try {
-    const r = await pool.query("DELETE FROM utilisateurs WHERE role IN ('eleve','parent')");
-    resultats.push('OK:utilisateurs-eleves-parents(' + r.rowCount + ')');
-  } catch (err) {
-    resultats.push('ERR:utilisateurs-eleves-parents:' + err.message);
-  }
+    await client.query('BEGIN');
 
-  const erreurs = resultats.filter(r => r.startsWith('ERR'));
-  res.json({
-    message: erreurs.length === 0 ? 'Reset rentree effectue' : 'Reset rentree partiel - ' + erreurs.length + ' erreur(s)',
-    details: resultats,
-    erreurs: erreurs
-  });
+    for (const table of tables) {
+      const exists = await client.query(
+        `SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = $1`,
+        [table]
+      );
+      if (!exists.rows.length) {
+        resultats.push('SKIP:' + table + '(absente)');
+        continue;
+      }
+      try {
+        const r = await client.query('DELETE FROM ' + table);
+        resultats.push('OK:' + table + '(' + r.rowCount + ')');
+      } catch (err) {
+        resultats.push('ERR:' + table + ':' + err.message);
+        return fail('Reset rentree echoue — aucune donnée n\'a été supprimée (rollback)');
+      }
+    }
+
+    try {
+      const r = await client.query("DELETE FROM utilisateurs WHERE role IN ('eleve','parent')");
+      resultats.push('OK:utilisateurs-eleves-parents(' + r.rowCount + ')');
+    } catch (err) {
+      resultats.push('ERR:utilisateurs-eleves-parents:' + err.message);
+      return fail('Reset rentree echoue — aucune donnée n\'a été supprimée (rollback)');
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      message: 'Reset rentree effectue',
+      details: resultats,
+      erreurs: [],
+    });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    res.status(500).json({
+      message: 'Erreur serveur lors du reset rentree',
+      erreur: err.message,
+      details: resultats,
+      erreurs: ['ERR:transaction:' + err.message],
+    });
+  } finally {
+    client.release();
+  }
 };
 
 const getAccesProfs = async (req, res) => {
