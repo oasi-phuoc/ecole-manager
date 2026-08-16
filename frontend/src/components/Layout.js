@@ -3,9 +3,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 import { ICONS_BY_PATH } from './DashboardIcons';
+import { useIsMobile, MOBILE_BREAKPOINT } from '../hooks/useIsMobile';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const W = 200;
+const TOP_BAR_H = 52;
 
 const ACCES_DEFAUT_PROF = {
   eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false,
@@ -114,14 +116,33 @@ const PinIcon = ({ pinned }) => (
   </svg>
 );
 
+const HamburgerIcon = () => (
+  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16" stroke="#4c1d95" strokeWidth={2} strokeLinecap="round" />
+  </svg>
+);
+
+function getCurrentPageTitle(pathname) {
+  if (pathname === '/dashboard') return 'Tableau de bord';
+  const mod = ALL_MODULES.find(
+    (m) =>
+      pathname === m.path ||
+      pathname.startsWith(m.path + '/') ||
+      (m.path === '/controle-qualite' && pathname === '/statistiques'),
+  );
+  return mod?.label || 'Oasis';
+}
+
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile(MOBILE_BREAKPOINT);
   const [user, setUser] = useState(null);
   const [accesProfs, setAccesProfs] = useState({});
   const [hoveredPath, setHoveredPath] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [pinnedPaths, setPinnedPaths] = useState(() => {
     try {
       const saved = localStorage.getItem('sidebar_pinned');
@@ -166,6 +187,26 @@ export default function Layout() {
     return () => document.removeEventListener('click', close);
   }, [showMoreMenu]);
 
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!drawerOpen || !isMobile) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [drawerOpen, isMobile]);
+
   const deconnexion = async () => {
     try { await axios.post(API + '/auth/logout'); } catch {}
     clearSessionUser();
@@ -206,269 +247,336 @@ export default function Layout() {
 
   const pinnedModules   = modules.filter(m => pinnedPaths.includes(m.path));
   const unpinnedModules = modules.filter(m => !pinnedPaths.includes(m.path));
+  const currentPageTitle = getCurrentPageTitle(location.pathname);
 
-  return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}>
-      {/* Sidebar fixe */}
-      <div style={s.sidebar}>
-        <div style={s.logo}>
-          <img src="/logo-oasis.webp" alt="Oasis" style={s.logoImg}
-            onClick={() => navigate('/dashboard')} title="Tableau de bord" />
-        </div>
+  const navigateToModule = (m, onAfterNavigate) => {
+    if (m.path === '/comptabilite') {
+      navigate('/comptabilite?tab=classes');
+    } else if (m.path === '/documents-administratifs') {
+      navigate('/documents-administratifs?tab=administratifs');
+    } else if (m.path === '/controle-qualite') {
+      const premier = CONTROLE_QUALITE_ONGLETS.find((o) => profAccesCle(o.accentKey))?.key || 'visites';
+      navigate(`/controle-qualite?tab=${premier}`);
+    } else {
+      navigate(m.path);
+    }
+    onAfterNavigate?.();
+  };
 
-        <nav style={s.nav}>
-          {pinnedModules.map(m => {
-            const IconComp = ICONS_BY_PATH[m.path];
-            const isActive =
-              location.pathname === m.path ||
-              location.pathname.startsWith(m.path + '/') ||
-              (m.path === '/controle-qualite' && location.pathname === '/statistiques');
-            const isHov = hoveredPath === m.path;
-            return (
-              <React.Fragment key={m.path}>
-                <button
-                  style={{ ...s.navItem, background: isActive ? '#ede9fe' : isHov ? '#f5f3ff' : 'transparent' }}
-                  onClick={() => {
-                    if (m.path === '/comptabilite') {
-                      navigate('/comptabilite?tab=classes');
-                    } else if (m.path === '/documents-administratifs') {
-                      navigate('/documents-administratifs?tab=administratifs');
-                    } else if (m.path === '/controle-qualite') {
-                      const premier = CONTROLE_QUALITE_ONGLETS.find((o) => profAccesCle(o.accentKey))?.key || 'visites';
-                      navigate(`/controle-qualite?tab=${premier}`);
-                    } else {
-                      navigate(m.path);
-                    }
-                  }}
-                  onMouseEnter={() => setHoveredPath(m.path)}
-                  onMouseLeave={() => setHoveredPath(null)}>
-                  {IconComp && <IconComp size={16} active={isActive} />}
-                  <span style={{ ...s.navLabel, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 600 }}>
-                    {m.label}
-                  </span>
-                  {isHov && (
-                    <span onClick={e => togglePin(m.path, e)} title="Désépingler" style={s.pinBtn}>
-                      <PinIcon pinned={true} />
-                    </span>
-                  )}
-                </button>
-                {m.path === '/classes' && isActive && (() => {
-                  const params = new URLSearchParams(location.search);
-                  const detailId = params.get('detail');
-                  if (!detailId) return null;
-                  const activeTab = params.get('tab') || 'eleves';
-                  return (
-                    <div style={s.subNav}>
-                      {CLASSES_DETAIL_TABS.map(o => (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: activeTab===o.key ? '#ddd6fe' : 'transparent', color: activeTab===o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab===o.key ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/classes?detail=${detailId}&tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {m.path === '/presences' && isActive && (
-                  <div style={s.subNav}>
-                    {PRESENCES_ONGLETS.map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'saisie';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/presences?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/tcf' && isActive && (
-                  <div style={s.subNav}>
-                    {TCF_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'pool';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/tcf?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/controle-qualite' && isActive && (
-                  <div style={s.subNav}>
-                    {CONTROLE_QUALITE_ONGLETS.filter((o) => profAccesCle(o.accentKey)).map((o) => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'visites';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button
-                          key={o.key}
-                          type="button"
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/controle-qualite?tab=${o.key}`); }}
-                        >
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/notes' && isActive && (() => {
-                  const params = new URLSearchParams(location.search);
-                  const classeId = params.get('classeId');
-                  if (!classeId) return null;
-                  const activeTab = params.get('tab') || 'evaluations';
-                  return (
-                    <div style={s.subNav}>
-                      {NOTES_ONGLETS.map(o => (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: activeTab === o.key ? '#ddd6fe' : 'transparent', color: activeTab === o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab === o.key ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/notes?tab=${o.key}&classeId=${classeId}`); }}>
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {m.path === '/emploi-du-temps' && isActive && (
-                  <div style={s.subNav}>
-                    {EDT_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'pools' : 'plannings');
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/emploi-du-temps?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/parametres' && isActive && (
-                  <div style={s.subNav}>
-                    {PARAMS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'profil';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/parametres?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/documents-administratifs' && isActive && (
-                  <div style={s.subNav}>
-                    {DOCS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || 'accueil';
-                      const isTabActive = activeTab === o.key;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(`/documents-administratifs?tab=${o.key}`); }}>
-                          {o.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {m.path === '/comptabilite' && isActive && (
-                  <div style={s.subNav}>
-                    {(() => {
-                      const params = new URLSearchParams(location.search);
-                      const classeId = params.get('classeId');
-                      const ongletsCompta = COMPTA_ONGLETS
-                        .filter(o => !o.adminOnly || isAdmin)
-                        .filter(o => (o.key === 'factures' ? !!classeId : true));
-                      return ongletsCompta.map(o => {
-                      const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'classes' : 'paiements');
-                      const isTabActive = activeTab === o.key;
-                      const target = o.key === 'factures' && classeId
-                        ? `/comptabilite?tab=factures&classeId=${classeId}`
-                        : `/comptabilite?tab=${o.key}`;
-                      return (
-                        <button key={o.key}
-                          style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
-                          onClick={e => { e.stopPropagation(); navigate(target); }}>
-                          {o.label}
-                        </button>
-                      );
-                      });
-                    })()}
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
+  const isModuleActive = (path) =>
+    location.pathname === path ||
+    location.pathname.startsWith(path + '/') ||
+    (path === '/controle-qualite' && location.pathname === '/statistiques');
 
-          {/* Bouton "..." pour les items non épinglés */}
-          {unpinnedModules.length > 0 && (
-            <div style={{ position: 'relative', marginTop: 4 }}>
+  const renderNav = (options = {}) => {
+    const { onAfterNavigate, inDrawer = false } = options;
+    const showPin = (isHov) => inDrawer || isHov;
+
+    return (
+      <nav style={s.nav}>
+        {pinnedModules.map(m => {
+          const IconComp = ICONS_BY_PATH[m.path];
+          const isActive = isModuleActive(m.path);
+          const isHov = hoveredPath === m.path;
+          return (
+            <React.Fragment key={m.path}>
               <button
-                style={{ ...s.navItem, justifyContent: 'center', gap: 0, background: showMoreMenu ? '#ede9fe' : 'transparent' }}
-                onClick={e => { e.stopPropagation(); setShowMoreMenu(v => !v); }}
-                title="Autres modules">
-                <div style={s.moreBtn}>
-                  <span style={s.moreDot}/><span style={s.moreDot}/><span style={s.moreDot}/>
-                </div>
+                style={{ ...s.navItem, background: isActive ? '#ede9fe' : isHov ? '#f5f3ff' : 'transparent' }}
+                onClick={() => navigateToModule(m, onAfterNavigate)}
+                onMouseEnter={() => setHoveredPath(m.path)}
+                onMouseLeave={() => setHoveredPath(null)}>
+                {IconComp && <IconComp size={16} active={isActive} />}
+                <span style={{ ...s.navLabel, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 600 }}>
+                  {m.label}
+                </span>
+                {showPin(isHov) && (
+                  <span onClick={e => togglePin(m.path, e)} title="Désépingler" style={{ ...s.pinBtn, opacity: inDrawer ? 1 : 0.7 }}>
+                    <PinIcon pinned={true} />
+                  </span>
+                )}
               </button>
-              {showMoreMenu && (
-                <div style={s.moreDropdown} onClick={e => e.stopPropagation()}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 12px 4px' }}>
-                    Modules non épinglés
+              {m.path === '/classes' && isActive && (() => {
+                const params = new URLSearchParams(location.search);
+                const detailId = params.get('detail');
+                if (!detailId) return null;
+                const activeTab = params.get('tab') || 'eleves';
+                return (
+                  <div style={s.subNav}>
+                    {CLASSES_DETAIL_TABS.map(o => (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: activeTab===o.key ? '#ddd6fe' : 'transparent', color: activeTab===o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab===o.key ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/classes?detail=${detailId}&tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    ))}
                   </div>
-                  {unpinnedModules.map(m => {
-                    const IconComp = ICONS_BY_PATH[m.path];
-                    const isActive =
-                      location.pathname === m.path ||
-                      location.pathname.startsWith(m.path + '/') ||
-                      (m.path === '/controle-qualite' && location.pathname === '/statistiques');
+                );
+              })()}
+              {m.path === '/presences' && isActive && (
+                <div style={s.subNav}>
+                  {PRESENCES_ONGLETS.map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || 'saisie';
+                    const isTabActive = activeTab === o.key;
                     return (
-                      <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
-                        onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
-                        onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
-                        onClick={() => {
-                          if (m.path === '/comptabilite') {
-                            navigate('/comptabilite?tab=classes');
-                          } else if (m.path === '/documents-administratifs') {
-                            navigate('/documents-administratifs?tab=administratifs');
-                          } else if (m.path === '/controle-qualite') {
-                            const premier = CONTROLE_QUALITE_ONGLETS.find((o) => profAccesCle(o.accentKey))?.key || 'visites';
-                            navigate(`/controle-qualite?tab=${premier}`);
-                          } else {
-                            navigate(m.path);
-                          }
-                          setShowMoreMenu(false);
-                        }}>
-                        {IconComp && <IconComp size={15} active={isActive} />}
-                        <span style={{ ...s.navLabel, flex: 1, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 500 }}>{m.label}</span>
-                        <span onClick={e => { togglePin(m.path, e); }} title="Épingler" style={s.pinBtn}>
-                          <PinIcon pinned={false} />
-                        </span>
-                      </div>
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/presences?tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
                     );
                   })}
                 </div>
               )}
-            </div>
-          )}
-        </nav>
+              {m.path === '/tcf' && isActive && (
+                <div style={s.subNav}>
+                  {TCF_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || 'pool';
+                    const isTabActive = activeTab === o.key;
+                    return (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/tcf?tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {m.path === '/controle-qualite' && isActive && (
+                <div style={s.subNav}>
+                  {CONTROLE_QUALITE_ONGLETS.filter((o) => profAccesCle(o.accentKey)).map((o) => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || 'visites';
+                    const isTabActive = activeTab === o.key;
+                    return (
+                      <button
+                        key={o.key}
+                        type="button"
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/controle-qualite?tab=${o.key}`); onAfterNavigate?.(); }}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {m.path === '/notes' && isActive && (() => {
+                const params = new URLSearchParams(location.search);
+                const classeId = params.get('classeId');
+                if (!classeId) return null;
+                const activeTab = params.get('tab') || 'evaluations';
+                return (
+                  <div style={s.subNav}>
+                    {NOTES_ONGLETS.map(o => (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: activeTab === o.key ? '#ddd6fe' : 'transparent', color: activeTab === o.key ? '#4c1d95' : '#6d6d8a', fontWeight: activeTab === o.key ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/notes?tab=${o.key}&classeId=${classeId}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+              {m.path === '/emploi-du-temps' && isActive && (
+                <div style={s.subNav}>
+                  {EDT_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'pools' : 'plannings');
+                    const isTabActive = activeTab === o.key;
+                    return (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/emploi-du-temps?tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {m.path === '/parametres' && isActive && (
+                <div style={s.subNav}>
+                  {PARAMS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || 'profil';
+                    const isTabActive = activeTab === o.key;
+                    return (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/parametres?tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {m.path === '/documents-administratifs' && isActive && (
+                <div style={s.subNav}>
+                  {DOCS_ONGLETS.filter(o => !o.adminOnly || isAdmin).map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || 'accueil';
+                    const isTabActive = activeTab === o.key;
+                    return (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(`/documents-administratifs?tab=${o.key}`); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {m.path === '/comptabilite' && isActive && (
+                <div style={s.subNav}>
+                  {(() => {
+                    const params = new URLSearchParams(location.search);
+                    const classeId = params.get('classeId');
+                    const ongletsCompta = COMPTA_ONGLETS
+                      .filter(o => !o.adminOnly || isAdmin)
+                      .filter(o => (o.key === 'factures' ? !!classeId : true));
+                    return ongletsCompta.map(o => {
+                    const activeTab = new URLSearchParams(location.search).get('tab') || (isAdmin ? 'classes' : 'paiements');
+                    const isTabActive = activeTab === o.key;
+                    const target = o.key === 'factures' && classeId
+                      ? `/comptabilite?tab=factures&classeId=${classeId}`
+                      : `/comptabilite?tab=${o.key}`;
+                    return (
+                      <button key={o.key}
+                        style={{ ...s.subNavItem, background: isTabActive ? '#ddd6fe' : 'transparent', color: isTabActive ? '#4c1d95' : '#6d6d8a', fontWeight: isTabActive ? 700 : 500 }}
+                        onClick={e => { e.stopPropagation(); navigate(target); onAfterNavigate?.(); }}>
+                        {o.label}
+                      </button>
+                    );
+                    });
+                  })()}
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
 
-        <div style={s.footer}>
-          <div style={s.avatar} title={`${user?.prenom || ''} ${user?.nom || ''}`}>
-            {user?.prenom?.[0]}{user?.nom?.[0]}
+        {unpinnedModules.length > 0 && (
+          <div style={{ position: 'relative', marginTop: 4 }}>
+            <button
+              style={{ ...s.navItem, justifyContent: 'center', gap: 0, background: showMoreMenu ? '#ede9fe' : 'transparent' }}
+              onClick={e => { e.stopPropagation(); setShowMoreMenu(v => !v); }}
+              title="Autres modules">
+              <div style={s.moreBtn}>
+                <span style={s.moreDot}/><span style={s.moreDot}/><span style={s.moreDot}/>
+              </div>
+            </button>
+            {showMoreMenu && (
+              <div style={inDrawer ? s.moreDropdownDrawer : s.moreDropdown} onClick={e => e.stopPropagation()}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 12px 4px' }}>
+                  Modules non épinglés
+                </div>
+                {unpinnedModules.map(m => {
+                  const IconComp = ICONS_BY_PATH[m.path];
+                  const isActive = isModuleActive(m.path);
+                  return (
+                    <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
+                      onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
+                      onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
+                      onClick={() => {
+                        navigateToModule(m, () => {
+                          setShowMoreMenu(false);
+                          onAfterNavigate?.();
+                        });
+                      }}>
+                      {IconComp && <IconComp size={15} active={isActive} />}
+                      <span style={{ ...s.navLabel, flex: 1, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 500 }}>{m.label}</span>
+                      <span onClick={e => { togglePin(m.path, e); }} title="Épingler" style={s.pinBtn}>
+                        <PinIcon pinned={false} />
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div style={s.userName}>{user?.prenom} {user?.nom}</div>
+        )}
+      </nav>
+    );
+  };
+
+  const renderSidebarFooter = () => (
+    <>
+      <div style={s.footer}>
+        <div style={s.avatar} title={`${user?.prenom || ''} ${user?.nom || ''}`}>
+          {user?.prenom?.[0]}{user?.nom?.[0]}
         </div>
-        <button style={s.btnDeconnexion} onClick={() => setShowLogoutConfirm(true)}>Se déconnecter</button>
+        <div style={s.userName}>{user?.prenom} {user?.nom}</div>
       </div>
+      <button style={s.btnDeconnexion} onClick={() => setShowLogoutConfirm(true)}>Se déconnecter</button>
+    </>
+  );
+
+  return (
+    <div
+      className={isMobile ? 'layout-mobile' : 'layout-desktop'}
+      style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}
+    >
+      {/* Desktop sidebar */}
+      {!isMobile && (
+        <div style={s.sidebar}>
+          <div style={s.logo}>
+            <img src="/logo-oasis.webp" alt="Oasis" style={s.logoImg}
+              onClick={() => navigate('/dashboard')} title="Tableau de bord" />
+          </div>
+          {renderNav()}
+          {renderSidebarFooter()}
+        </div>
+      )}
+
+      {/* Mobile top bar */}
+      {isMobile && (
+        <header style={s.mobileTopBar}>
+          <button
+            type="button"
+            style={s.hamburgerBtn}
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Ouvrir le menu"
+          >
+            <HamburgerIcon />
+          </button>
+          <div style={s.topBarCenter}>
+            <img
+              src="/logo-oasis.webp"
+              alt=""
+              style={s.topBarLogo}
+              onClick={() => navigate('/dashboard')}
+            />
+            <span style={s.topBarTitle}>{currentPageTitle}</span>
+          </div>
+          <button
+            type="button"
+            style={s.topBarAvatarBtn}
+            onClick={() => navigate('/parametres?tab=profil')}
+            title={`${user?.prenom || ''} ${user?.nom || ''}`}
+            aria-label="Mon profil"
+          >
+            <div style={s.avatar}>
+              {user?.prenom?.[0]}{user?.nom?.[0]}
+            </div>
+          </button>
+        </header>
+      )}
+
+      {/* Mobile drawer overlay */}
+      {isMobile && drawerOpen && (
+        <>
+          <div
+            style={s.drawerBackdrop}
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div style={s.drawer} role="dialog" aria-modal="true" aria-label="Menu de navigation">
+            <div style={s.logo}>
+              <img src="/logo-oasis.webp" alt="Oasis" style={s.logoImg}
+                onClick={() => { navigate('/dashboard'); setDrawerOpen(false); }}
+                title="Tableau de bord" />
+            </div>
+            {renderNav({ onAfterNavigate: () => setDrawerOpen(false), inDrawer: true })}
+            {renderSidebarFooter()}
+          </div>
+        </>
+      )}
 
       {showLogoutConfirm && (
         <div style={s.modalOverlay}>
@@ -483,9 +591,19 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Contenu principal : seul défilement de l’app — sticky des pages par rapport à cette zone */}
-      <div style={{ marginLeft: W, flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+      {/* Contenu principal : seul défilement de l'app — sticky des pages par rapport à cette zone */}
+      <div style={{
+        marginLeft: isMobile ? 0 : W,
+        paddingTop: isMobile ? TOP_BAR_H : 0,
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#f8fafc',
+      }}>
         <div
+          className="app-page-host"
           style={{
             flex: 1,
             minHeight: 0,
@@ -511,6 +629,7 @@ const s = {
   moreBtn: { display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 99, background: '#ede9fe' },
   moreDot: { display: 'block', width: 5, height: 5, borderRadius: '50%', background: '#6366f1' },
   moreDropdown: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(99,102,241,0.15)', border: '1px solid #ede9fe', zIndex: 200, padding: '4px 4px 8px' },
+  moreDropdownDrawer: { position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(99,102,241,0.15)', border: '1px solid #ede9fe', zIndex: 210, padding: '4px 4px 8px' },
   navLabel: { fontSize: 12, lineHeight: 1.2, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 },
   activeDot: { width: 5, height: 5, borderRadius: '50%', background: '#6366f1', flexShrink: 0 },
   subNav: { display: 'flex', flexDirection: 'column', gap: 1, paddingLeft: 8, marginTop: 1 },
@@ -524,4 +643,86 @@ const s = {
   modalBox: { background: 'white', borderRadius: 12, padding: '24px 28px', width: 300, boxShadow: '0 8px 30px rgba(0,0,0,0.15)' },
   modalBtnCancel: { padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#475569', fontFamily: 'inherit' },
   modalBtnConfirm: { padding: '8px 16px', background: '#dc2626', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white', fontFamily: 'inherit' },
+  mobileTopBar: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: TOP_BAR_H,
+    zIndex: 150,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '0 10px',
+    background: 'white',
+    borderBottom: '1px solid #ede9fe',
+    boxShadow: '0 2px 12px rgba(99,102,241,0.08)',
+  },
+  hamburgerBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    padding: 0,
+    border: 'none',
+    borderRadius: 8,
+    background: 'transparent',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  topBarCenter: {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  topBarLogo: {
+    height: 26,
+    objectFit: 'contain',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  topBarTitle: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#4c1d95',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    minWidth: 0,
+  },
+  topBarAvatarBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  drawerBackdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(15,23,42,0.4)',
+    zIndex: 180,
+  },
+  drawer: {
+    width: W,
+    background: 'white',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    zIndex: 200,
+    borderRight: '1px solid #ddd6fe',
+    boxShadow: '4px 0 24px rgba(99,102,241,0.15)',
+  },
 };
