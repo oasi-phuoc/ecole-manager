@@ -101,8 +101,10 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         drawH *= s;
       }
       if (i > 0) pdf.addPage(format, orientation);
+      // Centrer le tableau horizontalement et verticalement sur la page
       const x = (pageW - drawW) / 2;
-      pdf.addImage(imgData, 'JPEG', x, 0, drawW, drawH);
+      const y = (pageH - drawH) / 2;
+      pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
     }
 
     return pdf.output('blob');

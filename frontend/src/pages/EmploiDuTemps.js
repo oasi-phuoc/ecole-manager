@@ -2542,17 +2542,50 @@ export default function EmploiDuTemps() {
         <title>${escapeHtml(titre)}</title>
         <style>
           @page { size: ${pageSize}; margin: ${marginCss}; }
-          body { font-family: Arial, sans-serif; margin: ${a3Semaine ? '4px' : '16px'}; color: #111827; text-align: center; }
+          html, body { height: 100%; }
+          body {
+            font-family: Arial, sans-serif;
+            margin: ${a3Semaine ? '4px' : '16px'};
+            color: #111827;
+            text-align: center;
+            box-sizing: border-box;
+          }
           @media print {
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
+            html, body {
+              width: 100%;
+              height: 100%;
+              min-height: 100%;
+            }
+            /* Sans .section : centrer le contenu sur la page (ex. général par jours) */
+            body:not(:has(.section)):not(:has(.section-a3)) {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+            }
           }
-          h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; }
+          h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; width: 100%; }
           h2 { margin: 14px 0 8px; font-size: 15px; text-align: center; }
           table { border-collapse: collapse; margin: ${a3Semaine ? '0 auto' : '8px auto 18px'}; table-layout: fixed; ${a3Semaine ? 'width: 100%;' : 'width: auto; max-width: 100%;'} }
-          .section, .section-a3 { text-align: center; }
+          .section, .section-a3 {
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          @media print {
+            .section, .section-a3 {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: calc(100vh - 2mm);
+              page-break-inside: avoid;
+            }
+          }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; }
           th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '5px 4px'}; font-size: ${a3Semaine ? '7pt' : '9pt'}; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f8fafc; font-weight: 700; }
