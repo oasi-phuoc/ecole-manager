@@ -196,7 +196,8 @@ export default function TCF() {
   const [profs, setProfs] = useState([]);
   const [pools, setPools] = useState([]);
   const [creneaux, setCreneaux] = useState([]);
-  const [disposMap, setDisposMap] = useState({});
+  // Créneaux où le prof a une affectation EDT (Emploi du temps → Affectations → Professeurs)
+  const [affectationsMap, setAffectationsMap] = useState({});
   const [classes, setClasses] = useState([]);
   const [eleves, setEleves] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -368,11 +369,12 @@ export default function TCF() {
       setResponsablesTCF(respNames.map((name, i) => ({ id: `resp_${i}`, nom: name, prenom: '' })));
       setNiveauxDB(rNiveaux.data || []);
 
-      const dMap = {};
-      (rGeneral.data?.dispos || []).forEach(d => {
-        dMap[`${d.prof_id}-${d.creneau_id}`] = d.disponible;
+      const aMap = {};
+      (rGeneral.data?.affectations || []).forEach(a => {
+        if (a?.prof_id == null || a?.creneau_id == null) return;
+        aMap[`${a.prof_id}-${a.creneau_id}`] = true;
       });
-      setDisposMap(dMap);
+      setAffectationsMap(aMap);
 
       const poolLocal = lireObjetLocal('tcf_pool_state');
       const rsLocal = lireObjetLocal('tcf_resultats_scores');
@@ -577,6 +579,22 @@ export default function TCF() {
     return siteOrder.some(k => k !== siteKey && (selectedBySite[k] || []).includes(profId));
   };
 
+  const clearPastillesOverridesProf = (siteKey, profId) => {
+    setPoolCellOverrides(overrides => {
+      const next = { ...overrides };
+      JOURS.forEach(j => MOMENTS.forEach(m => {
+        delete next[cleCellulePool(siteKey, profId, j, m.id)];
+      }));
+      return next;
+    });
+  };
+
+  const resetPastillesProf = (siteKey, profId) => {
+    setPoolDirty(true);
+    // Recalcule les pastilles depuis l'horaire affecté (EDT), pas les disponibilités
+    clearPastillesOverridesProf(siteKey, profId);
+  };
+
   const toggleProfSite = (siteKey, profId) => {
     if (estBloqueDansAutreSite(siteKey, profId)) return;
     setPoolDirty(true);
@@ -584,15 +602,8 @@ export default function TCF() {
       const cur = prev[siteKey] || [];
       const deja = cur.includes(profId);
       if (!deja) {
-        // Initialiser toutes les cellules en rouge (réserve) par défaut
-        setPoolCellOverrides(overrides => {
-          const next = { ...overrides };
-          JOURS.forEach(j => MOMENTS.forEach(m => {
-            const key = cleCellulePool(siteKey, profId, j, m.id);
-            next[key] = { statut: 'rouge', rActif: false };
-          }));
-          return next;
-        });
+        // À la sélection : pastilles = horaire affecté EDT (vert/orange/rouge)
+        clearPastillesOverridesProf(siteKey, profId);
       }
       return {
         ...prev,
@@ -681,26 +692,35 @@ export default function TCF() {
     });
   };
 
-  const periodesDispoParDemiJournee = (profId, jour, momentId) => {
+  // Nombre de périodes où le prof travaille (affectations EDT) sur la demi-journée
+  const periodesAffecteesParDemiJournee = (profId, jour, momentId) => {
     const periodeCible = momentId === 'matin' ? 'matin' : 'apres-midi';
     const creneauxJour = creneaux.filter(c =>
       String(c.jour || '').toLowerCase() === jour.toLowerCase()
       && normaliserPeriode(c.periode) === periodeCible
     );
     const total = creneauxJour.length;
-    let dispo = 0;
+    let nb = 0;
     for (const c of creneauxJour) {
-      if (disposMap[`${profId}-${c.id}`] !== false) dispo += 1;
+      if (
+        affectationsMap[`${profId}-${c.id}`]
+        || affectationsMap[`${String(profId)}-${c.id}`]
+        || affectationsMap[`${profId}-${String(c.id)}`]
+        || affectationsMap[`${String(profId)}-${String(c.id)}`]
+      ) {
+        nb += 1;
+      }
     }
-    return { dispo, total };
+    return { nb, total };
   };
 
   const cleCellulePool = (siteKey, profId, jour, momentId) => `${siteKey}::${profId}::${jour}::${momentId}`;
 
+  // Vert = 4 périodes (demi-journée complète), orange = 1–3, rouge = 0
   const statutBaseCellule = (profId, jour, momentId) => {
-    const { dispo, total } = periodesDispoParDemiJournee(profId, jour, momentId);
-    if (dispo <= 0 || total <= 0) return 'rouge';
-    if (dispo >= total) return 'vert';
+    const { nb } = periodesAffecteesParDemiJournee(profId, jour, momentId);
+    if (nb <= 0) return 'rouge';
+    if (nb >= 4) return 'vert';
     return 'orange';
   };
 
@@ -781,9 +801,19 @@ export default function TCF() {
     return { cscCfr: filled ? cscCfr : '', cafCap: filled ? cafCap : '', total: filled ? total : '' };
   };
 
-  const renderPastille = (statut) => {
+  const renderPastille = (statut, nbPeriodes = null) => {
     const color = statut === 'vert' ? '#22c55e' : statut === 'orange' ? '#f59e0b' : '#ef4444';
-    return <span style={{ ...styles.dot, background: color }} />;
+    const showCount = statut === 'orange' && nbPeriodes >= 1 && nbPeriodes <= 3;
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ ...styles.dot, background: color }} />
+        {showCount && (
+          <span style={{ fontSize: 11, fontWeight: 800, color: '#b45309', lineHeight: 1, minWidth: 10 }}>
+            {nbPeriodes}
+          </span>
+        )}
+      </span>
+    );
   };
 
   const cellKeyAffectation = (jour, moment) => `${jour}|${moment}`;
@@ -910,6 +940,7 @@ export default function TCF() {
                   {JOURS.map(j => MOMENTS.map(m => {
                     const statut = statutCellule(siteKey, id, j, m.id);
                     const rActif = rActifCellule(siteKey, id, j, m.id);
+                    const { nb } = periodesAffecteesParDemiJournee(id, j, m.id);
                     return (
                       <td
                         key={`${id}-${j}-${m.id}`}
@@ -919,7 +950,7 @@ export default function TCF() {
                         <div style={styles.cellStatusWrap}>
                           {rActif
                             ? <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:'50%',background:'#a78bfa',color:'white',fontWeight:700,fontSize:10}}>R</span>
-                            : renderPastille(statut)
+                            : renderPastille(statut, nb)
                           }
                         </div>
                       </td>
@@ -1168,13 +1199,25 @@ export default function TCF() {
                     />
                     <span style={styles.profName}>{p.prenom} {toDisplayNom(p.nom)}</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => toggleSplitProf(p.id)}
-                    style={{ ...styles.splitToggleBtn, ...(splitByProf[p.id] ? styles.splitToggleBtnActif : {}) }}
-                  >
-                    Scinder
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {checked && (
+                      <button
+                        type="button"
+                        title="Recalculer les pastilles selon l'horaire affecté (EDT)"
+                        onClick={() => resetPastillesProf(siteKey, p.id)}
+                        style={styles.resetPastillesBtn}
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleSplitProf(p.id)}
+                      style={{ ...styles.splitToggleBtn, ...(splitByProf[p.id] ? styles.splitToggleBtnActif : {}) }}
+                    >
+                      Scinder
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -4658,6 +4701,20 @@ const styles = {
     borderColor: '#fca5a5',
     color: '#dc2626',
     fontWeight: 800,
+  },
+  resetPastillesBtn: {
+    flexShrink: 0,
+    minWidth: 52,
+    height: 22,
+    borderRadius: 11,
+    border: '1px solid #c7d2fe',
+    background: '#eef2ff',
+    color: '#4338ca',
+    fontSize: 11,
+    fontWeight: 800,
+    cursor: 'pointer',
+    padding: '0 10px',
+    lineHeight: '20px',
   },
 
   tableWrap: { border: '1px solid #e2e8f0', borderRadius: 12, background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflowX: 'auto' },
