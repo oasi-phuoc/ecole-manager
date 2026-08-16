@@ -251,7 +251,7 @@ export default function DocumentsAdministratifs() {
                 Trier
               </button>
             ) : (
-              <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+              <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
                 {[{ id: 'tous', label: 'Tous' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
                   <button
                     key={n.id}
@@ -460,7 +460,7 @@ export default function DocumentsAdministratifs() {
                 {activeTab === 'pedagogiques' && niveauxDB.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Niveau *</div>
-                    <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
+                    <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2, flexWrap: 'wrap' }}>
                       {[{ id: '', label: 'Tous les niveaux' }, ...niveauxDB.map(n => ({ id: n.nom, label: n.nom }))].map(n => (
                         <button
                           key={n.id === '' ? '__tous' : n.id}

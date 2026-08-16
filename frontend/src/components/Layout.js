@@ -511,7 +511,7 @@ export default function Layout() {
   return (
     <div
       className={isMobile ? 'layout-mobile' : 'layout-desktop'}
-      style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}
+      style={{ display: 'flex', height: isMobile ? '100dvh' : '100vh', maxHeight: isMobile ? '100dvh' : '100vh', overflow: 'hidden', fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif" }}
     >
       {/* Desktop sidebar */}
       {!isMobile && (
@@ -611,6 +611,7 @@ export default function Layout() {
             overflowY: 'auto',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
+            paddingBottom: isMobile ? 'calc(32px + env(safe-area-inset-bottom, 0px))' : 0,
           }}
         >
           <MobilePageEnhancer enabled={isMobile} />

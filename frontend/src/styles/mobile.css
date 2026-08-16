@@ -6,16 +6,21 @@
   html,
   body,
   #root {
+    height: 100%;
+    max-height: 100dvh;
     overflow: hidden;
   }
 
   .layout-mobile {
     --page-pad: 12px;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
   }
 
   .app-page-host {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Padding page : uniquement le premier enfant (la page), pas les descendants */
@@ -24,8 +29,10 @@
     padding-left: var(--page-pad) !important;
     padding-right: var(--page-pad) !important;
     padding-top: 12px !important;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: 100%;
     box-sizing: border-box !important;
+    min-height: auto !important;
   }
 
   /* Titres : une ligne dédiée, texte qui ne déborde pas */
@@ -121,11 +128,14 @@
     text-overflow: unset;
   }
 
-  /* Onglets / pastilles : défilement horizontal, plus de wrap cassé */
+  /* Onglets / pastilles : même taille, une rangée */
   .layout-mobile .chip-tabs,
-  .layout-mobile .mobile-chip-tabs {
+  .layout-mobile .mobile-chip-tabs,
+  .layout-mobile .mobile-tabs-bar,
+  .layout-mobile .tabs-scroll {
     display: flex !important;
     flex-wrap: nowrap !important;
+    align-items: stretch;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
@@ -133,49 +143,54 @@
     width: 100%;
     box-sizing: border-box;
     scrollbar-width: none;
-    gap: 4px;
+    gap: 3px;
     padding: 3px !important;
+    background: #ede9fe !important;
+    border-radius: 20px !important;
+    border-bottom: none !important;
   }
 
   .layout-mobile .chip-tabs::-webkit-scrollbar,
-  .layout-mobile .mobile-chip-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .layout-mobile .chip-tabs > button,
-  .layout-mobile .mobile-chip-tabs > button {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    font-size: 12px !important;
-    padding: 7px 12px !important;
-  }
-
-  /* Onglets type « dossier » (Notes, Bulletins, TCF) */
-  .layout-mobile .mobile-tabs-bar,
-  .layout-mobile .tabs-scroll {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    max-width: 100%;
-    scrollbar-width: none;
-  }
-
+  .layout-mobile .mobile-chip-tabs::-webkit-scrollbar,
   .layout-mobile .mobile-tabs-bar::-webkit-scrollbar,
   .layout-mobile .tabs-scroll::-webkit-scrollbar {
     display: none;
   }
 
+  .layout-mobile .chip-tabs > button,
+  .layout-mobile .mobile-chip-tabs > button,
   .layout-mobile .mobile-tabs-bar > button,
   .layout-mobile .tabs-scroll > button {
-    flex: 0 0 auto;
-    width: auto !important;
+    flex: 1 1 0% !important;
+    width: 0 !important;
     min-width: 0 !important;
     max-width: none !important;
-    padding: 8px 12px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
     font-size: 12px !important;
+    padding: 0 6px !important;
+    border-radius: 16px !important;
+    border: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    line-height: 1.15 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Beaucoup d’onglets : même largeur fixe + scroll horizontal */
+  .layout-mobile .chip-tabs-scroll > button {
+    flex: 0 0 96px !important;
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
   }
 
   /* Barres d’actions sous le titre */

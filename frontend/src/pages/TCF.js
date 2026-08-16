@@ -1729,7 +1729,7 @@ export default function TCF() {
               Trier
             </button>
           ) : (
-            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               <button
                 type="button"
                 onClick={() => withResultatToggleGuard(() => { setResultatNiveau(''); setResultatClasseId(''); setResultatEleveId(''); setResultatEleveSearch(''); setShowTrierNiveaux(false); })}
@@ -3613,7 +3613,7 @@ export default function TCF() {
               </>
             ) : (
               <>
-                <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+                <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
                   <button
                     type="button"
                     onClick={() => { setGraphNiveau(''); setGraphShowNiveaux(false); setGraphClasseId(''); setGraphEleveId(''); }}
@@ -3925,7 +3925,7 @@ export default function TCF() {
               Trier
             </button>
           ) : (
-            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               <button type="button" onClick={() => { setStatNiveau(''); setStatShowNiveaux(false); }}
                 style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: !statNiveau ? '#6366f1' : 'transparent', color: !statNiveau ? 'white' : '#6d28d9', fontWeight: !statNiveau ? 700 : 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                 Trier
@@ -4267,7 +4267,7 @@ export default function TCF() {
       <div style={styles.tabContent}>
         {onglet === 'pool' && (
           <div>
-            <div style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
+            <div className="chip-tabs" style={{ ...styles.pillGroup, display: 'inline-flex', marginBottom: 14 }}>
               {siteOrder.map((siteKey, idx) => (
                 <button
                   key={`pool-site-tab-${siteKey}`}

@@ -1073,7 +1073,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         {/* Sous-onglets Vue générale */}
         <div className="no-print" style={{ background: '#f8fafc', paddingBottom: 12, marginBottom: 0, boxShadow: 'none' }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+          <div className="chip-tabs" style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => (
               <button key={sem.id} onClick={() => { setGeneraleSemestre(sem.id); chargerRapport(classeSelectionnee, sem.id); }}
                 style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: generaleSemestre === sem.id ? '#6366f1' : 'transparent', color: generaleSemestre === sem.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: generaleSemestre === sem.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
@@ -1091,7 +1091,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             </button>
           ) : (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+              <div className="chip-tabs" style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
                 <button
                   type="button"
                   onClick={() => { setVueGeneraleMode('tous'); setShowVueGeneraleModes(false); }}
@@ -1808,7 +1808,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         </div>
         {/* Sous-onglets semestre + mode */}
         {vueClasseAction !== 'attestation' && <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+          <div className="chip-tabs" style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
               const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
               return (
@@ -1843,7 +1843,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
 
         {vueClasseAction === 'attestation' && (
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            <div className="chip-tabs" style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               {[{ id: 'eleve', label: 'Par élève' }, { id: 'tous', label: 'Tous' }].map(m => (
                 <button key={m.id} onClick={() => setAttestationMode(m.id)}
                   style={{ padding: '7px 16px', borderRadius: 17, border: 'none', background: attestationMode === m.id ? '#6366f1' : 'transparent', color: attestationMode === m.id ? 'white' : '#6d28d9', cursor: 'pointer', fontWeight: attestationMode === m.id ? 700 : 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
@@ -2582,7 +2582,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+          <div className="chip-tabs" style={{ display: 'inline-flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
             {[{ id: '1', label: '1er semestre' }, { id: '2', label: '2e semestre' }].map(sem => {
               const disabled = (sem.id === '2' && !sem1Bloque && !isAdmin()) || (sem.id === '1' && sem1Bloque && !isAdmin());
               return (
@@ -2698,7 +2698,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
               Trier
             </button>
           ) : (
-            <div style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
+            <div className="chip-tabs" style={{ display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 }}>
               {niveauxPills.map(n => (
                 <button key={n} onClick={() => { setEvalNiveauFiltre(n); if (n === 'tous') setShowNiveauxFiltres(false); }}
                   style={evalNiveauFiltre === n

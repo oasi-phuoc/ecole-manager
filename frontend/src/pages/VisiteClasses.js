@@ -686,7 +686,7 @@ export default function VisiteClasses() {
               Trier
             </button>
           ) : (
-            <div style={s.triGroup}>
+            <div className="chip-tabs" style={s.triGroup}>
               <button
                 type="button"
                 onClick={() => { setFiltreNiveau(''); setShowNiveaux(false); }}
@@ -1283,7 +1283,7 @@ export default function VisiteClasses() {
                 </div>
                 <div style={s.field}>
                   <span style={s.fieldLabel}>Durée de la visite</span>
-                  <div style={s.toggleWrap}>
+                  <div className="chip-tabs" style={s.toggleWrap}>
                     <button type="button" onClick={() => setDuree(1)} style={{ ...s.toggleBtn, ...(duree === 1 ? s.toggleBtnActif : {}) }}>1 période</button>
                     <button type="button" onClick={() => setDuree(2)} style={{ ...s.toggleBtn, ...(duree === 2 ? s.toggleBtnActif : {}) }}>2 périodes</button>
                   </div>

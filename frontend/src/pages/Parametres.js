@@ -211,7 +211,7 @@ export default function Parametres() {
 
   const barSousOnglets = (items, actif, onChange) => (
     <div
-      className={isMobile ? 'chip-tabs' : undefined}
+      className={isMobile ? 'chip-tabs chip-tabs-equal' : undefined}
       style={isMobile ? {
         display: 'flex',
         background: '#ede9fe',
@@ -1286,7 +1286,7 @@ export default function Parametres() {
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Priorité</label>
-                        <div style={{display:'flex',gap:8,marginTop:4,flexWrap:'wrap'}}>
+                        <div className={isMobile ? 'chip-tabs chip-tabs-equal' : undefined} style={{display:'flex',gap:8,marginTop:4,flexWrap: isMobile ? 'nowrap' : 'wrap'}}>
                           {[['niveau','Niveau'],['lieu','Lieu de travail'],['aucune','Aucune priorité']].map(([val,lbl]) => (
                             <button key={val} type="button"
                               onClick={() => setProfil({...profil, priorite_pref: val})}
@@ -1815,7 +1815,7 @@ export default function Parametres() {
                   <div>
                     {/* Sous-onglets style affectations EDT */}
                     <div
-                      className={isMobile ? 'chip-tabs' : undefined}
+                      className={isMobile ? 'chip-tabs chip-tabs-equal' : undefined}
                       style={isMobile ? {
                         display: 'flex',
                         background: '#ede9fe',
