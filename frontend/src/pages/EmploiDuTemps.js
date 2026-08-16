@@ -3013,12 +3013,16 @@ export default function EmploiDuTemps() {
       const pdfNomAvecSite = (site, suffixe) => `${site}_${sanitizeFilename(suffixe, 'doc')}.pdf`;
       const checkCancel = () => exportPdfAnnulerRef.current;
 
-      // Index : classeId -> pools, profId -> pools
+      // Index : classeId -> pools, profId -> pools (classes actives uniquement)
+      const classesActivesIds = new Set(
+        (classes || []).filter((c) => c && c.actif !== false).map((c) => String(c.id))
+      );
       const poolsParClasse = new Map();
       const poolsParProf = new Map();
       poolsExport.forEach((pool) => {
         (pool.classes || []).forEach((cl) => {
           const key = String(cl.id);
+          if (!classesActivesIds.has(key)) return;
           if (!poolsParClasse.has(key)) poolsParClasse.set(key, []);
           poolsParClasse.get(key).push(pool);
         });
@@ -3029,10 +3033,11 @@ export default function EmploiDuTemps() {
         });
       });
 
-      // —— Classes (sous-dossier par pool) ——
+      // —— Classes (sous-dossier par pool) : actives + rattachées à un pool uniquement ——
       setExportPdfProgress('Chargement des classes…');
       if (checkCancel()) throw Object.assign(new Error('annulé'), { cancelled: true });
-      const classesExport = classesToutesTriees.length ? classesToutesTriees : classes;
+      const classesExport = (classesToutesTriees.length ? classesToutesTriees : classes)
+        .filter((cl) => cl && cl.actif !== false && poolsParClasse.has(String(cl.id)));
       if (classesExport.length) {
         const reps = await Promise.all(
           classesExport.map((cl) => axios.get(API + '/planning/classe/' + cl.id, { headers }).catch(() => null))
@@ -3041,6 +3046,7 @@ export default function EmploiDuTemps() {
           if (!rep?.data) return;
           const data = rep.data;
           const classeId = String(data?.classe?.id || classesExport[idx]?.id || '');
+          if (!poolsParClasse.has(classeId)) return;
           const nomClasse = data?.classe?.nom || classesExport[idx]?.nom || `Classe_${idx + 1}`;
           const titulaireClasse = data?.classe?.titulaire_nom || '';
           const affs = data?.affectations || [];
@@ -3059,22 +3065,14 @@ export default function EmploiDuTemps() {
           const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
           const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
           const poolsClasse = poolsParClasse.get(classeId) || [];
-          if (poolsClasse.length) {
-            poolsClasse.forEach((pool) => {
-              const site = nomSiteSafe(pool);
-              documents.push({
-                relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
-                html,
-                pdfOptions,
-              });
-            });
-          } else {
+          poolsClasse.forEach((pool) => {
+            const site = nomSiteSafe(pool);
             documents.push({
-              relativePath: `Classes/_Sans_pool/${sanitizeFilename(nomClasse)}.pdf`,
+              relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
               html,
               pdfOptions,
             });
-          }
+          });
         });
       }
 
