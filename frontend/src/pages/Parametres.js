@@ -295,6 +295,11 @@ export default function Parametres() {
 
   useEffect(() => { chargerProfil(); }, []);
   useEffect(() => { chargerMfaStatus(); chargerPasskeys(); chargerDonnees(); }, []);
+  useEffect(() => {
+    if (onglet !== 'mfa') return;
+    setSousOngletProfil('connexion');
+    navigate('/parametres?tab=profil', { replace: true });
+  }, [onglet, navigate]);
   useEffect(() => { if (isAdmin) { chargerEcole(); chargerProfs(); chargerMail(); chargerAccesProfs(); } }, [isAdmin]);
   useEffect(() => { if (onglet === 'ecole' && isAdmin) chargerEcole(); }, [onglet]);
   useEffect(() => {
@@ -973,6 +978,126 @@ export default function Parametres() {
                           )}
                         </div>
                       </div>
+
+                      {/* Double authentification */}
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginTop: 14 }}>
+                        <div style={{ padding: '11px 16px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Double authentification</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Code à 6 chiffres (Google Authenticator) pour sécuriser la connexion.</div>
+                          </div>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: 99,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: mfaEnabled ? '#dcfce7' : '#fef3c7',
+                            color: mfaEnabled ? '#166534' : '#92400e',
+                          }}>
+                            {mfaEnabled ? '2FA active' : '2FA désactivée'}
+                          </span>
+                        </div>
+                        <div style={{ padding: 16, background: 'white', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {msgMfa && (
+                            <div style={{
+                              ...styles.msgInfo,
+                              background: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#dcfce7' : '#eff6ff',
+                              color: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#166534' : '#1e40af',
+                            }}>
+                              {msgMfa}
+                            </div>
+                          )}
+
+                          {!mfaEnabled && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                              {!mfaSetupToken && (
+                                <button type="button" style={{ ...styles.btnSauver, background: '#0f766e', alignSelf: 'flex-start' }} onClick={handleGenererMfaSetup} disabled={mfaLoading}>
+                                  {mfaLoading ? '⏳ Génération...' : 'Générer le setup 2FA'}
+                                </button>
+                              )}
+
+                              {mfaSetupToken && (
+                                <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#f8fafc' }}>
+                                  <div style={{ fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>1) Scanner le QR code</div>
+                                  {mfaOtpAuthUrl && (
+                                    <img
+                                      alt="QR code MFA"
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mfaOtpAuthUrl)}`}
+                                      style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', marginBottom: 10 }}
+                                    />
+                                  )}
+                                  <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                                    En cas de problème de scan, clé manuelle:
+                                  </div>
+                                  <code style={{ display: 'inline-block', padding: '6px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
+                                    {mfaSecret}
+                                  </code>
+                                  <div style={{ fontWeight: 700, marginTop: 14, marginBottom: 8, color: '#0f172a' }}>2) Saisir le code à 6 chiffres</div>
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <input
+                                      style={{ ...styles.input, maxWidth: 180 }}
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]{6}"
+                                      maxLength={6}
+                                      value={mfaCode}
+                                      onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                      placeholder="123456"
+                                    />
+                                    <button type="button" style={{ ...styles.btnSauver, background: '#0f766e' }} onClick={handleActiverMfa} disabled={mfaLoading}>
+                                      {mfaLoading ? '⏳ Activation...' : 'Activer 2FA'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {mfaEnabled && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              <div style={{ fontSize: 13, color: '#334155', fontWeight: 700 }}>
+                                Codes de secours restants: {mfaBackupRemaining}
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <input
+                                  style={{ ...styles.input, maxWidth: 180 }}
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]{6}"
+                                  maxLength={6}
+                                  value={mfaCode}
+                                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                  placeholder="Code 2FA"
+                                />
+                                <button type="button" style={{ ...styles.btnSauver, background: '#b45309' }} onClick={handleRegenererBackupCodes} disabled={mfaLoading}>
+                                  {mfaLoading ? '⏳ Génération...' : 'Régénérer codes secours'}
+                                </button>
+                                <button type="button" style={{ ...styles.btnSauver, background: '#dc2626' }} onClick={handleDesactiverMfa} disabled={mfaLoading}>
+                                  {mfaLoading ? '⏳ Désactivation...' : 'Désactiver 2FA'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {mfaBackupCodes.length > 0 && (
+                            <div style={{ border: '1px solid #fde68a', borderRadius: 10, padding: 14, background: '#fffbeb' }}>
+                              <div style={{ fontWeight: 800, color: '#92400e', marginBottom: 8 }}>
+                                ⚠️ Codes de secours (affichés une seule fois)
+                              </div>
+                              <div style={{ fontSize: 12, color: '#92400e', marginBottom: 10 }}>
+                                Conservez-les hors ligne. Chaque code ne peut être utilisé qu'une seule fois.
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
+                                {mfaBackupCodes.map((c, i) => (
+                                  <code key={`backup-${i}`} style={{ padding: '8px 10px', background: 'white', border: '1px solid #fcd34d', borderRadius: 8, textAlign: 'center', fontWeight: 800 }}>
+                                    {c}
+                                  </code>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -1325,123 +1450,6 @@ export default function Parametres() {
                 </div>
                 <button type="submit" style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>Changer</button>
               </form>
-            </div>
-          )}
-
-          {onglet === 'mfa' && (
-            <div style={cardStyle}>
-              <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Double authentification (Google Authenticator)</h3>
-              <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
-                Activez un second facteur de connexion (code à 6 chiffres) pour sécuriser l'accès à votre compte.
-              </p>
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: 8,
-                marginBottom: 16,
-                fontWeight: 700,
-                background: mfaEnabled ? '#dcfce7' : '#fef3c7',
-                color: mfaEnabled ? '#166534' : '#92400e'
-              }}>
-                {mfaEnabled ? '2FA active' : '2FA désactivée'}
-              </div>
-              {msgMfa && (
-                <div style={{
-                  ...styles.msgInfo,
-                  background: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#dcfce7' : '#eff6ff',
-                  color: (/^(Double authentification|Nouveaux codes de secours)/.test(msgMfa)) ? '#166534' : '#1e40af'
-                }}>
-                  {msgMfa}
-                </div>
-              )}
-
-              {!mfaEnabled && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {!mfaSetupToken && (
-                    <button type="button" style={{ ...styles.btnSauver, background: '#0f766e' }} onClick={handleGenererMfaSetup} disabled={mfaLoading}>
-                      {mfaLoading ? '⏳ Génération...' : 'Générer le setup 2FA'}
-                    </button>
-                  )}
-
-                  {mfaSetupToken && (
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#f8fafc' }}>
-                      <div style={{ fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>1) Scanner le QR code</div>
-                      {mfaOtpAuthUrl && (
-                        <img
-                          alt="QR code MFA"
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mfaOtpAuthUrl)}`}
-                          style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', marginBottom: 10 }}
-                        />
-                      )}
-                      <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>
-                        En cas de problème de scan, clé manuelle:
-                      </div>
-                      <code style={{ display: 'inline-block', padding: '6px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
-                        {mfaSecret}
-                      </code>
-                      <div style={{ fontWeight: 700, marginTop: 14, marginBottom: 8, color: '#0f172a' }}>2) Saisir le code à 6 chiffres</div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <input
-                          style={{ ...styles.input, maxWidth: 180 }}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]{6}"
-                          maxLength={6}
-                          value={mfaCode}
-                          onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          placeholder="123456"
-                        />
-                        <button type="button" style={{ ...styles.btnSauver, background: '#0f766e' }} onClick={handleActiverMfa} disabled={mfaLoading}>
-                          {mfaLoading ? '⏳ Activation...' : 'Activer 2FA'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {mfaEnabled && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontSize: 13, color: '#334155', fontWeight: 700 }}>
-                    Codes de secours restants: {mfaBackupRemaining}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <input
-                      style={{ ...styles.input, maxWidth: 180 }}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      value={mfaCode}
-                      onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Code 2FA"
-                    />
-                    <button type="button" style={{ ...styles.btnSauver, background: '#b45309' }} onClick={handleRegenererBackupCodes} disabled={mfaLoading}>
-                      {mfaLoading ? '⏳ Génération...' : 'Régénérer codes secours'}
-                    </button>
-                    <button type="button" style={{ ...styles.btnSauver, background: '#dc2626' }} onClick={handleDesactiverMfa} disabled={mfaLoading}>
-                      {mfaLoading ? '⏳ Désactivation...' : 'Désactiver 2FA'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {mfaBackupCodes.length > 0 && (
-                <div style={{ marginTop: 14, border: '1px solid #fde68a', borderRadius: 10, padding: 14, background: '#fffbeb' }}>
-                  <div style={{ fontWeight: 800, color: '#92400e', marginBottom: 8 }}>
-                    ⚠️ Codes de secours (affichés une seule fois)
-                  </div>
-                  <div style={{ fontSize: 12, color: '#92400e', marginBottom: 10 }}>
-                    Conservez-les hors ligne. Chaque code ne peut être utilisé qu'une seule fois.
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
-                    {mfaBackupCodes.map((c, i) => (
-                      <code key={`backup-${i}`} style={{ padding: '8px 10px', background: 'white', border: '1px solid #fcd34d', borderRadius: 8, textAlign: 'center', fontWeight: 800 }}>
-                        {c}
-                      </code>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

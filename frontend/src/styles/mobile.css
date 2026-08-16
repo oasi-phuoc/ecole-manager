@@ -35,6 +35,17 @@
     min-height: auto !important;
   }
 
+  /* Accueil : marges gauche/droite plus serrées, sans le padding 36px desktop */
+  .layout-mobile .app-page-host > .page-accueil {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .layout-mobile .page-accueil > div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
   /* Titres : une ligne dédiée, texte qui ne déborde pas */
   .layout-mobile .app-page-host h1,
   .layout-mobile .app-page-host h2 {

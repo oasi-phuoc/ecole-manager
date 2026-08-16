@@ -55,7 +55,6 @@ const NOTES_ONGLETS = [
 
 const PARAMS_ONGLETS = [
   { key: 'profil',  label: 'Mon profil',              adminOnly: false },
-  { key: 'mfa',    label: 'Double authentification',  adminOnly: false },
   { key: 'ecole',  label: 'École',                    adminOnly: true },
   { key: 'mail',   label: 'Envoi des mails',          adminOnly: true },
   { key: 'acces',  label: 'Gestion des accès',        adminOnly: true },
