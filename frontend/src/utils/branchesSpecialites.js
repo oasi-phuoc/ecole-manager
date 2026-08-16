@@ -113,24 +113,36 @@ export const ordonnerGroupesSelectionnes = (groupes, idsSelectionnes) => {
   return ordered;
 };
 
-/** Reconstruit la liste d'ids : colonnes dans l'ordre, groupes sélectionnés dans leur ordre relatif. */
-export const reconstruireIdsDepuisColonnes = (groupes, idsSelectionnes) => {
-  const orderedSelected = ordonnerGroupesSelectionnes(groupes, idsSelectionnes);
-  const parCat = { principales: [], culturelles: [], autres: [] };
-  orderedSelected.forEach((g) => {
-    const cat = g.categorie || 'autres';
-    if (parCat[cat]) parCat[cat].push(g);
-  });
-  const flat = [
-    ...parCat.principales,
-    ...parCat.autres,
-    ...parCat.culturelles,
-  ];
+/**
+ * Liste complète d'une colonne : ordre de préférence sauvegardé, puis les options restantes.
+ * Toutes les options possibles sont toujours présentes (liste numérotée 1..n).
+ */
+export const listerGroupesColonneOrdonnes = (groupes, idsSelectionnes, cat) => {
+  const items = (groupesParCategorie(groupes)[cat] || []);
+  const orderedSelected = ordonnerGroupesSelectionnes(groupes, idsSelectionnes).filter((g) => g.categorie === cat);
+  const vus = new Set(orderedSelected.map((g) => g.id));
+  const reste = items.filter((g) => !vus.has(g.id));
+  return [...orderedSelected, ...reste];
+};
+
+/** Aplatit les listes de colonnes (ordre ORDRE_COLONNES_SPECIALITES) en ids. */
+export const idsDepuisListesColonnes = (listesParCat) => {
   const ids = [];
-  flat.forEach((g) => {
-    (g.ids || []).forEach((id) => {
-      if (!ids.includes(String(id))) ids.push(String(id));
+  ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
+    (listesParCat[cat] || []).forEach((g) => {
+      (g.ids || []).forEach((id) => {
+        if (!ids.includes(String(id))) ids.push(String(id));
+      });
     });
   });
   return ids;
+};
+
+/** Reconstruit la liste d'ids : toutes les options de chaque colonne, dans l'ordre de préférence. */
+export const reconstruireIdsDepuisColonnes = (groupes, idsSelectionnes) => {
+  const listes = {};
+  ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
+    listes[cat] = listerGroupesColonneOrdonnes(groupes, idsSelectionnes, cat);
+  });
+  return idsDepuisListesColonnes(listes);
 };

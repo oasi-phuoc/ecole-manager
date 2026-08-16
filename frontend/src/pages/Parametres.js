@@ -8,8 +8,8 @@ import { stickyPageChrome } from '../styles/pageShell';
 import {
   normaliserBranchesSpecialites,
   regrouperBranchesParCode,
-  groupesParCategorie,
-  ordonnerGroupesSelectionnes,
+  listerGroupesColonneOrdonnes,
+  idsDepuisListesColonnes,
   reconstruireIdsDepuisColonnes,
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
@@ -178,10 +178,10 @@ export default function Parametres() {
   const [donneesSalleEdit, setDonneesSalleEdit] = useState(null);
   const dragNiveauIdx = useRef(null);
   const dragLieuIdx = useRef(null);
-  const dragBrancheRef = useRef(null); // { cat, id }
+  const dragBrancheRef = useRef(null); // { cat, idx }
   const [dragOverNiveau, setDragOverNiveau] = useState(null);
   const [dragOverLieu, setDragOverLieu] = useState(null);
-  const [dragOverBranche, setDragOverBranche] = useState(null); // { cat, id }
+  const [dragOverBranche, setDragOverBranche] = useState(null); // { cat, idx }
   const navigate = useNavigate();
   const headers = {};
   const isAdmin = profil.role === 'admin';
@@ -308,43 +308,19 @@ export default function Parametres() {
     setDisposProfilDirty(true);
   };
 
-  /** Réordonne les spécialités sélectionnées d'une colonne (glisser-déposer). */
-  const reorderBrancheProfilDansColonne = (cat, fromId, toId) => {
-    if (!fromId || !toId || fromId === toId) return;
-    const groupes = branchesDisponiblesProfil;
-    const ordered = ordonnerGroupesSelectionnes(groupes, profil.branches_specialites);
-    const colItems = ordered.filter((g) => g.categorie === cat);
-    const fromIdx = colItems.findIndex((g) => g.id === fromId);
-    const toIdx = colItems.findIndex((g) => g.id === toId);
-    if (fromIdx < 0 || toIdx < 0) return;
-    const newCol = [...colItems];
-    const [moved] = newCol.splice(fromIdx, 1);
-    newCol.splice(toIdx, 0, moved);
-    const indices = [];
-    ordered.forEach((g, i) => { if (g.categorie === cat) indices.push(i); });
-    const newOrdered = [...ordered];
-    indices.forEach((globalIdx, k) => { newOrdered[globalIdx] = newCol[k]; });
-    const newIds = [];
-    newOrdered.forEach((g) => {
-      (g.ids || []).forEach((id) => {
-        if (!newIds.includes(String(id))) newIds.push(String(id));
-      });
+  /** Réordonne toutes les options d'une colonne (glisser-déposer, sans sélection préalable). */
+  const reorderBrancheProfilDansColonne = (cat, fromIdx, toIdx) => {
+    if (fromIdx === toIdx || fromIdx == null || toIdx == null || fromIdx < 0 || toIdx < 0) return;
+    const listes = {};
+    ORDRE_COLONNES_SPECIALITES.forEach((c) => {
+      listes[c] = listerGroupesColonneOrdonnes(branchesDisponiblesProfil, profil.branches_specialites, c);
     });
-    setProfil((p) => ({ ...p, branches_specialites: newIds }));
-  };
-
-  const toggleBrancheProfil = (groupe) => {
-    const curr = normaliserBranchesSpecialites(profil.branches_specialites);
-    const selected = (groupe.ids || []).some((id) => curr.includes(String(id)));
-    let newSel;
-    if (selected) {
-      newSel = curr.filter((x) => !(groupe.ids || []).includes(String(x)));
-    } else {
-      newSel = Array.from(new Set([...curr, ...(groupe.ids || [])].map(String)));
-    }
-    // Réordonner par colonnes après sélection
-    newSel = reconstruireIdsDepuisColonnes(branchesDisponiblesProfil, newSel);
-    setProfil((p) => ({ ...p, branches_specialites: newSel }));
+    const list = [...(listes[cat] || [])];
+    if (fromIdx >= list.length || toIdx >= list.length) return;
+    const [moved] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, moved);
+    listes[cat] = list;
+    setProfil((p) => ({ ...p, branches_specialites: idsDepuisListesColonnes(listes) }));
   };
 
   const chargerEcole = async () => {
@@ -900,102 +876,101 @@ export default function Parametres() {
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Spécialité(s) — {profil.niveau_prefere || 'Tous niveaux'}</label>
                         <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
-                          Sélectionnez vos branches puis glissez-déposez pour les classer : le numéro 1 est votre priorité la plus forte, puis 2, 3, etc.
+                          Glissez-déposez pour classer les branches : le numéro 1 est votre priorité la plus forte, puis 2, 3, etc.
                         </p>
                         {branchesDisponiblesProfil.length === 0 ? (
                           <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
                         ) : (
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                             {ORDRE_COLONNES_SPECIALITES.map((cat) => {
-                              const colonnes = groupesParCategorie(branchesDisponiblesProfil);
-                              const items = colonnes[cat] || [];
-                              const orderedSelected = ordonnerGroupesSelectionnes(branchesDisponiblesProfil, profil.branches_specialites);
-                              const rangGlobal = (groupe) => {
-                                const idx = orderedSelected.findIndex((g) => g.id === groupe.id);
-                                return idx >= 0 ? idx + 1 : null;
-                              };
-                              // Afficher d'abord les sélectionnées (ordre de préférence), puis le reste
-                              const selectedInCol = orderedSelected.filter((g) => g.categorie === cat);
-                              const selectedIds = new Set(selectedInCol.map((g) => g.id));
-                              const nonSelected = items.filter((g) => !selectedIds.has(g.id));
-                              const itemsAffiches = [...selectedInCol, ...nonSelected];
+                              const items = listerGroupesColonneOrdonnes(branchesDisponiblesProfil, profil.branches_specialites, cat);
+                              const ROW_H = 34;
                               return (
                                 <div key={cat} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, background: '#f8fafc', minHeight: 120 }}>
                                   <div style={{ fontSize: 12, fontWeight: 800, color: '#334155', marginBottom: 8 }}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {itemsAffiches.length === 0 ? (
-                                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune branche</div>
-                                    ) : itemsAffiches.map((b) => {
-                                      const bsArr = normaliserBranchesSpecialites(profil.branches_specialites);
-                                      const selected = (b.ids || []).some((id) => bsArr.includes(String(id)));
-                                      const rang = rangGlobal(b);
-                                      const isDragOver = dragOverBranche?.cat === cat && dragOverBranche?.id === b.id;
-                                      return (
-                                        <div
-                                          key={b.id}
-                                          draggable={selected}
-                                          onDragStart={() => {
-                                            if (!selected) return;
-                                            dragBrancheRef.current = { cat, id: b.id };
-                                          }}
-                                          onDragOver={(e) => {
-                                            if (!selected) return;
-                                            e.preventDefault();
-                                            setDragOverBranche({ cat, id: b.id });
-                                          }}
-                                          onDragLeave={() => {
-                                            if (dragOverBranche?.cat === cat && dragOverBranche?.id === b.id) {
-                                              setDragOverBranche(null);
-                                            }
-                                          }}
-                                          onDrop={() => {
-                                            const from = dragBrancheRef.current;
-                                            if (from && from.cat === cat && selected) {
-                                              reorderBrancheProfilDansColonne(cat, from.id, b.id);
-                                            }
-                                            setDragOverBranche(null);
-                                            dragBrancheRef.current = null;
-                                          }}
-                                          onDragEnd={() => {
-                                            setDragOverBranche(null);
-                                            dragBrancheRef.current = null;
-                                          }}
-                                          title={(b.noms || []).join(' / ')}
-                                          style={{
-                                            display: 'flex', alignItems: 'center', gap: 6,
-                                            padding: '6px 10px',
-                                            background: isDragOver ? '#e0e7ff' : (selected ? '#eef2ff' : 'white'),
-                                            borderRadius: 7,
-                                            border: '1px solid ' + (isDragOver ? '#6366f1' : (selected ? '#a5b4fc' : '#e2e8f0')),
-                                            cursor: selected ? 'grab' : 'pointer',
-                                          }}
-                                        >
-                                          {selected ? (
-                                            <span style={{ color: '#cbd5e1', fontSize: 14, flexShrink: 0 }}>⠿</span>
-                                          ) : (
-                                            <span style={{ width: 14, flexShrink: 0 }} />
-                                          )}
-                                          <span style={{
-                                            minWidth: 22, flexShrink: 0, fontWeight: 800, fontSize: 12,
-                                            color: selected ? '#4338ca' : '#cbd5e1',
-                                          }}>
-                                            {selected && rang != null ? `${rang}.` : '·'}
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => toggleBrancheProfil(b)}
+                                  {items.length === 0 ? (
+                                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune branche</div>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                                      {/* Numéros fixes hors des pastilles (liste 1, 2, 3…) */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+                                        {items.map((_, idx) => (
+                                          <div
+                                            key={`num-${cat}-${idx}`}
                                             style={{
-                                              flex: 1, border: 'none', background: 'transparent', cursor: 'pointer',
-                                              textAlign: 'left', fontWeight: 700, fontSize: 13,
-                                              color: selected ? '#334155' : '#64748b', padding: 0,
+                                              height: ROW_H,
+                                              minWidth: 22,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'flex-end',
+                                              fontWeight: 800,
+                                              fontSize: 12,
+                                              color: '#64748b',
+                                              lineHeight: 1,
                                             }}
                                           >
-                                            {b.labelComplet || b.label}
-                                          </button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                            {idx + 1}.
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                        {items.map((b, idx) => {
+                                          const isDragOver = dragOverBranche?.cat === cat && dragOverBranche?.idx === idx;
+                                          return (
+                                            <div
+                                              key={b.id}
+                                              draggable
+                                              onDragStart={() => { dragBrancheRef.current = { cat, idx }; }}
+                                              onDragOver={(e) => { e.preventDefault(); setDragOverBranche({ cat, idx }); }}
+                                              onDragLeave={() => {
+                                                if (dragOverBranche?.cat === cat && dragOverBranche?.idx === idx) {
+                                                  setDragOverBranche(null);
+                                                }
+                                              }}
+                                              onDrop={() => {
+                                                const from = dragBrancheRef.current;
+                                                if (from && from.cat === cat) {
+                                                  reorderBrancheProfilDansColonne(cat, from.idx, idx);
+                                                }
+                                                setDragOverBranche(null);
+                                                dragBrancheRef.current = null;
+                                              }}
+                                              onDragEnd={() => {
+                                                setDragOverBranche(null);
+                                                dragBrancheRef.current = null;
+                                              }}
+                                              title={(b.noms || []).join(' / ')}
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 6,
+                                                height: ROW_H,
+                                                boxSizing: 'border-box',
+                                                padding: '0 10px',
+                                                background: isDragOver ? '#e0e7ff' : '#f8fafc',
+                                                borderRadius: 7,
+                                                border: '1px solid ' + (isDragOver ? '#6366f1' : '#e2e8f0'),
+                                                cursor: 'grab',
+                                              }}
+                                            >
+                                              <span style={{ color: '#cbd5e1', fontSize: 14, flexShrink: 0 }}>⠿</span>
+                                              <span style={{
+                                                flex: 1,
+                                                fontWeight: 700,
+                                                fontSize: 13,
+                                                color: '#334155',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                              }}>
+                                                {b.labelComplet || b.label}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
