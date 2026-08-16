@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { stickyPageChrome } from '../styles/pageShell';
 import { getSessionUser, fetchSessionUser } from '../utils/session';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [stats, setStats] = useState({ classes: 0, eleves: 0 });
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
+  const isMobile = useIsMobile();
   const [agendaPerso, setAgendaPerso] = useState([]);
   const [observationDetail, setObservationDetail] = useState(null);
   const [memo, setMemo] = useState('');
@@ -55,13 +56,10 @@ export default function Dashboard() {
 
   const chargerStats = async () => {
     try {
-      const [cl, el, st, ap] = await Promise.all([
-        axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
+      const [st, ap] = await Promise.all([
         axios.get(API + '/statistiques', { headers }).catch(() => ({ data: null })),
         axios.get(API + '/calendrier/prof', { headers }).catch(() => ({ data: [] })),
       ]);
-      setStats({ classes: cl.data.length, eleves: el.data.length });
       setAgendaPerso(ap.data || []);
       if (st.data) {
         setDashboardInfo({
@@ -74,8 +72,6 @@ export default function Dashboard() {
     } catch (err) { console.error(err); }
   };
 
-  const isAdmin = user?.role === 'admin';
-
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
   const fmtDate = (raw) => {
@@ -86,10 +82,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.main}>
-        <div style={{ ...stickyPageChrome('#ede9fe'), marginBottom: 0, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
-        <div style={styles.topBar}>
+    <div className="page-accueil" style={styles.page}>
+      <div style={{ ...styles.main, ...(isMobile ? { padding: '12px 0' } : {}) }}>
+        <div style={{
+          ...stickyPageChrome('#ede9fe'),
+          marginBottom: 0,
+          ...(isMobile
+            ? { marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0 }
+            : { marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }),
+        }}>
+        <div style={{ ...styles.topBar, ...(isMobile ? { marginBottom: 16 } : {}) }}>
           <div>
             <h1 style={styles.greeting}>{salut}, {user?.prenom} 👋</h1>
             <p style={styles.subGreeting}>Bienvenue sur votre tableau de bord</p>
@@ -98,21 +100,6 @@ export default function Dashboard() {
             <span style={styles.dateBadge}>{new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           </div>
         </div>
-
-        {/* Stats */}
-        {isAdmin && (
-          <div style={styles.statsRow}>
-            {[
-              { label: 'Classes', value: stats.classes },
-              { label: 'Élèves', value: stats.eleves },
-            ].map(s => (
-              <div key={s.label} style={styles.statCard}>
-                <div style={styles.statValue}>{s.value}</div>
-                <div style={styles.statLabel}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
         </div>
 
         <div style={styles.sectionTitle}>Informations utiles</div>
