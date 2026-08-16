@@ -65,6 +65,56 @@ const trierClassesParNom = (liste) =>
   [...(liste || [])].sort((a, b) =>
     String(a.nom || '').localeCompare(String(b.nom || ''), 'fr', { numeric: true, sensitivity: 'base' })
   );
+const extraireNumeroClasse = (nom) => {
+  const m = String(nom || '').match(/(\d+)\s*$/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) ? n : null;
+};
+/** true = pattern « pair » (02, 04…) : démarre Après-midi / EPL aprem / APL aprem+mardi-jeudi. */
+const estClasseIndexPair = (cl, listeOrdonnee = []) => {
+  const num = extraireNumeroClasse(cl?.nom);
+  if (num != null) return num % 2 === 0;
+  const idx = listeOrdonnee.findIndex((c) => String(c.id) === String(cl?.id));
+  return idx >= 0 ? idx % 2 === 1 : false;
+};
+/**
+ * Proposition d'horaires demi-journée par niveau :
+ * - CSC/CAL/CFR : alternance matin/aprem inversée à chaque classe
+ * - EPL : toute la semaine matin OU aprem (alternance entre classes)
+ * - APL : base matin OU aprem + 2 jours complets espacés (lun/mer ou mar/jeu)
+ */
+const genererHorairesPropositionPourClasse = (cl, niveau, listeMemeNiveau = []) => {
+  const cid = cl?.id;
+  if (cid == null) return null;
+  const pair = estClasseIndexPair(cl, listeMemeNiveau);
+  const niv = String(niveau || '').toUpperCase();
+
+  if (niv === 'CSC' || niv === 'CAL' || niv === 'CFR') {
+    return JOURS.map((jour, i) => {
+      const periode = pair
+        ? (i % 2 === 0 ? 'Après-midi' : 'Matin')
+        : (i % 2 === 0 ? 'Matin' : 'Après-midi');
+      return { classe_id: cid, jour, periode };
+    });
+  }
+  if (niv === 'EPL') {
+    const periode = pair ? 'Après-midi' : 'Matin';
+    return JOURS.map((jour) => ({ classe_id: cid, jour, periode }));
+  }
+  if (niv === 'APL') {
+    const base = pair ? 'Après-midi' : 'Matin';
+    const extra = base === 'Matin' ? 'Après-midi' : 'Matin';
+    const joursComplets = pair ? ['Mardi', 'Jeudi'] : ['Lundi', 'Mercredi'];
+    const out = [];
+    JOURS.forEach((jour) => {
+      out.push({ classe_id: cid, jour, periode: base });
+      if (joursComplets.includes(jour)) out.push({ classe_id: cid, jour, periode: extra });
+    });
+    return out;
+  }
+  return null;
+};
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
 const formaterNomComplet = (s) => String(s || '').replace(/(^|\s)(\S*?)-\S+$/, '$1$2').trim();
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
@@ -1075,6 +1125,216 @@ export default function EmploiDuTemps() {
     setSallesDraftMap({});
     setHasSallesUnsaved(false);
   };
+
+  const resetAffectationsSallesSalleCourante = () => {
+    if (!isAdmin()) return;
+    if (!sallesLieuTravailId) {
+      showToast('Sélectionnez d\'abord un lieu de travail.', 'info');
+      return;
+    }
+    if (!salleSelectionnee) {
+      showToast('Sélectionnez d\'abord une salle à réinitialiser.', 'info');
+      return;
+    }
+    const ok = window.confirm(
+      `Vider les affectations de la salle « ${salleSelectionnee} » ?\n\n` +
+      'Le tableau sera remis à zéro. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+    const next = { ...sallesDraftMap };
+    (creneaux || []).forEach((cr) => {
+      const key = `${cr.jour}|${cr.periode}|${cr.ordre}`;
+      const saved = getClasseAffecteeSalleCelluleSaved(cr.jour, cr.periode, cr.ordre) || '';
+      if (saved) next[key] = '';
+      else delete next[key];
+    });
+    setSallesDraftMap(next);
+    setHasSallesUnsaved(Object.keys(next).length > 0);
+    showToast(`Salle « ${salleSelectionnee} » vidée. Pensez à sauvegarder.`);
+  };
+
+  const resetAffectationsSallesSite = async () => {
+    if (!isAdmin()) return;
+    if (!sallesLieuTravailId) {
+      showToast('Sélectionnez d\'abord un lieu de travail.', 'info');
+      return;
+    }
+    const sallesSite = new Set((sallesDisponiblesLieu || []).map((s) => String(s).trim()));
+    if (!sallesSite.size) {
+      showToast('Aucune salle configurée pour ce lieu.', 'error');
+      return;
+    }
+    const ok = window.confirm(
+      `Vider les affectations salles de tout le site « ${sallesLieuTravailId} » ?\n\n` +
+      'Toutes les salles du lieu seront libérées immédiatement.'
+    );
+    if (!ok) return;
+    try {
+      const coursAVider = (coursEmploiDuTemps || []).filter((c) =>
+        sallesSite.has(String((c.salle || '').trim()))
+      );
+      for (const c of coursAVider) {
+        await updateCoursSalle(c, null);
+      }
+      setSallesDraftMap({});
+      setHasSallesUnsaved(false);
+      await chargerTout();
+      showToast(`Affectations salles du site « ${sallesLieuTravailId} » vidées.`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Erreur lors de la réinitialisation des salles.', 'error');
+    }
+  };
+
+  const proposerAffectationsSallesSite = async () => {
+    if (!isAdmin()) return;
+    if (!sallesLieuTravailId) {
+      showToast('Sélectionnez d\'abord un lieu de travail.', 'info');
+      return;
+    }
+    const sallesSite = [...(sallesDisponiblesLieu || [])];
+    if (!sallesSite.length) {
+      showToast('Aucune salle configurée pour ce lieu.', 'error');
+      return;
+    }
+    if (!classesPourSalles.length) {
+      showToast('Aucune classe sur ce site.', 'error');
+      return;
+    }
+    const ok = window.confirm(
+      `Proposer les affectations salles pour tout le site « ${sallesLieuTravailId} » ?\n\n` +
+      'Les classes complémentaires (horaires en alternance) sont jumelées dans une même salle pour la remplir.\n' +
+      'Chaque classe n’est placée qu’une seule fois sur le site. Les affectations actuelles du site seront remplacées.'
+    );
+    if (!ok) return;
+
+    try {
+      const demisParClasse = new Map();
+      classesPourSalles.forEach((cl) => {
+        const set = new Set(
+          (classeHoraires || [])
+            .filter((h) => String(h.classe_id) === String(cl.id))
+            .map((h) => `${h.jour}|${h.periode}`)
+        );
+        demisParClasse.set(String(cl.id), set);
+      });
+
+      const classesAvecHoraires = classesPourSalles.filter((cl) => (demisParClasse.get(String(cl.id)) || new Set()).size > 0);
+      if (!classesAvecHoraires.length) {
+        showToast('Aucune classe n’a d’horaires matin/après-midi. Configurez d’abord Affectations → Classes.', 'error');
+        return;
+      }
+
+      const seChevauchent = (idA, idB) => {
+        const a = demisParClasse.get(String(idA)) || new Set();
+        const b = demisParClasse.get(String(idB)) || new Set();
+        for (const k of a) if (b.has(k)) return true;
+        return false;
+      };
+      const tailleUnion = (idA, idB) => {
+        const a = demisParClasse.get(String(idA)) || new Set();
+        const b = demisParClasse.get(String(idB)) || new Set();
+        return new Set([...a, ...b]).size;
+      };
+
+      // Jumelage : prioriser les paires sans chevauchement qui couvrent le plus de demi-journées
+      const restants = trierClassesParNom(classesAvecHoraires).map((c) => String(c.id));
+      const paires = [];
+      const seuls = [];
+      while (restants.length) {
+        const a = restants.shift();
+        let meilleur = null;
+        let meilleurScore = -1;
+        for (const b of restants) {
+          if (seChevauchent(a, b)) continue;
+          const score = tailleUnion(a, b);
+          if (score > meilleurScore) {
+            meilleurScore = score;
+            meilleur = b;
+          }
+        }
+        if (meilleur) {
+          paires.push([a, meilleur]);
+          const idx = restants.indexOf(meilleur);
+          if (idx >= 0) restants.splice(idx, 1);
+        } else {
+          seuls.push(a);
+        }
+      }
+
+      const groupes = [...paires, ...seuls.map((id) => [id])];
+      if (groupes.length > sallesSite.length) {
+        showToast(
+          `Pas assez de salles (${sallesSite.length}) pour ${groupes.length} groupe(s) de classes. Réduisez les classes ou ajoutez des salles.`,
+          'error'
+        );
+        return;
+      }
+
+      // Vider d'abord les salles du site
+      const sallesSiteSet = new Set(sallesSite.map((s) => String(s).trim()));
+      for (const c of (coursEmploiDuTemps || [])) {
+        if (sallesSiteSet.has(String((c.salle || '').trim()))) {
+          await updateCoursSalle(c, null);
+        }
+      }
+
+      // Recharger pour partir d'un état propre
+      let coursActuels = [];
+      try {
+        const r = await axios.get(API + '/emploi-du-temps', { headers });
+        coursActuels = Array.isArray(r.data) ? r.data : (r.data?.cours || []);
+      } catch (_) {
+        coursActuels = coursEmploiDuTemps || [];
+      }
+
+      const trouverCours = (liste, classeId, jour, debut, fin) =>
+        liste.find((c) =>
+          String(c.classe_id) === String(classeId) &&
+          c.jour === jour &&
+          normaliserHeureCreneau(c.heure_debut) === debut &&
+          normaliserHeureCreneau(c.heure_fin) === fin
+        );
+
+      let posees = 0;
+      for (let i = 0; i < groupes.length; i += 1) {
+        const salle = sallesSite[i];
+        const idsGroupe = groupes[i];
+        for (const cr of (creneaux || [])) {
+          const cleDemi = `${cr.jour}|${cr.periode}`;
+          const classeId = idsGroupe.find((id) => (demisParClasse.get(String(id)) || new Set()).has(cleDemi));
+          if (!classeId) continue;
+          const debut = normaliserHeureCreneau(cr.heure_debut);
+          const fin = normaliserHeureCreneau(cr.heure_fin);
+          const existant = trouverCours(coursActuels, classeId, cr.jour, debut, fin);
+          if (existant) {
+            await updateCoursSalle(existant, salle);
+            existant.salle = salle;
+          } else {
+            const cree = await axios.post(API + '/emploi-du-temps', {
+              classe_id: Number(classeId),
+              matiere_id: null,
+              prof_id: null,
+              jour: cr.jour,
+              heure_debut: cr.heure_debut,
+              heure_fin: cr.heure_fin,
+              salle,
+            }, { headers });
+            const row = cree?.data?.cours || cree?.data;
+            if (row) coursActuels.push(row);
+          }
+          posees += 1;
+        }
+      }
+
+      setSallesDraftMap({});
+      setHasSallesUnsaved(false);
+      await chargerTout();
+      showToast(`Proposition salles enregistrée (${posees} créneaux, ${groupes.length} salle(s)).`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Erreur lors de la proposition des salles.', 'error');
+    }
+  };
+
   const classesPourSallesIds = new Set(classesPourSalles.map(cl => String(cl.id)));
   const creneauxTheoriquesKeys = new Set(
     creneaux.map(c => `${c.jour}|${normaliserHeureCreneau(c.heure_debut)}|${normaliserHeureCreneau(c.heure_fin)}`)
@@ -1696,6 +1956,81 @@ export default function EmploiDuTemps() {
     setClasseHoraires(classeHorairesSaved || []);
     setHasClassesUnsaved(false);
   };
+
+  const resetAffectationsClassesTableau = () => {
+    if (!isAdmin()) return;
+    if (!poolAffId) {
+      showToast('Sélectionnez d\'abord un pool.', 'info');
+      return;
+    }
+    const ok = window.confirm(
+      'Vider les horaires (matin / après-midi) de toutes les classes de ce pool ?\n\n' +
+      'Le tableau sera remis à zéro. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+    );
+    if (!ok) return;
+    const idsPool = new Set(classesPool.map((c) => String(c.id)));
+    setClasseHoraires((prev) => (prev || []).filter((h) => !idsPool.has(String(h.classe_id))));
+    setHasClassesUnsaved(true);
+    showToast('Horaires des classes vidés. Pensez à sauvegarder.');
+  };
+
+  const proposerAffectationsClasses = () => {
+    if (!isAdmin()) return;
+    if (!poolAffId) {
+      showToast('Sélectionnez d\'abord un pool.', 'info');
+      return;
+    }
+    if (!classesPool.length) {
+      showToast('Aucune classe dans ce pool.', 'error');
+      return;
+    }
+    const ok = window.confirm(
+      'Générer une proposition d\'horaires pour les classes de ce pool ?\n\n' +
+      '• CSC / CAL / CFR : alternance matin/après-midi inversée entre classes (ex. 01 M-A-M-A-M, 02 A-M-A-M-A)\n' +
+      '• EPL : toute la semaine matin ou après-midi (alternance entre classes)\n' +
+      '• APL : base matin ou après-midi + 2 jours complets espacés (lun/mer ou mar/jeu)\n\n' +
+      'Les horaires actuels du pool seront remplacés. Cliquez ensuite sur Sauvegarder.'
+    );
+    if (!ok) return;
+
+    const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
+    const parNiveau = {};
+    classesPool.forEach((cl) => {
+      const niv = resoudreNiveauClasse(cl, fallbackNiveau) || 'AUTRE';
+      if (!parNiveau[niv]) parNiveau[niv] = [];
+      parNiveau[niv].push(cl);
+    });
+
+    const idsPool = new Set(classesPool.map((c) => String(c.id)));
+    const nouveaux = (classeHoraires || []).filter((h) => !idsPool.has(String(h.classe_id)));
+    const ignores = [];
+    let generes = 0;
+
+    Object.entries(parNiveau).forEach(([niv, liste]) => {
+      const listeOrdonnee = trierClassesParNom(liste);
+      listeOrdonnee.forEach((cl) => {
+        const horaires = genererHorairesPropositionPourClasse(cl, niv, listeOrdonnee);
+        if (!horaires) {
+          ignores.push(cl.nom || String(cl.id));
+          return;
+        }
+        nouveaux.push(...horaires);
+        generes += 1;
+      });
+    });
+
+    setClasseHoraires(nouveaux);
+    setHasClassesUnsaved(true);
+    if (ignores.length) {
+      showToast(
+        `Proposition générée pour ${generes} classe(s). Non gérées (à saisir à la main) : ${ignores.join(', ')}.`,
+        'info'
+      );
+    } else {
+      showToast(`Proposition générée pour ${generes} classe(s). Pensez à sauvegarder.`);
+    }
+  };
+
   const abandonnerBranchesNonSauvegardees = () => {
     setBranchesMatiereDraftMap({});
     setHasBranchesUnsaved(false);
@@ -3255,6 +3590,79 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'affectations' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {sousOngletAff === 'classes' && isAdmin() && (
+              <>
+                <button
+                  type="button"
+                  title="Réinitialiser les horaires des classes du pool"
+                  aria-label="Réinitialiser les horaires des classes du pool"
+                  onClick={resetAffectationsClassesTableau}
+                  style={styles.btnResetAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="1 4 1 10 7 10" />
+                    <polyline points="23 20 23 14 17 14" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Proposer les horaires des classes"
+                  aria-label="Proposer les horaires des classes"
+                  onClick={proposerAffectationsClasses}
+                  style={styles.btnProposeAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                    <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
+                    <path d="M5 15l.6 1.6L7 17.2l-1.4.6L5 19.4l-.6-1.6L3 17.2l1.4-.6L5 15z" />
+                  </svg>
+                </button>
+              </>
+            )}
+            {sousOngletAff === 'salles' && isAdmin() && (
+              <>
+                <button
+                  type="button"
+                  title="Réinitialiser la salle sélectionnée"
+                  aria-label="Réinitialiser la salle sélectionnée"
+                  onClick={resetAffectationsSallesSalleCourante}
+                  style={styles.btnResetAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="1 4 1 10 7 10" />
+                    <polyline points="23 20 23 14 17 14" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Réinitialiser toutes les salles du site"
+                  aria-label="Réinitialiser toutes les salles du site"
+                  onClick={resetAffectationsSallesSite}
+                  style={{...styles.btnResetAff, color:'#b45309', borderColor:'#fde68a', background:'#fffbeb'}}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 21h18" />
+                    <path d="M5 21V8l7-5 7 5v13" />
+                    <path d="M9 21v-6h6v6" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Proposer les salles du site"
+                  aria-label="Proposer les salles du site"
+                  onClick={proposerAffectationsSallesSite}
+                  style={styles.btnProposeAff}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                    <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
+                    <path d="M5 15l.6 1.6L7 17.2l-1.4.6L5 19.4l-.6-1.6L3 17.2l1.4-.6L5 15z" />
+                  </svg>
+                </button>
+              </>
+            )}
             {sousOngletAff === 'profs' && isAdmin() && (
               <>
                 <button
