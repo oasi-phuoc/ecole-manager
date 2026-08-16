@@ -3327,17 +3327,27 @@ export default function EmploiDuTemps() {
         }
       }
 
-      // —— Super-général : regroupe les sites au même premier mot (ex. SYNECOM-*) ——
-      setExportPdfProgress('Plannings super-généraux…');
+      // —— Super-général : uniquement s'il existe plusieurs sites distincts
+      //    partageant le même premier mot (ex. SYNECOM-CFR-* + SYNECOM-CSC-*) ——
       const groupesPrefixe = new Map();
       poolsExport.forEach((pool) => {
-        const label = prefixeSitePool(pool);
-        const key = label.toUpperCase();
-        if (!groupesPrefixe.has(key)) groupesPrefixe.set(key, { label, pools: [] });
-        groupesPrefixe.get(key).pools.push(pool);
+        const labelComplet = labelComposePool(pool);
+        const prefixe = prefixeSitePool(pool);
+        const key = prefixe.toUpperCase();
+        if (!groupesPrefixe.has(key)) {
+          groupesPrefixe.set(key, { label: prefixe, pools: [], labelsComplets: new Set() });
+        }
+        const g = groupesPrefixe.get(key);
+        g.pools.push(pool);
+        g.labelsComplets.add(String(labelComplet).trim().toUpperCase());
       });
-      for (const { label, pools: poolsGroupe } of groupesPrefixe.values()) {
-        if (poolsGroupe.length < 2) continue;
+      const groupesSuper = Array.from(groupesPrefixe.values()).filter(
+        (g) => g.labelsComplets.size >= 2
+      );
+      if (groupesSuper.length) {
+        setExportPdfProgress('Plannings super-généraux…');
+      }
+      for (const { label, pools: poolsGroupe } of groupesSuper) {
         const datas = poolsGroupe
           .map((p) => generalParPoolId.get(String(p.id)))
           .filter(Boolean);
