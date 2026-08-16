@@ -10,7 +10,6 @@ import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
   idsDepuisListesColonnes,
-  reconstruireIdsDepuisColonnes,
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
