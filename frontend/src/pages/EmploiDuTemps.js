@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
-import { demanderDossierExport, exporterDocumentsPdf, sanitizeFilename } from '../utils/exportPlanningsPdf';
+import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import CustomSelect from '../components/CustomSelect';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -2938,28 +2938,50 @@ export default function EmploiDuTemps() {
   const imprimerPlanningGeneralA3Semaine = async () => {
     try {
       if (!planningPoolId) return alert("Sélectionnez d'abord un pool.");
-      let data = planningGeneral;
-      if (!data) {
-        const url = API + '/planning/general?pool_id=' + encodeURIComponent(planningPoolId);
-        const rep = await axios.get(url, { headers });
-        data = rep.data;
-      }
+      // Même pipeline que l’export PDF « Général » (données fraîches + HTML A3 + rendu PDF)
+      const pool = pools.find((p) => String(p.id) === String(planningPoolId));
+      const url = API + '/planning/general?pool_id=' + encodeURIComponent(planningPoolId);
+      const rep = await axios.get(url, { headers });
+      const data = rep.data || {};
       const contenu = buildPlanningGeneralA3SemainePrintHtml({
-        creneaux: data?.creneaux || [],
-        profs: data?.profs || [],
-        affectations: data?.affectations || [],
-        dispos: data?.dispos || [],
-        titulaires: data?.titulaires || [],
+        creneaux: data.creneaux || [],
+        profs: data.profs || [],
+        affectations: data.affectations || [],
+        dispos: data.dispos || [],
+        titulaires: data.titulaires || [],
         poolId: planningPoolId,
       });
-      const poolNom = pools.find((p) => String(p.id) === String(planningPoolId))?.nom || '';
-      const titre = `Planning général — semaine${poolNom ? ` — ${poolNom}` : ''}`;
-      return openPrintWindow(titre, contenu, {
+      const siteBrut = String(pool?.site || pool?.nom || '').trim();
+      const siteComplet = (
+        lieuxTravailMap.get(normaliserLieuTravail(siteBrut))
+        || siteBrut
+        || pool?.nom
+        || 'Site'
+      ).trim();
+      const titre = `Planning général — semaine — ${siteComplet}`;
+      const html = buildHtmlPrintDoc(titre, contenu, {
         paysage: true,
         format: 'A3',
         a3Semaine: true,
         margin: '6mm 8mm',
       });
+      const blob = await htmlDocumentToPdfBlob(html, {
+        paysage: true,
+        format: 'a3',
+        orientation: 'landscape',
+      });
+      const pdfUrl = URL.createObjectURL(blob);
+      const win = window.open(pdfUrl, '_blank');
+      if (!win) {
+        // Fallback téléchargement si popup bloquée
+        const a = document.createElement('a');
+        a.href = pdfUrl;
+        a.download = `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression A3.");
     }
