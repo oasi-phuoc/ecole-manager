@@ -3716,52 +3716,69 @@ export default function EmploiDuTemps() {
           </div>
         )}
         {onglet === 'plannings' && (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto',flexWrap:'wrap'}}>
-            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
-            <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
-            {sousOngletPlanning === 'general' && (
-              <>
-                <button
-                  type="button"
-                  style={styles.btnImprimer}
-                  onClick={imprimerPlanningGeneralA3Semaine}
-                  title="Imprimer toute la semaine sur une page A3 paysage"
-                >
-                  Imprimer A3 semaine
-                </button>
-                {exportPdfEnCours ? (
-                  <div style={{display:'inline-flex',alignItems:'center',gap:6,maxWidth:'min(520px,70vw)'}}>
-                    <button
-                      type="button"
-                      style={{...styles.btnImprimer, opacity: 0.85, cursor: 'default', maxWidth: 380, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}
-                      disabled
-                      title={exportPdfProgress || 'Export…'}
-                    >
-                      {exportPdfProgress || 'Export…'}
-                    </button>
-                    <button
-                      type="button"
-                      style={{...styles.btnImprimer, background: '#fee2e2', borderColor: '#fecaca', color: '#991b1b'}}
-                      onClick={() => {
-                        exportPdfAnnulerRef.current = true;
-                        setExportPdfProgress('Annulation…');
-                      }}
-                      title="Annuler l'export"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                ) : (
+          <div style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(720px,78vw)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
+              <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
+              <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
+              {sousOngletPlanning === 'general' && (
+                <>
                   <button
                     type="button"
                     style={styles.btnImprimer}
-                    onClick={exporterTousPlanningsPdf}
-                    title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                    onClick={imprimerPlanningGeneralA3Semaine}
+                    title="Imprimer toute la semaine sur une page A3 paysage"
                   >
-                    Exporter tous les PDF
+                    Imprimer A3 semaine
                   </button>
-                )}
-              </>
+                  {exportPdfEnCours ? (
+                    <>
+                      <button
+                        type="button"
+                        style={{...styles.btnImprimer, opacity: 0.85, cursor: 'default'}}
+                        disabled
+                      >
+                        Export en cours…
+                      </button>
+                      <button
+                        type="button"
+                        style={{...styles.btnImprimer, background: '#fee2e2', borderColor: '#fecaca', color: '#991b1b'}}
+                        onClick={() => {
+                          exportPdfAnnulerRef.current = true;
+                          setExportPdfProgress('Annulation…');
+                        }}
+                        title="Annuler l'export"
+                      >
+                        Annuler
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      style={styles.btnImprimer}
+                      onClick={exporterTousPlanningsPdf}
+                      title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                    >
+                      Exporter tous les PDF
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {exportPdfEnCours && (
+              <div
+                title={exportPdfProgress || 'Export…'}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#64748b',
+                  lineHeight: 1.35,
+                  textAlign: 'right',
+                  width: '100%',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {exportPdfProgress || 'Export…'}
+              </div>
             )}
           </div>
         )}
