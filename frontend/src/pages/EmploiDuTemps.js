@@ -3013,9 +3013,12 @@ export default function EmploiDuTemps() {
       const pdfNomAvecSite = (site, suffixe) => `${site}_${sanitizeFilename(suffixe, 'doc')}.pdf`;
       const checkCancel = () => exportPdfAnnulerRef.current;
 
-      // Index : classeId -> pools, profId -> pools (classes actives uniquement)
+      // Index : classeId -> pools, profId -> pools (actifs uniquement)
       const classesActivesIds = new Set(
         (classes || []).filter((c) => c && c.actif !== false).map((c) => String(c.id))
+      );
+      const profsActifsIds = new Set(
+        (profs || []).filter((p) => p && p.actif !== false).map((p) => String(p.id))
       );
       const poolsParClasse = new Map();
       const poolsParProf = new Map();
@@ -3028,6 +3031,7 @@ export default function EmploiDuTemps() {
         });
         (pool.profs || []).forEach((p) => {
           const key = String(p.id);
+          if (!profsActifsIds.has(key)) return;
           if (!poolsParProf.has(key)) poolsParProf.set(key, []);
           poolsParProf.get(key).push(pool);
         });
@@ -3076,9 +3080,11 @@ export default function EmploiDuTemps() {
         });
       }
 
-      // —— Professeurs (sous-dossier par pool) ——
+      // —— Professeurs (sous-dossier par pool) : actifs + rattachés à un pool uniquement ——
       setExportPdfProgress('Chargement des professeurs…');
-      const profsExport = (profs || []).filter((p) => p && p.actif !== false);
+      const profsExport = (profs || []).filter(
+        (p) => p && p.actif !== false && poolsParProf.has(String(p.id))
+      );
       if (profsExport.length) {
         const reps = await Promise.all(
           profsExport.map((p) => axios.get(API + '/planning/prof/' + p.id, { headers }).catch(() => null))
@@ -3087,6 +3093,7 @@ export default function EmploiDuTemps() {
           if (!rep?.data) return;
           const data = rep.data;
           const profId = String(data?.prof?.id || profsExport[idx]?.id || '');
+          if (!poolsParProf.has(profId)) return;
           const nom = `${data?.prof?.prenom || profsExport[idx]?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || profsExport[idx]?.nom || '')}`.trim() || `Prof_${idx + 1}`;
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
@@ -3115,22 +3122,14 @@ export default function EmploiDuTemps() {
           const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
           const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
           const poolsProf = poolsParProf.get(profId) || [];
-          if (poolsProf.length) {
-            poolsProf.forEach((pool) => {
-              const site = nomSiteSafe(pool);
-              documents.push({
-                relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
-                html,
-                pdfOptions,
-              });
-            });
-          } else {
+          poolsProf.forEach((pool) => {
+            const site = nomSiteSafe(pool);
             documents.push({
-              relativePath: `Professeurs/_Sans_pool/${sanitizeFilename(nom)}.pdf`,
+              relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
               html,
               pdfOptions,
             });
-          }
+          });
         });
       }
 
