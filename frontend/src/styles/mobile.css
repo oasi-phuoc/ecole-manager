@@ -277,3 +277,32 @@
     overflow: auto;
   }
 }
+
+/* ——— Paramètres : mise en page mobile dédiée ——— */
+@media (max-width: 900px) {
+  .layout-mobile .page-parametres {
+    min-width: 0;
+  }
+
+  .layout-mobile .page-parametres input,
+  .layout-mobile .page-parametres select,
+  .layout-mobile .page-parametres textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .layout-mobile .page-parametres button {
+    max-width: 100%;
+  }
+
+  .layout-mobile .page-parametres h3 {
+    font-size: 17px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+
+  .layout-mobile .page-parametres .chip-tabs {
+    margin-bottom: 14px;
+  }
+}

@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   normaliserBranchesSpecialites,
   regrouperBranchesParCode,
@@ -193,6 +194,82 @@ export default function Parametres() {
   const navigate = useNavigate();
   const headers = {};
   const isAdmin = profil.role === 'admin';
+  const isMobile = useIsMobile();
+
+  const formGridStyle = isMobile
+    ? { display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }
+    : styles.formGrid;
+  const cardStyle = isMobile
+    ? { ...styles.card, padding: 16, borderRadius: 12 }
+    : styles.card;
+  const mainStyle = isMobile
+    ? { ...styles.main, padding: 0 }
+    : styles.main;
+  const chromeStyle = isMobile
+    ? { ...stickyPageChrome(), marginBottom: 12 }
+    : { ...stickyPageChrome(), marginBottom: 0, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 };
+
+  const barSousOnglets = (items, actif, onChange) => (
+    <div
+      className={isMobile ? 'chip-tabs' : undefined}
+      style={isMobile ? {
+        display: 'flex',
+        background: '#ede9fe',
+        borderRadius: 20,
+        padding: 3,
+        gap: 2,
+        marginBottom: 16,
+        width: '100%',
+        boxSizing: 'border-box',
+      } : {
+        display: 'flex',
+        gap: 0,
+        borderBottom: '2px solid #6366f1',
+        marginBottom: 0,
+      }}
+    >
+      {items.map(([key, label]) => {
+        const selected = actif === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            style={isMobile ? {
+              padding: '8px 14px',
+              borderRadius: 17,
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: selected ? 700 : 600,
+              fontSize: 13,
+              lineHeight: 1,
+              outline: 'none',
+              whiteSpace: 'nowrap',
+              background: selected ? '#6366f1' : 'transparent',
+              color: selected ? 'white' : '#6d28d9',
+              fontFamily: 'inherit',
+            } : {
+              padding: '9px 18px',
+              borderRadius: '10px 10px 0 0',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: 13,
+              lineHeight: '1',
+              outline: 'none',
+              position: 'relative',
+              zIndex: selected ? 2 : 1,
+              ...(selected
+                ? { background: '#6366f1', color: 'white', marginBottom: -2, boxShadow: '0 -1px 6px rgba(99,102,241,0.18)' }
+                : { background: '#ede9fe', color: '#5b21b6' }),
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const reorderNiveaux = async (from, to) => {
     if (from === to) return;
@@ -752,21 +829,21 @@ export default function Parametres() {
   const COULEURS = { profil: '#1a73e8', mdp: '#ea4335', mfa: '#0f766e', ecole: '#34a853', mail: '#7c3aed', acces: '#ff9800', danger: '#dc2626' };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.main}>
-        <div style={{ ...stickyPageChrome(), marginBottom: 0, marginLeft: -36, marginRight: -36, paddingLeft: 36, paddingRight: 36 }}>
-        <div style={styles.topBar}>
-          <h1 style={styles.titre}>Paramètres</h1>
-          <div style={styles.topBarRight}>
+    <div className="page-parametres" style={styles.page}>
+      <div style={mainStyle}>
+        <div style={chromeStyle}>
+        <div style={{ ...styles.topBar, marginBottom: isMobile ? 12 : 24, alignItems: isMobile ? 'stretch' : 'center' }}>
+          <h1 style={{ ...styles.titre, fontSize: isMobile ? 20 : 22 }}>Paramètres</h1>
+          <div style={{ ...styles.topBarRight, width: isMobile ? '100%' : undefined, flexWrap: 'wrap' }}>
             {onglet === 'profil' && (<>
               {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Profil mis à jour.</span>}
               {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <button type="submit" form="form-profil" style={styles.btnSauverHeader}>Sauvegarder</button>
+              <button type="submit" form="form-profil" style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</button>
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
               {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Paramètres mis à jour.</span>}
               {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <button type="submit" form="form-ecole" style={styles.btnSauverHeader}>Sauvegarder</button>
+              <button type="submit" form="form-ecole" style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</button>
             </>)}
           </div>
         </div>
@@ -774,21 +851,20 @@ export default function Parametres() {
         <div style={styles.content}>
 
           {onglet === 'profil' && (
-            <div style={styles.card}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <h3 style={{ ...styles.cardTitre, margin: 0 }}>Mon profil</h3>
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                <h3 style={{ ...styles.cardTitre, margin: 0, fontSize: isMobile ? 17 : 20 }}>Mon profil</h3>
                 <div style={styles.roleTag}>{profil.role}</div>
               </div>
 
-              {/* Sous-onglets profil */}
-              <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
-                {[['connexion','Informations de connexion'],['personnelles','Informations personnelles'],['professionnelles','Informations professionnelles'],['desideratas','Désidératas']].map(([key, label]) => (
-                  <button key={key} onClick={() => setSousOngletProfil(key)} style={{ padding: '9px 18px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: '1', outline: 'none', position: 'relative', zIndex: sousOngletProfil === key ? 2 : 1, ...(sousOngletProfil === key ? { background: '#6366f1', color: 'white', marginBottom: -2, boxShadow: '0 -1px 6px rgba(99,102,241,0.18)' } : { background: '#ede9fe', color: '#5b21b6' }) }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ paddingTop: 20 }}>
+              {barSousOnglets(
+                isMobile
+                  ? [['connexion', 'Connexion'], ['personnelles', 'Perso'], ['professionnelles', 'Pro'], ['desideratas', 'Désidératas']]
+                  : [['connexion', 'Informations de connexion'], ['personnelles', 'Informations personnelles'], ['professionnelles', 'Informations professionnelles'], ['desideratas', 'Désidératas']],
+                sousOngletProfil,
+                setSousOngletProfil
+              )}
+              <div style={{ paddingTop: isMobile ? 0 : 20 }}>
                 {msgProfil === 'success' && <div style={styles.msgSuccess}>Profil mis à jour.</div>}
                 {msgProfil === 'error' && <div style={styles.msgError}>Erreur lors de la mise à jour</div>}
 
@@ -797,7 +873,7 @@ export default function Parametres() {
                   {/* Connexion */}
                   {sousOngletProfil === 'connexion' && (
                     <div>
-                      <div style={{...styles.formGrid, marginBottom: 20}}>
+                      <div style={{...formGridStyle, marginBottom: 20}}>
                         <div style={{...styles.formChamp, gridColumn:'1/-1'}}>
                           <label style={styles.label}>Email *</label>
                           <input style={styles.input} type="email" required value={profil.email} onChange={e => setProfil({ ...profil, email: e.target.value })} />
@@ -902,7 +978,7 @@ export default function Parametres() {
 
                   {/* Informations personnelles */}
                   {sousOngletProfil === 'personnelles' && (
-                    <div style={{...styles.formGrid, marginBottom: 20}}>
+                    <div style={{...formGridStyle, marginBottom: 20}}>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>NOM *</label>
                         <input style={styles.input} type="text" required value={profil.nom} onChange={e => setProfil({ ...profil, nom: e.target.value.toUpperCase() })} placeholder="DUPONT" />
@@ -959,7 +1035,7 @@ export default function Parametres() {
 
                   {/* Informations professionnelles */}
                   {sousOngletProfil === 'professionnelles' && (
-                    <div style={{...styles.formGrid, marginBottom: 20}}>
+                    <div style={{...formGridStyle, marginBottom: 20}}>
                       {[
                         {label:"Taux d'activité (%)", value: profil.taux_activite ?? '—'},
                         {label:"Périodes / semaine", value: profil.periodes_semaine ?? '—'},
@@ -1013,7 +1089,7 @@ export default function Parametres() {
                         {branchesDisponiblesProfil.length === 0 ? (
                           <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
                         ) : (
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                             {ORDRE_COLONNES_SPECIALITES.map((cat) => {
                               const items = listerGroupesColonneOrdonnes(branchesDisponiblesProfil, profil.branches_specialites, cat);
                               const ROW_H = 34;
@@ -1210,7 +1286,7 @@ export default function Parametres() {
                       </div>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Priorité</label>
-                        <div style={{display:'flex',gap:8,marginTop:4}}>
+                        <div style={{display:'flex',gap:8,marginTop:4,flexWrap:'wrap'}}>
                           {[['niveau','Niveau'],['lieu','Lieu de travail'],['aucune','Aucune priorité']].map(([val,lbl]) => (
                             <button key={val} type="button"
                               onClick={() => setProfil({...profil, priorite_pref: val})}
@@ -1229,8 +1305,8 @@ export default function Parametres() {
           )}
 
           {onglet === 'mdp' && (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitre}>Changer le mot de passe</h3>
+            <div style={cardStyle}>
+              <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Changer le mot de passe</h3>
               {msgMdp === 'success' && <div style={styles.msgSuccess}>Mot de passe modifié.</div>}
               {msgMdp === 'error' && <div style={styles.msgError}>Ancien mot de passe incorrect</div>}
               {msgMdp === 'mismatch' && <div style={styles.msgError}>Les mots de passe ne correspondent pas</div>}
@@ -1253,8 +1329,8 @@ export default function Parametres() {
           )}
 
           {onglet === 'mfa' && (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitre}>Double authentification (Google Authenticator)</h3>
+            <div style={cardStyle}>
+              <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Double authentification (Google Authenticator)</h3>
               <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
                 Activez un second facteur de connexion (code à 6 chiffres) pour sécuriser l'accès à votre compte.
               </p>
@@ -1370,24 +1446,21 @@ export default function Parametres() {
           )}
 
           {onglet === 'ecole' && isAdmin && (
-            <div style={styles.card}>
-              <h3 style={{ ...styles.cardTitre, marginBottom: 16 }}>Paramètres de l'école</h3>
+            <div style={cardStyle}>
+              <h3 style={{ ...styles.cardTitre, marginBottom: 16, fontSize: isMobile ? 17 : 20 }}>Paramètres de l'école</h3>
 
-              {/* Sous-onglets */}
-              <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #6366f1', marginBottom: 0 }}>
-                {[['adresse','Adresse'],['responsables','Responsables'],['structure','Structure'],['horaires','Horaires']].map(([key, label]) => (
-                  <button key={key} onClick={() => setSousOngletEcole(key)} style={{ padding: '9px 18px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: '1', outline: 'none', position: 'relative', zIndex: sousOngletEcole === key ? 2 : 1, ...(sousOngletEcole === key ? { background: '#6366f1', color: 'white', marginBottom: -2, boxShadow: '0 -1px 6px rgba(99,102,241,0.18)' } : { background: '#ede9fe', color: '#5b21b6' }) }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ paddingTop: sousOngletEcole === 'horaires' ? 0 : 20 }}>
+              {barSousOnglets(
+                [['adresse', 'Adresse'], ['responsables', 'Responsables'], ['structure', 'Structure'], ['horaires', 'Horaires']],
+                sousOngletEcole,
+                setSousOngletEcole
+              )}
+              <div style={{ paddingTop: (isMobile || sousOngletEcole === 'horaires') ? 0 : 20 }}>
 
               <form id="form-ecole" onSubmit={handleSauverEcole}>
 
                 {/* Section Adresse */}
                 {sousOngletEcole === 'adresse' && <div>
-                <div style={styles.formGrid}>
+                <div style={formGridStyle}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={styles.label}>Nom de l'école</label>
                     <input style={styles.input} type="text" value={ecole.nom_ecole || ''} onChange={e => setEcole({ ...ecole, nom_ecole: e.target.value })} />
@@ -1404,7 +1477,7 @@ export default function Parametres() {
                     <label style={styles.label}>Email</label>
                     <input style={styles.input} type="email" value={ecole.email || ''} onChange={e => setEcole({ ...ecole, email: e.target.value })} />
                   </div>
-                  <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '15px' }}>
+                  <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: '15px' }}>
                     <div style={styles.formChamp}>
                       <label style={styles.label}>Année scolaire</label>
                       <input style={styles.input} type="text" value={ecole.annee_scolaire || ''} onChange={e => setEcole({ ...ecole, annee_scolaire: e.target.value })} placeholder="2025-2026" />
@@ -1654,8 +1727,8 @@ export default function Parametres() {
                         setDonneesLieuEdit(null);
                         chargerDonnees();
                       } catch(err) { alert(err.response?.data?.message || err.message); }
-                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom (ex: BOTZA)" value={donneesLieuForm.nom} onChange={e => setDonneesLieuForm(f => ({ ...f, nom: e.target.value }))} required />
+                    }} style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px', minWidth: isMobile ? 0 : undefined }} placeholder="Nom (ex: BOTZA)" value={donneesLieuForm.nom} onChange={e => setDonneesLieuForm(f => ({ ...f, nom: e.target.value }))} required />
                       <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesLieuEdit ? '✓' : '+'}</button>
                       {donneesLieuEdit && <button type="button" onClick={() => { setDonneesLieuEdit(null); setDonneesLieuForm({ nom: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
                     </form>
@@ -1692,9 +1765,9 @@ export default function Parametres() {
                         setDonneesSalleEdit(null);
                         chargerDonnees();
                       } catch(err) { alert(err.response?.data?.message || err.message); }
-                    }} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px' }} placeholder="Nom salle" value={donneesSalleForm.nom} onChange={e => setDonneesSalleForm(f => ({ ...f, nom: e.target.value }))} required />
-                      <select style={{ ...styles.input, minWidth: 130, margin: 0, padding: '7px 8px' }} value={donneesSalleForm.lieu_travail_id} onChange={e => setDonneesSalleForm(f => ({ ...f, lieu_travail_id: e.target.value }))} required>
+                    }} style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+                      <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px', minWidth: isMobile ? '100%' : undefined }} placeholder="Nom salle" value={donneesSalleForm.nom} onChange={e => setDonneesSalleForm(f => ({ ...f, nom: e.target.value }))} required />
+                      <select style={{ ...styles.input, minWidth: isMobile ? 0 : 130, flex: isMobile ? 1 : undefined, margin: 0, padding: '7px 8px' }} value={donneesSalleForm.lieu_travail_id} onChange={e => setDonneesSalleForm(f => ({ ...f, lieu_travail_id: e.target.value }))} required>
                         <option value="">Lieu</option>
                         {lieuxTravailDB.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
                       </select>
@@ -1741,28 +1814,52 @@ export default function Parametres() {
                 return (
                   <div>
                     {/* Sous-onglets style affectations EDT */}
-                    <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', marginBottom: 0, marginTop: 0 }}>
+                    <div
+                      className={isMobile ? 'chip-tabs' : undefined}
+                      style={isMobile ? {
+                        display: 'flex',
+                        background: '#ede9fe',
+                        borderRadius: 20,
+                        padding: 3,
+                        gap: 2,
+                        marginBottom: 12,
+                        width: '100%',
+                      } : { display: 'flex', gap: 0, alignItems: 'flex-start', marginBottom: 0, marginTop: 0 }}
+                    >
                       {allTabs.map(item => {
                         const actif = (actifKey === item.key);
                         return (
-                          <button key={item.key} type="button" onClick={() => initLieu(item.key)} style={{ padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: actif ? '#4f46e5' : '#e0e7ff', color: actif ? 'white' : '#3730a3', lineHeight: 1, position: 'relative', zIndex: actif ? 2 : 1, outline: 'none', minWidth: 100, textAlign: 'center', ...(actif ? { marginTop: -1, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' } : {}) }}>
+                          <button key={item.key} type="button" onClick={() => initLieu(item.key)} style={isMobile ? {
+                            padding: '8px 14px',
+                            borderRadius: 17,
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: actif ? 700 : 600,
+                            fontSize: 13,
+                            background: actif ? '#6366f1' : 'transparent',
+                            color: actif ? 'white' : '#6d28d9',
+                            lineHeight: 1,
+                            outline: 'none',
+                            whiteSpace: 'nowrap',
+                            fontFamily: 'inherit',
+                          } : { padding: '9px 14px', borderRadius: '0 0 10px 10px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: actif ? '#4f46e5' : '#e0e7ff', color: actif ? 'white' : '#3730a3', lineHeight: 1, position: 'relative', zIndex: actif ? 2 : 1, outline: 'none', minWidth: 100, textAlign: 'center', ...(actif ? { marginTop: -1, boxShadow: '0 4px 8px rgba(79,70,229,0.22)' } : {}) }}>
                             {item.nom}
                           </button>
                         );
                       })}
                     </div>
-                    <div style={{ paddingTop: 20, display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+                    <div style={{ paddingTop: isMobile ? 8 : 20, display: 'flex', gap: isMobile ? 20 : 40, flexWrap: 'wrap' }}>
                       {[['matin', 'Matin'], ['apresmidi', 'Après-midi']].map(([bloc, titre]) => (
-                        <div key={bloc} style={{ minWidth: 260 }}>
+                        <div key={bloc} style={{ minWidth: isMobile ? 0 : 260, width: isMobile ? '100%' : undefined }}>
                           <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b', marginBottom: 12 }}>{titre}</div>
                           {(horaireActif[bloc] || []).map((p, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                              <span style={{ width: 44, fontSize: 13, color: p.label === 'Pause' ? '#94a3b8' : '#334155', fontWeight: p.label === 'Pause' ? 400 : 600 }}>{p.label}</span>
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, minWidth: 0 }}>
+                              <span style={{ width: 44, flexShrink: 0, fontSize: 13, color: p.label === 'Pause' ? '#94a3b8' : '#334155', fontWeight: p.label === 'Pause' ? 400 : 600 }}>{p.label}</span>
                               <input type="time" value={p.debut} onChange={e => updatePeriode(bloc, idx, 'debut', e.target.value)}
-                                style={{ ...styles.input, width: 90, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
-                              <span style={{ color: '#94a3b8', fontSize: 13 }}>→</span>
+                                style={{ ...styles.input, width: isMobile ? 'auto' : 90, flex: isMobile ? 1 : undefined, minWidth: 0, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
+                              <span style={{ color: '#94a3b8', fontSize: 13, flexShrink: 0 }}>→</span>
                               <input type="time" value={p.fin} onChange={e => updatePeriode(bloc, idx, 'fin', e.target.value)}
-                                style={{ ...styles.input, width: 90, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
+                                style={{ ...styles.input, width: isMobile ? 'auto' : 90, flex: isMobile ? 1 : undefined, minWidth: 0, padding: '5px 8px', margin: 0, textAlign: 'center' }} />
                             </div>
                           ))}
                         </div>
@@ -1777,8 +1874,8 @@ export default function Parametres() {
           )}
 
           {onglet === 'mail' && isAdmin && (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitre}>Envoi des mails (admin)</h3>
+            <div style={cardStyle}>
+              <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Envoi des mails (admin)</h3>
               <p style={{ color: '#64748b', fontSize: 14, marginBottom: 16, lineHeight: 1.6 }}>
                 Pour un compte Outlook avec double authentification, utilisez un <b>mot de passe d'application</b>
                 (et non votre mot de passe normal).
@@ -1787,7 +1884,7 @@ export default function Parametres() {
               {msgMail && msgMail !== 'success' && <div style={styles.msgError}>{msgMail === 'error' ? "Erreur lors de l'enregistrement" : msgMail}</div>}
 
               <form onSubmit={handleSauverMail}>
-                <div style={styles.formGrid}>
+                <div style={formGridStyle}>
                   <div style={{ ...styles.formChamp, gridColumn: '1/-1' }}>
                     <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span>Activer l'envoi d'emails</span>
@@ -1859,7 +1956,7 @@ export default function Parametres() {
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
                 <h4 style={{ margin: '0 0 12px', fontSize: 16, color: '#111827' }}>Tester l'envoi</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: 10, alignItems: 'end' }}>
                   <div style={styles.formChamp}>
                     <label style={styles.label}>Email destinataire test</label>
                     <input style={styles.input} type="email" value={mailTestTo} onChange={e => setMailTestTo(e.target.value)} placeholder="votre.email@exemple.ch" />
@@ -1878,23 +1975,16 @@ export default function Parametres() {
           )}
 
           {onglet === 'acces' && isAdmin && (
-            <div style={styles.card}>
-              <h3 style={styles.cardTitre}>Gestion des accès</h3>
+            <div style={cardStyle}>
+              <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Gestion des accès</h3>
 
-              {/* Onglets de rôle */}
-              <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid #6366f1' }}>
-                {[
-                  { key: 'employes_admin', label: 'Employés admin.' },
-                  { key: 'professeurs',    label: 'Professeurs' },
-                  { key: 'responsables',   label: 'Responsables' },
-                  { key: 'admins',         label: 'Administrateurs' },
-                ].map(r => (
-                  <button key={r.key} onClick={() => { setAccesRoleOnglet(r.key); setModuleOuvert(null); }}
-                    style={{ padding: '9px 18px', border: 'none', borderRadius: '10px 10px 0 0', background: accesRoleOnglet === r.key ? '#6366f1' : '#ede9fe', color: accesRoleOnglet === r.key ? 'white' : '#5b21b6', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginBottom: accesRoleOnglet === r.key ? -2 : 0, zIndex: accesRoleOnglet === r.key ? 2 : 1, position: 'relative' }}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
+              {barSousOnglets(
+                isMobile
+                  ? [['employes_admin', 'Employés'], ['professeurs', 'Profs'], ['responsables', 'Resp.'], ['admins', 'Admins']]
+                  : [['employes_admin', 'Employés admin.'], ['professeurs', 'Professeurs'], ['responsables', 'Responsables'], ['admins', 'Administrateurs']],
+                accesRoleOnglet,
+                (key) => { setAccesRoleOnglet(key); setModuleOuvert(null); }
+              )}
 
               {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>Accès mis à jour.</div>}
               {msgAccesProfs === 'error' && <div style={styles.msgError}>Erreur</div>}
@@ -1926,7 +2016,7 @@ export default function Parametres() {
                       <div style={{ background: 'white', padding: '4px 14px 10px' }}>
                         {m.onglets.map((o, i) => (
                           <div key={o.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < m.onglets.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                            <span style={{ fontSize: 13, color: '#334155' }}>{o.label}</span>
+                            <span style={{ fontSize: 13, color: '#334155', minWidth: 0, flex: 1, paddingRight: 8, lineHeight: 1.35 }}>{o.label}</span>
                             <div style={styles.toggle} onClick={e => { e.stopPropagation(); toggleOnglet(m, o.key); }}>
                               <span style={{ ...styles.toggleSlider, background: ca[o.key] ? '#34a853' : '#ccc' }}>
                                 <span style={{ ...styles.toggleThumb, left: ca[o.key] ? '22px' : '2px' }} />
@@ -1951,8 +2041,8 @@ export default function Parametres() {
             </div>
           )}
           {onglet === 'danger' && isAdmin && (
-            <div style={{...styles.card,border:'2px solid #fecaca'}}>
-              <h3 style={{...styles.cardTitre,color:'#dc2626'}}>Réinitialisation</h3>
+            <div style={{...cardStyle,border:'2px solid #fecaca'}}>
+              <h3 style={{...styles.cardTitre,color:'#dc2626', fontSize: isMobile ? 17 : 20}}>Réinitialisation</h3>
 
               <div style={{marginTop:4,paddingTop:0}}>
                 <h4 style={{margin:'0 0 10px',color:'#c2410c',fontSize:18}}>Réinitialisation pour la rentrée scolaire</h4>
@@ -1979,7 +2069,7 @@ export default function Parametres() {
 
                 {resetRentreeEtape === 0 && (
                   <button onClick={() => setResetRentreeEtape(1)}
-                    style={{padding:'12px 24px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14}}>
+                    style={{padding:'12px 24px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:14,width: isMobile ? '100%' : undefined}}>
                     Lancer la réinitialisation pour la rentrée scolaire
                   </button>
                 )}
@@ -1988,9 +2078,9 @@ export default function Parametres() {
                   <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:10,padding:20}}>
                     <p style={{fontWeight:700,color:'#c2410c',marginBottom:16}}>⚠️ Première confirmation — Continuer ?</p>
                     <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Cette action supprime les données scolaires listées ci-dessus.</p>
-                    <div style={{display:'flex',gap:10}}>
-                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                      <button onClick={() => setResetRentreeEtape(2)} style={{padding:'10px 20px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700}}>Oui, continuer</button>
+                    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
+                      <button onClick={() => setResetRentreeEtape(2)} style={{padding:'10px 20px',background:'#ea580c',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,flex: isMobile ? '1 1 140px' : undefined}}>Oui, continuer</button>
                     </div>
                   </div>
                 )}
@@ -1999,9 +2089,9 @@ export default function Parametres() {
                   <div style={{background:'#fff7ed',border:'2px solid #c2410c',borderRadius:10,padding:20}}>
                     <p style={{fontWeight:800,color:'#c2410c',marginBottom:16,fontSize:15}}>🚨 Dernière confirmation — Réinitialisation de rentrée ?</p>
                     <p style={{fontSize:13,color:'#7c2d12',marginBottom:16}}>Les données de rentrée seront supprimées immédiatement.</p>
-                    <div style={{display:'flex',gap:10}}>
-                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600}}>Annuler</button>
-                      <button onClick={handleResetRentree} style={{padding:'10px 20px',background:'#9a3412',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800}}>⚠️ SUPPRIMER LES DONNÉES DE RENTRÉE</button>
+                    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                      <button onClick={() => setResetRentreeEtape(0)} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
+                      <button onClick={handleResetRentree} style={{padding:'10px 20px',background:'#9a3412',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:800,flex: isMobile ? '1 1 100%' : undefined}}>⚠️ SUPPRIMER LES DONNÉES DE RENTRÉE</button>
                     </div>
                   </div>
                 )}
