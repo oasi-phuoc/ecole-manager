@@ -772,6 +772,13 @@ export default function EmploiDuTemps() {
     if (niveauClassePlanning) return nivM === niveauClassePlanning;
     return niveauxPoolPlanning.length > 0 && niveauxPoolPlanning.includes(nivM);
   });
+  /** Branche « Soutien » : gérée via type_special, pas via le suivi des branches à placer. */
+  const estMatiereSoutien = (m) => {
+    const nom = String(m?.nom || '').trim().toLowerCase();
+    const courte = String(m?.designation_courte || '').trim().toLowerCase();
+    return nom === 'soutien' || courte === 'soutien';
+  };
+  const matieresPourSuiviBranches = matieresPourPlanningClasse.filter((m) => !estMatiereSoutien(m));
   const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
     const key = String(a.id);
@@ -803,7 +810,7 @@ export default function EmploiDuTemps() {
     if (!cr) return false;
     return classeAHorairePlanning(cr.jour, cr.periode);
   });
-  const suiviBranchesClasse = planningClasse ? matieresPourPlanningClasse.map(m => {
+  const suiviBranchesClasse = planningClasse ? matieresPourSuiviBranches.map(m => {
     const affectees = planningClasseAffectationsActives.filter(a => String(a.matiere_id) === String(m.id)).length;
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
@@ -1761,9 +1768,9 @@ export default function EmploiDuTemps() {
     if (!ok) return;
 
     const requis = Object.fromEntries(
-      matieresPourPlanningClasse.map((m) => [String(m.id), parseInt(m.periodes_semaine, 10) || 0])
+      matieresPourSuiviBranches.map((m) => [String(m.id), parseInt(m.periodes_semaine, 10) || 0])
     );
-    const compte = Object.fromEntries(matieresPourPlanningClasse.map((m) => [String(m.id), 0]));
+    const compte = Object.fromEntries(matieresPourSuiviBranches.map((m) => [String(m.id), 0]));
     const assignment = {}; // affId -> matiereId
     const byJour = {};
     slots.forEach((s) => {
@@ -1772,8 +1779,8 @@ export default function EmploiDuTemps() {
       byJour[j].push(s);
     });
 
-    const matiereFr = matieresPourPlanningClasse.find(estBrancheFrancais) || null;
-    const matiereMa = matieresPourPlanningClasse.find(estBrancheMath) || null;
+    const matiereFr = matieresPourSuiviBranches.find(estBrancheFrancais) || null;
+    const matiereMa = matieresPourSuiviBranches.find(estBrancheMath) || null;
 
     const peutEncher = (matiereId, sequencePrecedente) => {
       const mid = String(matiereId);
@@ -1829,7 +1836,7 @@ export default function EmploiDuTemps() {
             if (estBrancheMath(m) && dejaMa) return false;
             return true;
           }),
-          ...matieresPourPlanningClasse,
+          ...matieresPourSuiviBranches,
         ];
         // unique by id preserving order
         const seen = new Set();
@@ -1865,7 +1872,7 @@ export default function EmploiDuTemps() {
       const sequence = jourSlots.slice(0, idx).map((s) => assignment[String(s.aff.id)] || null).filter(Boolean);
       let meilleur = null;
       let meilleurScore = -9999;
-      matieresPourPlanningClasse.forEach((m) => {
+      matieresPourSuiviBranches.forEach((m) => {
         const sc = scoreCandidat(m, slot, sequence, false, false);
         // ignore daily FR/MA bonus recalculation for fill — use restant mainly
         const mid = String(m.id);
@@ -1892,7 +1899,7 @@ export default function EmploiDuTemps() {
     setHasBranchesUnsaved(true);
     setPlanningClasse((prev) => (prev ? { ...prev } : prev));
 
-    const incompletes = matieresPourPlanningClasse
+    const incompletes = matieresPourSuiviBranches
       .filter((m) => (compte[String(m.id)] || 0) < (requis[String(m.id)] || 0))
       .map((m) => `${m.nom} ${compte[String(m.id)] || 0}/${requis[String(m.id)] || 0}`);
     if (incompletes.length) {
