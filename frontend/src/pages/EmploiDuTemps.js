@@ -3737,7 +3737,9 @@ export default function EmploiDuTemps() {
         {onglet === 'plannings' && (
           <div style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(720px,78vw)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
-              <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
+              {sousOngletPlanning !== 'general' && (
+                <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
+              )}
               <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningSelection}>Imprimer</button>
               {sousOngletPlanning === 'general' && (
                 <>
@@ -3745,7 +3747,7 @@ export default function EmploiDuTemps() {
                     type="button"
                     style={styles.btnImprimer}
                     onClick={imprimerPlanningGeneralA3Semaine}
-                    title="Imprimer toute la semaine sur une page A3 paysage"
+                    title="Même PDF A3 que l’export (semaine complète)"
                   >
                     Imprimer A3 semaine
                   </button>
