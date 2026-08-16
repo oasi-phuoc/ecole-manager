@@ -28,7 +28,7 @@ const getAllDisponibilites = async (req, res) => {
 const getRemarqueDisponibilites = async (req, res) => {
   try {
     const r = await pool.query(
-      "SELECT remarque_disponibilites FROM utilisateurs WHERE id=$1 AND role='prof'",
+      'SELECT remarque_disponibilites FROM utilisateurs WHERE id=$1',
       [req.params.prof_id]
     );
     if (r.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouvé' });
@@ -38,11 +38,20 @@ const getRemarqueDisponibilites = async (req, res) => {
   }
 };
 
+const peutEditerDisponibilites = (req, profId) => {
+  if (String(req.user?.id) === String(profId)) return true;
+  if (req.user?.role === 'admin') return true;
+  return false;
+};
+
 const saveRemarqueDisponibilites = async (req, res) => {
   try {
+    if (!peutEditerDisponibilites(req, req.params.prof_id)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
     const remarque = typeof req.body?.remarque === 'string' ? req.body.remarque : '';
     const r = await pool.query(
-      "UPDATE utilisateurs SET remarque_disponibilites=$1 WHERE id=$2 AND role='prof' RETURNING id",
+      'UPDATE utilisateurs SET remarque_disponibilites=$1 WHERE id=$2 RETURNING id',
       [remarque, req.params.prof_id]
     );
     if (r.rows.length === 0) return res.status(404).json({ message: 'Professeur non trouvé' });
@@ -56,8 +65,11 @@ const saveDisponibilites = async (req, res) => {
   const { prof_id } = req.params;
   const { disponibilites } = req.body;
   try {
+    if (!peutEditerDisponibilites(req, prof_id)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
     await pool.query('DELETE FROM disponibilites WHERE prof_id=$1', [prof_id]);
-    for (const d of disponibilites) {
+    for (const d of (disponibilites || [])) {
       await pool.query('INSERT INTO disponibilites (prof_id, creneau_id, disponible) VALUES ($1,$2,$3)', [prof_id, d.creneau_id, d.disponible]);
     }
     res.json({ message: 'Sauvegardé' });

@@ -4,30 +4,19 @@ import axios from 'axios';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
+import {
+  normaliserBranchesSpecialites,
+  regrouperBranchesParCode,
+  groupesParCategorie,
+  LIBELLES_COLONNES_SPECIALITES,
+  ORDRE_COLONNES_SPECIALITES,
+} from '../utils/branchesSpecialites';
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
 const MAX_PERIODES = 32;
 const nomSansSuffixe = (nom) => String(nom || '').split('-')[0].trim();
-
-const normaliserBranchesSpecialites = (valeur) => {
-  if (!valeur) return [];
-  if (Array.isArray(valeur)) {
-    return Array.from(new Set(valeur.map(v => String(v).trim()).filter(Boolean)));
-  }
-  const brut = String(valeur).trim();
-  if (!brut) return [];
-  try {
-    const parsed = JSON.parse(brut);
-    if (Array.isArray(parsed)) {
-      return Array.from(new Set(parsed.map(v => String(v).trim()).filter(Boolean)));
-    }
-  } catch {}
-  // Cas texte PostgreSQL (ex: {"1","2"}) ou liste simple "1,2"
-  const nettoye = brut.replace(/^\{|\}$/g, '').replace(/"/g, '');
-  return Array.from(new Set(nettoye.split(',').map(v => String(v).trim()).filter(Boolean)));
-};
 
 export default function Professeurs({
   apiBase = '/profs',
@@ -127,40 +116,12 @@ export default function Professeurs({
   const chargerBranchesNiveaux = async (niveaux = []) => {
     try {
       const r = await axios.get(API+'/branches', { headers });
-      const branchesFiltrees = r.data
+      const branchesFiltrees = (r.data || [])
         .filter(b => !niveaux.length || niveaux.includes(b.niveau))
-        .filter((b) => {
-          const code = String(b.designation_courte || '').trim().toUpperCase();
-          const nom = String(b.nom || '').trim().toLowerCase();
-          // Demande métier: ne pas proposer AI (Accompagnement individuelle) en spécialité prof.
-          if (code === 'AI') return false;
-          if (nom.includes('accompagnement individuelle')) return false;
-          return true;
-        })
         .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i);
 
-      // Regrouper les branches par désignation courte pour éviter les doublons (ex: FR sur plusieurs niveaux)
-      const branchesParCode = new Map();
-      branchesFiltrees.forEach((b) => {
-        const code = String(b.designation_courte || b.nom || '').trim().toUpperCase();
-        if (!code) return;
-        if (!branchesParCode.has(code)) {
-          branchesParCode.set(code, {
-            id: code,
-            label: code,
-            noms: [String(b.nom || '').trim()].filter(Boolean),
-            ids: [String(b.id)],
-          });
-          return;
-        }
-        const existant = branchesParCode.get(code);
-        existant.ids.push(String(b.id));
-        const nom = String(b.nom || '').trim();
-        if (nom && !existant.noms.includes(nom)) existant.noms.push(nom);
-      });
-
-      const options = Array.from(branchesParCode.values())
-        .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+      // Abrégé dans le formulaire professeur (pas de Soutien)
+      const options = regrouperBranchesParCode(branchesFiltrees, { labelComplet: false });
       setBranchesDisponibles(options);
     } catch(err) { setBranchesDisponibles([]); }
   };
@@ -580,43 +541,55 @@ export default function Professeurs({
                       {branchesDisponibles.length === 0 ? (
                         <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
                       ) : (
-                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))',gap:8}}>
-                          {branchesDisponibles.map(b => {
-                            const selected = (b.ids || []).some(id => branchesSpecialitesSelectionnees.includes(String(id)));
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(3, minmax(0, 1fr))',gap:10}}>
+                          {ORDRE_COLONNES_SPECIALITES.map((cat) => {
+                            const items = (groupesParCategorie(branchesDisponibles)[cat] || []);
                             return (
-                              <button key={b.id} type="button"
-                                title={(b.noms || []).join(' / ')}
-                                onClick={() => {
-                                  setForm(prev => {
-                                    const curr = normaliserBranchesSpecialites(prev.branches_specialites);
-                                    let newSel;
-                                    if (selected) {
-                                      newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
-                                    } else {
-                                      newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
-                                    }
-                                    return {...prev, branches_specialites:newSel};
-                                  });
-                                }}
-                                style={{
-                                  height: 34,
-                                  width: '100%',
-                                  borderRadius: 9,
-                                  border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
-                                  background:selected?'#e0e7ff':'white',
-                                  color:selected?'#3730a3':'#64748b',
-                                  cursor:'pointer',
-                                  fontWeight:700,
-                                  fontSize:12,
-                                  transition:'all 0.15s',
-                                  display:'flex',
-                                  alignItems:'center',
-                                  justifyContent:'center',
-                                  textAlign:'center',
-                                  padding:'0 8px'
-                                }}>
-                                {b.label}
-                              </button>
+                              <div key={cat} style={{border:'1px solid #e2e8f0',borderRadius:10,padding:8,background:'#f8fafc'}}>
+                                <div style={{fontSize:11,fontWeight:800,color:'#334155',marginBottom:6}}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
+                                <div style={{display:'grid',gridTemplateColumns:'1fr',gap:6}}>
+                                  {items.length === 0 ? (
+                                    <div style={{fontSize:11,color:'#94a3b8'}}>Aucune</div>
+                                  ) : items.map((b) => {
+                                    const selected = (b.ids || []).some(id => branchesSpecialitesSelectionnees.includes(String(id)));
+                                    return (
+                                      <button key={b.id} type="button"
+                                        title={(b.noms || []).join(' / ')}
+                                        onClick={() => {
+                                          setForm(prev => {
+                                            const curr = normaliserBranchesSpecialites(prev.branches_specialites);
+                                            let newSel;
+                                            if (selected) {
+                                              newSel = curr.filter(x => !(b.ids || []).includes(String(x)));
+                                            } else {
+                                              newSel = Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
+                                            }
+                                            return {...prev, branches_specialites:newSel};
+                                          });
+                                        }}
+                                        style={{
+                                          height: 34,
+                                          width: '100%',
+                                          borderRadius: 9,
+                                          border:'2px solid '+(selected?'#6366f1':'#e2e8f0'),
+                                          background:selected?'#e0e7ff':'white',
+                                          color:selected?'#3730a3':'#64748b',
+                                          cursor:'pointer',
+                                          fontWeight:700,
+                                          fontSize:12,
+                                          transition:'all 0.15s',
+                                          display:'flex',
+                                          alignItems:'center',
+                                          justifyContent:'center',
+                                          textAlign:'center',
+                                          padding:'0 8px'
+                                        }}>
+                                        {b.labelCourt || b.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             );
                           })}
                         </div>

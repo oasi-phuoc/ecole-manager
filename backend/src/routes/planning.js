@@ -9,7 +9,7 @@ router.get('/disponibilites', c.getAllDisponibilites);
 router.get('/disponibilites/:prof_id', c.getDisponibilites);
 router.get('/disponibilites/:prof_id/remarque', c.getRemarqueDisponibilites);
 router.post('/disponibilites/:prof_id', c.saveDisponibilites);
-router.post('/disponibilites/:prof_id/remarque', autoriser('admin'), c.saveRemarqueDisponibilites);
+router.post('/disponibilites/:prof_id/remarque', c.saveRemarqueDisponibilites);
 router.get('/pools', c.getPools);
 router.post('/pools', autoriser('admin'), c.createPool);
 router.put('/pools/:id', autoriser('admin'), c.updatePool);

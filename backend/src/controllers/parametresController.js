@@ -14,11 +14,30 @@ const getProfil = async (req, res) => {
 };
 
 const modifierProfil = async (req, res) => {
-  const { nom, prenom, email, telephone, adresse, npa, lieu, sexe, date_naissance, avs, niveau_prefere, lieu_travail_prefere, remarque_lieu_travail, priorite_pref, specialite } = req.body;
+  const {
+    nom, prenom, email, telephone, adresse, npa, lieu, sexe, date_naissance, avs,
+    niveau_prefere, lieu_travail_prefere, remarque_lieu_travail, priorite_pref, specialite,
+    branches_specialites, type_permis,
+  } = req.body;
   try {
+    let branchesVal = branches_specialites;
+    if (Array.isArray(branchesVal)) branchesVal = JSON.stringify(branchesVal);
+    else if (branchesVal == null) branchesVal = null;
+    else branchesVal = String(branchesVal);
+
     await pool.query(
-      'UPDATE utilisateurs SET nom=$1, prenom=$2, email=$3, telephone=$4, adresse=$5, npa=$6, lieu=$7, sexe=$8, date_naissance=$9, avs=$10, niveau_prefere=$11, lieu_travail_prefere=$12, remarque_lieu_travail=$13, priorite_pref=$14, specialite=$15 WHERE id=$16',
-      [nom, prenom, email, telephone||null, adresse||null, npa||null, lieu||null, sexe||null, date_naissance||null, avs||null, niveau_prefere||null, lieu_travail_prefere||null, remarque_lieu_travail||null, priorite_pref||null, specialite||null, req.user.id]
+      `UPDATE utilisateurs SET
+        nom=$1, prenom=$2, email=$3, telephone=$4, adresse=$5, npa=$6, lieu=$7, sexe=$8,
+        date_naissance=$9, avs=$10, niveau_prefere=$11, lieu_travail_prefere=$12,
+        remarque_lieu_travail=$13, priorite_pref=$14, specialite=$15,
+        branches_specialites=$16, type_permis=$17
+       WHERE id=$18`,
+      [
+        nom, prenom, email, telephone || null, adresse || null, npa || null, lieu || null, sexe || null,
+        date_naissance || null, avs || null, niveau_prefere || null, lieu_travail_prefere || null,
+        remarque_lieu_travail || null, priorite_pref || null, specialite || null,
+        branchesVal, type_permis || null, req.user.id,
+      ]
     );
     res.json({ message: 'Profil mis a jour' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }

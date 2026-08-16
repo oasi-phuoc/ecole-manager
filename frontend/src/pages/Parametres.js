@@ -5,17 +5,19 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
+import {
+  normaliserBranchesSpecialites,
+  regrouperBranchesParCode,
+  groupesParCategorie,
+  ordonnerGroupesSelectionnes,
+  reconstruireIdsDepuisColonnes,
+  LIBELLES_COLONNES_SPECIALITES,
+  ORDRE_COLONNES_SPECIALITES,
+} from '../utils/branchesSpecialites';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
-
-const normaliserBranchesSpecialites = (valeur) => {
-  if (!valeur) return [];
-  if (Array.isArray(valeur)) return Array.from(new Set(valeur.map(v => String(v).trim()).filter(Boolean)));
-  const brut = String(valeur).trim();
-  if (!brut) return [];
-  try { const parsed = JSON.parse(brut); if (Array.isArray(parsed)) return Array.from(new Set(parsed.map(v => String(v).trim()).filter(Boolean))); } catch {}
-  return brut.split(',').map(v => v.trim()).filter(Boolean);
-};
+const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+const BASE_PERIODES_TAUX = 40;
 
 const creerLigneResponsableNiveau = (overrides = {}) => ({
   nom: '',
@@ -105,7 +107,7 @@ const MODULES_ACCES_PROFS = [
 export default function Parametres() {
   const [searchParams] = useSearchParams();
   const onglet = searchParams.get('tab') || 'profil';
-  const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '', telephone: '', adresse: '', npa: '', lieu: '', sexe: '', date_naissance: '', avs: '', taux_activite: '', periodes_semaine: '', type_contrat: '', type_permis: '', niveau_prefere: '', lieu_travail_prefere: '', remarque_lieu_travail: '', priorite_pref: 'niveau', specialite: '' });
+  const [profil, setProfil] = useState({ nom: '', prenom: '', email: '', role: '', telephone: '', adresse: '', npa: '', lieu: '', sexe: '', date_naissance: '', avs: '', taux_activite: '', periodes_semaine: '', type_contrat: '', type_permis: '', niveau_prefere: '', branches_specialites: [], lieu_travail_prefere: '', remarque_lieu_travail: '', priorite_pref: 'niveau', specialite: '' });
   const [ecole, setEcole] = useState({
     nom_ecole: '', adresse: '', telephone: '', email: '', annee_scolaire: '', date_debut_annee: '', date_fin_annee: '',
     responsable_langues_jeunes: '', responsable_niveau: '',
@@ -128,6 +130,10 @@ export default function Parametres() {
   const [sousOngletProfil, setSousOngletProfil] = useState('connexion');
   const [mdpOuvert, setMdpOuvert] = useState(false);
   const [branchesDisponiblesProfil, setBranchesDisponiblesProfil] = useState([]);
+  const [creneauxDispoProfil, setCreneauxDispoProfil] = useState([]);
+  const [disposProfil, setDisposProfil] = useState({});
+  const [remarquesDispoProfil, setRemarquesDispoProfil] = useState('');
+  const [disposProfilDirty, setDisposProfilDirty] = useState(false);
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
@@ -238,19 +244,41 @@ export default function Parametres() {
   const chargerBranchesProfil = async (niveaux = []) => {
     try {
       const r = await axios.get(API + '/branches', { headers });
-      const filtrees = r.data
-        .filter(b => !niveaux.length || niveaux.includes(b.niveau))
-        .filter(b => { const code = String(b.designation_courte || '').trim().toUpperCase(); return code !== 'AI'; });
-      const parCode = new Map();
-      filtrees.forEach(b => {
-        const code = String(b.designation_courte || b.nom || '').trim().toUpperCase();
-        if (!code) return;
-        if (!parCode.has(code)) { parCode.set(code, { id: code, label: code, ids: [String(b.id)], noms: [String(b.nom || '').trim()].filter(Boolean) }); return; }
-        const ex = parCode.get(code); ex.ids.push(String(b.id));
-        const nom = String(b.nom || '').trim(); if (nom && !ex.noms.includes(nom)) ex.noms.push(nom);
-      });
-      setBranchesDisponiblesProfil(Array.from(parCode.values()).sort((a, b) => a.label.localeCompare(b.label, 'fr')));
+      const filtrees = (r.data || []).filter((b) => !niveaux.length || niveaux.includes(b.niveau));
+      setBranchesDisponiblesProfil(regrouperBranchesParCode(filtrees, { labelComplet: true }));
     } catch { setBranchesDisponiblesProfil([]); }
+  };
+
+  const chargerDisposProfil = async (profId) => {
+    if (!profId) {
+      setCreneauxDispoProfil([]);
+      setDisposProfil({});
+      setRemarquesDispoProfil('');
+      setDisposProfilDirty(false);
+      return;
+    }
+    try {
+      const [cr, d, rem] = await Promise.all([
+        axios.get(API + '/planning/creneaux', { headers }),
+        axios.get(API + '/planning/disponibilites/' + profId, { headers }),
+        axios.get(API + '/planning/disponibilites/' + profId + '/remarque', { headers }).catch(() => ({ data: { remarque: '' } })),
+      ]);
+      setCreneauxDispoProfil(cr.data || []);
+      const map = {};
+      (d.data || []).forEach((row) => { map[row.creneau_id] = row.disponible !== false; });
+      // Défaut : disponible si aucune entrée
+      (cr.data || []).forEach((c) => {
+        if (!Object.prototype.hasOwnProperty.call(map, c.id)) map[c.id] = true;
+      });
+      setDisposProfil(map);
+      setRemarquesDispoProfil(rem.data?.remarque || '');
+      setDisposProfilDirty(false);
+    } catch {
+      setCreneauxDispoProfil([]);
+      setDisposProfil({});
+      setRemarquesDispoProfil('');
+      setDisposProfilDirty(false);
+    }
   };
 
   useEffect(() => {
@@ -258,6 +286,64 @@ export default function Parametres() {
     const niveaux = (profil.niveau_prefere || '').split(',').filter(Boolean);
     chargerBranchesProfil(niveaux);
   }, [profil.niveau_prefere, sousOngletProfil]);
+
+  useEffect(() => {
+    if (sousOngletProfil !== 'desideratas') return;
+    if (!profil?.id) return;
+    chargerDisposProfil(profil.id);
+  }, [sousOngletProfil, profil?.id]);
+
+  const periodesRequisesDispoProfil = (() => {
+    const taux = Number(profil.taux_activite);
+    if (!Number.isFinite(taux) || taux <= 0) return parseInt(profil.periodes_semaine, 10) || 0;
+    return Math.max(0, Math.floor(((BASE_PERIODES_TAUX * taux) / 100) / 2) * 2);
+  })();
+  const periodesSelectionneesDispoProfil = Object.values(disposProfil).filter((v) => v !== false).length;
+  const couleurCompteurDispoProfil = periodesSelectionneesDispoProfil < periodesRequisesDispoProfil ? '#dc2626' : '#16a34a';
+
+  const toggleDispoProfil = (creneauId) => {
+    setDisposProfil((prev) => ({ ...prev, [creneauId]: prev[creneauId] === false }));
+    setDisposProfilDirty(true);
+  };
+
+  const deplacerBrancheProfil = (groupe, direction) => {
+    const groupes = branchesDisponiblesProfil;
+    const ordered = ordonnerGroupesSelectionnes(groupes, profil.branches_specialites);
+    const cat = groupe.categorie;
+    const dansColonne = ordered.filter((g) => g.categorie === cat);
+    const idxCol = dansColonne.findIndex((g) => g.id === groupe.id);
+    const cible = dansColonne[idxCol + direction];
+    if (!cible) return;
+    const codes = ordered.map((g) => g.id);
+    const i = codes.indexOf(groupe.id);
+    const j = codes.indexOf(cible.id);
+    if (i < 0 || j < 0) return;
+    [codes[i], codes[j]] = [codes[j], codes[i]];
+    const byId = new Map(groupes.map((g) => [g.id, g]));
+    const newIds = [];
+    codes.forEach((code) => {
+      const g = byId.get(code);
+      if (!g) return;
+      (g.ids || []).forEach((id) => {
+        if (!newIds.includes(String(id))) newIds.push(String(id));
+      });
+    });
+    setProfil((p) => ({ ...p, branches_specialites: newIds }));
+  };
+
+  const toggleBrancheProfil = (groupe) => {
+    const curr = normaliserBranchesSpecialites(profil.branches_specialites);
+    const selected = (groupe.ids || []).some((id) => curr.includes(String(id)));
+    let newSel;
+    if (selected) {
+      newSel = curr.filter((x) => !(groupe.ids || []).includes(String(x)));
+    } else {
+      newSel = Array.from(new Set([...curr, ...(groupe.ids || [])].map(String)));
+    }
+    // Réordonner par colonnes après sélection
+    newSel = reconstruireIdsDepuisColonnes(branchesDisponiblesProfil, newSel);
+    setProfil((p) => ({ ...p, branches_specialites: newSel }));
+  };
 
   const chargerEcole = async () => {
     try {
@@ -347,7 +433,22 @@ export default function Parametres() {
   const handleSauverProfil = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(API + '/parametres/profil', profil, { headers });
+      const payload = {
+        ...profil,
+        branches_specialites: normaliserBranchesSpecialites(profil.branches_specialites),
+      };
+      await axios.put(API + '/parametres/profil', payload, { headers });
+      if (profil?.id) {
+        const liste = Object.entries(disposProfil).map(([creneau_id, disponible]) => ({
+          creneau_id: Number(creneau_id),
+          disponible: disponible !== false,
+        }));
+        await Promise.all([
+          axios.post(API + '/planning/disponibilites/' + profil.id, { disponibilites: liste }, { headers }),
+          axios.post(API + '/planning/disponibilites/' + profil.id + '/remarque', { remarque: remarquesDispoProfil || '' }, { headers }),
+        ]);
+        setDisposProfilDirty(false);
+      }
       setMsgProfil('success');
       setTimeout(() => setMsgProfil(''), 3000);
     } catch (err) { setMsgProfil('error'); }
@@ -748,7 +849,7 @@ export default function Parametres() {
 
                   {/* Désidératas */}
                   {sousOngletProfil === 'desideratas' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Niveaux préférés</label>
                         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
@@ -773,32 +874,151 @@ export default function Parametres() {
                           </button>
                         </div>
                       </div>
+
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Spécialité(s) — {profil.niveau_prefere || 'Tous niveaux'}</label>
+                        <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
+                          Classez les branches par ordre de préférence : le numéro 1 correspond à votre priorité la plus forte, puis 2, 3, etc.
+                        </p>
                         {branchesDisponiblesProfil.length === 0 ? (
                           <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
                         ) : (
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginTop: 4 }}>
-                            {branchesDisponiblesProfil.map(b => {
-                              const bsArr = normaliserBranchesSpecialites(profil.branches_specialites);
-                              const selected = (b.ids || []).some(id => bsArr.includes(String(id)));
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                            {ORDRE_COLONNES_SPECIALITES.map((cat) => {
+                              const colonnes = groupesParCategorie(branchesDisponiblesProfil);
+                              const items = colonnes[cat] || [];
+                              const orderedSelected = ordonnerGroupesSelectionnes(branchesDisponiblesProfil, profil.branches_specialites);
+                              const rangGlobal = (groupe) => {
+                                const idx = orderedSelected.findIndex((g) => g.id === groupe.id);
+                                return idx >= 0 ? idx + 1 : null;
+                              };
+                              const selectedInCol = orderedSelected.filter((g) => g.categorie === cat);
                               return (
-                                <button key={b.id} type="button" title={(b.noms || []).join(' / ')}
-                                  onClick={() => {
-                                    const curr = normaliserBranchesSpecialites(profil.branches_specialites);
-                                    const newSel = selected
-                                      ? curr.filter(x => !(b.ids || []).includes(String(x)))
-                                      : Array.from(new Set([...curr, ...(b.ids || [])].map(String)));
-                                    setProfil({ ...profil, branches_specialites: newSel });
-                                  }}
-                                  style={{ height: 34, borderRadius: 9, border: '2px solid ' + (selected ? '#6366f1' : '#e2e8f0'), background: selected ? '#e0e7ff' : 'white', color: selected ? '#3730a3' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
-                                  {b.label}
-                                </button>
+                                <div key={cat} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, background: '#f8fafc', minHeight: 120 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 800, color: '#334155', marginBottom: 8 }}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {items.length === 0 ? (
+                                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune branche</div>
+                                    ) : items.map((b) => {
+                                      const bsArr = normaliserBranchesSpecialites(profil.branches_specialites);
+                                      const selected = (b.ids || []).some((id) => bsArr.includes(String(id)));
+                                      const rang = rangGlobal(b);
+                                      const idxInCol = selectedInCol.findIndex((g) => g.id === b.id);
+                                      const peutMonter = selected && idxInCol > 0;
+                                      const peutDescendre = selected && idxInCol >= 0 && idxInCol < selectedInCol.length - 1;
+                                      return (
+                                        <div key={b.id} style={{
+                                          display: 'flex', alignItems: 'center', gap: 6,
+                                          border: '2px solid ' + (selected ? '#6366f1' : '#e2e8f0'),
+                                          background: selected ? '#e0e7ff' : 'white',
+                                          borderRadius: 9, padding: '4px 6px',
+                                        }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleBrancheProfil(b)}
+                                            title={(b.noms || []).join(' / ')}
+                                            style={{
+                                              flex: 1, border: 'none', background: 'transparent', cursor: 'pointer',
+                                              textAlign: 'left', fontWeight: 700, fontSize: 12,
+                                              color: selected ? '#3730a3' : '#64748b', padding: '4px 2px',
+                                            }}
+                                          >
+                                            {selected && rang != null ? (
+                                              <span style={{ display: 'inline-block', minWidth: 22, marginRight: 6, color: '#4338ca' }}>{rang}.</span>
+                                            ) : null}
+                                            {b.labelComplet || b.label}
+                                          </button>
+                                          {selected && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                              <button type="button" disabled={!peutMonter} onClick={() => deplacerBrancheProfil(b, -1)}
+                                                title="Monter dans l’ordre de préférence"
+                                                style={{ width: 22, height: 18, border: 'none', borderRadius: 4, cursor: peutMonter ? 'pointer' : 'default', background: peutMonter ? '#c7d2fe' : '#f1f5f9', color: '#3730a3', fontSize: 10, fontWeight: 800, padding: 0, opacity: peutMonter ? 1 : 0.35 }}>▲</button>
+                                              <button type="button" disabled={!peutDescendre} onClick={() => deplacerBrancheProfil(b, 1)}
+                                                title="Descendre dans l’ordre de préférence"
+                                                style={{ width: 22, height: 18, border: 'none', borderRadius: 4, cursor: peutDescendre ? 'pointer' : 'default', background: peutDescendre ? '#c7d2fe' : '#f1f5f9', color: '#3730a3', fontSize: 10, fontWeight: 800, padding: 0, opacity: peutDescendre ? 1 : 0.35 }}>▼</button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               );
                             })}
                           </div>
                         )}
                       </div>
+
+                      <div style={styles.formChamp}>
+                        <label style={styles.label}>
+                          Disponibilités (jours de travail)
+                          <span style={{ marginLeft: 10, fontWeight: 800, color: couleurCompteurDispoProfil }}>
+                            {periodesSelectionneesDispoProfil} / {periodesRequisesDispoProfil} périodes
+                          </span>
+                        </label>
+                        <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
+                          Indiquez vos périodes disponibles. Ce tableau est le même que dans Emploi du temps → Disponibilités.
+                        </p>
+                        <div style={{ marginBottom: 10 }}>
+                          <label style={{ ...styles.label, fontSize: 12 }}>Remarques</label>
+                          <textarea
+                            style={{ ...styles.input, width: '100%', minHeight: 72, resize: 'vertical' }}
+                            value={remarquesDispoProfil}
+                            onChange={(e) => { setRemarquesDispoProfil(e.target.value); setDisposProfilDirty(true); }}
+                            placeholder="Ajouter une remarque…"
+                          />
+                        </div>
+                        {!creneauxDispoProfil.length ? (
+                          <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucun créneau configuré.</div>
+                        ) : (
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 640 }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ padding: '8px 6px', fontSize: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', width: 72 }}>Période</th>
+                                  {JOURS_DISPO.map((j) => (
+                                    <th key={j} style={{ padding: '8px 6px', fontSize: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', textAlign: 'center' }}>{j}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {['Matin', 'Après-midi'].map((periode) => {
+                                  const crsLundi = creneauxDispoProfil.filter((c) => c.jour === 'Lundi' && c.periode === periode);
+                                  if (!crsLundi.length) return null;
+                                  return [
+                                    <tr key={periode + '-banner'}>
+                                      <td colSpan={JOURS_DISPO.length + 1} style={{ padding: '6px 10px', background: '#eef2ff', fontWeight: 700, fontSize: 12, color: '#3730a3', border: '1px solid #e2e8f0' }}>{periode}</td>
+                                    </tr>,
+                                    ...crsLundi.map((crBase, idx) => (
+                                      <tr key={crBase.id}>
+                                        <td style={{ padding: '8px 6px', fontSize: 12, fontWeight: 700, border: '1px solid #e2e8f0', textAlign: 'center', background: '#f8fafc' }}>
+                                          P{periode === 'Matin' ? idx + 1 : idx + 5}
+                                        </td>
+                                        {JOURS_DISPO.map((jour) => {
+                                          const cr = creneauxDispoProfil.find((c) => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
+                                          if (!cr) return <td key={jour} style={{ background: '#f0f0f0', border: '1px solid #e2e8f0' }} />;
+                                          const ok = disposProfil[cr.id] !== false;
+                                          return (
+                                            <td
+                                              key={jour}
+                                              onClick={() => toggleDispoProfil(cr.id)}
+                                              title={ok ? 'Disponible — cliquer pour basculer' : 'Indisponible — cliquer pour basculer'}
+                                              style={{ padding: '10px 6px', border: '1px solid #e2e8f0', textAlign: 'center', cursor: 'pointer', verticalAlign: 'middle' }}
+                                            >
+                                              <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', background: ok ? '#16a34a' : '#dc2626', verticalAlign: 'middle' }} />
+                                            </td>
+                                          );
+                                        })}
+                                      </tr>
+                                    )),
+                                  ];
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Lieux de travail préférés</label>
                         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
