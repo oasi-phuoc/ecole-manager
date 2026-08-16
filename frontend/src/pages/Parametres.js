@@ -178,8 +178,10 @@ export default function Parametres() {
   const [donneesSalleEdit, setDonneesSalleEdit] = useState(null);
   const dragNiveauIdx = useRef(null);
   const dragLieuIdx = useRef(null);
+  const dragBrancheRef = useRef(null); // { cat, id }
   const [dragOverNiveau, setDragOverNiveau] = useState(null);
   const [dragOverLieu, setDragOverLieu] = useState(null);
+  const [dragOverBranche, setDragOverBranche] = useState(null); // { cat, id }
   const navigate = useNavigate();
   const headers = {};
   const isAdmin = profil.role === 'admin';
@@ -306,24 +308,24 @@ export default function Parametres() {
     setDisposProfilDirty(true);
   };
 
-  const deplacerBrancheProfil = (groupe, direction) => {
+  /** Réordonne les spécialités sélectionnées d'une colonne (glisser-déposer). */
+  const reorderBrancheProfilDansColonne = (cat, fromId, toId) => {
+    if (!fromId || !toId || fromId === toId) return;
     const groupes = branchesDisponiblesProfil;
     const ordered = ordonnerGroupesSelectionnes(groupes, profil.branches_specialites);
-    const cat = groupe.categorie;
-    const dansColonne = ordered.filter((g) => g.categorie === cat);
-    const idxCol = dansColonne.findIndex((g) => g.id === groupe.id);
-    const cible = dansColonne[idxCol + direction];
-    if (!cible) return;
-    const codes = ordered.map((g) => g.id);
-    const i = codes.indexOf(groupe.id);
-    const j = codes.indexOf(cible.id);
-    if (i < 0 || j < 0) return;
-    [codes[i], codes[j]] = [codes[j], codes[i]];
-    const byId = new Map(groupes.map((g) => [g.id, g]));
+    const colItems = ordered.filter((g) => g.categorie === cat);
+    const fromIdx = colItems.findIndex((g) => g.id === fromId);
+    const toIdx = colItems.findIndex((g) => g.id === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const newCol = [...colItems];
+    const [moved] = newCol.splice(fromIdx, 1);
+    newCol.splice(toIdx, 0, moved);
+    const indices = [];
+    ordered.forEach((g, i) => { if (g.categorie === cat) indices.push(i); });
+    const newOrdered = [...ordered];
+    indices.forEach((globalIdx, k) => { newOrdered[globalIdx] = newCol[k]; });
     const newIds = [];
-    codes.forEach((code) => {
-      const g = byId.get(code);
-      if (!g) return;
+    newOrdered.forEach((g) => {
       (g.ids || []).forEach((id) => {
         if (!newIds.includes(String(id))) newIds.push(String(id));
       });
@@ -898,7 +900,7 @@ export default function Parametres() {
                       <div style={styles.formChamp}>
                         <label style={styles.label}>Spécialité(s) — {profil.niveau_prefere || 'Tous niveaux'}</label>
                         <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
-                          Classez les branches par ordre de préférence : le numéro 1 correspond à votre priorité la plus forte, puis 2, 3, etc.
+                          Sélectionnez vos branches puis glissez-déposez pour les classer : le numéro 1 est votre priorité la plus forte, puis 2, 3, etc.
                         </p>
                         {branchesDisponiblesProfil.length === 0 ? (
                           <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
@@ -912,52 +914,84 @@ export default function Parametres() {
                                 const idx = orderedSelected.findIndex((g) => g.id === groupe.id);
                                 return idx >= 0 ? idx + 1 : null;
                               };
+                              // Afficher d'abord les sélectionnées (ordre de préférence), puis le reste
                               const selectedInCol = orderedSelected.filter((g) => g.categorie === cat);
+                              const selectedIds = new Set(selectedInCol.map((g) => g.id));
+                              const nonSelected = items.filter((g) => !selectedIds.has(g.id));
+                              const itemsAffiches = [...selectedInCol, ...nonSelected];
                               return (
                                 <div key={cat} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 10, background: '#f8fafc', minHeight: 120 }}>
                                   <div style={{ fontSize: 12, fontWeight: 800, color: '#334155', marginBottom: 8 }}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    {items.length === 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                    {itemsAffiches.length === 0 ? (
                                       <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune branche</div>
-                                    ) : items.map((b) => {
+                                    ) : itemsAffiches.map((b) => {
                                       const bsArr = normaliserBranchesSpecialites(profil.branches_specialites);
                                       const selected = (b.ids || []).some((id) => bsArr.includes(String(id)));
                                       const rang = rangGlobal(b);
-                                      const idxInCol = selectedInCol.findIndex((g) => g.id === b.id);
-                                      const peutMonter = selected && idxInCol > 0;
-                                      const peutDescendre = selected && idxInCol >= 0 && idxInCol < selectedInCol.length - 1;
+                                      const isDragOver = dragOverBranche?.cat === cat && dragOverBranche?.id === b.id;
                                       return (
-                                        <div key={b.id} style={{
-                                          display: 'flex', alignItems: 'center', gap: 6,
-                                          border: '2px solid ' + (selected ? '#6366f1' : '#e2e8f0'),
-                                          background: selected ? '#e0e7ff' : 'white',
-                                          borderRadius: 9, padding: '4px 6px',
-                                        }}>
+                                        <div
+                                          key={b.id}
+                                          draggable={selected}
+                                          onDragStart={() => {
+                                            if (!selected) return;
+                                            dragBrancheRef.current = { cat, id: b.id };
+                                          }}
+                                          onDragOver={(e) => {
+                                            if (!selected) return;
+                                            e.preventDefault();
+                                            setDragOverBranche({ cat, id: b.id });
+                                          }}
+                                          onDragLeave={() => {
+                                            if (dragOverBranche?.cat === cat && dragOverBranche?.id === b.id) {
+                                              setDragOverBranche(null);
+                                            }
+                                          }}
+                                          onDrop={() => {
+                                            const from = dragBrancheRef.current;
+                                            if (from && from.cat === cat && selected) {
+                                              reorderBrancheProfilDansColonne(cat, from.id, b.id);
+                                            }
+                                            setDragOverBranche(null);
+                                            dragBrancheRef.current = null;
+                                          }}
+                                          onDragEnd={() => {
+                                            setDragOverBranche(null);
+                                            dragBrancheRef.current = null;
+                                          }}
+                                          title={(b.noms || []).join(' / ')}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            padding: '6px 10px',
+                                            background: isDragOver ? '#e0e7ff' : (selected ? '#eef2ff' : 'white'),
+                                            borderRadius: 7,
+                                            border: '1px solid ' + (isDragOver ? '#6366f1' : (selected ? '#a5b4fc' : '#e2e8f0')),
+                                            cursor: selected ? 'grab' : 'pointer',
+                                          }}
+                                        >
+                                          {selected ? (
+                                            <span style={{ color: '#cbd5e1', fontSize: 14, flexShrink: 0 }}>⠿</span>
+                                          ) : (
+                                            <span style={{ width: 14, flexShrink: 0 }} />
+                                          )}
+                                          <span style={{
+                                            minWidth: 22, flexShrink: 0, fontWeight: 800, fontSize: 12,
+                                            color: selected ? '#4338ca' : '#cbd5e1',
+                                          }}>
+                                            {selected && rang != null ? `${rang}.` : '·'}
+                                          </span>
                                           <button
                                             type="button"
                                             onClick={() => toggleBrancheProfil(b)}
-                                            title={(b.noms || []).join(' / ')}
                                             style={{
                                               flex: 1, border: 'none', background: 'transparent', cursor: 'pointer',
-                                              textAlign: 'left', fontWeight: 700, fontSize: 12,
-                                              color: selected ? '#3730a3' : '#64748b', padding: '4px 2px',
+                                              textAlign: 'left', fontWeight: 700, fontSize: 13,
+                                              color: selected ? '#334155' : '#64748b', padding: 0,
                                             }}
                                           >
-                                            {selected && rang != null ? (
-                                              <span style={{ display: 'inline-block', minWidth: 22, marginRight: 6, color: '#4338ca' }}>{rang}.</span>
-                                            ) : null}
                                             {b.labelComplet || b.label}
                                           </button>
-                                          {selected && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                              <button type="button" disabled={!peutMonter} onClick={() => deplacerBrancheProfil(b, -1)}
-                                                title="Monter dans l’ordre de préférence"
-                                                style={{ width: 22, height: 18, border: 'none', borderRadius: 4, cursor: peutMonter ? 'pointer' : 'default', background: peutMonter ? '#c7d2fe' : '#f1f5f9', color: '#3730a3', fontSize: 10, fontWeight: 800, padding: 0, opacity: peutMonter ? 1 : 0.35 }}>▲</button>
-                                              <button type="button" disabled={!peutDescendre} onClick={() => deplacerBrancheProfil(b, 1)}
-                                                title="Descendre dans l’ordre de préférence"
-                                                style={{ width: 22, height: 18, border: 'none', borderRadius: 4, cursor: peutDescendre ? 'pointer' : 'default', background: peutDescendre ? '#c7d2fe' : '#f1f5f9', color: '#3730a3', fontSize: 10, fontWeight: 800, padding: 0, opacity: peutDescendre ? 1 : 0.35 }}>▼</button>
-                                            </div>
-                                          )}
                                         </div>
                                       );
                                     })}

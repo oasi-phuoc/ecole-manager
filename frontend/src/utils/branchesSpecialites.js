@@ -25,9 +25,9 @@ export const estBrancheExclueSpecialite = (branche) => {
 
 /**
  * Colonnes Désidératas :
- * - principales : Français / Mathématiques
- * - culturelles : ACM / ACS
- * - autres : reste des branches secondaires
+ * - principales : Branches principales (Français / Mathématiques)
+ * - autres : Branches secondaires (reste hors ACM/ACS)
+ * - culturelles : Autres (ACM / ACS)
  */
 export const categoriserBrancheSpecialite = (branche) => {
   if (estBrancheExclueSpecialite(branche)) return null;
@@ -46,12 +46,12 @@ export const categoriserBrancheSpecialite = (branche) => {
 };
 
 export const LIBELLES_COLONNES_SPECIALITES = {
-  principales: 'Français / Mathématiques',
-  culturelles: 'ACM / ACS',
-  autres: 'Autres branches secondaires',
+  principales: 'Branches principales',
+  autres: 'Branches secondaires',
+  culturelles: 'Autres',
 };
 
-export const ORDRE_COLONNES_SPECIALITES = ['principales', 'culturelles', 'autres'];
+export const ORDRE_COLONNES_SPECIALITES = ['principales', 'autres', 'culturelles'];
 
 /** Regroupe les branches brutes par code court (ids multi-niveaux). */
 export const regrouperBranchesParCode = (branches, { labelComplet = false } = {}) => {
@@ -123,8 +123,8 @@ export const reconstruireIdsDepuisColonnes = (groupes, idsSelectionnes) => {
   });
   const flat = [
     ...parCat.principales,
-    ...parCat.culturelles,
     ...parCat.autres,
+    ...parCat.culturelles,
   ];
   const ids = [];
   flat.forEach((g) => {
