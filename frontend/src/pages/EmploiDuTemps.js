@@ -2965,13 +2965,16 @@ export default function EmploiDuTemps() {
       const rootFolderName = `Plannings_EDT_${dateTag}`;
       const poolsExport = Array.isArray(pools) ? pools : [];
       const nomPoolSafe = (pool) => sanitizeFilename(pool?.nom || `Pool_${pool?.id || 'x'}`, 'Pool');
-      /** Nom du site (lieu) pour préfixer les PDF : BOTZA_CSC1.pdf, etc. */
-      const nomSiteSafe = (poolOrSite) => {
-        if (poolOrSite && typeof poolOrSite === 'object') {
-          return sanitizeFilename(poolOrSite.site || poolOrSite.nom || 'Site', 'Site');
-        }
-        return sanitizeFilename(poolOrSite || 'Site', 'Site');
+      /** Nom du site (lieu) canonique / complet pour préfixer les PDF. */
+      const resoudreNomSiteComplet = (poolOrSite) => {
+        const brut = (poolOrSite && typeof poolOrSite === 'object')
+          ? String(poolOrSite.site || poolOrSite.nom || '').trim()
+          : String(poolOrSite || '').trim();
+        if (!brut) return 'Site';
+        const canon = lieuxTravailMap.get(normaliserLieuTravail(brut));
+        return (canon || brut).trim() || 'Site';
       };
+      const nomSiteSafe = (poolOrSite) => sanitizeFilename(resoudreNomSiteComplet(poolOrSite), 'Site');
       const pdfNomAvecSite = (site, suffixe) => `${site}_${sanitizeFilename(suffixe, 'doc')}.pdf`;
       const checkCancel = () => exportPdfAnnulerRef.current;
 
@@ -3165,17 +3168,31 @@ export default function EmploiDuTemps() {
         });
       }
 
-      // —— Général : par jours + A3 semaine, un sous-dossier par pool ——
+      // —— Général : par jours + A3 semaine, nommés avec le nom complet du site ——
       setExportPdfProgress('Chargement des plannings généraux…');
+      const countPoolsParSite = new Map();
+      poolsExport.forEach((p) => {
+        const key = normaliserLieuTravail(p.site || p.nom || '');
+        countPoolsParSite.set(key, (countPoolsParSite.get(key) || 0) + 1);
+      });
       for (const pool of poolsExport) {
         const poolId = String(pool.id);
         const poolNom = pool.nom || `Pool_${poolId}`;
-        const poolFolder = nomPoolSafe(pool);
-        const site = nomSiteSafe(pool);
+        const siteComplet = resoudreNomSiteComplet(pool);
+        const siteFile = sanitizeFilename(siteComplet, 'Site');
+        const siteKey = normaliserLieuTravail(pool.site || pool.nom || '');
+        const plusieursPoolsMemeSite = (countPoolsParSite.get(siteKey) || 0) > 1;
+        // Fichier = nom complet du site ; si plusieurs pools sur le même site, suffixe pool
+        const baseNomGeneral = plusieursPoolsMemeSite
+          ? `${siteFile}_${nomPoolSafe(pool)}`
+          : siteFile;
         try {
           const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
           const rep = await axios.get(url, { headers });
           const data = rep.data || {};
+          const titreGeneral = plusieursPoolsMemeSite
+            ? `Planning général — ${siteComplet} — ${poolNom}`
+            : `Planning général — ${siteComplet}`;
           const contenuJours = buildPlanningGeneralPrintHtml({
             creneaux: data.creneaux || [],
             profs: data.profs || [],
@@ -3184,8 +3201,8 @@ export default function EmploiDuTemps() {
             poolId,
           });
           documents.push({
-            relativePath: `General/${poolFolder}/${site}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(`Planning général — ${poolNom}`, contenuJours, { paysage: true }),
+            relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
+            html: buildHtmlPrintDoc(titreGeneral, contenuJours, { paysage: true }),
             pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
@@ -3197,9 +3214,11 @@ export default function EmploiDuTemps() {
             poolId,
           });
           documents.push({
-            relativePath: `General/${poolFolder}/${site}_Planning-général.pdf`,
+            relativePath: `General/${baseNomGeneral}_Planning-général.pdf`,
             html: buildHtmlPrintDoc(
-              `Planning général — semaine — ${poolNom}`,
+              plusieursPoolsMemeSite
+                ? `Planning général — semaine — ${siteComplet} — ${poolNom}`
+                : `Planning général — semaine — ${siteComplet}`,
               contenuA3,
               { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
             ),
