@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { fetchSessionUser, clearSessionUser } from './utils/session';
 import Layout from './components/Layout';
+import MfaGate from './components/MfaGate';
 import Login from './pages/Login';
+import ActiverMfa from './pages/ActiverMfa';
 import Dashboard from './pages/Dashboard';
 import Eleves from './pages/Eleves';
 import EmployesAdministratifs from './pages/EmployesAdministratifs';
@@ -54,7 +56,8 @@ function App() {
       <Routes>
         <Route path="/repondre/:token" element={<SondageRepondre />} />
         <Route path="/login" element={<Login />} />
-        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+        <Route path="/activer-mfa" element={<PrivateRoute><ActiverMfa /></PrivateRoute>} />
+        <Route element={<PrivateRoute><MfaGate><Layout /></MfaGate></PrivateRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/eleves" element={<Eleves />} />
           <Route path="/employes-administratifs" element={<EmployesAdministratifs />} />

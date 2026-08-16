@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { setSessionUser } from '../utils/session';
+import { getSessionUser, setSessionUser } from '../utils/session';
+import { redirectAfterAuth } from '../utils/mfa';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
@@ -44,7 +45,7 @@ export default function Login() {
       setShowChangeMdp(true);
       return;
     }
-    navigate('/dashboard');
+    redirectAfterAuth(navigate, utilisateur);
   };
 
   const handleSubmit = async (e) => {
@@ -110,7 +111,15 @@ export default function Login() {
     setChangeMdpLoading(true);
     try {
       await axios.post(API + '/auth/changer-mdp', { nouveau_mdp: newMdp });
-      navigate('/dashboard');
+      let nextUser = { ...(getSessionUser() || {}), doit_changer_mdp: false };
+      try {
+        const st = await axios.get(API + '/auth/mfa/status');
+        nextUser = { ...nextUser, mfa_enabled: st.data?.mfa_enabled === true };
+      } catch {
+        nextUser = { ...nextUser, mfa_enabled: false };
+      }
+      setSessionUser(nextUser);
+      redirectAfterAuth(navigate, nextUser);
     } catch (err) {
       setChangeMdpErreur(err.response?.data?.message || 'Erreur lors du changement de mot de passe.');
     } finally {

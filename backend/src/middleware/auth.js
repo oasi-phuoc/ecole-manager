@@ -2,6 +2,17 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'ecole_manager_token';
 
+const MFA_ALLOWED_PATHS = new Set([
+  '/api/auth/moi',
+  '/api/auth/changer-mdp',
+  '/api/auth/logout',
+  '/api/auth/mfa/status',
+  '/api/auth/mfa/setup',
+  '/api/auth/mfa/enable',
+]);
+
+const requestPath = (req) => String(req.originalUrl || req.path || '').split('?')[0].replace(/\/+$/, '') || '/';
+
 const parseCookies = (cookieHeader) => {
   const out = {};
   if (!cookieHeader) return out;
@@ -27,9 +38,15 @@ const verifierToken = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Token manquant' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await pool.query('SELECT id, nom, prenom, email, role, permissions FROM utilisateurs WHERE id=$1', [decoded.id]);
+    const result = await pool.query('SELECT id, nom, prenom, email, role, permissions, mfa_enabled FROM utilisateurs WHERE id=$1', [decoded.id]);
     if (result.rows.length === 0) return res.status(401).json({ message: 'Utilisateur non trouve' });
     req.user = result.rows[0];
+    if (req.user.mfa_enabled !== true && !MFA_ALLOWED_PATHS.has(requestPath(req))) {
+      return res.status(403).json({
+        message: 'Double authentification obligatoire. Activez-la pour continuer.',
+        mfa_required: true,
+      });
+    }
     next();
   } catch (err) {
     return res.status(403).json({ message: 'Token invalide' });

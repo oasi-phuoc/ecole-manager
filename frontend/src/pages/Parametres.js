@@ -984,7 +984,7 @@ export default function Parametres() {
                         <div style={{ padding: '11px 16px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Double authentification</div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Code à 6 chiffres (Google Authenticator) pour sécuriser la connexion.</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Code à 6 chiffres (Google Authenticator). Obligatoire pour accéder à l’application.</div>
                           </div>
                           <span style={{
                             padding: '4px 10px',
@@ -1072,9 +1072,9 @@ export default function Parametres() {
                                 <button type="button" style={{ ...styles.btnSauver, background: '#b45309' }} onClick={handleRegenererBackupCodes} disabled={mfaLoading}>
                                   {mfaLoading ? '⏳ Génération...' : 'Régénérer codes secours'}
                                 </button>
-                                <button type="button" style={{ ...styles.btnSauver, background: '#dc2626' }} onClick={handleDesactiverMfa} disabled={mfaLoading}>
-                                  {mfaLoading ? '⏳ Désactivation...' : 'Désactiver 2FA'}
-                                </button>
+                                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                                  La 2FA est obligatoire et ne peut pas être désactivée pour le moment.
+                                </div>
                               </div>
                             </div>
                           )}

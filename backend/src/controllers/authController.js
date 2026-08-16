@@ -32,6 +32,15 @@ const getCookieOptions = () => {
 };
 const signerToken = (payload, expiresIn = '8h') => jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 const userPayload = (user) => ({ id: user.id, email: user.email, role: user.role, nom: user.nom, prenom: user.prenom });
+const publicUser = (user) => ({
+  id: user.id,
+  nom: user.nom,
+  prenom: user.prenom,
+  email: user.email,
+  role: user.role,
+  doit_changer_mdp: user.doit_changer_mdp || false,
+  mfa_enabled: user.mfa_enabled === true,
+});
 const writeAuthCookie = (res, payload) => {
   const token = signerToken(payload, '8h');
   res.cookie(COOKIE_NAME, token, getCookieOptions());
@@ -117,7 +126,7 @@ const login = async (req, res) => {
     writeAuthCookie(res, userPayload(user));
     res.json({
       message: 'Connexion reussie',
-      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role, doit_changer_mdp: user.doit_changer_mdp || false }
+      utilisateur: publicUser(user),
     });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
@@ -161,7 +170,7 @@ const loginMfa = async (req, res) => {
     writeAuthCookie(res, userPayload(user));
     return res.json({
       message: 'Connexion reussie',
-      utilisateur: { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role, doit_changer_mdp: user.doit_changer_mdp || false }
+      utilisateur: publicUser(user),
     });
   } catch {
     return res.status(401).json({ message: 'Token MFA invalide ou expire' });
@@ -231,19 +240,9 @@ const mfaRegenerateBackupCodes = async (req, res) => {
 };
 
 const mfaDisable = async (req, res) => {
-  const { code } = req.body || {};
-  if (!code) return res.status(400).json({ message: 'Code MFA manquant' });
-  try {
-    const r = await pool.query('SELECT mfa_enabled, mfa_secret FROM utilisateurs WHERE id = $1', [req.user.id]);
-    const row = r.rows[0];
-    if (!row || row.mfa_enabled !== true) return res.status(400).json({ message: 'MFA deja desactivee' });
-    const secret = decryptText(row.mfa_secret || '');
-    if (!secret || !verifyTotp(secret, code, 1)) return res.status(401).json({ message: 'Code MFA invalide' });
-    await pool.query('UPDATE utilisateurs SET mfa_enabled = false, mfa_secret = NULL, mfa_enabled_at = NULL, mfa_backup_codes = $1::jsonb WHERE id = $2', ['[]', req.user.id]);
-    return res.json({ message: 'Double authentification desactivee' });
-  } catch (err) {
-    return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
-  }
+  return res.status(403).json({
+    message: 'La double authentification est obligatoire. Elle ne peut pas être désactivée pour le moment.',
+  });
 };
 
 const mdpFortValide = (mdp) => {
@@ -271,10 +270,12 @@ const changerMdp = async (req, res) => {
 const moi = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nom, prenom, email, role, created_at FROM utilisateurs WHERE id = $1',
+      'SELECT id, nom, prenom, email, role, created_at, mfa_enabled, doit_changer_mdp FROM utilisateurs WHERE id = $1',
       [req.user.id]
     );
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+    if (!row) return res.status(404).json({ message: 'Utilisateur non trouve' });
+    res.json({ ...row, mfa_enabled: row.mfa_enabled === true, doit_changer_mdp: row.doit_changer_mdp || false });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -483,7 +484,7 @@ const passkeyLoginVerify = async (req, res) => {
     if (!credentialId) return res.status(400).json({ message: 'Identifiant passkey manquant' });
 
     const credRes = await pool.query(
-      `SELECT c.*, u.id AS uid, u.nom, u.prenom, u.email, u.role, u.doit_changer_mdp, u.actif
+      `SELECT c.*, u.id AS uid, u.nom, u.prenom, u.email, u.role, u.doit_changer_mdp, u.mfa_enabled, u.actif
        FROM webauthn_credentials c
        JOIN utilisateurs u ON u.id = c.user_id
        WHERE c.credential_id = $1`,
@@ -524,18 +525,12 @@ const passkeyLoginVerify = async (req, res) => {
       email: row.email,
       role: row.role,
       doit_changer_mdp: row.doit_changer_mdp || false,
+      mfa_enabled: row.mfa_enabled === true,
     };
     writeAuthCookie(res, userPayload(user));
     return res.json({
       message: 'Connexion reussie',
-      utilisateur: {
-        id: user.id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        role: user.role,
-        doit_changer_mdp: user.doit_changer_mdp,
-      },
+      utilisateur: publicUser(user),
     });
   } catch (err) {
     if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
