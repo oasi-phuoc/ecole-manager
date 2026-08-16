@@ -591,10 +591,10 @@ export default function Enclassement() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         {/* Panneau paramètres */}
-        <div style={{ width: 280, flexShrink: 0, background: 'white', borderRadius: 14, padding: '20px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+        <div style={{ width: '100%', maxWidth: 320, flex: '1 1 240px', background: 'white', borderRadius: 14, padding: '20px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
           <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16, marginTop: 0 }}>Paramètres</h2>
 
           <label style={s.label}>Session TCF source</label>
@@ -646,13 +646,13 @@ export default function Enclassement() {
         </div>
 
         {/* Liste élèves */}
-        <div style={{ flex: 1, background: 'white', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flex: '1 1 280px', minWidth: 0, background: 'white', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', margin: 0 }}>
               Élèves avec résultats TCF ({elevesAvecScores.length})
             </h2>
             <input placeholder="Rechercher…" value={searchInit} onChange={e => setSearchInit(e.target.value)}
-              style={{ ...s.input, marginBottom: 0, marginLeft: 'auto', width: 160 }} />
+              style={{ ...s.input, marginBottom: 0, marginLeft: 'auto', width: 'min(160px, 100%)', minWidth: 120 }} />
           </div>
 
           {elevesAvecScores.length === 0 ? (
