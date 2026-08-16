@@ -716,6 +716,34 @@ export default function EmploiDuTemps() {
     if (!poolClasse) return false;
     return String(poolClasse.id) !== String(poolCourant.id);
   };
+  /** Hors pool pour un groupe de pools (super-général) : classe absente de tous les pools du groupe. */
+  const estAffectationHorsPools = (aff, poolsGroupe) => {
+    const liste = (poolsGroupe || []).filter(Boolean);
+    if (!aff || !aff.classe_id || !liste.length) return false;
+    if (liste.length === 1) return estAffectationHorsPool(aff, liste[0]);
+    const idsClasses = new Set();
+    liste.forEach((p) => (p.classes || []).forEach((c) => idsClasses.add(String(c.id))));
+    return !idsClasses.has(String(aff.classe_id));
+  };
+  const resoudrePoolsPourGeneral = (poolId = null, poolIds = null) => {
+    if (Array.isArray(poolIds) && poolIds.length) {
+      return poolIds.map((id) => pools.find((p) => String(p.id) === String(id))).filter(Boolean);
+    }
+    if (poolId != null && poolId !== '') {
+      const p = pools.find((x) => String(x.id) === String(poolId));
+      return p ? [p] : [];
+    }
+    return [];
+  };
+  /** Libellé court de la branche affectée (pour affichage en petit). */
+  const libelleBrancheAffectation = (aff) => {
+    if (!aff) return '';
+    if (aff.matiere_id != null && aff.matiere_id !== '') {
+      const m = matieresParId.get(String(aff.matiere_id));
+      if (m) return String(m.designation_courte || m.nom || '').trim();
+    }
+    return String(aff.matiere_nom || '').trim();
+  };
   const nomPoolAffectationExterne = (aff, poolCourant) => {
     if (aff?.pool_nom && aff.dans_pool_courant === false) return String(aff.pool_nom);
     const poolClasse = trouverPoolParClasseId(aff?.classe_id);
@@ -2668,10 +2696,10 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null }) => {
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const ROW_H = 52;
-    const poolCourant = poolId ? pools.find((p) => String(p.id) === String(poolId)) : null;
+    const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
     const parts = [];
     JOURS.forEach(jour => {
       const crs = (allCrs || []).filter(c => c.jour === jour);
@@ -2693,9 +2721,9 @@ export default function EmploiDuTemps() {
             const dispo = (dispos || []).find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
             const indispo = dispo && !dispo.disponible;
             let bg = '#fff', content = '';
-            if (aff && estAffectationHorsPool(aff, poolCourant)) {
+            if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
-              const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolCourant));
+              const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
               content = `<div style="font-weight:700;color:#475569;font-size:8pt;line-height:1.2;">${nomPool}</div>`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
@@ -2706,7 +2734,10 @@ export default function EmploiDuTemps() {
               const ligne1 = estSpecial
                 ? getLibelleTypeSpecial(aff.type_special)
                 : (estSoutien ? `${nomClasse} - Soutien` : nomClasse);
-              const ligne2 = estSpecial ? '' : (aff.matiere_nom ? `<div style="font-size:8pt;margin-top:2px;">${escapeHtml(aff.matiere_nom)}</div>` : '');
+              const branche = libelleBrancheAffectation(aff);
+              const ligne2 = estSpecial || !branche
+                ? ''
+                : `<div style="font-size:7.5pt;font-weight:600;margin-top:2px;line-height:1.15;opacity:0.95;">${escapeHtml(branche)}</div>`;
               content = `<div style="font-weight:700;color:${fg};font-size:9pt;">${ligne1}</div>${ligne2}`;
             } else if (indispo) {
               bg = '#eee';
@@ -2737,7 +2768,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -2747,7 +2778,7 @@ export default function EmploiDuTemps() {
     const listeAff = Array.isArray(affectations) ? affectations : [];
     const listeDispos = Array.isArray(dispos) ? dispos : [];
     const listeTit = Array.isArray(titulaires) ? titulaires : [];
-    const poolCourant = poolId ? pools.find((p) => String(p.id) === String(poolId)) : null;
+    const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
     const classesParProf = {};
     listeTit.forEach((t) => {
       const pid = t?.prof_id != null ? String(t.prof_id) : '';
@@ -2775,7 +2806,7 @@ export default function EmploiDuTemps() {
     const nProfs = listeProfs.length; // toujours A3_NB_COLONNES_PROF
     const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
     const CRENEAU_W = 72;
-    const ROW_H = 28;
+    const ROW_H = 30;
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
@@ -2841,9 +2872,9 @@ export default function EmploiDuTemps() {
             const indispo = dispo && !dispo.disponible;
             let bg = '#fff';
             let content = '';
-            if (aff && estAffectationHorsPool(aff, poolCourant)) {
+            if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
-              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;">${escapeHtml(nomPoolAffectationExterne(aff, poolCourant))}</div>`;
+              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;">${escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]))}</div>`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
@@ -2853,7 +2884,11 @@ export default function EmploiDuTemps() {
               const ligne1 = estSpecial
                 ? getLibelleTypeSpecial(aff.type_special)
                 : (estSoutien ? `${nomClasse} - Soutien` : nomClasse);
-              content = `<div style="font-weight:700;color:${fg};font-size:7pt;line-height:1.15;">${ligne1}</div>`;
+              const branche = libelleBrancheAffectation(aff);
+              const ligne2 = estSpecial || !branche
+                ? ''
+                : `<div style="font-size:5.5pt;font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;">${escapeHtml(branche)}</div>`;
+              content = `<div style="font-weight:700;color:${fg};font-size:7pt;line-height:1.15;">${ligne1}</div>${ligne2}`;
             } else if (indispo) {
               bg = '#eee';
               content = '<span style="color:#9ca3af;font-size:6.5pt;">Indispo</span>';
@@ -3175,6 +3210,69 @@ export default function EmploiDuTemps() {
         const key = normaliserLieuTravail(p.site || p.nom || '');
         countPoolsParSite.set(key, (countPoolsParSite.get(key) || 0) + 1);
       });
+      /** Premier mot du libellé composé (ex. SYNECOM-CFR-Fort → SYNECOM) pour le super-général. */
+      const labelComposePool = (pool) => {
+        const site = String(pool?.site || '').trim();
+        const nom = String(pool?.nom || '').trim();
+        if (site.includes('-') || site.includes('–') || site.includes('—')) return site;
+        if (nom.includes('-') || nom.includes('–') || nom.includes('—')) return nom;
+        return resoudreNomSiteComplet(pool);
+      };
+      const prefixeSitePool = (pool) => {
+        const label = labelComposePool(pool);
+        const premier = String(label).split(/[-–—_\s]+/).filter(Boolean)[0] || label;
+        return String(premier).trim() || 'Site';
+      };
+      const fusionnerPlanningsGeneraux = (datas) => {
+        const profMap = new Map();
+        const affKeys = new Set();
+        const affectations = [];
+        const dispoKeys = new Set();
+        const dispos = [];
+        const titMap = new Map();
+        let creneaux = [];
+        (datas || []).forEach((data) => {
+          if (!data) return;
+          (data.profs || []).forEach((p) => {
+            if (p?.id == null) return;
+            if (!profMap.has(String(p.id))) profMap.set(String(p.id), p);
+          });
+          if (!creneaux.length && Array.isArray(data.creneaux) && data.creneaux.length) {
+            creneaux = data.creneaux;
+          }
+          (data.affectations || []).forEach((a) => {
+            const k = `${a.prof_id}|${a.creneau_id}|${a.classe_id || ''}|${a.type_special || ''}|${a.matiere_id || ''}`;
+            if (affKeys.has(k)) return;
+            affKeys.add(k);
+            const { dans_pool_courant, ...rest } = a;
+            affectations.push(rest);
+          });
+          (data.dispos || []).forEach((d) => {
+            const k = `${d.prof_id}|${d.creneau_id}`;
+            if (dispoKeys.has(k)) return;
+            dispoKeys.add(k);
+            dispos.push(d);
+          });
+          (data.titulaires || []).forEach((t) => {
+            const k = String(t.classe_id != null ? t.classe_id : t.classe_nom || '');
+            if (!k || titMap.has(k)) return;
+            titMap.set(k, t);
+          });
+        });
+        const profsMerged = Array.from(profMap.values()).sort((a, b) =>
+          String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+          || String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr')
+        );
+        return {
+          profs: profsMerged,
+          creneaux,
+          affectations,
+          dispos,
+          titulaires: Array.from(titMap.values()),
+        };
+      };
+
+      const generalParPoolId = new Map();
       for (const pool of poolsExport) {
         const poolId = String(pool.id);
         const poolNom = pool.nom || `Pool_${poolId}`;
@@ -3182,7 +3280,6 @@ export default function EmploiDuTemps() {
         const siteFile = sanitizeFilename(siteComplet, 'Site');
         const siteKey = normaliserLieuTravail(pool.site || pool.nom || '');
         const plusieursPoolsMemeSite = (countPoolsParSite.get(siteKey) || 0) > 1;
-        // Fichier = nom complet du site ; si plusieurs pools sur le même site, suffixe pool
         const baseNomGeneral = plusieursPoolsMemeSite
           ? `${siteFile}_${nomPoolSafe(pool)}`
           : siteFile;
@@ -3190,6 +3287,7 @@ export default function EmploiDuTemps() {
           const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
           const rep = await axios.get(url, { headers });
           const data = rep.data || {};
+          generalParPoolId.set(poolId, data);
           const titreGeneral = plusieursPoolsMemeSite
             ? `Planning général — ${siteComplet} — ${poolNom}`
             : `Planning général — ${siteComplet}`;
@@ -3226,6 +3324,61 @@ export default function EmploiDuTemps() {
           });
         } catch (errPool) {
           console.error('Export général pool', poolId, errPool);
+        }
+      }
+
+      // —— Super-général : regroupe les sites au même premier mot (ex. SYNECOM-*) ——
+      setExportPdfProgress('Plannings super-généraux…');
+      const groupesPrefixe = new Map();
+      poolsExport.forEach((pool) => {
+        const label = prefixeSitePool(pool);
+        const key = label.toUpperCase();
+        if (!groupesPrefixe.has(key)) groupesPrefixe.set(key, { label, pools: [] });
+        groupesPrefixe.get(key).pools.push(pool);
+      });
+      for (const { label, pools: poolsGroupe } of groupesPrefixe.values()) {
+        if (poolsGroupe.length < 2) continue;
+        const datas = poolsGroupe
+          .map((p) => generalParPoolId.get(String(p.id)))
+          .filter(Boolean);
+        if (!datas.length) continue;
+        const merged = fusionnerPlanningsGeneraux(datas);
+        if (!(merged.profs || []).length) continue;
+        const poolIds = poolsGroupe.map((p) => p.id);
+        const prefixFile = sanitizeFilename(label, 'Site');
+        const titreSuper = `Planning super-général — ${label}`;
+        try {
+          const contenuJours = buildPlanningGeneralPrintHtml({
+            creneaux: merged.creneaux || [],
+            profs: merged.profs || [],
+            affectations: merged.affectations || [],
+            dispos: merged.dispos || [],
+            poolIds,
+          });
+          documents.push({
+            relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
+            html: buildHtmlPrintDoc(titreSuper, contenuJours, { paysage: true }),
+            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+          });
+          const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
+            creneaux: merged.creneaux || [],
+            profs: merged.profs || [],
+            affectations: merged.affectations || [],
+            dispos: merged.dispos || [],
+            titulaires: merged.titulaires || [],
+            poolIds,
+          });
+          documents.push({
+            relativePath: `Super_General/${prefixFile}_Planning-général.pdf`,
+            html: buildHtmlPrintDoc(
+              `${titreSuper} — semaine`,
+              contenuA3,
+              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
+            ),
+            pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
+          });
+        } catch (errSuper) {
+          console.error('Export super-général', label, errSuper);
         }
       }
 
@@ -5892,12 +6045,13 @@ export default function EmploiDuTemps() {
                                   couleurTexte = '#111827';
                                   libelleAff = aff?.classe_nom || '';
                                 }
+                                const brancheAff = (!horsPool && !estSpecial) ? libelleBrancheAffectation(aff) : '';
                                 return (
                                   <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                     background:couleurFond,color:couleurTexte}}>
                                     {aff ? <>
                                       <b style={{color:couleurTexte,fontSize:12}}>{libelleAff}</b>
-                                      {!horsPool && !estSpecial && aff.matiere_nom ? <div style={{color:couleurTexte,fontWeight:600,fontSize:11,marginTop:3}}>{aff.matiere_nom}</div> : null}
+                                      {brancheAff ? <div style={{color:couleurTexte,fontWeight:600,fontSize:10,marginTop:2,lineHeight:1.15,opacity:0.92}}>{brancheAff}</div> : null}
                                     </> : ''}
                                   </td>
                                 );
