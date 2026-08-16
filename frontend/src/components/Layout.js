@@ -4,6 +4,7 @@ import axios from 'axios';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 import { ICONS_BY_PATH } from './DashboardIcons';
 import { useIsMobile, MOBILE_BREAKPOINT } from '../hooks/useIsMobile';
+import MobilePageEnhancer from './MobilePageEnhancer';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const W = 200;
@@ -594,7 +595,7 @@ export default function Layout() {
       {/* Contenu principal : seul défilement de l'app — sticky des pages par rapport à cette zone */}
       <div style={{
         marginLeft: isMobile ? 0 : W,
-        paddingTop: isMobile ? TOP_BAR_H : 0,
+        paddingTop: isMobile ? `calc(${TOP_BAR_H}px + env(safe-area-inset-top, 0px))` : 0,
         flex: 1,
         minWidth: 0,
         minHeight: 0,
@@ -608,10 +609,11 @@ export default function Layout() {
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
-            overflowX: 'auto',
+            overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
           }}
         >
+          <MobilePageEnhancer enabled={isMobile} />
           <Outlet />
         </div>
       </div>
@@ -648,12 +650,12 @@ const s = {
     top: 0,
     left: 0,
     right: 0,
-    height: TOP_BAR_H,
+    height: `calc(${TOP_BAR_H}px + env(safe-area-inset-top, 0px))`,
     zIndex: 150,
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '0 10px',
+    padding: 'env(safe-area-inset-top, 0px) 10px 0',
     background: 'white',
     borderBottom: '1px solid #ede9fe',
     boxShadow: '0 2px 12px rgba(99,102,241,0.08)',

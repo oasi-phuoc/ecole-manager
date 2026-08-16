@@ -821,7 +821,7 @@ const s = {
   controlsRow:{display:'flex',alignItems:'center',gap:10,marginBottom:16,flexWrap:'wrap'},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},
-  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},
+  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:'min(200px, 100%)',background:'white',outline:'none'},
   filtres:{display:'flex',gap:4},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
   filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},

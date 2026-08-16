@@ -803,7 +803,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
     const tabs = vueContexte === 'bulletin' ? tabsBulletin : tabsDetail;
     return (
       <div className={className}>
-        <div style={s.tabsBar}>
+        <div className="mobile-tabs-bar" style={s.tabsBar}>
           {tabs.map(([k, l]) => (
             <button key={k}
               style={{ ...s.tabBtn, ...(vueClasseAction === k ? s.tabBtnActif : {}) }}

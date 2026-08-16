@@ -525,7 +525,7 @@ export default function Eleves() {
       <div style={{position:'relative',background:'#f8fafc',paddingBottom:12,marginBottom:0,boxShadow:'none'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12,flexWrap:'wrap',minHeight:40}}>
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
-        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+        <div className="page-actions" style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
           {isAdmin() && <label style={{padding:'8px 14px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
             {loraUpdateLoading ? 'Mise à jour...' : 'Mise à jour LORA'}
@@ -534,9 +534,9 @@ export default function Eleves() {
           {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>Importer LORA</button>}
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:0,flexWrap:'wrap'}}>
         <input
-          style={{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'}}
+          style={{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:'min(280px, 100%)',color:'#1e293b',fontFamily:'inherit'}}
           placeholder="Rechercher un élève, une classe..."
           value={recherche}
           onChange={e => { setRecherche(e.target.value); }}
@@ -555,7 +555,7 @@ export default function Eleves() {
           </button>
         ) : (
           <>
-            <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+            <div className="chip-tabs" style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
               {['tous', ...niveauxDB.map(n => n.nom), 'sans'].map(k => {
                 const actif = niveauOnglet === k;
                 const label = k === 'tous' ? 'Trier' : k === 'sans' ? 'Sans classe' : k;

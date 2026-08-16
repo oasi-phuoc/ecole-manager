@@ -86,7 +86,7 @@ export default function Branches() {
             Trier
           </button>
         ) : (
-          <div style={s.toggleGroup}>
+          <div className="chip-tabs" style={s.toggleGroup}>
             {niveaux.map(n => (
               <button key={n} style={{...s.toggleBtn,...(filtreNiveau===n?s.toggleBtnActif:{})}} onClick={() => { setFiltreNiveau(n); if (n === 'tous') setShowNiveauxFiltres(false); }}>
                 {n==='tous'?'Trier':n}

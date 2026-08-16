@@ -119,7 +119,7 @@ export default function Login() {
   };
 
   if (showChangeMdp) return (
-    <div style={styles.page}>
+    <div className="login-page" style={styles.page}>
       <div style={{...styles.card, maxWidth: 460}}>
         <div style={styles.logoContainer}>
           <img src="/logo-image-oasis.webp" alt="Oasis" style={styles.logoImage} />
@@ -194,7 +194,7 @@ export default function Login() {
   );
 
   return (
-    <div style={styles.page}>
+    <div className="login-page" style={styles.page}>
       <div style={styles.card}>
         <div style={styles.logoContainer}>
           <img src="/logo-image-oasis.webp" alt="Oasis" style={styles.logoImage} />
@@ -296,7 +296,7 @@ const styles = {
   card: {
     background: 'white',
     borderRadius: '16px',
-    padding: '40px',
+    padding: '28px 20px',
     width: '100%',
     maxWidth: '400px',
     boxShadow: '0 10px 40px rgba(0,0,0,0.2)',

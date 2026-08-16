@@ -1,0 +1,279 @@
+/* ============================================================
+   Frontend mobile (≤900px) — desktop inchangé
+   ============================================================ */
+
+@media (max-width: 900px) {
+  html,
+  body,
+  #root {
+    overflow: hidden;
+  }
+
+  .layout-mobile {
+    --page-pad: 12px;
+  }
+
+  .app-page-host {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Padding page : uniquement le premier enfant (la page), pas les descendants */
+  .layout-mobile .app-page-host > .page-shell,
+  .layout-mobile .app-page-host > div {
+    padding-left: var(--page-pad) !important;
+    padding-right: var(--page-pad) !important;
+    padding-top: 12px !important;
+    max-width: 100%;
+    box-sizing: border-box !important;
+  }
+
+  /* Titres : une ligne dédiée, texte qui ne déborde pas */
+  .layout-mobile .app-page-host h1,
+  .layout-mobile .app-page-host h2 {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 1.15rem !important;
+    line-height: 1.25 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout-mobile .app-page-host input,
+  .layout-mobile .app-page-host select,
+  .layout-mobile .app-page-host textarea {
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Annule les bandes sticky « bleed » desktop */
+  .layout-mobile .app-page-host [style*="margin-left: -"],
+  .layout-mobile .app-page-host [style*="margin-left:-"] {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* clip-path / overflow des tableaux : casse les en-têtes sticky */
+  .layout-mobile table {
+    clip-path: none !important;
+    border-radius: 8px;
+    overflow: visible !important;
+  }
+
+  /* Conteneur de scroll horizontal pour les tableaux */
+  .layout-mobile .table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: transparent;
+  }
+
+  .layout-mobile .table-scroll table {
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+  }
+
+  /* En-têtes de tableau lisibles + texte tronqué */
+  .layout-mobile table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    font-size: 10px !important;
+    letter-spacing: 0.03em;
+    padding: 8px 8px !important;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .layout-mobile table tbody td,
+  .layout-mobile table td {
+    padding: 8px 8px !important;
+    font-size: 12px !important;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* Cellules interactives : ne pas tronquer */
+  .layout-mobile table td:has(select),
+  .layout-mobile table td:has(button),
+  .layout-mobile table td:has(input),
+  .layout-mobile table td:has(textarea),
+  .layout-mobile table th:has(button),
+  .layout-mobile table th:has(input) {
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: unset;
+  }
+
+  /* Onglets / pastilles : défilement horizontal, plus de wrap cassé */
+  .layout-mobile .chip-tabs,
+  .layout-mobile .mobile-chip-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    gap: 4px;
+    padding: 3px !important;
+  }
+
+  .layout-mobile .chip-tabs::-webkit-scrollbar,
+  .layout-mobile .mobile-chip-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .layout-mobile .chip-tabs > button,
+  .layout-mobile .mobile-chip-tabs > button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 12px !important;
+    padding: 7px 12px !important;
+  }
+
+  /* Onglets type « dossier » (Notes, Bulletins, TCF) */
+  .layout-mobile .mobile-tabs-bar,
+  .layout-mobile .tabs-scroll {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+
+  .layout-mobile .mobile-tabs-bar::-webkit-scrollbar,
+  .layout-mobile .tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .layout-mobile .mobile-tabs-bar > button,
+  .layout-mobile .tabs-scroll > button {
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Barres d’actions sous le titre */
+  .layout-mobile .page-actions,
+  .layout-mobile .mobile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+  }
+
+  .layout-mobile .page-actions > button,
+  .layout-mobile .mobile-actions > button,
+  .layout-mobile .page-actions > label,
+  .layout-mobile .mobile-actions > label {
+    flex: 1 1 auto;
+    min-width: min(140px, 100%);
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Grilles */
+  .layout-mobile .app-page-host [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .layout-mobile .app-page-host [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .layout-mobile .app-page-host [style*="grid-template-columns:1fr 1fr 1fr"],
+  .layout-mobile .app-page-host [style*="grid-template-columns: 1fr 1fr"],
+  .layout-mobile .app-page-host [style*="grid-template-columns: 1fr 360px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modales */
+  .layout-mobile .modal-overlay {
+    padding: 10px !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .layout-mobile .modal-overlay > div {
+    width: min(100%, 640px) !important;
+    max-width: calc(100vw - 20px) !important;
+    margin: 8px auto !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+  }
+
+  /* CustomSelect trop large */
+  .layout-mobile .custom-select,
+  .layout-mobile [class*="custom-select"] {
+    max-width: 100%;
+  }
+
+  /* Cartes / chips à largeur fixe (EDT suivi, etc.) */
+  .layout-mobile .app-page-host [style*="min-width: 240px"],
+  .layout-mobile .app-page-host [style*="minWidth:240"],
+  .layout-mobile .app-page-host [style*="width: 240px"],
+  .layout-mobile .app-page-host [style*="width:240px"],
+  .layout-mobile .app-page-host [style*="width: 300px"],
+  .layout-mobile .app-page-host [style*="min-width: 300px"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .layout-mobile {
+    --page-pad: 10px;
+  }
+
+  .layout-mobile .app-page-host h1,
+  .layout-mobile .app-page-host h2 {
+    font-size: 1.05rem !important;
+  }
+
+  .layout-mobile .app-page-host [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .layout-mobile table thead th {
+    max-width: 110px;
+    font-size: 9px !important;
+  }
+
+  .layout-mobile table tbody td,
+  .layout-mobile table td {
+    max-width: 130px;
+    font-size: 11px !important;
+  }
+}
+
+/* Login hors Layout */
+@media (max-width: 900px) {
+  body:has(.login-page) {
+    overflow: auto;
+  }
+}

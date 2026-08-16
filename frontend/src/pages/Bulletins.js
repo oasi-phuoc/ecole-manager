@@ -342,7 +342,7 @@ export default function Bulletins() {
         <div style={s.header}>
           <h2 style={s.titre}>Bulletins de notes</h2>
         </div>
-        <div style={s.tabsBar}>
+        <div className="mobile-tabs-bar" style={s.tabsBar}>
           {niveaux.map(n => (
             <button key={n} onClick={() => setNiveauFiltre(n)}
               style={{ ...s.tabBtn, width: 90, minWidth: 90, ...(niveauFiltre === n ? s.tabBtnActif : {}) }}>
@@ -418,7 +418,7 @@ export default function Bulletins() {
       </div>
 
       {/* Main tabs */}
-      <div style={s.tabsBar}>
+      <div className="mobile-tabs-bar" style={s.tabsBar}>
         {[['comportements', 'Comportements'], ['bulletin', 'Bulletins de notes']].map(([k, l]) => (
           <button key={k} onClick={async () => {
             if (onglet === 'comportements' && k !== 'comportements' && criteresModifies && criteresValides) await sauvegarderTousCriteres();

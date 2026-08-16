@@ -595,7 +595,7 @@ export default function Presences() {
               options={classes.map(c => ({value: c.id, label: c.nom}))}
               onChange={(v) => setClasseSelectionnee(v)}
             />
-            <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+            <div className="chip-tabs" style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
               {[
                 { id: '1sem', label: '1er semestre' },
                 { id: '2sem', label: '2e semestre' },

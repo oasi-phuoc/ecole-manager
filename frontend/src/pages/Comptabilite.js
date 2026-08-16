@@ -832,7 +832,7 @@ export default function Comptabilite() {
             {!showFacturesNiveaux ? (
               <button style={styles.btnGhostPill} onClick={() => setShowFacturesNiveaux(true)}>Trier</button>
             ) : (
-              <div style={styles.toggleGroup}>
+              <div className="chip-tabs" style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(facturesNiveau === niv ? styles.toggleBtnActif : {}) }}
                     onClick={() => { setFacturesNiveau(niv); setRechercheFactures(''); if (niv === 'Tous') setShowFacturesNiveaux(false); }}>
@@ -1008,7 +1008,7 @@ export default function Comptabilite() {
             {!showPaiementsNiveaux ? (
               <button style={styles.btnGhostPill} onClick={() => setShowPaiementsNiveaux(true)}>Trier</button>
             ) : (
-              <div style={styles.toggleGroup}>
+              <div className="chip-tabs" style={styles.toggleGroup}>
                 {['Tous', 'CSC', 'CFR', 'EPL', 'CPR'].map(niv => (
                   <button key={niv} style={{ ...styles.toggleBtn, ...(paiementsNiveau === niv ? styles.toggleBtnActif : {}) }}
                     onClick={() => { setPaiementsNiveau(niv); if (niv === 'Tous') setShowPaiementsNiveaux(false); }}>{niv}</button>
@@ -1345,7 +1345,7 @@ export default function Comptabilite() {
         <>
           <div style={styles.filtersRow}>
             <input style={styles.tabSearch} placeholder="Rechercher un article..." value={recherchePrix} onChange={e => setRecherchePrix(e.target.value)} />
-            <div style={styles.toggleGroup}>
+            <div className="chip-tabs" style={styles.toggleGroup}>
               {[{ key: 'ecolage', label: 'Écolage' }, { key: 'scolaire', label: 'Matériel scolaire' }, { key: 'fournitures', label: 'Autres fournitures' }].map(t => (
                 <button key={t.key} style={{ ...styles.toggleBtn, ...(prixOnglet === t.key ? styles.toggleBtnActif : {}) }} onClick={() => setPrixOnglet(t.key)}>{t.label}</button>
               ))}

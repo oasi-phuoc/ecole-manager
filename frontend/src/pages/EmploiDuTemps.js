@@ -3768,7 +3768,7 @@ export default function EmploiDuTemps() {
           </div>
         )}
         {onglet === 'plannings' && (
-          <div style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(720px,78vw)'}}>
+          <div className="page-actions" style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(720px,100%)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
               {sousOngletPlanning !== 'general' && (
                 <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
@@ -3989,7 +3989,7 @@ export default function EmploiDuTemps() {
 
       {onglet === 'plannings' && (
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-          <div style={styles.toggleGroup}>
+          <div className="chip-tabs" style={styles.toggleGroup}>
             {[{id:'classes',label:'Classes'},{id:'salle',label:'Salles'},{id:'professeurs',label:'Professeurs'},{id:'general',label:'Général'}].map(o => (
               <button key={o.id} style={{...styles.toggleBtn,...(sousOngletPlanning===o.id?styles.toggleBtnActif:{})}}
                 onClick={() => {
@@ -4081,7 +4081,7 @@ export default function EmploiDuTemps() {
                     Trier
                   </button>
                 ) : (
-                  <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+                  <div className="chip-tabs" style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
                     {[{id:'tous', label:'Trier'}, ...pools.map(p => ({id:String(p.id), label:p.nom}))].map(tab => {
                       const actif = sousOngletDisp === tab.id;
                       return (
@@ -4560,7 +4560,7 @@ export default function EmploiDuTemps() {
         <div>
           {/* Toggles + Dropdowns — une seule ligne */}
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}}>
-            <div style={styles.toggleGroup}>
+            <div className="chip-tabs" style={styles.toggleGroup}>
               {[{id:'classes',label:'Classes'},{id:'salles',label:'Salles'},{id:'profs',label:'Professeurs'},{id:'branches',label:'Branches'}].map(o => (
                 <button key={o.id} style={{...styles.toggleBtn,...(sousOngletAff===o.id?styles.toggleBtnActif:{})}}
                   onClick={async () => {
@@ -6026,7 +6026,7 @@ export default function EmploiDuTemps() {
                   Trier
                 </button>
               ) : (
-                <div style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
+                <div className="chip-tabs" style={{display:'flex',background:'#ede9fe',borderRadius:20,padding:3,gap:2}}>
                   {['tous',...JOURS].map(j => (
                     <button key={j}
                       onClick={() => { setJourPlanningFiltre(j); if (j==='tous') setShowJoursFiltres(false); }}
@@ -6160,7 +6160,7 @@ export default function EmploiDuTemps() {
 
 const styles = {
   page:{padding:'28px 32px',background:'#f8fafc',minHeight:'100%',boxSizing:'border-box',fontFamily:"'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif"},
-  header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%',minHeight:40},
+  header:{display:'flex',alignItems:'center',gap:15,marginBottom:12,width:'100%',minHeight:40,flexWrap:'wrap'},
   btnRetour:{padding:'8px 14px',background:'white',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#475569'},
   btnImprimer:{padding:'8px 14px',background:'#6366f1',border:'1px solid #6366f1',borderRadius:8,cursor:'pointer',fontSize:13,color:'white',fontWeight:600},
   titre:{fontSize:22,fontWeight:800,color:'#0f172a',margin:0},

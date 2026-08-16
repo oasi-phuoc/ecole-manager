@@ -1762,7 +1762,7 @@ export default function TCF() {
         </div>
 
         <div style={{...styles.filtersStack}}>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {/* Backup visuel conservé: option "Tous" */}
             {false && (
               <button onClick={() => withResultatToggleGuard(() => setResultatSession(''))}
@@ -1777,13 +1777,13 @@ export default function TCF() {
               </button>
             ))}
           </div>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
               <button key={val} onClick={() => withResultatToggleGuard(() => setResultatMatiere(val))}
                 style={{ ...styles.pillBtn, ...(resultatMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {[['individuelle','Élève'],['classe','Classe']].map(([val,label]) => (
               <button key={val} onClick={() => withResultatToggleGuard(() => { setResultatVue(val); if (val === 'individuelle') setResultatClasseId(''); else { setResultatEleveId(''); setResultatEleveSearch(''); } })}
                 style={{ ...styles.pillBtn, ...(resultatVue === val ? styles.pillBtnActif : {}) }}>{label}</button>
@@ -3637,7 +3637,7 @@ export default function TCF() {
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-            <div style={styles.pillGroup}>
+            <div className="chip-tabs" style={styles.pillGroup}>
               {SESSIONS.map(s => (
                 <button key={s} type="button" onClick={() => setGraphSession(prev => prev === s ? '' : s)}
                   style={{ ...styles.pillBtn, ...(graphSession === s ? styles.pillBtnActif : {}) }}>
@@ -3645,11 +3645,11 @@ export default function TCF() {
                 </button>
               ))}
             </div>
-            <div style={styles.pillGroup}>
+            <div className="chip-tabs" style={styles.pillGroup}>
               <button type="button" onClick={() => { setGraphVue('moyenne'); setGraphClasseId(''); setGraphEleveId(''); }} style={{ ...styles.pillBtn, ...(classModeActive ? styles.pillBtnActif : {}) }}>Classes</button>
               <button type="button" onClick={() => { setGraphVue('individuelle'); setGraphClasseId(''); setGraphEleveId(''); }} style={{ ...styles.pillBtn, ...(graphVue === 'individuelle' ? styles.pillBtnActif : {}) }}>Élèves</button>
             </div>
-            <div style={styles.pillGroup}>
+            <div className="chip-tabs" style={styles.pillGroup}>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('francais')} style={{ ...styles.pillBtn, ...(isFr ? styles.pillBtnActif : {}) }}>Français</button>
               <button type="button" onClick={() => setOngletGraphiqueMatiere('math')} style={{ ...styles.pillBtn, ...(!isFr ? styles.pillBtnActif : {}) }}>Math</button>
             </div>
@@ -3901,19 +3901,19 @@ export default function TCF() {
             placeholder="Rechercher un élève, une classe..."
             style={{ ...styles.searchInput, width: 200, minWidth: 'unset', flex: 'none' }}
           />
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {[['francais','Français'],['math','Math']].map(([val,label]) => (
               <button key={val} onClick={() => setStatMatiere(val)}
                 style={{ ...styles.pillBtn, ...(statMatiere === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {[['fort','Fort'],['faible','Faible']].map(([val,label]) => (
               <button key={val} onClick={() => { setStatSens(val); setStatSeuil(val === 'fort' ? '80' : '40'); }}
                 style={{ ...styles.pillBtn, ...(statSens === val ? styles.pillBtnActif : {}) }}>{label}</button>
             ))}
           </div>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {[['croissant','Croissant'],['decroissant','Décroissant']].map(([val,label]) => (
               <button key={val} onClick={() => setStatOrdre(val)}
                 style={{ ...styles.pillBtn, ...(statOrdre === val ? styles.pillBtnActif : {}) }}>{label}</button>
@@ -3941,7 +3941,7 @@ export default function TCF() {
         </div>
 
         <div style={{ ...styles.filtersRow, justifyContent: 'flex-end' }}>
-          <div style={styles.pillGroup}>
+          <div className="chip-tabs" style={styles.pillGroup}>
             {SESSIONS.map(s => (
               <button key={s} type="button" onClick={() => setStatSession(prev => prev === s ? '' : s)}
                 style={{ ...styles.pillBtn, ...(statSession === s ? styles.pillBtnActif : {}) }}>
@@ -4353,7 +4353,7 @@ export default function TCF() {
           return (
           <div>
             <div className="tcf-no-print" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-              <div style={styles.pillGroup}>
+              <div className="chip-tabs" style={styles.pillGroup}>
                 {siteOrder.map((sk, idx) => (
                   <button key={`plan-site-${sk}`} type="button"
                     onClick={() => setPlanningsSite(sk)}
@@ -4362,7 +4362,7 @@ export default function TCF() {
                   </button>
                 ))}
               </div>
-              <div style={styles.pillGroup}>
+              <div className="chip-tabs" style={styles.pillGroup}>
                 {[{ id: 'professeurs', label: 'Professeurs' }, { id: 'classes', label: 'Classes' }, { id: 'roles', label: 'Rôles' }].map(t => (
                   <button key={`plan-type-${t.id}`} type="button"
                     onClick={() => setPlanningsType(t.id)}
@@ -4628,7 +4628,7 @@ const styles = {
     boxSizing: 'border-box',
     fontFamily: "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif",
   },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, minHeight: 40 },
+  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, minHeight: 40, flexWrap: 'wrap' },
   btnBack: { padding: '8px 14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', color: '#475569', lineHeight: '1' },
   title: { margin: 0, fontSize: 24, fontWeight: 800, color: '#0f172a' },
   pillGroup: { display: 'flex', background: '#ede9fe', borderRadius: 20, padding: 3, gap: 2 },

@@ -1696,7 +1696,7 @@ export default function Classes() {
                   Trier
                 </button>
               ) : (
-                <div style={s.toggleGroup}>
+                <div className="chip-tabs" style={s.toggleGroup}>
                   <button
                     type="button"
                     style={{...s.toggleBtn,...(devoirBrancheFiltre===null?s.toggleBtnActif:{})}}
@@ -1962,7 +1962,7 @@ export default function Classes() {
           ) : (
             <div style={{display:'flex',alignItems:'center',gap:10,marginTop:4,marginBottom:8,flexWrap:'wrap'}}>
               <input style={s.tabSearch} placeholder="Rechercher un document..." value={rechercheInventaire} onChange={e => setRechercheInventaire(e.target.value)} />
-              <div style={s.toggleGroup}>
+              <div className="chip-tabs" style={s.toggleGroup}>
                 {trierBranchesParType(branchesInventaire).map(b => (
                     <button
                       key={b.id}
@@ -2134,7 +2134,7 @@ export default function Classes() {
             Trier
           </button>
         ) : (
-          <div style={s.toggleGroup}>
+          <div className="chip-tabs" style={s.toggleGroup}>
             {[{id:'tous',label:'Trier'}, ...niveauxDB.map(n => ({id:n.nom,label:n.nom}))].map(f => (
               <button key={f.id} style={{...s.toggleBtn,...(filtreNiveau===f.id?s.toggleBtnActif:{})}} onClick={() => { setFiltreNiveau(f.id); if (f.id === 'tous') setShowNiveauxFiltres(false); }}>{f.label}</button>
             ))}
@@ -2303,11 +2303,11 @@ const s = {
   subTabsBar:{display:'flex',gap:0,marginTop:0},
   subTabBtn:{padding:'9px 14px',borderRadius:'0 0 10px 10px',fontSize:14,background:'#e0e7ff',color:'#3730a3',fontWeight:700,width:110,minWidth:110,textAlign:'center',border:'none',cursor:'pointer',outline:'none',lineHeight:1},
   subTabBtnActif:{background:'#4f46e5',color:'white',boxShadow:'0 4px 6px rgba(79,70,229,0.18)'},
-  tabSearch:{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:280,color:'#1e293b',fontFamily:'inherit'},
+  tabSearch:{padding:'9px 14px',borderRadius:8,border:'1px solid #c7d2fe',background:'white',outline:'none',fontSize:14,width:'min(280px, 100%)',color:'#1e293b',fontFamily:'inherit'},
   chip:{padding:'5px 12px',borderRadius:99,fontSize:12,fontWeight:600},
   searchBox:{position:'relative',display:'flex',alignItems:'center'},
   searchIcon:{position:'absolute',left:10,fontSize:13},
-  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:200,background:'white',outline:'none'},
+  searchInput:{padding:'8px 12px 8px 32px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,width:'min(200px, 100%)',background:'white',outline:'none'},
   filtres:{display:'flex',gap:4},
   filtrBtn:{padding:'7px 12px',background:'white',border:'1px solid #e2e8f0',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:500,color:'#64748b'},
   filtrActif:{background:'#6366f1',color:'white',border:'1px solid #6366f1'},
@@ -2321,7 +2321,7 @@ const s = {
   cardTitle:{fontSize:15,fontWeight:700,color:'#0f172a',margin:0},
   rowBetween:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8},
   overlay:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,backdropFilter:'blur(2px)'},
-  modal:{background:'white',padding:32,borderRadius:16,width:500,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
+  modal:{background:'white',padding:32,borderRadius:16,width:'min(500px, 100%)',maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'},
   modalHeader:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24},
   modalTitle:{fontSize:18,fontWeight:800,color:'#0f172a',margin:0},
   btnClose:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#94a3b8'},
