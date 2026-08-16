@@ -1,13 +1,14 @@
-const jwt = require('jsonwebtoken');
 const XLSX = require('xlsx');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const pool = require('../config/database');
 
-const ARCHIVE_PURPOSE = 'archive-rentree';
-const ARCHIVE_TTL = '2h';
-
 const TABLE_GROUPS = [
+  {
+    folder: '00-references',
+    title: 'Référentiel au moment de l’archive',
+    tables: ['classes', 'pools', 'matieres'],
+  },
   {
     folder: '01-eleves',
     title: 'Élèves et données liées',
@@ -53,19 +54,6 @@ const SENSITIVE_COLS = new Set([
   'mot_de_passe', 'password', 'mfa_secret', 'smtp_app_password', 'mfa_backup_codes',
 ]);
 
-const signerArchiveToken = (userId) =>
-  jwt.sign({ purpose: ARCHIVE_PURPOSE, id: userId }, process.env.JWT_SECRET, { expiresIn: ARCHIVE_TTL });
-
-const verifierArchiveToken = (token, userId) => {
-  if (!token) return false;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded?.purpose === ARCHIVE_PURPOSE && Number(decoded?.id) === Number(userId);
-  } catch {
-    return false;
-  }
-};
-
 const tableExists = async (client, name) => {
   const r = await client.query(
     `SELECT 1 FROM information_schema.tables
@@ -75,19 +63,30 @@ const tableExists = async (client, name) => {
   return r.rows.length > 0;
 };
 
-const sanitizeRows = (rows) => rows.map((row) => {
+const sanitizeRows = (rows) => (rows || []).map((row) => {
   const out = {};
   Object.entries(row || {}).forEach(([k, v]) => {
     if (SENSITIVE_COLS.has(k)) return;
     if (v instanceof Date) out[k] = v.toISOString();
-    else if (v && typeof v === 'object') out[k] = JSON.stringify(v);
+    else if (Buffer.isBuffer(v)) out[k] = v.toString('base64');
+    else if (v && typeof v === 'object') {
+      try { out[k] = JSON.parse(JSON.stringify(v)); } catch { out[k] = String(v); }
+    } else out[k] = v;
+  });
+  return out;
+});
+
+const flattenRows = (rows) => (rows || []).map((row) => {
+  const out = {};
+  Object.entries(row || {}).forEach(([k, v]) => {
+    if (v && typeof v === 'object' && !(v instanceof Date)) out[k] = JSON.stringify(v);
     else out[k] = v;
   });
   return out;
 });
 
 const sheetFromRows = (rows, sheetName) => {
-  const clean = sanitizeRows(rows);
+  const clean = flattenRows(rows);
   const ws = XLSX.utils.json_to_sheet(clean.length ? clean : [{ info: 'Aucune donnée' }]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, String(sheetName || 'Données').slice(0, 31));
@@ -101,18 +100,18 @@ const buildPdf = (title, sections) => new Promise((resolve, reject) => {
   doc.on('end', () => resolve(Buffer.concat(chunks)));
   doc.on('error', reject);
 
-  doc.fontSize(18).fillColor('#4c1d95').text('Oasis — Archive de rentrée', { align: 'left' });
+  doc.fontSize(18).fillColor('#4c1d95').text('Oasis — Archive', { align: 'left' });
   doc.moveDown(0.3);
   doc.fontSize(13).fillColor('#0f172a').text(title);
   doc.fontSize(9).fillColor('#64748b').text(new Date().toLocaleString('fr-CH'));
   doc.moveDown();
 
-  sections.forEach((section, idx) => {
+  (sections || []).forEach((section, idx) => {
     if (idx > 0 && doc.y > 700) doc.addPage();
     doc.fontSize(12).fillColor('#4c1d95').text(section.heading);
     doc.fontSize(9).fillColor('#334155').text(section.subtitle || '');
     doc.moveDown(0.3);
-    const rows = section.rows || [];
+    const rows = flattenRows(section.rows || []);
     if (!rows.length) {
       doc.fontSize(9).fillColor('#94a3b8').text('Aucune donnée.');
       doc.moveDown();
@@ -146,14 +145,14 @@ const buildPdf = (title, sections) => new Promise((resolve, reject) => {
   doc.end();
 });
 
-const guessExtension = (nom, contenu) => {
-  const fromName = String(nom || '').split('.').pop();
-  if (fromName && fromName.length <= 5 && fromName !== String(nom)) return fromName;
+const guessMime = (nom, contenu) => {
   const s = String(contenu || '');
-  if (s.startsWith('data:application/pdf') || s.startsWith('%PDF')) return 'pdf';
-  if (s.startsWith('data:image/png') || s.startsWith('\x89PNG')) return 'png';
-  if (s.startsWith('data:image/jpeg') || s.startsWith('data:image/jpg')) return 'jpg';
-  return 'bin';
+  if (s.startsWith('data:')) return s.slice(5).split(';')[0] || 'application/octet-stream';
+  const ext = String(nom || '').split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return 'application/pdf';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  return 'application/octet-stream';
 };
 
 const decodeDocument = (contenu) => {
@@ -171,116 +170,305 @@ const fetchAnnee = async (client) => {
     const r = await client.query('SELECT nom_ecole, annee_scolaire FROM parametres_ecole LIMIT 1');
     return {
       nom: r.rows[0]?.nom_ecole || 'Oasis',
-      annee: r.rows[0]?.annee_scolaire || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
+      annee: r.rows[0]?.annee_scolaire || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
     };
   } catch {
     return { nom: 'Oasis', annee: String(new Date().getFullYear()) };
   }
 };
 
-const archiveRentreeZip = async (req, res) => {
-  if (!process.env.JWT_SECRET) {
-    return res.status(500).json({ message: 'Configuration de securite manquante' });
+const collectSnapshot = async (client) => {
+  const groups = [];
+  const fichiers = [];
+  const synthese = [];
+
+  for (const group of TABLE_GROUPS) {
+    const tables = [];
+    for (const table of group.tables) {
+      if (!(await tableExists(client, table))) continue;
+      const result = await client.query(`SELECT * FROM ${table}`);
+      let rows = sanitizeRows(result.rows);
+      if (table === 'documents_eleves') {
+        result.rows.forEach((doc) => {
+          if (!doc?.contenu) return;
+          fichiers.push({
+            table_name: table,
+            nom: doc.nom || `document-${doc.id}`,
+            eleve_id: doc.eleve_id || null,
+            mime: guessMime(doc.nom, doc.contenu),
+            contenu: String(doc.contenu),
+          });
+        });
+        rows = rows.map((r) => {
+          const { contenu, ...rest } = r;
+          return { ...rest, fichier_archive: contenu ? 'oui' : 'non' };
+        });
+      }
+      tables.push({ table, rows });
+      synthese.push({ groupe: group.title, table, lignes: rows.length });
+    }
+    groups.push({ folder: group.folder, title: group.title, tables });
   }
+
+  if (await tableExists(client, 'utilisateurs')) {
+    const comptes = await client.query(
+      `SELECT id, nom, prenom, email, role, actif, created_at
+       FROM utilisateurs WHERE role IN ('eleve','parent') ORDER BY nom, prenom`
+    );
+    const rows = sanitizeRows(comptes.rows);
+    const elevesGroup = groups.find((g) => g.folder === '01-eleves');
+    if (elevesGroup) elevesGroup.tables.push({ table: 'comptes_eleves_parents', rows });
+    synthese.push({ groupe: 'Élèves et données liées', table: 'comptes_eleves_parents', lignes: rows.length });
+
+    const profs = await client.query(
+      `SELECT id, nom, prenom, email, role, actif
+       FROM utilisateurs WHERE role NOT IN ('eleve','parent') ORDER BY nom, prenom`
+    );
+    const refGroup = groups.find((g) => g.folder === '00-references');
+    if (refGroup) refGroup.tables.push({ table: 'personnel', rows: sanitizeRows(profs.rows) });
+  }
+
+  return { groups, fichiers, synthese };
+};
+
+const sauvegarderArchiveAnnee = async (user) => {
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const meta = await fetchAnnee(client);
-    const safeAnnee = String(meta.annee).replace(/[^\w.-]+/g, '_');
-    const fileName = `Oasis-archive-rentree-${safeAnnee}.zip`;
-    const token = signerArchiveToken(req.user.id);
-    const manifest = [];
-    const zip = archiver('zip', { zlib: { level: 6 } });
-
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('X-Archive-Token', token);
-    zip.on('error', (err) => {
-      if (!res.headersSent) res.status(500).json({ message: err.message });
-      else res.end();
-    });
-    zip.pipe(res);
-
-    const synthese = [];
-
-    for (const group of TABLE_GROUPS) {
-      const pdfSections = [];
-      for (const table of group.tables) {
-        if (!(await tableExists(client, table))) {
-          manifest.push(`SKIP ${table} (table absente)`);
-          continue;
-        }
-        const result = await client.query(`SELECT * FROM ${table}`);
-        const rows = sanitizeRows(result.rows);
-        zip.append(sheetFromRows(rows, table), { name: `${group.folder}/${table}.xlsx` });
-        pdfSections.push({
-          heading: table,
-          subtitle: `${rows.length} ligne(s)`,
-          rows,
-        });
-        synthese.push({ groupe: group.title, table, lignes: rows.length });
-        manifest.push(`OK ${table} (${rows.length})`);
-
-        if (table === 'documents_eleves') {
-          result.rows.forEach((doc, i) => {
-            if (!doc?.contenu) return;
-            const ext = guessExtension(doc.nom, doc.contenu);
-            const base = String(doc.nom || `document-${doc.id || i}`).replace(/[^\w.-]+/g, '_');
-            zip.append(decodeDocument(doc.contenu), {
-              name: `${group.folder}/fichiers/${doc.eleve_id || 'sans-eleve'}_${doc.id || i}_${base}.${ext}`,
-            });
-          });
-        }
-      }
-      const pdfBuf = await buildPdf(group.title, pdfSections);
-      zip.append(pdfBuf, { name: `${group.folder}/${group.folder}.pdf` });
-    }
-
-    if (await tableExists(client, 'utilisateurs')) {
-      const comptes = await client.query(
-        `SELECT id, nom, prenom, email, role, actif, created_at
-         FROM utilisateurs WHERE role IN ('eleve','parent') ORDER BY nom, prenom`
-      );
-      const rows = sanitizeRows(comptes.rows);
-      zip.append(sheetFromRows(rows, 'comptes'), { name: '01-eleves/comptes_eleves_parents.xlsx' });
-      synthese.push({ groupe: 'Élèves et données liées', table: 'utilisateurs_eleves_parents', lignes: rows.length });
-      manifest.push(`OK utilisateurs_eleves_parents (${rows.length})`);
-    }
-
-    zip.append(sheetFromRows(synthese, 'synthese'), { name: '00-synthese.xlsx' });
-    const synthesePdf = await buildPdf('Synthèse de l’archive', [{
-      heading: 'Contenu archivé',
-      subtitle: `${meta.nom} — année ${meta.annee}`,
-      rows: synthese,
-    }]);
-    zip.append(synthesePdf, { name: '00-synthese.pdf' });
-    zip.append(
-      [
-        `Oasis — Archive de rentrée`,
-        `École : ${meta.nom}`,
-        `Année : ${meta.annee}`,
-        `Date : ${new Date().toLocaleString('fr-CH')}`,
-        `Auteur : ${req.user.prenom || ''} ${req.user.nom || ''} (${req.user.email || ''})`,
-        '',
-        'Cette archive contient les données qui seront supprimées par la réinitialisation de rentrée.',
-        'Les disponibilités professeurs, classes, pools (structure), créneaux et paramètres ne sont pas archivés ici car ils sont conservés.',
-        '',
-        ...manifest,
-      ].join('\n'),
-      { name: '00-LISEZMOI.txt' }
+    const exist = await client.query(
+      `SELECT id, verrouilee FROM archives_annees
+       WHERE annee_scolaire = $1 AND verrouilee = false
+       ORDER BY id DESC LIMIT 1`,
+      [meta.annee]
     );
 
-    await zip.finalize();
-  } catch (err) {
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Erreur lors de l’archivage', erreur: err.message });
+    const snapshot = await collectSnapshot(client);
+    let archiveId = exist.rows[0]?.id;
+    if (archiveId) {
+      await client.query('DELETE FROM archives_fichiers WHERE archive_id = $1', [archiveId]);
+      await client.query('DELETE FROM archives_tables WHERE archive_id = $1', [archiveId]);
+      await client.query(
+        `UPDATE archives_annees
+         SET nom_ecole=$1, created_at=NOW(), created_by=$2, synthese=$3::jsonb, verrouilee=false
+         WHERE id=$4`,
+        [meta.nom, user?.id || null, JSON.stringify(snapshot.synthese), archiveId]
+      );
+    } else {
+      const ins = await client.query(
+        `INSERT INTO archives_annees (annee_scolaire, nom_ecole, created_by, synthese)
+         VALUES ($1,$2,$3,$4::jsonb) RETURNING id`,
+        [meta.annee, meta.nom, user?.id || null, JSON.stringify(snapshot.synthese)]
+      );
+      archiveId = ins.rows[0].id;
     }
+
+    for (const group of snapshot.groups) {
+      for (const t of group.tables) {
+        await client.query(
+          `INSERT INTO archives_tables (archive_id, groupe, groupe_titre, table_name, n_lignes, donnees)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+          [archiveId, group.folder, group.title, t.table, t.rows.length, JSON.stringify(t.rows)]
+        );
+      }
+    }
+    for (const f of snapshot.fichiers) {
+      await client.query(
+        `INSERT INTO archives_fichiers (archive_id, table_name, nom, eleve_id, mime, contenu)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [archiveId, f.table_name, f.nom, f.eleve_id, f.mime, f.contenu]
+      );
+    }
+
+    await client.query('COMMIT');
+    return {
+      archive_id: archiveId,
+      annee: meta.annee,
+      nom_ecole: meta.nom,
+      synthese: snapshot.synthese,
+      n_fichiers: snapshot.fichiers.length,
+    };
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    throw err;
   } finally {
     client.release();
   }
 };
 
+const verifierArchivePourReset = async (archiveId, annee) => {
+  if (!archiveId) return false;
+  const r = await pool.query(
+    'SELECT id, annee_scolaire, verrouilee FROM archives_annees WHERE id=$1',
+    [archiveId]
+  );
+  const row = r.rows[0];
+  return Boolean(
+    row
+    && String(row.annee_scolaire) === String(annee)
+    && row.verrouilee !== true
+  );
+};
+
+const verrouillerArchive = async (archiveId) => {
+  if (!archiveId) return;
+  await pool.query('UPDATE archives_annees SET verrouilee=true WHERE id=$1', [archiveId]);
+};
+
+const listerArchives = async () => {
+  const r = await pool.query(
+    `SELECT a.id, a.annee_scolaire, a.nom_ecole, a.created_at, a.verrouilee, a.synthese,
+            u.prenom AS auteur_prenom, u.nom AS auteur_nom
+     FROM archives_annees a
+     LEFT JOIN utilisateurs u ON u.id = a.created_by
+     ORDER BY a.annee_scolaire DESC, a.created_at DESC`
+  );
+  return r.rows.map((row) => ({
+    ...row,
+    n_lignes: Array.isArray(row.synthese)
+      ? row.synthese.reduce((s, x) => s + Number(x.lignes || 0), 0)
+      : 0,
+  }));
+};
+
+const getArchiveDetail = async (id) => {
+  const a = await pool.query(
+    `SELECT a.*, u.prenom AS auteur_prenom, u.nom AS auteur_nom
+     FROM archives_annees a
+     LEFT JOIN utilisateurs u ON u.id = a.created_by
+     WHERE a.id=$1`,
+    [id]
+  );
+  if (!a.rows[0]) return null;
+  const tables = await pool.query(
+    `SELECT id, groupe, groupe_titre, table_name, n_lignes
+     FROM archives_tables WHERE archive_id=$1
+     ORDER BY groupe, table_name`,
+    [id]
+  );
+  const fichiers = await pool.query(
+    `SELECT id, table_name, nom, eleve_id, mime, length(contenu) AS taille
+     FROM archives_fichiers WHERE archive_id=$1 ORDER BY nom`,
+    [id]
+  );
+  const groupes = [];
+  const map = new Map();
+  tables.rows.forEach((t) => {
+    if (!map.has(t.groupe)) {
+      const g = { folder: t.groupe, title: t.groupe_titre, tables: [] };
+      map.set(t.groupe, g);
+      groupes.push(g);
+    }
+    map.get(t.groupe).tables.push(t);
+  });
+  return { ...a.rows[0], groupes, fichiers: fichiers.rows };
+};
+
+const getArchiveTable = async (archiveId, tableName, { limit = 200, offset = 0 } = {}) => {
+  const r = await pool.query(
+    `SELECT groupe, groupe_titre, table_name, n_lignes, donnees
+     FROM archives_tables WHERE archive_id=$1 AND table_name=$2`,
+    [archiveId, tableName]
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  const all = Array.isArray(row.donnees) ? row.donnees : [];
+  return {
+    groupe: row.groupe,
+    groupe_titre: row.groupe_titre,
+    table_name: row.table_name,
+    n_lignes: row.n_lignes,
+    colonnes: all[0] ? Object.keys(all[0]) : [],
+    lignes: all.slice(Number(offset) || 0, (Number(offset) || 0) + (Number(limit) || 200)),
+  };
+};
+
+const getArchiveFichier = async (archiveId, fichierId) => {
+  const r = await pool.query(
+    `SELECT id, nom, mime, contenu FROM archives_fichiers WHERE archive_id=$1 AND id=$2`,
+    [archiveId, fichierId]
+  );
+  return r.rows[0] || null;
+};
+
+const exporterArchiveZip = async (archiveId, res) => {
+  const detail = await getArchiveDetail(archiveId);
+  if (!detail) return res.status(404).json({ message: 'Archive introuvable' });
+  const tables = await pool.query(
+    `SELECT groupe, groupe_titre, table_name, donnees FROM archives_tables WHERE archive_id=$1 ORDER BY groupe, table_name`,
+    [archiveId]
+  );
+  const fichiers = await pool.query(
+    `SELECT nom, eleve_id, contenu FROM archives_fichiers WHERE archive_id=$1`,
+    [archiveId]
+  );
+
+  const safeAnnee = String(detail.annee_scolaire || 'annee').replace(/[^\w.-]+/g, '_');
+  const fileName = `Oasis-archive-${safeAnnee}.zip`;
+  const zip = archiver('zip', { zlib: { level: 6 } });
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  zip.on('error', (err) => {
+    if (!res.headersSent) res.status(500).json({ message: err.message });
+    else res.end();
+  });
+  zip.pipe(res);
+
+  const byGroup = new Map();
+  tables.rows.forEach((t) => {
+    if (!byGroup.has(t.groupe)) byGroup.set(t.groupe, { title: t.groupe_titre, folder: t.groupe, tables: [] });
+    byGroup.get(t.groupe).tables.push(t);
+  });
+
+  const synthese = Array.isArray(detail.synthese) ? detail.synthese : [];
+  zip.append(sheetFromRows(synthese, 'synthese'), { name: '00-synthese.xlsx' });
+  zip.append(await buildPdf(`Synthèse ${detail.annee_scolaire}`, [{
+    heading: 'Contenu archivé',
+    subtitle: `${detail.nom_ecole || 'Oasis'} — ${detail.annee_scolaire}`,
+    rows: synthese,
+  }]), { name: '00-synthese.pdf' });
+
+  for (const group of byGroup.values()) {
+    const pdfSections = [];
+    for (const t of group.tables) {
+      const rows = Array.isArray(t.donnees) ? t.donnees : [];
+      zip.append(sheetFromRows(rows, t.table_name), { name: `${group.folder}/${t.table_name}.xlsx` });
+      pdfSections.push({ heading: t.table_name, subtitle: `${rows.length} ligne(s)`, rows });
+    }
+    zip.append(await buildPdf(group.title, pdfSections), { name: `${group.folder}/${group.folder}.pdf` });
+  }
+
+  fichiers.rows.forEach((f, i) => {
+    const base = String(f.nom || `fichier-${i}`).replace(/[^\w.-]+/g, '_');
+    zip.append(decodeDocument(f.contenu), {
+      name: `01-eleves/fichiers/${f.eleve_id || 'sans-eleve'}_${f.id || i}_${base}`,
+    });
+  });
+
+  zip.append(
+    [
+      `Oasis — Archive ${detail.annee_scolaire}`,
+      `École : ${detail.nom_ecole || 'Oasis'}`,
+      `Date d’archivage : ${detail.created_at ? new Date(detail.created_at).toLocaleString('fr-CH') : ''}`,
+      '',
+      'Consultation en lecture seule dans le menu Archive.',
+    ].join('\n'),
+    { name: '00-LISEZMOI.txt' }
+  );
+
+  await zip.finalize();
+};
+
 module.exports = {
-  archiveRentreeZip,
-  verifierArchiveToken,
   TABLE_GROUPS,
+  fetchAnnee,
+  sauvegarderArchiveAnnee,
+  verifierArchivePourReset,
+  verrouillerArchive,
+  listerArchives,
+  getArchiveDetail,
+  getArchiveTable,
+  getArchiveFichier,
+  exporterArchiveZip,
+  decodeDocument,
 };

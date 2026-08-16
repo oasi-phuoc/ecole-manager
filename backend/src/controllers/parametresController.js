@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 const { getMailSettingsRow, getMailRuntimeConfig, sendEmail } = require('../services/mailer');
 const { encryptText } = require('../utils/crypto');
-const { archiveRentreeZip, verifierArchiveToken } = require('../services/archiveRentree');
+const { fetchAnnee, verifierArchivePourReset, verrouillerArchive } = require('../services/archiveRentree');
 
 const getProfil = async (req, res) => {
   try {
@@ -364,13 +364,12 @@ const resetTout = async (req, res) => {
   });
 };
 
-const archiveRentree = archiveRentreeZip;
-
 const resetRentree = async (req, res) => {
-  const archiveToken = req.headers['x-archive-token'] || req.body?.archive_token;
-  if (!verifierArchiveToken(archiveToken, req.user.id)) {
+  const archiveId = Number(req.headers['x-archive-id'] || req.body?.archive_id || 0);
+  const meta = await fetchAnnee(pool).catch(() => ({ annee: '' }));
+  if (!(await verifierArchivePourReset(archiveId, meta.annee))) {
     return res.status(400).json({
-      message: 'Vous devez d’abord télécharger l’archive de l’année en cours avant de confirmer la réinitialisation.',
+      message: 'Vous devez d’abord transférer l’année en cours vers le menu Archive avant de confirmer la réinitialisation.',
       archive_required: true,
     });
   }
@@ -466,10 +465,12 @@ const resetRentree = async (req, res) => {
     }
 
     await client.query('COMMIT');
+    try { await verrouillerArchive(archiveId); } catch (_) { /* ignore */ }
     res.json({
       message: 'Reset rentree effectue',
       details: resultats,
       erreurs: [],
+      archive_id: archiveId,
     });
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
@@ -517,7 +518,6 @@ module.exports = {
   modifierPermissions,
   getClassesProf,
   resetTout,
-  archiveRentree,
   resetRentree,
   getAccesProfs,
   modifierAccesProfs,

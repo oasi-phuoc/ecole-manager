@@ -680,6 +680,45 @@ const initDB = async () => {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS archives_annees (
+        id SERIAL PRIMARY KEY,
+        annee_scolaire VARCHAR(40) NOT NULL,
+        nom_ecole VARCHAR(200),
+        created_at TIMESTAMP DEFAULT NOW(),
+        created_by INTEGER REFERENCES utilisateurs(id) ON DELETE SET NULL,
+        verrouilee BOOLEAN DEFAULT false,
+        synthese JSONB DEFAULT '[]'::jsonb
+      )
+    `);
+    await pool.query(`ALTER TABLE archives_annees DROP CONSTRAINT IF EXISTS archives_annees_annee_scolaire_key`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS archives_annees_annee_idx ON archives_annees (annee_scolaire)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS archives_tables (
+        id SERIAL PRIMARY KEY,
+        archive_id INTEGER NOT NULL REFERENCES archives_annees(id) ON DELETE CASCADE,
+        groupe VARCHAR(80) NOT NULL,
+        groupe_titre VARCHAR(200) NOT NULL,
+        table_name VARCHAR(80) NOT NULL,
+        n_lignes INTEGER DEFAULT 0,
+        donnees JSONB DEFAULT '[]'::jsonb
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS archives_tables_archive_idx ON archives_tables (archive_id)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS archives_tables_unique ON archives_tables (archive_id, table_name)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS archives_fichiers (
+        id SERIAL PRIMARY KEY,
+        archive_id INTEGER NOT NULL REFERENCES archives_annees(id) ON DELETE CASCADE,
+        table_name VARCHAR(80),
+        nom VARCHAR(255),
+        eleve_id INTEGER,
+        mime VARCHAR(120),
+        contenu TEXT
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS archives_fichiers_archive_idx ON archives_fichiers (archive_id)`);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);

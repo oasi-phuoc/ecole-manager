@@ -173,6 +173,14 @@ export const IconEnclassement = ({ size, active }) => (
   }/>
 );
 
+// ── Archives — boîte d’archive ──────────────────────────────────────────────
+export const IconArchives = ({ size, active }) => (
+  <I size={size} active={active} ch={<>
+    <path fillRule="evenodd" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v3H3V7z M3 12h18v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8z"/>
+    <path stroke={active ? 'white' : 'currentColor'} fill="none" strokeWidth={1.5} d="M9 16h6"/>
+  </>}/>
+);
+
 // ── Sorties scolaires — bus ──────────────────────────────────────────────────
 export const IconSorties = ({ size, active }) => (
   <I size={size} active={active} ch={<>
@@ -421,6 +429,7 @@ export const ICONS_BY_PATH = {
   '/comptabilite':            IconComptabilite,
   '/documents-administratifs':IconDocuments,
   '/enclassement':            IconEnclassement,
+  '/archives':                IconArchives,
   '/controle-qualite':        IconVisiteClasses,
   '/sorties-scolaires':       IconSorties,
   '/parametres':              IconParametres,

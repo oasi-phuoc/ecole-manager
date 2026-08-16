@@ -24,6 +24,7 @@ import ClasseInventaire from './pages/ClasseInventaire';
 import Enclassement from './pages/Enclassement';
 import SortieScolaire from './pages/SortieScolaire';
 import ControleQualiteHub from './pages/ControleQualiteHub';
+import Archives from './pages/Archives';
 import SondageRepondre from './pages/SondageRepondre';
 
 const PrivateRoute = ({ children }) => {
@@ -76,6 +77,7 @@ function App() {
           <Route path="/documents-administratifs" element={<DocumentsAdministratifs />} />
           <Route path="/classes/:classeId/inventaire" element={<ClasseInventaire />} />
           <Route path="/enclassement" element={<Enclassement />} />
+          <Route path="/archives" element={<Archives />} />
           <Route path="/controle-qualite" element={<ControleQualiteHub />} />
           <Route path="/visite-classes" element={<Navigate to="/controle-qualite?tab=visites" replace />} />
           <Route path="/sondage" element={<Navigate to="/controle-qualite?tab=sondage" replace />} />

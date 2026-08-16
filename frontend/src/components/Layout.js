@@ -12,7 +12,7 @@ const TOP_BAR_H = 52;
 
 const ACCES_DEFAUT_PROF = {
   eleves: true, classes: false, branches: false, emploi_du_temps: false, presences: true, notes: true, bulletins: true, tcf: false, calendrier: true, comptabilite: false, documents: false, statistiques: false, professeurs: true, enclassement: false, sorties_scolaires: false,
-  visite_classes: true, sondage: true,
+  visite_classes: true, sondage: true, archives: true,
 };
 
 const CLASSES_DETAIL_TABS = [
@@ -98,6 +98,7 @@ const ALL_MODULES = [
   { label: 'Emploi du temps',   path: '/emploi-du-temps',         accentKey: 'emploi_du_temps' },
   { label: 'TCF',               path: '/tcf',                     accentKey: 'tcf' },
   { label: 'Enclassement',      path: '/enclassement',            accentKey: 'enclassement' },
+  { label: 'Archives',          path: '/archives',                accentKey: 'archives' },
   { label: 'Contrôle qualité', path: '/controle-qualite' },
   { label: 'Paramètres',        path: '/parametres' },
 ];

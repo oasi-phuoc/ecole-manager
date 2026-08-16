@@ -37,8 +37,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Archive-Token'],
-  exposedHeaders: ['X-Archive-Token', 'Content-Disposition'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Archive-Id'],
+  exposedHeaders: ['Content-Disposition'],
 }));
 const cspConnectSrc = ["'self'", ...allowedOrigins];
 app.use(helmet({
@@ -138,6 +138,7 @@ app.use('/api/devoirs', require('./src/routes/devoirs'));
 app.use('/api/sorties', require('./src/routes/sorties'));
 app.use('/api/visites-classes', require('./src/routes/visiteClasses'));
 app.use('/api/sondages', require('./src/routes/sondages'));
+app.use('/api/archives', require('./src/routes/archives'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur Oasis opérationnel !' });

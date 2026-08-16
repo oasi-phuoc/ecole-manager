@@ -103,6 +103,7 @@ const MODULES_ACCES_PROFS = [
   { key: 'comptabilite',    label: 'Comptabilité',     defaut: false, onglets: [{ key: 'comptabilite_factures', label: 'Factures' }, { key: 'comptabilite_paiements', label: 'Paiements' }, { key: 'comptabilite_prix', label: 'Liste de prix' }] },
   { key: 'documents',       label: 'Documents',        defaut: false, onglets: [{ key: 'documents_administratifs', label: 'Administratifs' }, { key: 'documents_pedagogiques', label: 'Pédagogiques' }, { key: 'documents_seances', label: 'Séances' }, { key: 'documents_formulaires', label: 'Formulaires' }, { key: 'documents_divers', label: 'Divers' }] },
   { key: 'enclassement',      label: 'Enclassement',        defaut: false, onglets: [] },
+  { key: 'archives',          label: 'Archives',            defaut: true,  onglets: [] },
   { key: 'sorties_scolaires', label: 'Sorties scolaires',   defaut: false, onglets: [{ key: 'sorties_automne', label: 'Automne' }, { key: 'sorties_juin', label: 'Juin' }, { key: 'sorties_autres', label: 'Autres' }, { key: 'sorties_suivi', label: 'Tableau de suivi' }] },
   { key: 'visite_classes', label: 'Contrôle qualité — Visites & feedback', defaut: true, onglets: [] },
   { key: 'sondage', label: 'Contrôle qualité — Sondage', defaut: true, onglets: [] },
@@ -175,7 +176,7 @@ export default function Parametres() {
   const [resetMsg, setResetMsg] = useState('');
   const [resetRentreeEtape, setResetRentreeEtape] = useState(0); // 0=idle, 1=confirm1, 2=confirm2, 3=loading, 4=done
   const [resetRentreeMsg, setResetRentreeMsg] = useState('');
-  const [archiveToken, setArchiveToken] = useState('');
+  const [archiveId, setArchiveId] = useState(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [archiveNom, setArchiveNom] = useState('');
   // Données (niveaux, lieux, salles)
@@ -806,64 +807,37 @@ export default function Parametres() {
     setArchiveLoading(true);
     setResetRentreeMsg('');
     try {
-      const res = await axios.get(API + '/parametres/archive-rentree', {
-        headers,
-        responseType: 'blob',
-        timeout: 300000,
-      });
-      if (res.data && res.data.type && String(res.data.type).includes('application/json')) {
-        const txt = await res.data.text();
-        const parsed = JSON.parse(txt);
-        throw new Error(parsed.message || 'Erreur d’archivage');
-      }
-      const token = res.headers['x-archive-token'] || '';
-      const cd = res.headers['content-disposition'] || '';
-      const match = cd.match(/filename="?([^"]+)"?/i);
-      const name = match?.[1] || 'Oasis-archive-rentree.zip';
-      const url = window.URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      if (!token) throw new Error('Archive téléchargée mais jeton manquant. Réessayez.');
-      setArchiveToken(token);
-      setArchiveNom(name);
-      setResetRentreeMsg('Archive téléchargée. Vous pouvez maintenant confirmer pour continuer.');
+      const res = await axios.post(API + '/archives', {}, { headers, timeout: 300000 });
+      const id = res.data?.archive_id;
+      if (!id) throw new Error('Transfert effectué mais identifiant d’archive manquant.');
+      setArchiveId(id);
+      setArchiveNom(res.data?.annee || 'année en cours');
+      setResetRentreeMsg('Année transférée dans le menu Archive (lecture seule). Vous pouvez maintenant confirmer pour continuer.');
     } catch (err) {
-      setArchiveToken('');
+      setArchiveId(null);
       setArchiveNom('');
-      let message = err.message || 'Erreur lors de l’archivage';
-      const data = err.response?.data;
-      if (data instanceof Blob) {
-        try { message = JSON.parse(await data.text()).message || message; } catch { /* ignore */ }
-      } else if (data?.message) {
-        message = data.message;
-      }
-      setResetRentreeMsg('Erreur : ' + message);
+      setResetRentreeMsg('Erreur : ' + (err.response?.data?.message || err.message));
     } finally {
       setArchiveLoading(false);
     }
   };
 
   const handleResetRentree = async () => {
-    if (!archiveToken) {
+    if (!archiveId) {
       setResetRentreeEtape(1);
-      setResetRentreeMsg('Vous devez d’abord télécharger l’archive avant de continuer.');
+      setResetRentreeMsg('Vous devez d’abord transférer l’année vers Archives avant de continuer.');
       return;
     }
     setResetRentreeEtape(3);
     try {
       const res = await axios.delete(API + '/parametres/reset-rentree', {
-        headers: { ...headers, 'X-Archive-Token': archiveToken },
-        data: { archive_token: archiveToken },
+        headers: { ...headers, 'X-Archive-Id': String(archiveId) },
+        data: { archive_id: archiveId },
       });
       const data = res.data || {};
       const erreurs = Array.isArray(data.erreurs) ? data.erreurs : [];
       setResetRentreeEtape(4);
-      setArchiveToken('');
+      setArchiveId(null);
       setArchiveNom('');
       if (erreurs.length) {
         setResetRentreeMsg(
@@ -2127,7 +2101,7 @@ export default function Parametres() {
                 </ul>
                 <p style={{color:'#9a3412',fontSize:12,marginBottom:16,lineHeight:1.5}}>
                   Conservés : professeurs, classes, pools (vides), créneaux, branches/matières, disponibilités, paramètres école.
-                  Une archive ZIP (Excel + PDF) de l’année en cours est obligatoire avant la première confirmation.
+                  Les données de l’année sont d’abord transférées dans le menu Archive (lecture seule, par année). Les exports Excel et PDF se font ensuite depuis ce menu.
                 </p>
 
                 {resetRentreeMsg && (
@@ -2145,9 +2119,9 @@ export default function Parametres() {
 
                 {resetRentreeEtape === 1 && (
                   <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:10,padding:20}}>
-                    <p style={{fontWeight:700,color:'#c2410c',marginBottom:10}}>⚠️ Première confirmation — Archiver avant de continuer</p>
+                    <p style={{fontWeight:700,color:'#c2410c',marginBottom:10}}>⚠️ Première confirmation — Transférer vers Archives</p>
                     <p style={{fontSize:13,color:'#7c2d12',marginBottom:14,lineHeight:1.55}}>
-                      Vous devez d’abord télécharger l’archive de l’année en cours (ZIP : Excel + PDF des élèves, notes, affectations, plannings, présences et comptabilité). La confirmation n’est possible qu’après ce téléchargement.
+                      Vous devez d’abord transférer toutes les données de l’année (élèves, notes, affectations, plannings, présences, comptabilité et documents) vers le menu Archive. Elles y resteront en lecture seule, classées par année. La confirmation n’est possible qu’après ce transfert.
                     </p>
                     <button
                       type="button"
@@ -2155,19 +2129,23 @@ export default function Parametres() {
                       disabled={archiveLoading}
                       style={{padding:'10px 20px',background:'#0f766e',color:'white',border:'none',borderRadius:8,cursor: archiveLoading ? 'wait' : 'pointer',fontWeight:700,marginBottom:14,width: isMobile ? '100%' : undefined,opacity: archiveLoading ? 0.75 : 1}}
                     >
-                      {archiveLoading ? '⏳ Archivage en cours…' : (archiveToken ? 'Télécharger à nouveau l’archive' : 'Télécharger l’archive de l’année')}
+                      {archiveLoading ? '⏳ Transfert en cours…' : (archiveId ? 'Mettre à jour le transfert' : 'Transférer l’année vers Archives')}
                     </button>
-                    {archiveToken && archiveNom && (
+                    {archiveId && archiveNom && (
                       <p style={{fontSize:12,color:'#166534',fontWeight:700,marginBottom:14}}>
-                        Archive prête : {archiveNom}
+                        Année transférée : {archiveNom} — consultable dans le menu Archive (lecture seule).
+                        {' '}
+                        <button type="button" onClick={() => navigate('/archives')} style={{background:'none',border:'none',color:'#4c1d95',fontWeight:800,cursor:'pointer',padding:0,textDecoration:'underline'}}>
+                          Ouvrir Archives
+                        </button>
                       </p>
                     )}
                     <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-                      <button onClick={() => { setResetRentreeEtape(0); setArchiveToken(''); setArchiveNom(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
+                      <button onClick={() => { setResetRentreeEtape(0); setArchiveId(null); setArchiveNom(''); }} style={{padding:'10px 20px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontWeight:600,flex: isMobile ? '1 1 120px' : undefined}}>Annuler</button>
                       <button
-                        onClick={() => archiveToken && setResetRentreeEtape(2)}
-                        disabled={!archiveToken || archiveLoading}
-                        style={{padding:'10px 20px',background: archiveToken ? '#ea580c' : '#fdba74',color:'white',border:'none',borderRadius:8,cursor: archiveToken ? 'pointer' : 'not-allowed',fontWeight:700,flex: isMobile ? '1 1 140px' : undefined}}
+                        onClick={() => archiveId && setResetRentreeEtape(2)}
+                        disabled={!archiveId || archiveLoading}
+                        style={{padding:'10px 20px',background: archiveId ? '#ea580c' : '#fdba74',color:'white',border:'none',borderRadius:8,cursor: archiveId ? 'pointer' : 'not-allowed',fontWeight:700,flex: isMobile ? '1 1 140px' : undefined}}
                       >
                         Oui, continuer
                       </button>
