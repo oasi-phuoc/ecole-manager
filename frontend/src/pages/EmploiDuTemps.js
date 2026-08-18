@@ -11,7 +11,6 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
-  LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
 
@@ -1060,12 +1059,15 @@ export default function EmploiDuTemps() {
         });
       });
       const totalPeriodes = affsProf.length;
+      const quota = getQuotaEffectifProf(prof);
+      const lignesBranches = ORDRE_COLONNES_SPECIALITES.flatMap((cat) => colonnes[cat] || []);
       return {
         profId: String(prof.id),
         nom: `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim() || `Prof ${prof.id}`,
-        colonnes,
+        lignesBranches,
         compteSansBranche,
         totalPeriodes,
+        quotaPeriodes: quota > 0 ? quota : 0,
       };
     });
   const lieuxTravailMap = new Map();
@@ -5683,62 +5685,44 @@ export default function EmploiDuTemps() {
                   </div>
                   <div style={{marginTop:16,marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Préférences</h3>
-                    <p style={{margin:'0 0 12px',fontSize:12,color:'#64748b',lineHeight:1.45,fontWeight:600}}>
-                      Désidératas en 3 colonnes, ordre de préférence, et nombre de périodes déjà affectées sur tout le pool
-                      {poolClasseP?.nom ? ` « ${poolClasseP.nom} »` : ''}
-                      {(classesPoolP || []).length ? ` (${(classesPoolP || []).map((c) => c.nom).filter(Boolean).join(', ')})` : ''}.
-                    </p>
                     {suiviPreferencesBranches.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur dans ce pool pour le moment.</div>
                     ) : (
-                      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                      <div style={{display:'flex',gap:8,width:'100%',marginBottom:4}}>
                         {suiviPreferencesBranches.map((item) => (
-                          <div key={item.profId} style={{...styles.suiviPrefCard,width:'auto',minWidth:0,maxWidth:'none',background:'#ffffff',borderColor:'#e2e8f0'}}>
-                            <div style={styles.suiviPrefHead}>
-                              <div style={{...styles.suiviPrefNom,color:'#0f172a'}}>{item.nom}</div>
-                              <div style={{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'flex-end'}}>
-                                <span style={styles.suiviPrefTagOk}>{item.totalPeriodes} pér. pool</span>
+                          <div key={item.profId} style={{
+                            ...styles.suiviClasseChip,
+                            flex:1,
+                            width:'auto',
+                            minWidth:0,
+                            maxWidth:'none',
+                            alignItems:'stretch',
+                            justifyContent:'flex-start',
+                            textAlign:'left',
+                            border:'1px solid #e2e8f0',
+                            background:'#ffffff',
+                            color:'#0f172a'
+                          }}>
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'start'}}>
+                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',textAlign:'center',paddingRight:8,borderRight:'1px solid #e2e8f0'}}>
+                                <div style={styles.suiviClasseNom}>{item.nom}</div>
+                                <div style={styles.suiviClasseLigne}>
+                                  Périodes {item.totalPeriodes}{item.quotaPeriodes > 0 ? `/${item.quotaPeriodes}` : ''}
+                                </div>
                                 {item.compteSansBranche > 0 && (
-                                  <span style={styles.suiviPrefTagAutre}>Sans branche ({item.compteSansBranche})</span>
+                                  <div style={styles.suiviClasseLigne}>Sans branche {item.compteSansBranche}</div>
                                 )}
                               </div>
-                            </div>
-                            <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',gap:10}}>
-                              {ORDRE_COLONNES_SPECIALITES.map((cat) => {
-                                const items = item.colonnes[cat] || [];
-                                return (
-                                  <div key={`${item.profId}-${cat}`} style={{border:'1px solid #e2e8f0',borderRadius:10,padding:8,background:'#f8fafc',minHeight:80}}>
-                                    <div style={{fontSize:11,fontWeight:800,color:'#334155',marginBottom:6}}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
-                                    {items.length === 0 ? (
-                                      <div style={styles.suiviPrefLigne}>Aucune branche</div>
-                                    ) : (
-                                      <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                                        {items.map((b) => (
-                                          <div key={`${item.profId}-${cat}-${b.id}`} style={{display:'flex',alignItems:'center',gap:6}}>
-                                            <span style={{minWidth:18,textAlign:'right',fontWeight:800,fontSize:11,color:'#64748b',flexShrink:0}}>{b.rang}.</span>
-                                            <span
-                                              title={`${b.label} — ${b.compte} période(s) sur le pool`}
-                                              style={{
-                                                ...(b.compte > 0 ? styles.suiviPrefTagOk : styles.suiviPrefTag),
-                                                display:'flex',
-                                                flex:1,
-                                                minWidth:0,
-                                                justifyContent:'space-between',
-                                                alignItems:'center',
-                                                gap:8,
-                                                borderRadius:7,
-                                              }}
-                                            >
-                                              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
-                                              <span>({b.compte})</span>
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
+                              <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0}}>
+                                {(item.lignesBranches || []).length === 0 ? (
+                                  <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune branche</div>
+                                ) : (item.lignesBranches || []).map((b) => (
+                                  <div key={`${item.profId}-${b.id}-${b.rang}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
+                                    <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
+                                    <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{b.compte}</span>
                                   </div>
-                                );
-                              })}
+                                ))}
+                              </div>
                             </div>
                           </div>
                         ))}
