@@ -11,6 +11,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
+  categoriserBrancheSpecialite,
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
@@ -1079,7 +1080,7 @@ export default function EmploiDuTemps() {
     if (!soeur) return null;
     return matieresParId.get(String(soeur.matiere_id)) || null;
   };
-  const insererSoutienSousFrMa = (items, comptes, afficher) => {
+  const insererSoutienSousFrMa = (items, comptes, afficher, compteSoutienRecu = 0) => {
     if (!afficher) return items;
     const out = [];
     let frAjoute = false;
@@ -1111,6 +1112,13 @@ export default function EmploiDuTemps() {
     if (!maAjoute) {
       out.push({ id: 'MA_SOUTIEN', label: 'Math soutien', compte: comptes.ma || 0, indent: true });
     }
+    out.push({
+      id: 'SOUTIEN_RECU',
+      label: 'Soutien reçu',
+      compte: compteSoutienRecu || 0,
+      indent: true,
+      theme: true,
+    });
     return out;
   };
   const suiviPreferencesBranches = (profsPoolP || [])
@@ -1122,6 +1130,13 @@ export default function EmploiDuTemps() {
       const affsProf = affectationsPoolBranchesSuivi.filter((a) => String(a.prof_id) === String(prof.id));
       const compteParCode = {};
       const comptesSoutien = { fr: 0, ma: 0 };
+      const comptesSoutienRecu = { principales: 0, autres: 0, culturelles: 0 };
+      const coursAUnSoutienCollegue = (affCours) => (affectationsPoolBranchesSuivi || []).some((a) =>
+        String(a.classe_id) === String(affCours.classe_id)
+        && String(a.creneau_id) === String(affCours.creneau_id)
+        && String(a.prof_id) !== String(affCours.prof_id)
+        && (estAffectationSoutien(a) || estAffSoutienPlanning(a))
+      );
       affsProf.forEach((a) => {
         const estSoutien = estAffectationSoutien(a) || estAffSoutienPlanning(a);
         if (estSoutien) {
@@ -1136,10 +1151,27 @@ export default function EmploiDuTemps() {
         if (!matiere || estMatiereSoutien(matiere)) return;
         const groupe = groupePourMatiereId(a.matiere_id);
         const code = String(groupe?.code || groupe?.id || matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
-        if (!code) return;
-        compteParCode[code] = (compteParCode[code] || 0) + 1;
+        if (code) compteParCode[code] = (compteParCode[code] || 0) + 1;
+        if (coursAUnSoutienCollegue(a)) {
+          const cat = groupe?.categorie || categoriserBrancheSpecialite(matiere) || 'autres';
+          if (Object.prototype.hasOwnProperty.call(comptesSoutienRecu, cat)) {
+            comptesSoutienRecu[cat] += 1;
+          } else {
+            comptesSoutienRecu.autres += 1;
+          }
+        }
       });
-      const afficherSoutien = poolPlanningAvecSoutien || comptesSoutien.fr > 0 || comptesSoutien.ma > 0;
+      const afficherSoutien = poolPlanningAvecSoutien
+        || comptesSoutien.fr > 0
+        || comptesSoutien.ma > 0
+        || Object.values(comptesSoutienRecu).some((n) => n > 0);
+      const ligneSoutienRecu = (cat) => ({
+        id: `SOUTIEN_RECU_${cat}`,
+        label: 'Soutien reçu',
+        compte: comptesSoutienRecu[cat] || 0,
+        indent: true,
+        theme: true,
+      });
       const colonnes = {};
       ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
         const items = listerGroupesColonneOrdonnes(groupesBranchesPool, prof.branches_specialites, cat).map((g, idx) => {
@@ -1155,8 +1187,8 @@ export default function EmploiDuTemps() {
           };
         });
         colonnes[cat] = cat === 'principales'
-          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien)
-          : items;
+          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien, comptesSoutienRecu.principales)
+          : (afficherSoutien ? [...items, ligneSoutienRecu(cat)] : items);
       });
       return {
         profId: String(prof.id),
@@ -5792,16 +5824,16 @@ export default function EmploiDuTemps() {
                                           minWidth:0,
                                           paddingLeft: catIdx ? 6 : 0,
                                           paddingRight: catIdx < ORDRE_COLONNES_SPECIALITES.length - 1 ? 6 : 0,
-                                          borderLeft: catIdx ? '1px solid #cbd5e1' : 'none',
+                                          borderLeft: catIdx ? '1px solid #6366f1' : 'none',
                                         }}
                                       >
-                                        <div style={{fontSize:9,fontWeight:800,color:'#64748b',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                        <div style={{fontSize:9,fontWeight:800,color:'#6366f1',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                           {LIBELLES_COLONNES_SPECIALITES[cat]}
                                         </div>
                                         {items.length === 0 ? (
                                           <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7,fontSize:10}}>Aucune</div>
                                         ) : items.map((b, idx) => (
-                                          <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:4,minWidth:0,paddingLeft: b.indent ? 8 : 0}}>
+                                          <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:4,minWidth:0,paddingLeft: b.indent ? 8 : 0,color: b.theme ? '#6366f1' : undefined}}>
                                             <span style={{fontSize:10,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
                                             <span style={{fontSize:10,fontWeight:800,flexShrink:0}}>{b.compte}</span>
                                           </div>
