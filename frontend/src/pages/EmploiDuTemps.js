@@ -158,6 +158,26 @@ const normaliserIdsPrefBranches = (valeur) => {
   return nettoye.split(',').map(v => String(v).trim()).filter(Boolean);
 };
 
+/** Répartit les cartes sur plusieurs lignes : max 5 par ligne, lignes équilibrées (6→3+3, 7→4+3). */
+const repartirCartesParLigne = (items, maxParLigne = 5) => {
+  const liste = Array.isArray(items) ? items : [];
+  const n = liste.length;
+  if (!n) return [];
+  const cap = Math.max(1, Number(maxParLigne) || 5);
+  if (n <= cap) return [liste];
+  const nbLignes = Math.ceil(n / cap);
+  const lignes = [];
+  let index = 0;
+  for (let l = 0; l < nbLignes; l++) {
+    const restantes = n - index;
+    const lignesRestantes = nbLignes - l;
+    const taille = Math.ceil(restantes / lignesRestantes);
+    lignes.push(liste.slice(index, index + taille));
+    index += taille;
+  }
+  return lignes;
+};
+
 export default function EmploiDuTemps() {
   const isMobile = useIsMobile();
   const clonePausesParPeriode = (source = PAUSES_PAR_PERIODE_DEFAUT) => ({
@@ -5743,41 +5763,55 @@ export default function EmploiDuTemps() {
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur dans ce pool pour le moment.</div>
                     ) : (
                       <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:4}}>
-                        {suiviPreferencesBranches.map((item) => (
-                          <div key={item.profId} style={{
-                            ...styles.suiviClasseChip,
-                            width:'auto',
-                            minWidth:0,
-                            maxWidth:'none',
-                            alignItems:'stretch',
-                            justifyContent:'flex-start',
-                            textAlign:'left',
-                            border:'1px solid #e2e8f0',
-                            background:'#ffffff',
-                            color:'#0f172a',
-                            padding:'10px 12px'
-                          }}>
-                            <div style={{...styles.suiviClasseNom,textAlign:'center',marginBottom:8}}>{item.nom}</div>
-                            <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',gap:10}}>
-                              {ORDRE_COLONNES_SPECIALITES.map((cat) => {
-                                const items = item.colonnes?.[cat] || [];
-                                return (
-                                  <div key={`${item.profId}-${cat}`}>
-                                    <div style={{fontSize:11,fontWeight:800,color:'#334155',marginBottom:6}}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
-                                    {items.length === 0 ? (
-                                      <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune branche</div>
-                                    ) : items.map((b, idx) => (
-                                      <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0,paddingLeft: b.indent ? 12 : 0}}>
-                                        <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                          {b.indent ? b.label : `${b.rang}. ${b.label}`}
-                                        </span>
-                                        <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{b.compte}</span>
+                        {repartirCartesParLigne(suiviPreferencesBranches, isMobile ? 2 : 5).map((ligne, ligneIdx) => (
+                          <div key={`prefs-ligne-${ligneIdx}`} style={{display:'flex',gap:8,width:'100%',alignItems:'stretch'}}>
+                            {ligne.map((item) => (
+                              <div key={item.profId} style={{
+                                ...styles.suiviClasseChip,
+                                flex:1,
+                                width:'auto',
+                                minWidth:0,
+                                maxWidth:'none',
+                                alignItems:'stretch',
+                                justifyContent:'flex-start',
+                                textAlign:'left',
+                                border:'1px solid #e2e8f0',
+                                background:'#ffffff',
+                                color:'#0f172a',
+                                padding:'8px 8px'
+                              }}>
+                                <div style={{...styles.suiviClasseNom,textAlign:'center',marginBottom:6,fontSize:12}}>{item.nom}</div>
+                                <div style={{display:'flex',alignItems:'stretch',minWidth:0,width:'100%'}}>
+                                  {ORDRE_COLONNES_SPECIALITES.map((cat, catIdx) => {
+                                    const items = item.colonnes?.[cat] || [];
+                                    return (
+                                      <div
+                                        key={`${item.profId}-${cat}`}
+                                        style={{
+                                          flex:1,
+                                          minWidth:0,
+                                          paddingLeft: catIdx ? 6 : 0,
+                                          paddingRight: catIdx < ORDRE_COLONNES_SPECIALITES.length - 1 ? 6 : 0,
+                                          borderLeft: catIdx ? '1px solid #cbd5e1' : 'none',
+                                        }}
+                                      >
+                                        <div style={{fontSize:9,fontWeight:800,color:'#64748b',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                          {LIBELLES_COLONNES_SPECIALITES[cat]}
+                                        </div>
+                                        {items.length === 0 ? (
+                                          <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7,fontSize:10}}>Aucune</div>
+                                        ) : items.map((b, idx) => (
+                                          <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:4,minWidth:0,paddingLeft: b.indent ? 8 : 0}}>
+                                            <span style={{fontSize:10,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
+                                            <span style={{fontSize:10,fontWeight:800,flexShrink:0}}>{b.compte}</span>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
