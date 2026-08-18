@@ -449,16 +449,24 @@ export default function EmploiDuTemps() {
       if (!ok) return;
     }
     const liste = Object.entries(dispos).map(([creneau_id, disponible]) => ({ creneau_id: parseInt(creneau_id), disponible }));
-    await Promise.all([
-      axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
-      axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
-    ]);
     try {
-      const rAll = await axios.get(API + '/planning/disponibilites', { headers });
-      setAllDispos(rAll.data || []);
-    } catch {}
-    chargerDisposAffectations(poolAffId);
-    showToast('Disponibilités et remarque sauvegardées.');
+      const [rDispo] = await Promise.all([
+        axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
+        axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
+      ]);
+      try {
+        const rAll = await axios.get(API + '/planning/disponibilites', { headers });
+        setAllDispos(rAll.data || []);
+      } catch {}
+      await chargerTout();
+      await chargerDisposAffectations(poolAffId);
+      const nRetirees = Number(rDispo?.data?.affectations_supprimees) || 0;
+      showToast(nRetirees > 0
+        ? `Disponibilités sauvegardées. ${nRetirees} période(s) retirée(s) des affectations professeurs.`
+        : 'Disponibilités et remarque sauvegardées.');
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Erreur lors de la sauvegarde des disponibilités.', 'error');
+    }
   };
 
   const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));

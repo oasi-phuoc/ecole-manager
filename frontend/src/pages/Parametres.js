@@ -515,14 +515,17 @@ export default function Parametres() {
           creneau_id: Number(creneau_id),
           disponible: disponible !== false,
         }));
-        await Promise.all([
+        const [rDispo] = await Promise.all([
           axios.post(API + '/planning/disponibilites/' + profil.id, { disponibilites: liste }, { headers }),
           axios.post(API + '/planning/disponibilites/' + profil.id + '/remarque', { remarque: remarquesDispoProfil || '' }, { headers }),
         ]);
         setDisposProfilDirty(false);
+        const nRetirees = Number(rDispo?.data?.affectations_supprimees) || 0;
+        setMsgProfil(nRetirees > 0 ? 'success-affectations' : 'success');
+      } else {
+        setMsgProfil('success');
       }
-      setMsgProfil('success');
-      setTimeout(() => setMsgProfil(''), 3000);
+      setTimeout(() => setMsgProfil(''), 4000);
     } catch (err) { setMsgProfil('error'); }
   };
 
@@ -875,7 +878,7 @@ export default function Parametres() {
           <h1 style={{ ...styles.titre, fontSize: isMobile ? 20 : 22 }}>Paramètres</h1>
           <div style={{ ...styles.topBarRight, width: isMobile ? '100%' : undefined, flexWrap: 'wrap' }}>
             {onglet === 'profil' && (<>
-              {msgProfil === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Profil mis à jour.</span>}
+              {(msgProfil === 'success' || msgProfil === 'success-affectations') && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{msgProfil === 'success-affectations' ? 'Profil mis à jour. Cours retirés des créneaux indisponibles.' : 'Profil mis à jour.'}</span>}
               {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
               <button type="submit" form="form-profil" style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</button>
             </>)}
@@ -905,6 +908,7 @@ export default function Parametres() {
               )}
               <div style={{ paddingTop: isMobile ? 0 : 20 }}>
                 {msgProfil === 'success' && <div style={styles.msgSuccess}>Profil mis à jour.</div>}
+                {msgProfil === 'success-affectations' && <div style={styles.msgSuccess}>Profil mis à jour. Les cours sur les créneaux indisponibles ont été retirés de l'emploi du temps.</div>}
                 {msgProfil === 'error' && <div style={styles.msgError}>Erreur lors de la mise à jour</div>}
 
                 <form id="form-profil" onSubmit={handleSauverProfil}>
