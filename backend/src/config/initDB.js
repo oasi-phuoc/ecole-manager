@@ -749,6 +749,41 @@ const initDB = async () => {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS archives_fichiers_archive_idx ON archives_fichiers (archive_id)`);
 
+    // Verrouiller l’API PostgREST Supabase (tables public sans RLS = accès anon).
+    // Express continue via le rôle postgres (BYPASSRLS). Idempotent.
+    await pool.query(`
+      DO $rls$
+      DECLARE r RECORD;
+      BEGIN
+        FOR r IN
+          SELECT c.relname AS tablename
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relkind IN ('r', 'p')
+        LOOP
+          EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', r.tablename);
+        END LOOP;
+      END
+      $rls$;
+    `);
+    await pool.query(`
+      DO $rev$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+          REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+          REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+          REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+          REVOKE ALL ON ALL TABLES IN SCHEMA public FROM authenticated;
+          REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM authenticated;
+          REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM authenticated;
+        END IF;
+      END
+      $rev$;
+    `);
+
     console.log('✅ Toutes les tables créées avec succès !');
   } catch (err) {
     console.error('Erreur création tables:', err);
