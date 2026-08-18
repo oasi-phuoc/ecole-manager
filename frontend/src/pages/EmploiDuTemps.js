@@ -159,22 +159,15 @@ const normaliserIdsPrefBranches = (valeur) => {
   return nettoye.split(',').map(v => String(v).trim()).filter(Boolean);
 };
 
-/** Répartit les cartes sur plusieurs lignes : max 5 par ligne, lignes équilibrées (6→3+3, 7→4+3). */
+/** Répartit les cartes : max `maxParLigne` par ligne (6 → 5+1). */
 const repartirCartesParLigne = (items, maxParLigne = 5) => {
   const liste = Array.isArray(items) ? items : [];
   const n = liste.length;
   if (!n) return [];
   const cap = Math.max(1, Number(maxParLigne) || 5);
-  if (n <= cap) return [liste];
-  const nbLignes = Math.ceil(n / cap);
   const lignes = [];
-  let index = 0;
-  for (let l = 0; l < nbLignes; l++) {
-    const restantes = n - index;
-    const lignesRestantes = nbLignes - l;
-    const taille = Math.ceil(restantes / lignesRestantes);
-    lignes.push(liste.slice(index, index + taille));
-    index += taille;
+  for (let i = 0; i < n; i += cap) {
+    lignes.push(liste.slice(i, i + cap));
   }
   return lignes;
 };
@@ -1109,7 +1102,29 @@ export default function EmploiDuTemps() {
       { id: 'SOUTIEN_RECU', label: 'Soutien reçu', compte: compteSoutienRecu || 0, theme: true },
     ];
   };
-  const suiviPreferencesBranches = (profsPoolP || [])
+  const idsProfsClasseCourante = (() => {
+    const ids = new Set();
+    (planningClasseAffectations || []).forEach((a) => {
+      if (!a?.prof_id || estAffectationSpecialSansClasse(a)) return;
+      ids.add(String(a.prof_id));
+    });
+    const titulaireId = classePlanningObj?.prof_principal_id;
+    if (titulaireId) ids.add(String(titulaireId));
+    return ids;
+  })();
+  const profsPreferencesBranches = Array.from(idsProfsClasseCourante)
+    .map((id) =>
+      (profsPoolP || []).find((p) => String(p.id) === id)
+      || (profs || []).find((p) => String(p.id) === id)
+      || { id }
+    )
+    .filter((p) => p?.id != null);
+  const LIBELLES_PREFS_CARTES = {
+    principales: 'Principales',
+    autres: 'Secondaires',
+    culturelles: 'Autres',
+  };
+  const suiviPreferencesBranches = (profsPreferencesBranches || [])
     .slice()
     .sort((a, b) => String(a?.nom || '').localeCompare(String(b?.nom || ''), 'fr')
       || String(a?.prenom || '').localeCompare(String(b?.prenom || ''), 'fr'))
@@ -5743,18 +5758,18 @@ export default function EmploiDuTemps() {
                   <div style={{marginTop:16,marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Préférences</h3>
                     {suiviPreferencesBranches.length === 0 ? (
-                      <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur dans ce pool pour le moment.</div>
+                      <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
                     ) : (
                       <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:4}}>
                         {repartirCartesParLigne(suiviPreferencesBranches, isMobile ? 2 : 5).map((ligne, ligneIdx) => (
-                          <div key={`prefs-ligne-${ligneIdx}`} style={{display:'flex',gap:8,width:'100%',alignItems:'stretch'}}>
+                          <div key={`prefs-ligne-${ligneIdx}`} style={{display:'grid',gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))',gap:8,width:'100%',alignItems:'stretch'}}>
                             {ligne.map((item) => (
                               <div key={item.profId} style={{
                                 ...styles.suiviClasseChip,
-                                flex:1,
-                                width:'auto',
-                                minWidth:0,
-                                maxWidth:'none',
+                                flex: 'unset',
+                                width: 'auto',
+                                minWidth: 0,
+                                maxWidth: 'none',
                                 alignItems:'stretch',
                                 justifyContent:'flex-start',
                                 textAlign:'left',
@@ -5779,7 +5794,7 @@ export default function EmploiDuTemps() {
                                         }}
                                       >
                                         <div style={{fontSize:12,fontWeight:800,color:'#6366f1',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                          {LIBELLES_COLONNES_SPECIALITES[cat]}
+                                          {LIBELLES_PREFS_CARTES[cat] || LIBELLES_COLONNES_SPECIALITES[cat]}
                                         </div>
                                         {items.length === 0 ? (
                                           <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune</div>
