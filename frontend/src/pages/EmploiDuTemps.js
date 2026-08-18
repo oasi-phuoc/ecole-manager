@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
-import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import CustomSelect from '../components/CustomSelect';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -2768,6 +2768,7 @@ export default function EmploiDuTemps() {
     const compactClasses = !!options?.compactClasses;
     const a3Semaine = !!options?.a3Semaine;
     const marginCss = options?.margin || (a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
+    const titreDansBanniere = /class=["'][^"']*(?:section|section-a3)/.test(String(contenu || ''));
     return `
     <html>
       <head>
@@ -2775,7 +2776,7 @@ export default function EmploiDuTemps() {
         <title>${escapeHtml(titre)}</title>
         <style>
           @page { size: ${pageSize}; margin: ${marginCss}; }
-          html, body { height: 100%; }
+          html, body { height: auto; }
           body {
             font-family: Arial, sans-serif;
             margin: ${a3Semaine ? '4px' : '16px'};
@@ -2790,8 +2791,8 @@ export default function EmploiDuTemps() {
             }
             html, body {
               width: 100%;
-              height: 100%;
-              min-height: 100%;
+              height: auto;
+              min-height: 0;
             }
             /* Sans .section : centrer le contenu sur la page (ex. général par jours) */
             body:not(:has(.section)):not(:has(.section-a3)) {
@@ -2811,11 +2812,8 @@ export default function EmploiDuTemps() {
           }
           @media print {
             .section, .section-a3 {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: calc(100vh - 2mm);
+              display: block;
+              min-height: 0;
               page-break-inside: avoid;
             }
           }
@@ -2843,7 +2841,7 @@ export default function EmploiDuTemps() {
         </style>
       </head>
       <body>
-        <h1>${escapeHtml(titre)}</h1>
+        ${titreDansBanniere ? '' : `<h1>${escapeHtml(titre)}</h1>`}
         ${contenu}
       </body>
     </html>
@@ -3191,21 +3189,24 @@ export default function EmploiDuTemps() {
       </div>
     `;
   };
-  const openPrintWindow = (titre, contenu, options = {}) => {
-    const html = withPrintLayout(titre, contenu, options);
-    const format = String(options?.format || 'A4').toUpperCase() === 'A3' ? 'A3' : 'A4';
-    const pageSize = options?.pageSize
-      || (format === 'A3'
-        ? (options?.paysage ? 'A3 landscape' : 'A3 portrait')
-        : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
-    const margin = options?.margin || (options?.a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
-    const finalHtml = injectForcedPrintCss(html, pageSize, margin);
-    const popup = openPrintPopup(finalHtml, {
-      title: titre,
-      width: format === 'A3' ? 1600 : 1200,
-      height: format === 'A3' ? 1000 : 820,
+  const ouvrirPdfDepuisHtml = async (html, pdfOptions = {}, fileName = 'planning.pdf') => {
+    const blob = await htmlDocumentToPdfBlob(html, {
+      paysage: true,
+      format: 'a4',
+      orientation: 'landscape',
+      ...pdfOptions,
     });
-    if (!popup) alert("Impossible d'ouvrir la fenêtre d'impression. Autorisez les popups.");
+    const pdfUrl = URL.createObjectURL(blob);
+    const win = window.open(pdfUrl, '_blank');
+    if (!win) {
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
   };
   const imprimerPlanningGeneralA3Semaine = async () => {
     try {
@@ -3237,23 +3238,11 @@ export default function EmploiDuTemps() {
         a3Semaine: true,
         margin: '6mm 8mm',
       });
-      const blob = await htmlDocumentToPdfBlob(html, {
-        paysage: true,
-        format: 'a3',
-        orientation: 'landscape',
-      });
-      const pdfUrl = URL.createObjectURL(blob);
-      const win = window.open(pdfUrl, '_blank');
-      if (!win) {
-        // Fallback téléchargement si popup bloquée
-        const a = document.createElement('a');
-        a.href = pdfUrl;
-        a.download = `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
+      await ouvrirPdfDepuisHtml(
+        html,
+        { paysage: true, format: 'a3', orientation: 'landscape' },
+        `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`
+      );
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression A3.");
     }
@@ -3735,12 +3724,17 @@ export default function EmploiDuTemps() {
           creneauxAvecSoutien: creneauxAvecSoutienClasse,
           labelsSoutien: labelsSoutienClasse,
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+        return ouvrirPdfDepuisHtml(
+          html,
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          `${sanitizeFilename(nomClasse || 'Classe')}.pdf`
+        );
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profPlanningId || !planningProf) return alert("Sélectionnez d'abord un professeur.");
         const nomProf = `${planningProf?.prof?.prenom || ''} ${nomSansSuffixe(planningProf?.prof?.nom || '')}`.trim();
-        const titre = `Plannings professeur — ${nomProf}`;
+        const titre = `Planning professeur — ${nomProf}`;
         const table = buildPlanningTableHtml({
           creneauxListe: planningProf.creneaux || [],
           showPauseRows: true,
@@ -3769,12 +3763,17 @@ export default function EmploiDuTemps() {
             return { text: '' };
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return ouvrirPdfDepuisHtml(
+          html,
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          `${sanitizeFilename(nomProf || 'Professeur')}.pdf`
+        );
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId || !salleSelectionnee) return alert("Sélectionnez d'abord un lieu de travail et une salle.");
         const idsClassesLieu = new Set(classesPourSalles.map(cl => String(cl.id)));
-        const titre = `Plannings salles — ${salleSelectionnee}`;
+        const titre = `Planning salle — ${salleSelectionnee}`;
         const table = buildPlanningTableHtml({
           creneauxListe: creneaux || [],
           showPauseRows: true,
@@ -3814,21 +3813,14 @@ export default function EmploiDuTemps() {
             };
           }
         });
-        return openPrintWindow(titre, `<div class="section">${table}</div>`, { paysage: true });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
+        return ouvrirPdfDepuisHtml(
+          html,
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          `${sanitizeFilename(salleSelectionnee || 'Salle')}.pdf`
+        );
       }
-      const poolId = planningPoolId || '';
-      const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
-      const rep = await axios.get(url, { headers });
-      const data = rep.data;
-      const titre = `Plannings général${poolId ? ' — pool sélectionné' : ''}`;
-      const contenu = buildPlanningGeneralPrintHtml({
-        creneaux: data?.creneaux || [],
-        profs: data?.profs || [],
-        affectations: data?.affectations || [],
-        dispos: data?.dispos || [],
-        poolId,
-      });
-      return openPrintWindow(titre, contenu, { paysage: true });
+      return imprimerPlanningGeneralA3Semaine();
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression.");
     }
@@ -3859,7 +3851,11 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section">${table}</div>`;
         });
-        return openPrintWindow('Plannings classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true });
+        return ouvrirPdfDepuisHtml(
+          buildHtmlPrintDoc('Plannings classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true }),
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          'Plannings-classes.pdf'
+        );
       }
       if (sousOngletPlanning === 'professeurs') {
         if (!profs.length) return alert('Aucun professeur à imprimer.');
@@ -3901,7 +3897,11 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section">${table}</div>`;
         });
-        return openPrintWindow('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true });
+        return ouvrirPdfDepuisHtml(
+          buildHtmlPrintDoc('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true }),
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          'Plannings-professeurs.pdf'
+        );
       }
       if (sousOngletPlanning === 'salle') {
         if (!sallesLieuTravailId) return alert("Sélectionnez d'abord un lieu de travail.");
@@ -3949,20 +3949,13 @@ export default function EmploiDuTemps() {
           });
           return `<div class="section">${table}</div>`;
         });
-        return openPrintWindow(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true });
+        return ouvrirPdfDepuisHtml(
+          buildHtmlPrintDoc(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true }),
+          { paysage: true, format: 'a4', orientation: 'landscape' },
+          `${sanitizeFilename(sallesLieuTravailId || 'Salles')}_Plannings-salles.pdf`
+        );
       }
-      const poolId = planningPoolId || '';
-      const url = API + '/planning/general' + (poolId ? `?pool_id=${poolId}` : '');
-      const rep = await axios.get(url, { headers });
-      const data = rep.data;
-      const contenu = buildPlanningGeneralPrintHtml({
-        creneaux: data?.creneaux || [],
-        profs: data?.profs || [],
-        affectations: data?.affectations || [],
-        dispos: data?.dispos || [],
-        poolId,
-      });
-      return openPrintWindow('Plannings général — complet', contenu, { paysage: true });
+      return imprimerPlanningGeneralA3Semaine();
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Erreur lors de l'impression globale.");
     }

@@ -5,7 +5,7 @@ export function getForcedPrintCss(pageSize = 'A4 portrait', margin = '10mm') {
       margin: 0 !important;
       padding: 0 !important;
       width: 100%;
-      height: 100%;
+      height: auto;
     }
     * {
       -webkit-print-color-adjust: exact !important;
@@ -16,8 +16,8 @@ export function getForcedPrintCss(pageSize = 'A4 portrait', margin = '10mm') {
     @media print {
       html, body {
         width: 100%;
-        height: 100%;
-        min-height: 100%;
+        height: auto;
+        min-height: 0;
         overflow: visible !important;
         background: white !important;
       }
@@ -29,11 +29,8 @@ export function getForcedPrintCss(pageSize = 'A4 portrait', margin = '10mm') {
       }
       .section, .section-a3 {
         width: 100%;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: calc(100vh - 2mm);
+        display: block !important;
+        min-height: 0;
       }
       .no-print {
         display: none !important;
