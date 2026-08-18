@@ -5717,7 +5717,7 @@ export default function EmploiDuTemps() {
                                 {(item.lignesBranches || []).length === 0 ? (
                                   <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune branche</div>
                                 ) : (item.lignesBranches || []).map((b) => (
-                                  <div key={`${item.profId}-${b.id}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
+                                  <div key={`${item.profId}-${b.id}-${b.rang}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
                                     <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
                                     <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{b.compte}</span>
                                   </div>
