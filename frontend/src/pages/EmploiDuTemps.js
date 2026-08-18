@@ -784,6 +784,10 @@ export default function EmploiDuTemps() {
     profsPoolIds.has(String(a.prof_id)) &&
     (classesPoolIds.has(String(a.classe_id)) || !!a.type_special)
   );
+  const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
+    acc[p.id] = (affectationsPourProfs || []).filter((a) => String(a.prof_id) === String(p.id)).length;
+    return acc;
+  }, {});
   const suiviClasses = classesPool.map(cl => {
     const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
     const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
@@ -825,10 +829,6 @@ export default function EmploiDuTemps() {
       ? (c.periodesNormalesAffectees < c.periodesNormalesRequises || c.periodesSoutienAffectees < c.periodesSoutienRequises)
       : (c.periodesNormalesAffectees < c.periodesNormalesRequises)
   );
-  const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
-    acc[p.id] = affectationsPool.filter(a => String(a.prof_id) === String(p.id)).length;
-    return acc;
-  }, {});
   const totalRequisClassesPool = suiviClasses.reduce(
     (sum, c) => sum + (c.periodesNormalesRequises || 0) + (c.periodesSoutienRequises || 0),
     0
@@ -1639,9 +1639,10 @@ export default function EmploiDuTemps() {
 
     const idsAffectationsSupprimees = new Set();
     setAffectationsDraft((prev) => (prev || []).filter((a) => {
-      const dansPool = profsPoolIds.has(String(a.prof_id));
-      if (dansPool && a?.id != null) idsAffectationsSupprimees.add(String(a.id));
-      return !dansPool;
+      if (!profsPoolIds.has(String(a.prof_id))) return true;
+      if (estAffectationHorsPool(a, poolSelectionne)) return true;
+      if (a?.id != null) idsAffectationsSupprimees.add(String(a.id));
+      return false;
     }));
     setAffectationModes((prev) => {
       const next = { ...prev };
@@ -1752,7 +1753,10 @@ export default function EmploiDuTemps() {
       titulariatsPairs.map(({ profId, classeId }) => [`${profId}|${classeId}`, 0])
     );
 
-    let nextDraft = (affectationsDraft || []).filter((a) => !profsPoolIds.has(String(a.prof_id)));
+    let nextDraft = (affectationsDraft || []).filter((a) => {
+      if (!profsPoolIds.has(String(a.prof_id))) return true;
+      return estAffectationHorsPool(a, poolSelectionne);
+    });
     const nextModes = {};
     const occupiedProf = new Set();
     const occupiedClasse = new Set(); // clé: classeId|creneauId|classe|soutien
@@ -1761,6 +1765,12 @@ export default function EmploiDuTemps() {
     const loadSoutien = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
     const quotaProf = Object.fromEntries(profsPool.map((p) => [String(p.id), getQuotaProf(p)]));
     const requisParClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), getRequisClasse(c)]));
+    nextDraft.forEach((a) => {
+      const pid = String(a.prof_id);
+      if (!profsPoolIds.has(pid)) return;
+      loadProf[pid] = (loadProf[pid] || 0) + 1;
+      if (a.creneau_id != null) occupiedProf.add(`${pid}|${String(a.creneau_id)}`);
+    });
     const cleOccupationClasse = (classeId, creneauId, mode = 'classe') =>
       `${String(classeId)}|${String(creneauId)}|${mode === 'soutien' ? 'soutien' : 'classe'}`;
 
