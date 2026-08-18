@@ -1113,9 +1113,9 @@ export default function EmploiDuTemps() {
     }
     out.push({
       id: 'SOUTIEN_RECU',
-      label: 'Soutien reçu',
+      label: 'SOUTIEN REÇU',
       compte: compteSoutienRecu || 0,
-      indent: true,
+      indent: false,
       theme: true,
     });
     return out;
