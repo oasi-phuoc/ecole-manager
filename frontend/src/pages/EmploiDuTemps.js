@@ -791,13 +791,33 @@ export default function EmploiDuTemps() {
     const periodesNormalesAffectees = affectationsClasse.filter(a => !estAffectationSoutien(a) && !estAffectationSpecialSansClasse(a)).length;
     const periodesSoutienAffectees = affectationsClasse.filter(a => estAffectationSoutien(a)).length;
     const requis = getRequisPeriodesNiveau(niveauClasse);
+    const periodesParProf = new Map();
+    affectationsClasse.forEach((a) => {
+      if (!a?.prof_id || estAffectationSpecialSansClasse(a)) return;
+      const key = String(a.prof_id);
+      const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0 };
+      prev.periodes += 1;
+      periodesParProf.set(key, prev);
+    });
+    const profsClasse = Array.from(periodesParProf.values()).map((row) => {
+      const prof = (profsPool || []).find((p) => String(p.id) === String(row.profId))
+        || (profs || []).find((p) => String(p.id) === String(row.profId));
+      const nom = prof
+        ? `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim()
+        : `Prof ${row.profId}`;
+      return { ...row, nom };
+    }).sort((a, b) =>
+      (b.periodes - a.periodes)
+      || String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+    );
     return {
       ...cl,
       niveauClasse,
       periodesNormalesAffectees,
       periodesSoutienAffectees,
       periodesNormalesRequises: requis.normales,
-      periodesSoutienRequises: requis.soutien
+      periodesSoutienRequises: requis.soutien,
+      profsClasse,
     };
   });
   const suiviClassesIncompletes = suiviClasses.filter(c =>
@@ -4958,20 +4978,37 @@ export default function EmploiDuTemps() {
                         width:'auto',
                         minWidth:0,
                         maxWidth:'none',
+                        alignItems:'stretch',
+                        justifyContent:'flex-start',
+                        textAlign:'left',
                         border: classeOk ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
                         background: classeOk ? '#eef2ff' : '#ffffff',
                         color: classeOk ? '#3730a3' : '#0f172a'
                       }}>
-                        <div style={styles.suiviClasseNom}>{cl.nom}</div>
-                        {avecSoutien && (
-                          <>
-                            <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
-                            <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
-                          </>
-                        )}
-                        {!avecSoutien && (
-                          <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
-                        )}
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'stretch'}}>
+                          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',paddingRight:8,borderRight:'1px solid '+(classeOk ? '#c7d2fe' : '#e2e8f0')}}>
+                            <div style={styles.suiviClasseNom}>{cl.nom}</div>
+                            {avecSoutien && (
+                              <>
+                                <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
+                                <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
+                              </>
+                            )}
+                            {!avecSoutien && (
+                              <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
+                            )}
+                          </div>
+                          <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:3,minWidth:0}}>
+                            {(cl.profsClasse || []).length === 0 ? (
+                              <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucun professeur</div>
+                            ) : (cl.profsClasse || []).map((p) => (
+                              <div key={`${cl.id}-${p.profId}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
+                                <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
+                                <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{p.periodes}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
