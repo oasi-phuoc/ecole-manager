@@ -75,7 +75,8 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       setTimeout(resolve, 800);
     });
 
-    const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'));
+    const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
+      .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
     const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
