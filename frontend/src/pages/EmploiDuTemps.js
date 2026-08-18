@@ -11,6 +11,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
+  LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
 
@@ -942,6 +943,18 @@ export default function EmploiDuTemps() {
     const courte = String(m?.designation_courte || '').trim().toLowerCase();
     return nom === 'soutien' || courte === 'soutien';
   };
+  const estBrancheFrancais = (m) => {
+    const courte = String(m?.designation_courte || m?.code || m?.labelCourt || '').trim().toLowerCase();
+    const nom = String(m?.nom || m?.label || '').trim().toLowerCase();
+    if (['fr', 'fra'].includes(courte)) return true;
+    return /fran[cç]ais/.test(`${nom} ${courte}`);
+  };
+  const estBrancheMath = (m) => {
+    const courte = String(m?.designation_courte || m?.code || m?.labelCourt || '').trim().toLowerCase();
+    const nom = String(m?.nom || m?.label || '').trim().toLowerCase();
+    if (['ma', 'mat', 'math'].includes(courte)) return true;
+    return /math/.test(`${nom} ${courte}`);
+  };
   const matieresPourSuiviBranches = matieresPourPlanningClasse.filter((m) => !estMatiereSoutien(m));
   const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
@@ -1007,19 +1020,79 @@ export default function EmploiDuTemps() {
   }) : [];
   const groupesBranchesPool = regrouperBranchesParCode(matieresPourPlanningClasse);
   const idsClassesPoolPlanning = new Set((classesPoolP || []).map((c) => String(c.id)));
-  const codesGroupesPool = new Set(groupesBranchesPool.map((g) => String(g.code || g.id).toUpperCase()));
+  const poolPlanningAvecSoutien = niveauxPoolPlanning.some((n) => niveauAvecSoutien(n))
+    || (classesPoolP || []).some((cl) => niveauAvecSoutien(resoudreNiveauClasse(cl)));
   const affectationsPoolBranchesSuivi = (() => {
     const byId = new Map();
     (affectationsDraft || []).forEach((a) => {
       if (!idsClassesPoolPlanning.has(String(a.classe_id))) return;
-      if (estAffectationSoutien(a) || estAffectationSpecialSansClasse(a)) return;
+      if (estAffectationSpecialSansClasse(a)) return;
       byId.set(String(a.id), a);
     });
     planningClasseAffectationsActives.forEach((a) => {
+      if (estAffectationSpecialSansClasse(a)) return;
+      byId.set(String(a.id), a);
+    });
+    (planningClasseAffectations || []).forEach((a) => {
+      if (!estAffSoutienPlanning(a) && !estAffectationSoutien(a)) return;
+      if (!idsClassesPoolPlanning.has(String(a.classe_id))) return;
       byId.set(String(a.id), a);
     });
     return Array.from(byId.values());
   })();
+  const groupePourMatiereId = (matiereId) => {
+    if (matiereId == null || matiereId === '') return null;
+    const mid = String(matiereId);
+    return groupesBranchesPool.find((g) => (g.ids || []).map(String).includes(mid)) || null;
+  };
+  const matiereCoursNormalDuSoutien = (affSoutien, liste) => {
+    const soeurs = (liste || []).filter((a) =>
+      String(a.classe_id) === String(affSoutien.classe_id)
+      && String(a.creneau_id) === String(affSoutien.creneau_id)
+      && String(a.id) !== String(affSoutien.id)
+      && !estAffectationSoutien(a)
+      && !estAffSoutienPlanning(a)
+      && !estAffectationSpecialSansClasse(a)
+      && a.matiere_id
+    );
+    const soeur = soeurs.find((a) => String(a.prof_id) !== String(affSoutien.prof_id)) || soeurs[0];
+    if (!soeur) return null;
+    return matieresParId.get(String(soeur.matiere_id)) || null;
+  };
+  const insererSoutienSousFrMa = (items, comptes, afficher) => {
+    if (!afficher) return items;
+    const out = [];
+    let frAjoute = false;
+    let maAjoute = false;
+    (items || []).forEach((item) => {
+      out.push(item);
+      if (estBrancheFrancais(item) && !frAjoute) {
+        out.push({
+          id: `${item.id}_SOUTIEN_FR`,
+          label: 'Français soutien',
+          compte: comptes.fr || 0,
+          indent: true,
+        });
+        frAjoute = true;
+      }
+      if (estBrancheMath(item) && !maAjoute) {
+        out.push({
+          id: `${item.id}_SOUTIEN_MA`,
+          label: 'Math soutien',
+          compte: comptes.ma || 0,
+          indent: true,
+        });
+        maAjoute = true;
+      }
+    });
+    if (!frAjoute) {
+      out.push({ id: 'FR_SOUTIEN', label: 'Français soutien', compte: comptes.fr || 0, indent: true });
+    }
+    if (!maAjoute) {
+      out.push({ id: 'MA_SOUTIEN', label: 'Math soutien', compte: comptes.ma || 0, indent: true });
+    }
+    return out;
+  };
   const suiviPreferencesBranches = (profsPoolP || [])
     .slice()
     .sort((a, b) => String(a?.nom || '').localeCompare(String(b?.nom || ''), 'fr')
@@ -1028,46 +1101,47 @@ export default function EmploiDuTemps() {
       const prof = (profs || []).find((x) => String(x.id) === String(p.id)) || p;
       const affsProf = affectationsPoolBranchesSuivi.filter((a) => String(a.prof_id) === String(prof.id));
       const compteParCode = {};
-      let compteSansBranche = 0;
+      const comptesSoutien = { fr: 0, ma: 0 };
       affsProf.forEach((a) => {
-        if (!a?.matiere_id) {
-          compteSansBranche += 1;
+        const estSoutien = estAffectationSoutien(a) || estAffSoutienPlanning(a);
+        if (estSoutien) {
+          const matiereLiee = matiereCoursNormalDuSoutien(a, affectationsPoolBranchesSuivi)
+            || (a.matiere_id ? matieresParId.get(String(a.matiere_id)) : null);
+          if (estBrancheFrancais(matiereLiee)) comptesSoutien.fr += 1;
+          else if (estBrancheMath(matiereLiee)) comptesSoutien.ma += 1;
           return;
         }
+        if (!a?.matiere_id) return;
         const matiere = matieresParId.get(String(a.matiere_id));
-        if (!matiere || estMatiereSoutien(matiere)) {
-          compteSansBranche += 1;
-          return;
-        }
-        const code = String(matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
-        if (!code || !codesGroupesPool.has(code)) {
-          compteSansBranche += 1;
-          return;
-        }
+        if (!matiere || estMatiereSoutien(matiere)) return;
+        const groupe = groupePourMatiereId(a.matiere_id);
+        const code = String(groupe?.code || groupe?.id || matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
+        if (!code) return;
         compteParCode[code] = (compteParCode[code] || 0) + 1;
       });
+      const afficherSoutien = poolPlanningAvecSoutien || comptesSoutien.fr > 0 || comptesSoutien.ma > 0;
       const colonnes = {};
       ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
-        colonnes[cat] = listerGroupesColonneOrdonnes(groupesBranchesPool, prof.branches_specialites, cat).map((g, idx) => {
+        const items = listerGroupesColonneOrdonnes(groupesBranchesPool, prof.branches_specialites, cat).map((g, idx) => {
           const code = String(g.code || g.id).toUpperCase();
           return {
             id: g.id,
+            code,
             label: g.labelCourt || g.label || code,
+            designation_courte: g.code || g.labelCourt,
+            nom: g.labelComplet || g.label,
             rang: idx + 1,
             compte: compteParCode[code] || 0,
           };
         });
+        colonnes[cat] = cat === 'principales'
+          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien)
+          : items;
       });
-      const totalPeriodes = affsProf.length;
-      const quota = getQuotaEffectifProf(prof);
-      const lignesBranches = ORDRE_COLONNES_SPECIALITES.flatMap((cat) => colonnes[cat] || []);
       return {
         profId: String(prof.id),
         nom: `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim() || `Prof ${prof.id}`,
-        lignesBranches,
-        compteSansBranche,
-        totalPeriodes,
-        quotaPeriodes: quota > 0 ? quota : 0,
+        colonnes,
       };
     });
   const lieuxTravailMap = new Map();
@@ -2209,15 +2283,6 @@ export default function EmploiDuTemps() {
   const abandonnerBranchesNonSauvegardees = () => {
     setBranchesMatiereDraftMap({});
     setHasBranchesUnsaved(false);
-  };
-
-  const estBrancheFrancais = (m) => {
-    const txt = `${m?.nom || ''} ${m?.designation_courte || ''}`.toLowerCase();
-    return /fran[cç]ais|\bfr\b/.test(txt);
-  };
-  const estBrancheMath = (m) => {
-    const txt = `${m?.nom || ''} ${m?.designation_courte || ''}`.toLowerCase();
-    return /math/.test(txt);
   };
 
   const resetAffectationsBranchesTableau = () => {
@@ -5036,9 +5101,9 @@ export default function EmploiDuTemps() {
                 <div style={{display:'flex',gap:8,width:'100%'}}>
                   {suiviClasses.map(cl => {
                     const avecSoutien = niveauAvecSoutien(cl.niveauClasse);
-                    const classeOk = avecSoutien
-                      ? (cl.periodesNormalesAffectees === cl.periodesNormalesRequises && cl.periodesSoutienAffectees === cl.periodesSoutienRequises)
-                      : (cl.periodesNormalesAffectees === cl.periodesNormalesRequises);
+                    const totalAffectees = (cl.periodesNormalesAffectees || 0) + (avecSoutien ? (cl.periodesSoutienAffectees || 0) : 0);
+                    const totalRequis = (cl.periodesNormalesRequises || 0) + (avecSoutien ? (cl.periodesSoutienRequises || 0) : 0);
+                    const classeOk = totalRequis > 0 && totalAffectees === totalRequis;
                     return (
                       <div key={cl.id} style={{
                         ...styles.suiviClasseChip,
@@ -5053,29 +5118,18 @@ export default function EmploiDuTemps() {
                         background: classeOk ? '#eef2ff' : '#ffffff',
                         color: classeOk ? '#3730a3' : '#0f172a'
                       }}>
-                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'start'}}>
-                          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',textAlign:'center',paddingRight:8,borderRight:'1px solid '+(classeOk ? '#c7d2fe' : '#e2e8f0')}}>
-                            <div style={styles.suiviClasseNom}>{cl.nom}</div>
-                            {avecSoutien && (
-                              <>
-                                <div style={styles.suiviClasseLigne}>Périodes : {cl.periodesNormalesAffectees} / {cl.periodesNormalesRequises}</div>
-                                <div style={styles.suiviClasseLigne}>Soutien : {cl.periodesSoutienAffectees} / {cl.periodesSoutienRequises}</div>
-                              </>
-                            )}
-                            {!avecSoutien && (
-                              <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
-                            )}
-                          </div>
-                          <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0}}>
-                            {(cl.profsClasse || []).length === 0 ? (
-                              <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucun professeur</div>
-                            ) : (cl.profsClasse || []).map((p) => (
-                              <div key={`${cl.id}-${p.profId}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
-                                <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
-                                <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{p.periodes}</span>
-                              </div>
-                            ))}
-                          </div>
+                        <div style={{...styles.suiviClasseNom,textAlign:'center'}}>
+                          {cl.nom} - Périodes {totalAffectees}/{totalRequis}
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0,marginTop:6}}>
+                          {(cl.profsClasse || []).length === 0 ? (
+                            <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7,textAlign:'center'}}>Aucun professeur</div>
+                          ) : (cl.profsClasse || []).map((p) => (
+                            <div key={`${cl.id}-${p.profId}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
+                              <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
+                              <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{p.periodes}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -5688,11 +5742,10 @@ export default function EmploiDuTemps() {
                     {suiviPreferencesBranches.length === 0 ? (
                       <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur dans ce pool pour le moment.</div>
                     ) : (
-                      <div style={{display:'flex',gap:8,width:'100%',marginBottom:4}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:4}}>
                         {suiviPreferencesBranches.map((item) => (
                           <div key={item.profId} style={{
                             ...styles.suiviClasseChip,
-                            flex:1,
                             width:'auto',
                             minWidth:0,
                             maxWidth:'none',
@@ -5701,28 +5754,29 @@ export default function EmploiDuTemps() {
                             textAlign:'left',
                             border:'1px solid #e2e8f0',
                             background:'#ffffff',
-                            color:'#0f172a'
+                            color:'#0f172a',
+                            padding:'10px 12px'
                           }}>
-                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'start'}}>
-                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',textAlign:'center',paddingRight:8,borderRight:'1px solid #e2e8f0'}}>
-                                <div style={styles.suiviClasseNom}>{item.nom}</div>
-                                <div style={styles.suiviClasseLigne}>
-                                  Périodes {item.totalPeriodes}{item.quotaPeriodes > 0 ? `/${item.quotaPeriodes}` : ''}
-                                </div>
-                                {item.compteSansBranche > 0 && (
-                                  <div style={styles.suiviClasseLigne}>Sans branche {item.compteSansBranche}</div>
-                                )}
-                              </div>
-                              <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0}}>
-                                {(item.lignesBranches || []).length === 0 ? (
-                                  <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune branche</div>
-                                ) : (item.lignesBranches || []).map((b) => (
-                                  <div key={`${item.profId}-${b.id}-${b.rang}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
-                                    <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
-                                    <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{b.compte}</span>
+                            <div style={{...styles.suiviClasseNom,textAlign:'center',marginBottom:8}}>{item.nom}</div>
+                            <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',gap:10}}>
+                              {ORDRE_COLONNES_SPECIALITES.map((cat) => {
+                                const items = item.colonnes?.[cat] || [];
+                                return (
+                                  <div key={`${item.profId}-${cat}`}>
+                                    <div style={{fontSize:11,fontWeight:800,color:'#334155',marginBottom:6}}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
+                                    {items.length === 0 ? (
+                                      <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune branche</div>
+                                    ) : items.map((b, idx) => (
+                                      <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0,paddingLeft: b.indent ? 12 : 0}}>
+                                        <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                          {b.indent ? b.label : `${b.rang}. ${b.label}`}
+                                        </span>
+                                        <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{b.compte}</span>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                );
+                              })}
                             </div>
                           </div>
                         ))}
