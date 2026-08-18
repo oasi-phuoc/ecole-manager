@@ -174,6 +174,36 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS classe_horaires (id SERIAL PRIMARY KEY, classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, jour VARCHAR(20), periode VARCHAR(50));`);
     await pool.query(`CREATE TABLE IF NOT EXISTS affectations (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id), classe_id INTEGER REFERENCES classes(id) ON DELETE CASCADE, matiere_id INTEGER REFERENCES matieres(id), creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, type_special VARCHAR(30), UNIQUE(classe_id, creneau_id));`);
     await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS type_special VARCHAR(30)`);
+    await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS pool_id INTEGER REFERENCES pools(id) ON DELETE SET NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS affectations_pool_idx ON affectations (pool_id)`);
+    // Rattacher les affectations existantes à un pool unique quand c'est non ambigu
+    await pool.query(`
+      UPDATE affectations a
+      SET pool_id = pc.pool_id
+      FROM pool_classes pc
+      WHERE a.pool_id IS NULL
+        AND a.classe_id IS NOT NULL
+        AND pc.classe_id = a.classe_id
+        AND NOT EXISTS (
+          SELECT 1 FROM pool_classes pc2
+          WHERE pc2.classe_id = a.classe_id AND pc2.pool_id IS DISTINCT FROM pc.pool_id
+        )
+    `);
+    await pool.query(`
+      UPDATE affectations a
+      SET pool_id = sub.seul_pool
+      FROM (
+        SELECT a2.id, MIN(pp.pool_id) AS seul_pool
+        FROM affectations a2
+        JOIN pool_profs pp ON pp.prof_id = a2.prof_id
+        WHERE a2.pool_id IS NULL
+          AND a2.classe_id IS NULL
+          AND a2.type_special IN ('titulariat', 'atelier', 'mediation', 'autre')
+        GROUP BY a2.id
+        HAVING COUNT(DISTINCT pp.pool_id) = 1
+      ) sub
+      WHERE a.id = sub.id
+    `);
     // Autoriser cours normal + soutien de la même classe sur le même créneau
     await pool.query(`ALTER TABLE affectations DROP CONSTRAINT IF EXISTS affectations_classe_id_creneau_id_key`);
     try {
