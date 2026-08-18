@@ -281,6 +281,27 @@ const getAffectations = async (req, res) => {
         ELSE NULL
       END) as classe_nom,
       m.nom as matiere_nom,
+      CASE WHEN a.type_special = 'soutien' THEN (
+        SELECT a2.matiere_id
+        FROM affectations a2
+        WHERE a2.classe_id = a.classe_id
+          AND a2.creneau_id = a.creneau_id
+          AND (a2.type_special IS NULL OR a2.type_special = '')
+          AND a2.prof_id IS DISTINCT FROM a.prof_id
+        ORDER BY a2.id
+        LIMIT 1
+      ) ELSE NULL END AS soutien_matiere_id,
+      CASE WHEN a.type_special = 'soutien' THEN (
+        SELECT m2.nom
+        FROM affectations a2
+        LEFT JOIN matieres m2 ON m2.id = a2.matiere_id
+        WHERE a2.classe_id = a.classe_id
+          AND a2.creneau_id = a.creneau_id
+          AND (a2.type_special IS NULL OR a2.type_special = '')
+          AND a2.prof_id IS DISTINCT FROM a.prof_id
+        ORDER BY a2.id
+        LIMIT 1
+      ) ELSE NULL END AS soutien_matiere_nom,
       COALESCE(ps.nom, (
         SELECT p.nom FROM pools p
         JOIN pool_classes pc ON pc.pool_id = p.id
