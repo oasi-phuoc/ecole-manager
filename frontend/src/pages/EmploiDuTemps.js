@@ -5051,8 +5051,8 @@ export default function EmploiDuTemps() {
                         background: classeOk ? '#eef2ff' : '#ffffff',
                         color: classeOk ? '#3730a3' : '#0f172a'
                       }}>
-                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'stretch'}}>
-                          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',paddingRight:8,borderRight:'1px solid '+(classeOk ? '#c7d2fe' : '#e2e8f0')}}>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,width:'100%',alignItems:'start'}}>
+                          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',textAlign:'center',paddingRight:8,borderRight:'1px solid '+(classeOk ? '#c7d2fe' : '#e2e8f0')}}>
                             <div style={styles.suiviClasseNom}>{cl.nom}</div>
                             {avecSoutien && (
                               <>
@@ -5064,7 +5064,7 @@ export default function EmploiDuTemps() {
                               <div style={styles.suiviClasseLigne}>Périodes {cl.periodesNormalesAffectees}/{cl.periodesNormalesRequises}</div>
                             )}
                           </div>
-                          <div style={{display:'flex',flexDirection:'column',justifyContent:'center',gap:3,minWidth:0}}>
+                          <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0}}>
                             {(cl.profsClasse || []).length === 0 ? (
                               <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucun professeur</div>
                             ) : (cl.profsClasse || []).map((p) => (
