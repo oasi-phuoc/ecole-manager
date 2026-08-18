@@ -61,19 +61,56 @@ const saveRemarqueDisponibilites = async (req, res) => {
   }
 };
 
+const estIndisponible = (valeur) => valeur === false || valeur === 0 || valeur === 'false';
+
 const saveDisponibilites = async (req, res) => {
   const { prof_id } = req.params;
   const { disponibilites } = req.body;
+  if (!peutEditerDisponibilites(req, prof_id)) {
+    return res.status(403).json({ message: 'Accès refusé' });
+  }
+  const profIdNum = Number(prof_id);
+  if (!Number.isInteger(profIdNum) || profIdNum <= 0) {
+    return res.status(400).json({ message: 'prof_id invalide' });
+  }
+  const liste = Array.isArray(disponibilites) ? disponibilites : [];
+  const creneauxIndispo = [...new Set(
+    liste
+      .filter((d) => d && estIndisponible(d.disponible))
+      .map((d) => Number(d.creneau_id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  )];
+  let client;
   try {
-    if (!peutEditerDisponibilites(req, prof_id)) {
-      return res.status(403).json({ message: 'Accès refusé' });
+    client = await pool.connect();
+    await client.query('BEGIN');
+    await client.query('DELETE FROM disponibilites WHERE prof_id=$1', [profIdNum]);
+    for (const d of liste) {
+      const creneauId = Number(d?.creneau_id);
+      if (!Number.isInteger(creneauId) || creneauId <= 0) continue;
+      await client.query(
+        'INSERT INTO disponibilites (prof_id, creneau_id, disponible) VALUES ($1,$2,$3)',
+        [profIdNum, creneauId, !estIndisponible(d.disponible)]
+      );
     }
-    await pool.query('DELETE FROM disponibilites WHERE prof_id=$1', [prof_id]);
-    for (const d of (disponibilites || [])) {
-      await pool.query('INSERT INTO disponibilites (prof_id, creneau_id, disponible) VALUES ($1,$2,$3)', [prof_id, d.creneau_id, d.disponible]);
+    let affectationsSupprimees = 0;
+    if (creneauxIndispo.length) {
+      const del = await client.query(
+        'DELETE FROM affectations WHERE prof_id = $1 AND creneau_id = ANY($2::int[])',
+        [profIdNum, creneauxIndispo]
+      );
+      affectationsSupprimees = del.rowCount || 0;
     }
-    res.json({ message: 'Sauvegardé' });
-  } catch(err) { res.status(500).json({ message: err.message }); }
+    await client.query('COMMIT');
+    res.json({ message: 'Sauvegardé', affectations_supprimees: affectationsSupprimees });
+  } catch (err) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+    }
+    res.status(500).json({ message: err.message });
+  } finally {
+    if (client) client.release();
+  }
 };
 
 const getPools = async (req, res) => {
