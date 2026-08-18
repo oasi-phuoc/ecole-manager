@@ -7,6 +7,13 @@ import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import CustomSelect from '../components/CustomSelect';
+import { useIsMobile } from '../hooks/useIsMobile';
+import {
+  regrouperBranchesParCode,
+  listerGroupesColonneOrdonnes,
+  LIBELLES_COLONNES_SPECIALITES,
+  ORDRE_COLONNES_SPECIALITES,
+} from '../utils/branchesSpecialites';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -152,6 +159,7 @@ const normaliserIdsPrefBranches = (valeur) => {
 };
 
 export default function EmploiDuTemps() {
+  const isMobile = useIsMobile();
   const clonePausesParPeriode = (source = PAUSES_PAR_PERIODE_DEFAUT) => ({
     Matin: { ...(source?.Matin || PAUSES_PAR_PERIODE_DEFAUT.Matin) },
     'Après-midi': { ...(source?.['Après-midi'] || PAUSES_PAR_PERIODE_DEFAUT['Après-midi']) },
@@ -929,47 +937,68 @@ export default function EmploiDuTemps() {
     const requises = parseInt(m.periodes_semaine) || 0;
     return { id: m.id, nom: m.nom, affectees, requises };
   }) : [];
-  const profsAffectesClasse = planningClasse ? Array.from(new Set(
-    planningClasseAffectationsActives
-      .map(a => a.prof_id)
-      .filter(Boolean)
-      .map(id => String(id))
-  )) : [];
-  const suiviPreferencesBranches = profsAffectesClasse.map((profId) => {
-    const prof = (profsPoolP || []).find(p => String(p.id) === String(profId)) || (profs || []).find(p => String(p.id) === String(profId));
-    const idsPrefs = normaliserIdsPrefBranches(prof?.branches_specialites)
-      .filter(id => {
-        const m = matieresParId.get(String(id));
-        return m && (!niveauxPoolPlanning.length || niveauxPoolPlanning.includes(String(m.niveau || '').toUpperCase()));
+  const groupesBranchesPool = regrouperBranchesParCode(matieresPourPlanningClasse);
+  const idsClassesPoolPlanning = new Set((classesPoolP || []).map((c) => String(c.id)));
+  const codesGroupesPool = new Set(groupesBranchesPool.map((g) => String(g.code || g.id).toUpperCase()));
+  const affectationsPoolBranchesSuivi = (() => {
+    const byId = new Map();
+    (affectationsDraft || []).forEach((a) => {
+      if (!idsClassesPoolPlanning.has(String(a.classe_id))) return;
+      if (estAffectationSoutien(a) || estAffectationSpecialSansClasse(a)) return;
+      byId.set(String(a.id), a);
+    });
+    planningClasseAffectationsActives.forEach((a) => {
+      byId.set(String(a.id), a);
+    });
+    return Array.from(byId.values());
+  })();
+  const suiviPreferencesBranches = (profsPoolP || [])
+    .slice()
+    .sort((a, b) => String(a?.nom || '').localeCompare(String(b?.nom || ''), 'fr')
+      || String(a?.prenom || '').localeCompare(String(b?.prenom || ''), 'fr'))
+    .map((p) => {
+      const prof = (profs || []).find((x) => String(x.id) === String(p.id)) || p;
+      const affsProf = affectationsPoolBranchesSuivi.filter((a) => String(a.prof_id) === String(prof.id));
+      const compteParCode = {};
+      let compteSansBranche = 0;
+      affsProf.forEach((a) => {
+        if (!a?.matiere_id) {
+          compteSansBranche += 1;
+          return;
+        }
+        const matiere = matieresParId.get(String(a.matiere_id));
+        if (!matiere || estMatiereSoutien(matiere)) {
+          compteSansBranche += 1;
+          return;
+        }
+        const code = String(matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
+        if (!code || !codesGroupesPool.has(code)) {
+          compteSansBranche += 1;
+          return;
+        }
+        compteParCode[code] = (compteParCode[code] || 0) + 1;
       });
-    const affectationsProf = planningClasseAffectationsActives.filter(a => String(a.prof_id) === String(profId));
-    const compteurParBranche = affectationsProf.reduce((acc, a) => {
-      if (!a?.matiere_id) return acc;
-      const key = String(a.matiere_id);
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-    const idsPrefsSet = new Set(idsPrefs.map(String));
-    const branchesPrefs = idsPrefs
-      .map(id => {
-        const matiere = matieresParId.get(String(id));
-        if (!matiere) return null;
-        const label = matiere.designation_courte || matiere.nom;
-        const compte = compteurParBranche[String(id)] || 0;
-        return { id: String(id), label, compte, affectee: compte > 0 };
-      })
-      .filter(Boolean);
-    const compteAutres = Object.entries(compteurParBranche).reduce((sum, [matiereId, compte]) => {
-      if (idsPrefsSet.has(String(matiereId))) return sum;
-      return sum + (parseInt(compte, 10) || 0);
-    }, 0);
-    return {
-      profId: String(profId),
-      nom: prof ? `${prof.prenom} ${nomSansSuffixe(prof.nom)}` : `Prof ${profId}`,
-      branchesPrefs,
-      compteAutres
-    };
-  });
+      const colonnes = {};
+      ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
+        colonnes[cat] = listerGroupesColonneOrdonnes(groupesBranchesPool, prof.branches_specialites, cat).map((g, idx) => {
+          const code = String(g.code || g.id).toUpperCase();
+          return {
+            id: g.id,
+            label: g.labelCourt || g.label || code,
+            rang: idx + 1,
+            compte: compteParCode[code] || 0,
+          };
+        });
+      });
+      const totalPeriodes = affsProf.length;
+      return {
+        profId: String(prof.id),
+        nom: `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim() || `Prof ${prof.id}`,
+        colonnes,
+        compteSansBranche,
+        totalPeriodes,
+      };
+    });
   const lieuxTravailMap = new Map();
   lieuxTravailDB.forEach(l => lieuxTravailMap.set(normaliserLieuTravail(l.nom), l.nom));
   pools
@@ -5544,30 +5573,63 @@ export default function EmploiDuTemps() {
                   </div>
                   <div style={{marginTop:16,marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Préférences</h3>
+                    <p style={{margin:'0 0 12px',fontSize:12,color:'#64748b',lineHeight:1.45,fontWeight:600}}>
+                      Désidératas en 3 colonnes, ordre de préférence, et nombre de périodes déjà affectées sur tout le pool
+                      {poolClasseP?.nom ? ` « ${poolClasseP.nom} »` : ''}
+                      {(classesPoolP || []).length ? ` (${(classesPoolP || []).map((c) => c.nom).filter(Boolean).join(', ')})` : ''}.
+                    </p>
                     {suiviPreferencesBranches.length === 0 ? (
-                      <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur affecté à cette classe pour le moment.</div>
+                      <div style={{fontSize:12,color:'#64748b',fontWeight:600,marginBottom:14}}>Aucun professeur dans ce pool pour le moment.</div>
                     ) : (
-                      <div style={styles.suiviPrefsGrid}>
+                      <div style={{display:'flex',flexDirection:'column',gap:10}}>
                         {suiviPreferencesBranches.map((item) => (
-                          <div key={item.profId} style={{...styles.suiviPrefCard,background:'#ffffff',borderColor:'#e2e8f0'}}>
+                          <div key={item.profId} style={{...styles.suiviPrefCard,width:'auto',minWidth:0,maxWidth:'none',background:'#ffffff',borderColor:'#e2e8f0'}}>
                             <div style={styles.suiviPrefHead}>
                               <div style={{...styles.suiviPrefNom,color:'#0f172a'}}>{item.nom}</div>
-                              <span style={styles.suiviPrefTagAutre}>Autre ({item.compteAutres})</span>
-                            </div>
-                            {item.branchesPrefs.length === 0 ? (
-                              <div style={styles.suiviPrefLigne}>Aucune préférence de branche</div>
-                            ) : (
-                              <div style={styles.suiviPrefTags}>
-                                {item.branchesPrefs.map((b) => (
-                                  <span
-                                    key={`${item.profId}-${b.id}`}
-                                    style={b.affectee ? styles.suiviPrefTagOk : styles.suiviPrefTag}
-                                  >
-                                    {b.label} ({b.compte})
-                                  </span>
-                                ))}
+                              <div style={{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'flex-end'}}>
+                                <span style={styles.suiviPrefTagOk}>{item.totalPeriodes} pér. pool</span>
+                                {item.compteSansBranche > 0 && (
+                                  <span style={styles.suiviPrefTagAutre}>Sans branche ({item.compteSansBranche})</span>
+                                )}
                               </div>
-                            )}
+                            </div>
+                            <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',gap:10}}>
+                              {ORDRE_COLONNES_SPECIALITES.map((cat) => {
+                                const items = item.colonnes[cat] || [];
+                                return (
+                                  <div key={`${item.profId}-${cat}`} style={{border:'1px solid #e2e8f0',borderRadius:10,padding:8,background:'#f8fafc',minHeight:80}}>
+                                    <div style={{fontSize:11,fontWeight:800,color:'#334155',marginBottom:6}}>{LIBELLES_COLONNES_SPECIALITES[cat]}</div>
+                                    {items.length === 0 ? (
+                                      <div style={styles.suiviPrefLigne}>Aucune branche</div>
+                                    ) : (
+                                      <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                                        {items.map((b) => (
+                                          <div key={`${item.profId}-${cat}-${b.id}`} style={{display:'flex',alignItems:'center',gap:6}}>
+                                            <span style={{minWidth:18,textAlign:'right',fontWeight:800,fontSize:11,color:'#64748b',flexShrink:0}}>{b.rang}.</span>
+                                            <span
+                                              title={`${b.label} — ${b.compte} période(s) sur le pool`}
+                                              style={{
+                                                ...(b.compte > 0 ? styles.suiviPrefTagOk : styles.suiviPrefTag),
+                                                display:'flex',
+                                                flex:1,
+                                                minWidth:0,
+                                                justifyContent:'space-between',
+                                                alignItems:'center',
+                                                gap:8,
+                                                borderRadius:7,
+                                              }}
+                                            >
+                                              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
+                                              <span>({b.compte})</span>
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         ))}
                       </div>
