@@ -570,7 +570,7 @@ export default function EmploiDuTemps() {
       const aff = getAffectation(classe_id, creneau_id);
       if (aff) await axios.delete(API + '/planning/affectations/' + aff.id, { headers });
     } else {
-      await axios.post(API + '/planning/affectations', { prof_id, classe_id, creneau_id }, { headers });
+      await axios.post(API + '/planning/affectations', { prof_id, classe_id, creneau_id, pool_id: idPoolNumerique() }, { headers });
     }
     chargerTout();
   };
@@ -722,26 +722,58 @@ export default function EmploiDuTemps() {
   };
 
   const poolSelectionne = pools.find(p => p.id == poolAffId);
+  const idPoolNumerique = (id = poolAffId) => {
+    if (id == null || id === '') return null;
+    const n = Number(id);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  };
+  const trouverPoolParId = (poolId) => {
+    if (poolId == null || poolId === '') return null;
+    return pools.find((p) => String(p.id) === String(poolId)) || null;
+  };
   const trouverPoolParClasseId = (classeId) => {
     if (classeId == null || classeId === '') return null;
     return pools.find((p) => (p.classes || []).some((c) => String(c.id) === String(classeId))) || null;
   };
+  const poolIdDeAffectation = (aff) => {
+    if (aff?.pool_id != null && aff.pool_id !== '') return aff.pool_id;
+    if (aff?.pool_id_aff != null && aff.pool_id_aff !== '') return aff.pool_id_aff;
+    return null;
+  };
+  /** Titulariat / Atelier / Médiation / Autre (et classes) déjà posés sur un autre site. */
   const estAffectationHorsPool = (aff, poolCourant) => {
-    if (!aff || !poolCourant || !aff.classe_id) return false;
+    if (!aff || !poolCourant) return false;
+    const poolAff = poolIdDeAffectation(aff);
+    if (poolAff != null) return String(poolAff) !== String(poolCourant.id);
     if (aff.dans_pool_courant === false) return true;
     if (aff.dans_pool_courant === true) return false;
+    if (!aff.classe_id) return false;
     const poolClasse = trouverPoolParClasseId(aff.classe_id);
     if (!poolClasse) return false;
     return String(poolClasse.id) !== String(poolCourant.id);
   };
-  /** Hors pool pour un groupe de pools (super-général) : classe absente de tous les pools du groupe. */
+  /** Hors pool pour un groupe de pools (super-général) : absent de tous les pools du groupe. */
   const estAffectationHorsPools = (aff, poolsGroupe) => {
     const liste = (poolsGroupe || []).filter(Boolean);
-    if (!aff || !aff.classe_id || !liste.length) return false;
+    if (!aff || !liste.length) return false;
     if (liste.length === 1) return estAffectationHorsPool(aff, liste[0]);
+    const idsPools = new Set(liste.map((p) => String(p.id)));
+    const poolAff = poolIdDeAffectation(aff);
+    if (poolAff != null) return !idsPools.has(String(poolAff));
+    if (aff.dans_pool_courant === false) return true;
+    if (!aff.classe_id) return false;
     const idsClasses = new Set();
     liste.forEach((p) => (p.classes || []).forEach((c) => idsClasses.add(String(c.id))));
     return !idsClasses.has(String(aff.classe_id));
+  };
+  const libellePeriodeAffectation = (aff) => {
+    if (!aff) return '';
+    if (estAffectationSpecialSansClasse(aff)) return getLibelleTypeSpecial(aff.type_special);
+    const nomClasse = String(aff.classe_nom || '').trim();
+    if (String(aff.type_special || '').toLowerCase() === 'soutien' || estAffectationSoutien(aff)) {
+      return nomClasse ? `${nomClasse} - Soutien` : 'Soutien';
+    }
+    return nomClasse;
   };
   const resoudrePoolsPourGeneral = (poolId = null, poolIds = null) => {
     if (Array.isArray(poolIds) && poolIds.length) {
@@ -763,12 +795,14 @@ export default function EmploiDuTemps() {
     return String(aff.matiere_nom || '').trim();
   };
   const nomPoolAffectationExterne = (aff, poolCourant) => {
-    if (aff?.pool_nom && aff.dans_pool_courant === false) return String(aff.pool_nom);
+    const poolAff = trouverPoolParId(poolIdDeAffectation(aff));
+    if (poolAff?.nom) return poolAff.nom;
+    if (aff?.pool_nom) return String(aff.pool_nom);
     const poolClasse = trouverPoolParClasseId(aff?.classe_id);
     if (poolClasse && poolCourant && String(poolClasse.id) !== String(poolCourant.id)) {
       return poolClasse.nom || 'Autre pool';
     }
-    return aff?.pool_nom || 'Autre pool';
+    return 'Autre pool';
   };
   const profsPool = poolSelectionne ? poolSelectionne.profs : profs;
   const classesPool = trierClassesParNom(poolSelectionne ? poolSelectionne.classes : classes);
@@ -780,10 +814,17 @@ export default function EmploiDuTemps() {
   const classesPoolIds = new Set(classesPool.map(c => String(c.id)));
   const profsPoolIds = new Set(profsPool.map(p => String(p.id)));
   const affectationsPourProfs = hasAffectationsUnsaved ? affectationsDraft : affectations;
-  const affectationsPool = affectationsPourProfs.filter(a =>
-    profsPoolIds.has(String(a.prof_id)) &&
-    (classesPoolIds.has(String(a.classe_id)) || !!a.type_special)
-  );
+  const affectationsPool = affectationsPourProfs.filter(a => {
+    if (!profsPoolIds.has(String(a.prof_id))) return false;
+    if (estAffectationHorsPool(a, poolSelectionne)) return false;
+    if (a.classe_id != null && a.classe_id !== '' && classesPoolIds.has(String(a.classe_id))) return true;
+    if (estAffectationSpecialSansClasse(a)) {
+      const poolAff = poolIdDeAffectation(a);
+      if (poolAff != null) return String(poolAff) === String(poolAffId);
+      return true;
+    }
+    return false;
+  });
   const periodesAffecteesParProf = profsPool.reduce((acc, p) => {
     acc[p.id] = (affectationsPourProfs || []).filter((a) => String(a.prof_id) === String(p.id)).length;
     return acc;
@@ -1792,6 +1833,7 @@ export default function EmploiDuTemps() {
         matiere_id: null,
         creneau_id: Number.isFinite(Number(creneauId)) ? Number(creneauId) : creneauId,
         type_special: typeSpecialFinal,
+        pool_id: idPoolNumerique(),
       });
       nextModes[id] = typeSpecialFinal === 'soutien' ? 'soutien' : (typeSpecialFinal ? 'special' : mode);
       occupiedProf.add(`${pid}|${crid}`);
@@ -2408,7 +2450,8 @@ export default function EmploiDuTemps() {
           const changedClasse = String(orig.classe_id || '') !== String(draft.classe_id || '');
           const changedMatiere = String(orig.matiere_id || '') !== String(draft.matiere_id || '');
           const changedSpecial = String(orig.type_special || '') !== String(draft.type_special || '');
-          if (changedClasse || changedMatiere || changedSpecial) {
+          const changedPool = String(orig.pool_id || '') !== String(draft.pool_id || '');
+          if (changedClasse || changedMatiere || changedSpecial || changedPool) {
             deletes.push(orig.id);
             upserts.push(draft);
           }
@@ -2452,6 +2495,7 @@ export default function EmploiDuTemps() {
           matiere_id: a.matiere_id || null,
           creneau_id: a.creneau_id,
           type_special: a.type_special || null,
+          pool_id: a.pool_id != null && a.pool_id !== '' ? a.pool_id : idPoolNumerique(),
         }, { headers });
       }
       for (const t of updatesTitulaires) {
@@ -2486,6 +2530,7 @@ export default function EmploiDuTemps() {
           matiere_id: nouvelleMatiere,
           creneau_id: aff.creneau_id,
           type_special: aff.type_special || null,
+          pool_id: aff.pool_id != null && aff.pool_id !== '' ? aff.pool_id : (classePlanningPoolId || idPoolNumerique()),
         }, { headers });
       }
       await chargerTout();
@@ -2855,7 +2900,8 @@ export default function EmploiDuTemps() {
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
               const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
-              content = `<div style="font-weight:700;color:#475569;font-size:8pt;line-height:1.2;">${nomPool}</div>`;
+              const periodeExt = escapeHtml(libellePeriodeAffectation(aff));
+              content = `<div style="font-weight:700;color:#475569;font-size:8pt;line-height:1.2;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:7pt;margin-top:1px;line-height:1.15;">${periodeExt}</div>` : ''}`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
@@ -3005,7 +3051,9 @@ export default function EmploiDuTemps() {
             let content = '';
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
-              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;">${escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]))}</div>`;
+              const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
+              const periodeExt = escapeHtml(libellePeriodeAffectation(aff));
+              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:5.5pt;margin-top:1px;line-height:1.1;">${periodeExt}</div>` : ''}`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
@@ -5170,14 +5218,16 @@ export default function EmploiDuTemps() {
                                 const horsPool = aff && estAffectationHorsPool(aff, poolSelectionne);
                                 if (horsPool) {
                                   const nomPoolExt = nomPoolAffectationExterne(aff, poolSelectionne);
+                                  const periodeExt = libellePeriodeAffectation(aff);
                                   return (
-                                    <td key={prof.id} style={{...styles.td,padding:'8px 4px',background:'#e2e8f0',textAlign:'center'}} title={`Affecté sur le pool « ${nomPoolExt} »`}>
+                                    <td key={prof.id} style={{...styles.td,padding:'8px 4px',background:'#e2e8f0',textAlign:'center'}} title={`Affecté sur le pool « ${nomPoolExt} »${periodeExt ? ` : ${periodeExt}` : ''}`}>
                                       <div style={{
-                                        minHeight:32,display:'flex',alignItems:'center',justifyContent:'center',
+                                        minHeight:32,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
                                         fontSize:11,fontWeight:700,color:'#475569',padding:'4px 6px',
                                         borderRadius:6,background:'#cbd5e1',lineHeight:1.2
                                       }}>
-                                        {nomPoolExt}
+                                        <span>{nomPoolExt}</span>
+                                        {periodeExt ? <span style={{fontSize:10,fontWeight:600,color:'#64748b',marginTop:2}}>{periodeExt}</span> : null}
                                       </div>
                                     </td>
                                   );
@@ -5208,7 +5258,7 @@ export default function EmploiDuTemps() {
                                         // Empêcher d'écraser une affectation hors pool (déjà affichée ailleurs)
                                         const affExistante = affectationsDraft.find(x => x.prof_id==prof.id && x.creneau_id==cr.id);
                                         if (affExistante && estAffectationHorsPool(affExistante, poolSelectionne) && e.target.value) {
-                                          alert(`Ce professeur est déjà affecté sur « ${nomPoolAffectationExterne(affExistante, poolSelectionne)} » à cette période.`);
+                                          alert(`Ce professeur est déjà affecté sur « ${nomPoolAffectationExterne(affExistante, poolSelectionne)} » (${libellePeriodeAffectation(affExistante) || 'période déjà posée'}) à cette heure.`);
                                           return;
                                         }
                                         const valeur = e.target.value;
@@ -5261,6 +5311,7 @@ export default function EmploiDuTemps() {
                                                   next[idxConflit].classe_id = ancienne.classe_id || null;
                                                   next[idxConflit].type_special = ancienne.type_special || null;
                                                   next[idxConflit].matiere_id = ancienne.matiere_id || null;
+                                                  next[idxConflit].pool_id = ancienne.pool_id != null ? ancienne.pool_id : idPoolNumerique();
                                                 } else {
                                                   next.splice(idxConflit, 1);
                                                 }
@@ -5269,6 +5320,7 @@ export default function EmploiDuTemps() {
                                                 next[idxAncienne].classe_id = classe_id;
                                                 next[idxAncienne].type_special = typeSpecial;
                                                 next[idxAncienne].matiere_id = null;
+                                                next[idxAncienne].pool_id = idPoolNumerique();
                                               } else {
                                                 next.push({
                                                   id: draftId(),
@@ -5277,6 +5329,7 @@ export default function EmploiDuTemps() {
                                                   matiere_id: null,
                                                   creneau_id: cr.id,
                                                   type_special: typeSpecial,
+                                                  pool_id: idPoolNumerique(),
                                                 });
                                               }
                                               return next;
@@ -5301,6 +5354,7 @@ export default function EmploiDuTemps() {
                                               next[idxAncienne].classe_id = classe_id;
                                               next[idxAncienne].type_special = typeSpecial;
                                               next[idxAncienne].matiere_id = null;
+                                              next[idxAncienne].pool_id = idPoolNumerique();
                                             } else {
                                               const newId = draftId();
                                               next.push({
@@ -5310,6 +5364,7 @@ export default function EmploiDuTemps() {
                                                 matiere_id: null,
                                                 creneau_id: cr.id,
                                                 type_special: typeSpecial,
+                                                pool_id: idPoolNumerique(),
                                               });
                                             }
                                             return next;
@@ -6234,11 +6289,13 @@ export default function EmploiDuTemps() {
                                 let couleurFond = '#fff';
                                 let couleurTexte = '#111827';
                                 let libelleAff = '';
+                                let periodeHorsPool = '';
                                 try {
                                   if (horsPool) {
                                     couleurFond = '#e2e8f0';
                                     couleurTexte = '#475569';
                                     libelleAff = nomPoolAffectationExterne(aff, poolCourantGen);
+                                    periodeHorsPool = libellePeriodeAffectation(aff);
                                   } else {
                                     couleurFond = aff
                                       ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
@@ -6261,6 +6318,7 @@ export default function EmploiDuTemps() {
                                     background:couleurFond,color:couleurTexte}}>
                                     {aff ? <>
                                       <b style={{color:couleurTexte,fontSize:12}}>{libelleAff}</b>
+                                      {periodeHorsPool ? <div style={{color:'#64748b',fontWeight:600,fontSize:10,marginTop:2,lineHeight:1.15}}>{periodeHorsPool}</div> : null}
                                       {brancheAff ? <div style={{color:couleurTexte,fontWeight:600,fontSize:10,marginTop:2,lineHeight:1.15,opacity:0.92}}>{brancheAff}</div> : null}
                                     </> : ''}
                                   </td>
