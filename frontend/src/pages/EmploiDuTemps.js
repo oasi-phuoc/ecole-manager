@@ -14,6 +14,7 @@ import {
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
+import { compterPreferencesSoutienParProf } from '../utils/comptesSoutienPreferences';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -964,12 +965,22 @@ export default function EmploiDuTemps() {
     return nom === 'soutien' || courte === 'soutien';
   };
   const estBrancheFrancais = (m) => {
+    if (typeof m === 'string') {
+      const s = m.trim().toLowerCase();
+      if (['fr', 'fra'].includes(s)) return true;
+      return /fran[cç]ais/.test(s);
+    }
     const courte = String(m?.designation_courte || m?.code || m?.labelCourt || '').trim().toLowerCase();
     const nom = String(m?.nom || m?.label || '').trim().toLowerCase();
     if (['fr', 'fra'].includes(courte)) return true;
     return /fran[cç]ais/.test(`${nom} ${courte}`);
   };
   const estBrancheMath = (m) => {
+    if (typeof m === 'string') {
+      const s = m.trim().toLowerCase();
+      if (['ma', 'mat', 'math'].includes(s)) return true;
+      return /math/.test(s);
+    }
     const courte = String(m?.designation_courte || m?.code || m?.labelCourt || '').trim().toLowerCase();
     const nom = String(m?.nom || m?.label || '').trim().toLowerCase();
     if (['ma', 'mat', 'math'].includes(courte)) return true;
@@ -1042,22 +1053,36 @@ export default function EmploiDuTemps() {
   const idsClassesPoolPlanning = new Set((classesPoolP || []).map((c) => String(c.id)));
   const poolPlanningAvecSoutien = niveauxPoolPlanning.some((n) => niveauAvecSoutien(n))
     || (classesPoolP || []).some((cl) => niveauAvecSoutien(resoudreNiveauClasse(cl)));
+  const fusionnerLignesAffectation = (existante, candidate) => {
+    if (!existante) return candidate;
+    if (!candidate) return existante;
+    const existanteComplete = existante.matiere_id != null && existante.matiere_id !== '';
+    const candidateComplete = candidate.matiere_id != null && candidate.matiere_id !== '';
+    if (candidateComplete && !existanteComplete) return { ...existante, ...candidate };
+    if (existanteComplete && !candidateComplete) return { ...candidate, ...existante };
+    return {
+      ...existante,
+      ...candidate,
+      matiere_id: candidate.matiere_id ?? existante.matiere_id,
+      type_special: candidate.type_special ?? existante.type_special,
+      matiere_nom: candidate.matiere_nom || existante.matiere_nom,
+      soutien_matiere_id: candidate.soutien_matiere_id ?? existante.soutien_matiere_id,
+      soutien_matiere_nom: candidate.soutien_matiere_nom || existante.soutien_matiere_nom,
+    };
+  };
   const affectationsPoolBranchesSuivi = (() => {
     const byId = new Map();
-    (affectationsDraft || []).forEach((a) => {
+    const ajouter = (a) => {
+      if (!a || a.id == null) return;
       if (!idsClassesPoolPlanning.has(String(a.classe_id))) return;
       if (estAffectationSpecialSansClasse(a)) return;
-      byId.set(String(a.id), a);
-    });
-    planningClasseAffectationsActives.forEach((a) => {
-      if (estAffectationSpecialSansClasse(a)) return;
-      byId.set(String(a.id), a);
-    });
-    (planningClasseAffectations || []).forEach((a) => {
-      if (!estAffSoutienPlanning(a) && !estAffectationSoutien(a)) return;
-      if (!idsClassesPoolPlanning.has(String(a.classe_id))) return;
-      byId.set(String(a.id), a);
-    });
+      const id = String(a.id);
+      byId.set(id, fusionnerLignesAffectation(byId.get(id), a));
+    };
+    (affectations || []).forEach(ajouter);
+    (affectationsDraft || []).forEach(ajouter);
+    (planningClasseAffectations || []).forEach(ajouter);
+    planningClasseAffectationsActives.forEach(ajouter);
     return Array.from(byId.values());
   })();
   const groupePourMatiereId = (matiereId) => {
@@ -1065,20 +1090,11 @@ export default function EmploiDuTemps() {
     const mid = String(matiereId);
     return groupesBranchesPool.find((g) => (g.ids || []).map(String).includes(mid)) || null;
   };
-  const matiereCoursNormalDuSoutien = (affSoutien, liste) => {
-    const soeurs = (liste || []).filter((a) =>
-      String(a.classe_id) === String(affSoutien.classe_id)
-      && String(a.creneau_id) === String(affSoutien.creneau_id)
-      && String(a.id) !== String(affSoutien.id)
-      && !estAffectationSoutien(a)
-      && !estAffSoutienPlanning(a)
-      && !estAffectationSpecialSansClasse(a)
-      && a.matiere_id
-    );
-    const soeur = soeurs.find((a) => String(a.prof_id) !== String(affSoutien.prof_id)) || soeurs[0];
-    if (!soeur) return null;
-    return matieresParId.get(String(soeur.matiere_id)) || null;
-  };
+  const comptesSuiviPrefParProf = compterPreferencesSoutienParProf(
+    affectationsPoolBranchesSuivi,
+    matieresParId,
+    groupePourMatiereId
+  );
   const insererSoutienSousFrMa = (items, comptes, afficher, compteSoutienRecu = 0) => {
     if (!afficher) return items;
     const out = [];
@@ -1126,35 +1142,10 @@ export default function EmploiDuTemps() {
       || String(a?.prenom || '').localeCompare(String(b?.prenom || ''), 'fr'))
     .map((p) => {
       const prof = (profs || []).find((x) => String(x.id) === String(p.id)) || p;
-      const affsProf = affectationsPoolBranchesSuivi.filter((a) => String(a.prof_id) === String(prof.id));
-      const compteParCode = {};
-      const comptesSoutien = { fr: 0, ma: 0 };
-      let compteSoutienRecu = 0;
-      const coursAUnSoutienCollegue = (affCours) => (affectationsPoolBranchesSuivi || []).some((a) =>
-        String(a.classe_id) === String(affCours.classe_id)
-        && String(a.creneau_id) === String(affCours.creneau_id)
-        && String(a.prof_id) !== String(affCours.prof_id)
-        && (estAffectationSoutien(a) || estAffSoutienPlanning(a))
-      );
-      affsProf.forEach((a) => {
-        const estSoutien = estAffectationSoutien(a) || estAffSoutienPlanning(a);
-        if (estSoutien) {
-          const matiereLiee = matiereCoursNormalDuSoutien(a, affectationsPoolBranchesSuivi)
-            || (a.matiere_id ? matieresParId.get(String(a.matiere_id)) : null);
-          if (estBrancheFrancais(matiereLiee)) comptesSoutien.fr += 1;
-          else if (estBrancheMath(matiereLiee)) comptesSoutien.ma += 1;
-          return;
-        }
-        if (!a?.matiere_id) return;
-        const matiere = matieresParId.get(String(a.matiere_id));
-        if (!matiere || estMatiereSoutien(matiere)) return;
-        const groupe = groupePourMatiereId(a.matiere_id);
-        const code = String(groupe?.code || groupe?.id || matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
-        if (code) compteParCode[code] = (compteParCode[code] || 0) + 1;
-        if (coursAUnSoutienCollegue(a) && (estBrancheFrancais(matiere) || estBrancheMath(matiere) || groupe?.categorie === 'principales')) {
-          compteSoutienRecu += 1;
-        }
-      });
+      const totaux = comptesSuiviPrefParProf[String(prof.id)] || { parCode: {}, frS: 0, maS: 0, recu: 0 };
+      const compteParCode = totaux.parCode;
+      const comptesSoutien = { fr: totaux.frS || 0, ma: totaux.maS || 0 };
+      const compteSoutienRecu = totaux.recu || 0;
       const afficherSoutien = poolPlanningAvecSoutien
         || comptesSoutien.fr > 0
         || comptesSoutien.ma > 0
