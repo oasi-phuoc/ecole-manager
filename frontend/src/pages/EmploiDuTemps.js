@@ -1096,45 +1096,18 @@ export default function EmploiDuTemps() {
     groupePourMatiereId
   );
   const insererSoutienSousFrMa = (items, comptes, afficher, compteSoutienRecu = 0) => {
-    if (!afficher) return items;
-    const out = [];
-    let frAjoute = false;
-    let maAjoute = false;
-    (items || []).forEach((item) => {
-      out.push(item);
-      if (estBrancheFrancais(item) && !frAjoute) {
-        out.push({
-          id: `${item.id}_SOUTIEN_FR`,
-          label: 'Français soutien',
-          compte: comptes.fr || 0,
-          indent: true,
-        });
-        frAjoute = true;
-      }
-      if (estBrancheMath(item) && !maAjoute) {
-        out.push({
-          id: `${item.id}_SOUTIEN_MA`,
-          label: 'Math soutien',
-          compte: comptes.ma || 0,
-          indent: true,
-        });
-        maAjoute = true;
-      }
+    const principales = [...(items || [])].sort((a, b) => {
+      const rang = (x) => (estBrancheFrancais(x) ? 0 : estBrancheMath(x) ? 1 : 2);
+      return rang(a) - rang(b);
     });
-    if (!frAjoute) {
-      out.push({ id: 'FR_SOUTIEN', label: 'Français soutien', compte: comptes.fr || 0, indent: true });
-    }
-    if (!maAjoute) {
-      out.push({ id: 'MA_SOUTIEN', label: 'Math soutien', compte: comptes.ma || 0, indent: true });
-    }
-    out.push({
-      id: 'SOUTIEN_RECU',
-      label: 'SOUTIEN REÇU',
-      compte: compteSoutienRecu || 0,
-      indent: false,
-      theme: true,
-    });
-    return out;
+    if (!afficher) return principales;
+    return [
+      ...principales,
+      { id: 'SOUTIEN_SEP', separator: true },
+      { id: 'FR_SOUTIEN', label: 'Soutien français', compte: comptes.fr || 0, theme: true },
+      { id: 'MA_SOUTIEN', label: 'Soutien math', compte: comptes.ma || 0, theme: true },
+      { id: 'SOUTIEN_RECU', label: 'Soutien reçu', compte: compteSoutienRecu || 0, theme: true },
+    ];
   };
   const suiviPreferencesBranches = (profsPoolP || [])
     .slice()
@@ -5790,7 +5763,7 @@ export default function EmploiDuTemps() {
                                 color:'#0f172a',
                                 padding:'8px 8px'
                               }}>
-                                <div style={{...styles.suiviClasseNom,textAlign:'center',marginBottom:6,fontSize:12}}>{item.nom}</div>
+                                <div style={{...styles.suiviClasseNom,textAlign:'center',marginBottom:6}}>{item.nom}</div>
                                 <div style={{display:'flex',alignItems:'stretch',minWidth:0,width:'100%'}}>
                                   {ORDRE_COLONNES_SPECIALITES.map((cat, catIdx) => {
                                     const items = item.colonnes?.[cat] || [];
@@ -5805,16 +5778,20 @@ export default function EmploiDuTemps() {
                                           borderLeft: catIdx ? '1px solid #6366f1' : 'none',
                                         }}
                                       >
-                                        <div style={{fontSize:9,fontWeight:800,color:'#6366f1',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                        <div style={{fontSize:12,fontWeight:800,color:'#6366f1',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                           {LIBELLES_COLONNES_SPECIALITES[cat]}
                                         </div>
                                         {items.length === 0 ? (
-                                          <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7,fontSize:10}}>Aucune</div>
+                                          <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7}}>Aucune</div>
                                         ) : items.map((b, idx) => (
-                                          <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:4,minWidth:0,paddingLeft: b.indent ? 8 : 0,color: b.theme ? '#6366f1' : undefined}}>
-                                            <span style={{fontSize:10,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
-                                            <span style={{fontSize:10,fontWeight:800,flexShrink:0}}>{b.compte}</span>
-                                          </div>
+                                          b.separator ? (
+                                            <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{borderTop:'1px solid #6366f1',margin:'6px 0 4px'}} />
+                                          ) : (
+                                            <div key={`${item.profId}-${cat}-${b.id}-${idx}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:4,minWidth:0,color: b.theme ? '#6366f1' : undefined}}>
+                                              <span style={{fontSize:12,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{b.label}</span>
+                                              <span style={{fontSize:12,fontWeight:800,flexShrink:0}}>{b.compte}</span>
+                                            </div>
+                                          )
                                         ))}
                                       </div>
                                     );
