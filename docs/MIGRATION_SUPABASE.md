@@ -122,6 +122,16 @@ Puis **Manual Deploy** / redémarrer le service. Garder Neon intact quelques jou
 ## Hors scope phase 1
 
 - Remplacer JWT par Supabase Auth
-- Migrer fichiers vers Storage
-- RLS sur `public` (l’API passe toujours par Express)
 - Arrêter `initDB` au boot (possible une fois le schéma figé)
+
+## Sécurité RLS (schéma `public`)
+
+Les tables sont dans `public`, donc exposées à l’API PostgREST si le **RLS** est désactivé.
+L’appli n’utilise **pas** la clé anon : tout passe par Express.
+
+La migration `20260818200000_enable_rls_public.sql` (et `initDB` au boot) :
+
+1. Active le RLS sur **toutes** les tables `public` (sans politique = aucun accès via anon).
+2. Révoque les droits `anon` / `authenticated` sur tables, séquences et fonctions.
+
+Le rôle `postgres` (connexion `DATABASE_URL`) conserve l’accès. Après déploiement, l’alerte Supabase `rls_disabled_in_public` disparaît.
