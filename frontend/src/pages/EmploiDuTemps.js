@@ -11,7 +11,6 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
-  categoriserBrancheSpecialite,
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
@@ -1130,7 +1129,7 @@ export default function EmploiDuTemps() {
       const affsProf = affectationsPoolBranchesSuivi.filter((a) => String(a.prof_id) === String(prof.id));
       const compteParCode = {};
       const comptesSoutien = { fr: 0, ma: 0 };
-      const comptesSoutienRecu = { principales: 0, autres: 0, culturelles: 0 };
+      let compteSoutienRecu = 0;
       const coursAUnSoutienCollegue = (affCours) => (affectationsPoolBranchesSuivi || []).some((a) =>
         String(a.classe_id) === String(affCours.classe_id)
         && String(a.creneau_id) === String(affCours.creneau_id)
@@ -1152,26 +1151,14 @@ export default function EmploiDuTemps() {
         const groupe = groupePourMatiereId(a.matiere_id);
         const code = String(groupe?.code || groupe?.id || matiere.designation_courte || matiere.nom || '').trim().toUpperCase();
         if (code) compteParCode[code] = (compteParCode[code] || 0) + 1;
-        if (coursAUnSoutienCollegue(a)) {
-          const cat = groupe?.categorie || categoriserBrancheSpecialite(matiere) || 'autres';
-          if (Object.prototype.hasOwnProperty.call(comptesSoutienRecu, cat)) {
-            comptesSoutienRecu[cat] += 1;
-          } else {
-            comptesSoutienRecu.autres += 1;
-          }
+        if (coursAUnSoutienCollegue(a) && (estBrancheFrancais(matiere) || estBrancheMath(matiere) || groupe?.categorie === 'principales')) {
+          compteSoutienRecu += 1;
         }
       });
       const afficherSoutien = poolPlanningAvecSoutien
         || comptesSoutien.fr > 0
         || comptesSoutien.ma > 0
-        || Object.values(comptesSoutienRecu).some((n) => n > 0);
-      const ligneSoutienRecu = (cat) => ({
-        id: `SOUTIEN_RECU_${cat}`,
-        label: 'Soutien reçu',
-        compte: comptesSoutienRecu[cat] || 0,
-        indent: true,
-        theme: true,
-      });
+        || compteSoutienRecu > 0;
       const colonnes = {};
       ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
         const items = listerGroupesColonneOrdonnes(groupesBranchesPool, prof.branches_specialites, cat).map((g, idx) => {
@@ -1187,8 +1174,8 @@ export default function EmploiDuTemps() {
           };
         });
         colonnes[cat] = cat === 'principales'
-          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien, comptesSoutienRecu.principales)
-          : (afficherSoutien ? [...items, ligneSoutienRecu(cat)] : items);
+          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien, compteSoutienRecu)
+          : items;
       });
       return {
         profId: String(prof.id),
