@@ -4436,13 +4436,68 @@ export default function EmploiDuTemps() {
             />
           )}
           {sousOngletPlanning === 'general' && (
-            <CustomSelect
-              style={styles.selAff}
-              value={planningPoolId}
-              placeholder="Choisir un pool"
-              options={pools.map(p => ({value: p.id, label: p.nom}))}
-              onChange={(v) => { setPlanningPoolId(v); chargerPlanningGeneral(v); }}
-            />
+            <>
+              <CustomSelect
+                style={styles.selAff}
+                value={planningPoolId}
+                placeholder="Choisir un pool"
+                options={pools.map(p => ({value: p.id, label: p.nom}))}
+                onChange={(v) => { setPlanningPoolId(v); chargerPlanningGeneral(v); }}
+              />
+              <button
+                type="button"
+                role="switch"
+                aria-checked={afficherNomsBranchesGeneral}
+                aria-label="Afficher les noms des branches"
+                title="Afficher ou masquer les noms de branches (écran et PDF A3)"
+                onClick={() => setAfficherNomsBranchesGeneral((v) => !v)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  height: 36,
+                  padding: '0 12px',
+                  borderRadius: 8,
+                  border: '1px solid #c7d2fe',
+                  background: afficherNomsBranchesGeneral ? '#eef2ff' : '#ffffff',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#334155',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                Noms des branches
+                <span
+                  style={{
+                    width: 40,
+                    height: 22,
+                    borderRadius: 99,
+                    background: afficherNomsBranchesGeneral ? '#6366f1' : '#cbd5e1',
+                    position: 'relative',
+                    flexShrink: 0,
+                    display: 'inline-block',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: afficherNomsBranchesGeneral ? 20 : 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
+                      transition: 'left 0.15s ease',
+                    }}
+                  />
+                </span>
+              </button>
+            </>
           )}
           {sousOngletPlanning === 'salle' && (
             <>
@@ -6490,56 +6545,6 @@ export default function EmploiDuTemps() {
                   ))}
                 </div>
               )}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={afficherNomsBranchesGeneral}
-                aria-label="Afficher les noms des branches"
-                title="Afficher ou masquer les noms de branches (PDF A3 inclus)"
-                onClick={() => setAfficherNomsBranchesGeneral((v) => !v)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginLeft: 'auto',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#334155',
-                  background: 'transparent',
-                  border: 'none',
-                  fontFamily: 'inherit',
-                  padding: 0,
-                }}
-              >
-                Noms des branches
-                <span
-                  style={{
-                    width: 40,
-                    height: 22,
-                    borderRadius: 99,
-                    background: afficherNomsBranchesGeneral ? '#6366f1' : '#cbd5e1',
-                    position: 'relative',
-                    flexShrink: 0,
-                    display: 'inline-block',
-                  }}
-                >
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: 2,
-                      left: afficherNomsBranchesGeneral ? 20 : 2,
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      background: '#ffffff',
-                      boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
-                      transition: 'left 0.15s ease',
-                    }}
-                  />
-                </span>
-              </button>
             </div>
           )}
           {planningPoolId && !planningGeneralLoading && planningGeneral && (
