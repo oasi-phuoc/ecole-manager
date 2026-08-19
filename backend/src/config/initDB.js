@@ -166,6 +166,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS horaires TEXT`);
     await pool.query(`ALTER TABLE pools ADD COLUMN IF NOT EXISTS ordre INTEGER DEFAULT 0`);
     await pool.query(`CREATE TABLE IF NOT EXISTS disponibilites (id SERIAL PRIMARY KEY, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE, creneau_id INTEGER REFERENCES creneaux(id) ON DELETE CASCADE, disponible BOOLEAN DEFAULT true);`);
+    await pool.query(`ALTER TABLE disponibilites ADD COLUMN IF NOT EXISTS eviter BOOLEAN DEFAULT false`);
     await pool.query(`CREATE TABLE IF NOT EXISTS pool_profs (id SERIAL PRIMARY KEY, pool_id INTEGER REFERENCES pools(id) ON DELETE CASCADE, prof_id INTEGER REFERENCES utilisateurs(id) ON DELETE CASCADE);`);
     // Un prof peut être dans plusieurs pools ; éviter les doublons dans un même pool
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS pool_profs_pool_prof_uidx ON pool_profs (pool_id, prof_id)`);

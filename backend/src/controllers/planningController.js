@@ -16,12 +16,12 @@ const getCreneaux = async (req, res) => {
 };
 
 const getDisponibilites = async (req, res) => {
-  const r = await pool.query('SELECT creneau_id, disponible FROM disponibilites WHERE prof_id=$1', [req.params.prof_id]);
+  const r = await pool.query('SELECT creneau_id, disponible, eviter FROM disponibilites WHERE prof_id=$1', [req.params.prof_id]);
   res.json(r.rows);
 };
 
 const getAllDisponibilites = async (req, res) => {
-  const r = await pool.query('SELECT prof_id, creneau_id, disponible FROM disponibilites');
+  const r = await pool.query('SELECT prof_id, creneau_id, disponible, eviter FROM disponibilites');
   res.json(r.rows);
 };
 
@@ -61,7 +61,13 @@ const saveRemarqueDisponibilites = async (req, res) => {
   }
 };
 
-const estIndisponible = (valeur) => valeur === false || valeur === 0 || valeur === 'false';
+const estIndisponible = (valeur) => valeur === false || valeur === 0 || valeur === 'false' || valeur === 'indispo';
+const estEviterFlag = (d) =>
+  d?.eviter === true
+  || d?.eviter === 1
+  || d?.eviter === 'true'
+  || d?.statut === 'eviter'
+  || d?.disponible === 'eviter';
 
 const saveDisponibilites = async (req, res) => {
   const { prof_id } = req.params;
@@ -88,9 +94,10 @@ const saveDisponibilites = async (req, res) => {
     for (const d of liste) {
       const creneauId = Number(d?.creneau_id);
       if (!Number.isInteger(creneauId) || creneauId <= 0) continue;
+      const eviter = !estIndisponible(d.disponible) && estEviterFlag(d);
       await client.query(
-        'INSERT INTO disponibilites (prof_id, creneau_id, disponible) VALUES ($1,$2,$3)',
-        [profIdNum, creneauId, !estIndisponible(d.disponible)]
+        'INSERT INTO disponibilites (prof_id, creneau_id, disponible, eviter) VALUES ($1,$2,$3,$4)',
+        [profIdNum, creneauId, !estIndisponible(d.disponible), eviter]
       );
     }
     let affectationsSupprimees = 0;
@@ -487,7 +494,7 @@ const getPlanningGeneral = async (req, res) => {
         LEFT JOIN matieres m ON m.id=a.matiere_id
       `, [pool_id]);
       dispos = await pool.query(`
-        SELECT d.prof_id, d.creneau_id, d.disponible
+        SELECT d.prof_id, d.creneau_id, d.disponible, d.eviter
         FROM disponibilites d
         JOIN pool_profs pp ON pp.prof_id = d.prof_id AND pp.pool_id = $1
       `, [pool_id]);
@@ -525,7 +532,7 @@ const getPlanningGeneral = async (req, res) => {
         LEFT JOIN classes c ON c.id=a.classe_id
         LEFT JOIN matieres m ON m.id=a.matiere_id
       `);
-      dispos = await pool.query('SELECT prof_id,creneau_id,disponible FROM disponibilites');
+      dispos = await pool.query('SELECT prof_id,creneau_id,disponible,eviter FROM disponibilites');
     }
     const titulaires = pool_id
       ? await pool.query(`
@@ -638,7 +645,7 @@ const getPlanningProf = async (req, res) => {
     WHERE pp.prof_id = $1
     ORDER BY p.nom
   `, [prof_id]);
-  const dispos = await pool.query('SELECT creneau_id,disponible FROM disponibilites WHERE prof_id=$1', [prof_id]);
+  const dispos = await pool.query('SELECT creneau_id,disponible,eviter FROM disponibilites WHERE prof_id=$1', [prof_id]);
   res.json({
     prof: prof.rows[0],
     creneaux: creneaux.rows,
