@@ -2752,64 +2752,87 @@ export default function EmploiDuTemps() {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
+  const CARTES_SUIVI_PDF_PAR_LIGNE = 4;
+  const CARTES_SUIVI_PDF_PAR_PAGE = 8;
+  const styleCarteSuiviPdf = (minHeight) =>
+    `box-sizing:border-box;width:100%;min-height:${minHeight}px;height:100%;border:1px solid #e2e8f0;background:#ffffff;border-radius:12px;padding:12px 14px;color:#0f172a;text-align:left;display:flex;flex-direction:column;`;
+  const htmlPagesGrilleCartesSuivi = (titre, cartesHtml, videMsg) => {
+    const liste = Array.isArray(cartesHtml) ? cartesHtml.filter(Boolean) : [];
+    if (!liste.length) {
+      return `<div class="section" style="text-align:left;">
+        <div style="font-size:20pt;font-weight:800;margin:0 0 16px;color:#0f172a;text-align:left;">${escapeHtml(titre)}</div>
+        <p style="color:#64748b;font-size:14pt;font-weight:600;">${escapeHtml(videMsg)}</p>
+      </div>`;
+    }
+    const pages = [];
+    for (let i = 0; i < liste.length; i += CARTES_SUIVI_PDF_PAR_PAGE) {
+      const slice = liste.slice(i, i + CARTES_SUIVI_PDF_PAR_PAGE);
+      const suffixe = liste.length > CARTES_SUIVI_PDF_PAR_PAGE
+        ? ` (${Math.floor(i / CARTES_SUIVI_PDF_PAR_PAGE) + 1}/${Math.ceil(liste.length / CARTES_SUIVI_PDF_PAR_PAGE)})`
+        : '';
+      pages.push(`<div class="section" style="text-align:left;">
+        <div style="font-size:20pt;font-weight:800;margin:0 0 16px;color:#0f172a;text-align:left;">${escapeHtml(titre)}${escapeHtml(suffixe)}</div>
+        <div style="display:grid;grid-template-columns:repeat(${CARTES_SUIVI_PDF_PAR_LIGNE},minmax(0,1fr));gap:14px;width:100%;align-items:stretch;">${slice.join('')}</div>
+      </div>`);
+    }
+    return pages.join('');
+  };
+
   const htmlCartesSuiviPeriodes = (titre, cartes) => {
-    const lignes = repartirCartesParLigne(cartes, 5);
-    const rows = lignes.map((ligne) => {
-      const cells = ligne.map((cl) => {
-        const ok = cl.totalRequis > 0 && cl.totalAffectees === cl.totalRequis;
-        const profsHtml = (cl.profsClasse || []).length
-          ? cl.profsClasse.map((p) => (
-            `<div style="display:flex;justify-content:space-between;gap:6px;min-width:0;">
-              <span style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nom)}</span>
-              <span style="font-size:10px;font-weight:800;flex-shrink:0;">${p.periodes}</span>
-            </div>`
-          )).join('')
-          : '<div style="font-size:10px;font-weight:600;opacity:0.7;text-align:center;">Aucun professeur</div>';
-        return `<div style="flex:1;min-width:0;border:1px solid ${ok ? '#c7d2fe' : '#e2e8f0'};background:${ok ? '#eef2ff' : '#ffffff'};border-radius:10px;padding:8px 10px;color:${ok ? '#3730a3' : '#0f172a'};">
-          <div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:6px;">${escapeHtml(cl.nom)} — Périodes ${cl.totalAffectees}/${cl.totalRequis}</div>
-          ${profsHtml}
-        </div>`;
-      }).join('');
-      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:stretch;">${cells}</div>`;
-    }).join('');
-    return `<div class="section">
-      <h2 style="font-size:13pt;margin:0 0 12px;font-weight:800;">${escapeHtml(titre)}</h2>
-      ${rows || '<p style="color:#64748b;font-size:11px;">Aucune classe dans ce pool.</p>'}
-    </div>`;
+    const liste = Array.isArray(cartes) ? cartes : [];
+    const maxProfs = Math.max(1, ...liste.map((cl) => (cl.profsClasse || []).length));
+    const minHeight = Math.max(200, 70 + maxProfs * 26);
+    const cartesHtml = liste.map((cl) => {
+      const profsHtml = (cl.profsClasse || []).length
+        ? cl.profsClasse.map((p) => (
+          `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;line-height:1.35;">
+            <span style="font-size:13pt;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nom)}</span>
+            <span style="font-size:13pt;font-weight:800;flex-shrink:0;">${p.periodes}</span>
+          </div>`
+        )).join('')
+        : '<div style="font-size:13pt;font-weight:600;opacity:0.7;">Aucun professeur</div>';
+      return `<div style="${styleCarteSuiviPdf(minHeight)}">
+        <div style="font-size:15pt;font-weight:800;text-align:center;margin-bottom:4px;line-height:1.2;">${escapeHtml(cl.nom)}</div>
+        <div style="font-size:12pt;font-weight:800;color:#6366f1;text-align:center;margin-bottom:10px;">Périodes ${cl.totalAffectees}/${cl.totalRequis}</div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">${profsHtml}</div>
+      </div>`;
+    });
+    return htmlPagesGrilleCartesSuivi(titre, cartesHtml, 'Aucune classe dans ce pool.');
   };
 
   const htmlCartesPreferencesPool = (titre, cartes) => {
-    const lignes = repartirCartesParLigne(cartes, 5);
-    const rows = lignes.map((ligne) => {
-      const cells = ligne.map((item) => {
-        const cols = ORDRE_COLONNES_SPECIALITES.map((cat, catIdx) => {
-          const items = item.colonnes?.[cat] || [];
-          const lignesCol = items.length
-            ? items.map((b) => (
-              b.separator
-                ? `<div style="border-top:1px solid #6366f1;margin:6px 0 4px;"></div>`
-                : `<div style="display:flex;justify-content:space-between;gap:4px;min-width:0;color:${b.theme ? '#6366f1' : 'inherit'};">
-                    <span style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.label)}</span>
-                    <span style="font-size:10px;font-weight:800;flex-shrink:0;">${b.compte}</span>
-                  </div>`
-            )).join('')
-            : '<div style="font-size:10px;font-weight:600;opacity:0.7;">Aucune</div>';
-          return `<div style="flex:1;min-width:0;padding-left:${catIdx ? 6 : 0}px;padding-right:${catIdx < ORDRE_COLONNES_SPECIALITES.length - 1 ? 6 : 0}px;border-left:${catIdx ? '1px solid #6366f1' : 'none'};">
-            <div style="font-size:10px;font-weight:800;color:#6366f1;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(LIBELLES_PREFS_CARTES[cat] || cat)}</div>
-            ${lignesCol}
-          </div>`;
-        }).join('');
-        return `<div style="flex:1;min-width:0;border:1px solid #e2e8f0;background:#ffffff;border-radius:10px;padding:8px;color:#0f172a;">
-          <div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:6px;">${escapeHtml(item.nom)}</div>
-          <div style="display:flex;align-items:stretch;min-width:0;width:100%;">${cols}</div>
+    const liste = Array.isArray(cartes) ? cartes : [];
+    const hauteurCol = (item) => ORDRE_COLONNES_SPECIALITES.reduce((max, cat) => {
+      const items = item.colonnes?.[cat] || [];
+      const n = items.reduce((sum, b) => sum + (b.separator ? 0.5 : 1), 0);
+      return Math.max(max, n);
+    }, 1);
+    const maxLignes = Math.max(1, ...liste.map(hauteurCol));
+    const minHeight = Math.max(240, 78 + maxLignes * 24);
+    const cartesHtml = liste.map((item) => {
+      const cols = ORDRE_COLONNES_SPECIALITES.map((cat, catIdx) => {
+        const items = item.colonnes?.[cat] || [];
+        const lignesCol = items.length
+          ? items.map((b) => (
+            b.separator
+              ? `<div style="border-top:1px solid #6366f1;margin:8px 0 6px;"></div>`
+              : `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;line-height:1.35;color:${b.theme ? '#6366f1' : 'inherit'};">
+                  <span style="font-size:12pt;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.label)}</span>
+                  <span style="font-size:12pt;font-weight:800;flex-shrink:0;">${b.compte}</span>
+                </div>`
+          )).join('')
+          : '<div style="font-size:12pt;font-weight:600;opacity:0.7;">Aucune</div>';
+        return `<div style="flex:1;min-width:0;padding-left:${catIdx ? 8 : 0}px;padding-right:${catIdx < ORDRE_COLONNES_SPECIALITES.length - 1 ? 8 : 0}px;border-left:${catIdx ? '1px solid #6366f1' : 'none'};">
+          <div style="font-size:12pt;font-weight:800;color:#6366f1;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(LIBELLES_PREFS_CARTES[cat] || cat)}</div>
+          ${lignesCol}
         </div>`;
       }).join('');
-      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:stretch;">${cells}</div>`;
-    }).join('');
-    return `<div class="section">
-      <h2 style="font-size:13pt;margin:0 0 12px;font-weight:800;">${escapeHtml(titre)}</h2>
-      ${rows || '<p style="color:#64748b;font-size:11px;">Aucun professeur dans ce pool.</p>'}
-    </div>`;
+      return `<div style="${styleCarteSuiviPdf(minHeight)}">
+        <div style="font-size:15pt;font-weight:800;text-align:center;margin-bottom:10px;line-height:1.2;">${escapeHtml(item.nom)}</div>
+        <div style="display:flex;align-items:stretch;min-width:0;width:100%;flex:1;">${cols}</div>
+      </div>`;
+    });
+    return htmlPagesGrilleCartesSuivi(titre, cartesHtml, 'Aucun professeur dans ce pool.');
   };
 
   const calculerCartesSuiviPeriodesPool = (pool, affectationsListe) => {
@@ -3850,15 +3873,23 @@ export default function EmploiDuTemps() {
         const titrePeriodes = `Suivi périodes — ${pool.nom || poolFolder}`;
         const cartesPeriodes = calculerCartesSuiviPeriodesPool(pool, affsPool);
         documents.push({
-          relativePath: `Suivi/${poolFolder}/${pdfNomAvecSite(site, 'Suivi-periodes')}`,
-          html: buildHtmlPrintDoc(titrePeriodes, htmlCartesSuiviPeriodes(titrePeriodes, cartesPeriodes), { paysage: true }),
+          relativePath: `Suivi/${pdfNomAvecSite(site, `${poolFolder}_periodes`)}`,
+          html: buildHtmlPrintDoc(titrePeriodes, htmlCartesSuiviPeriodes(titrePeriodes, cartesPeriodes), {
+            paysage: true,
+            format: 'A4',
+            margin: '10mm 12mm',
+          }),
           pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
         });
         const titrePrefs = `Préférences — ${pool.nom || poolFolder}`;
         const cartesPrefs = calculerCartesPreferencesPool(pool, affsPool);
         documents.push({
-          relativePath: `Suivi/${poolFolder}/${pdfNomAvecSite(site, 'Suivi-preferences')}`,
-          html: buildHtmlPrintDoc(titrePrefs, htmlCartesPreferencesPool(titrePrefs, cartesPrefs), { paysage: true }),
+          relativePath: `Suivi/${pdfNomAvecSite(site, `${poolFolder}_preferences`)}`,
+          html: buildHtmlPrintDoc(titrePrefs, htmlCartesPreferencesPool(titrePrefs, cartesPrefs), {
+            paysage: true,
+            format: 'A4',
+            margin: '10mm 12mm',
+          }),
           pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
         });
       }
