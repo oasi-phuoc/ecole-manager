@@ -15,6 +15,14 @@ import {
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
 import { startRegistration } from '@simplewebauthn/browser';
+import {
+  cycleStatutDispo,
+  fondCelluleStatutDispo,
+  pastilleDispo,
+  payloadDepuisStatut,
+  statutDepuisDispoRow,
+  titreStatutDispo,
+} from '../utils/disponibilites';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
@@ -361,7 +369,7 @@ export default function Parametres() {
       ]);
       setCreneauxDispoProfil(cr.data || []);
       const map = {};
-      (d.data || []).forEach((row) => { map[row.creneau_id] = row.disponible !== false; });
+      (d.data || []).forEach((row) => { map[row.creneau_id] = statutDepuisDispoRow(row); });
       // Défaut : disponible si aucune entrée
       (cr.data || []).forEach((c) => {
         if (!Object.prototype.hasOwnProperty.call(map, c.id)) map[c.id] = true;
@@ -398,7 +406,7 @@ export default function Parametres() {
   const couleurCompteurDispoProfil = periodesSelectionneesDispoProfil < periodesRequisesDispoProfil ? '#dc2626' : '#16a34a';
 
   const toggleDispoProfil = (creneauId) => {
-    setDisposProfil((prev) => ({ ...prev, [creneauId]: prev[creneauId] === false }));
+    setDisposProfil((prev) => ({ ...prev, [creneauId]: cycleStatutDispo(prev[creneauId]) }));
     setDisposProfilDirty(true);
   };
 
@@ -511,10 +519,7 @@ export default function Parametres() {
       };
       await axios.put(API + '/parametres/profil', payload, { headers });
       if (profil?.id) {
-        const liste = Object.entries(disposProfil).map(([creneau_id, disponible]) => ({
-          creneau_id: Number(creneau_id),
-          disponible: disponible !== false,
-        }));
+        const liste = Object.entries(disposProfil).map(([creneau_id, statut]) => payloadDepuisStatut(creneau_id, statut));
         const [rDispo] = await Promise.all([
           axios.post(API + '/planning/disponibilites/' + profil.id, { disponibilites: liste }, { headers }),
           axios.post(API + '/planning/disponibilites/' + profil.id + '/remarque', { remarque: remarquesDispoProfil || '' }, { headers }),
@@ -1357,8 +1362,13 @@ export default function Parametres() {
                           </span>
                         </label>
                         <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
-                          Indiquez vos périodes disponibles. Ce tableau est le même que dans Emploi du temps → Disponibilités.
+                          Indiquez vos périodes disponibles. Orange = disponible, mais à éviter si possible sur les affectations. Cliquer pour cycler : disponible → à éviter → indisponible.
                         </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: 10, fontSize: 12, color: '#475569' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> Disponible</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ea580c', display: 'inline-block' }} /> À éviter</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Indisponible</span>
+                        </div>
                         <div style={{ marginBottom: 10 }}>
                           <label style={{ ...styles.label, fontSize: 12 }}>Remarques</label>
                           <textarea
@@ -1397,15 +1407,15 @@ export default function Parametres() {
                                         {JOURS_DISPO.map((jour) => {
                                           const cr = creneauxDispoProfil.find((c) => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
                                           if (!cr) return <td key={jour} style={{ background: '#f0f0f0', border: '1px solid #e2e8f0' }} />;
-                                          const ok = disposProfil[cr.id] !== false;
+                                          const statut = statutDepuisDispoRow(disposProfil[cr.id]);
                                           return (
                                             <td
                                               key={jour}
                                               onClick={() => toggleDispoProfil(cr.id)}
-                                              title={ok ? 'Disponible — cliquer pour basculer' : 'Indisponible — cliquer pour basculer'}
-                                              style={{ padding: '10px 6px', border: '1px solid #e2e8f0', textAlign: 'center', cursor: 'pointer', verticalAlign: 'middle' }}
+                                              title={`${titreStatutDispo(statut)} — cliquer pour cycler`}
+                                              style={{ padding: '10px 6px', border: '1px solid #e2e8f0', textAlign: 'center', cursor: 'pointer', verticalAlign: 'middle', background: fondCelluleStatutDispo(statut) }}
                                             >
-                                              <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', background: ok ? '#16a34a' : '#dc2626', verticalAlign: 'middle' }} />
+                                              <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', background: pastilleDispo(statut), verticalAlign: 'middle' }} />
                                             </td>
                                           );
                                         })}

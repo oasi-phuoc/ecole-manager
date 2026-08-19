@@ -15,6 +15,17 @@ import {
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
 import { compterPreferencesSoutienParProf } from '../utils/comptesSoutienPreferences';
+import {
+  STATUT_DISPO_EVITER,
+  COULEUR_FOND_EVITER,
+  cycleStatutDispo,
+  fondCelluleStatutDispo,
+  pastilleDispo,
+  payloadDepuisStatut,
+  statutDepuisDispoRow,
+  styleCelluleDispoVide,
+  titreStatutDispo,
+} from '../utils/disponibilites';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
@@ -417,7 +428,7 @@ export default function EmploiDuTemps() {
       const url = API + '/planning/general' + (pool_id ? '?pool_id=' + pool_id : '');
       const r = await axios.get(url, { headers });
       const map = {};
-      (r.data?.dispos || []).forEach(d => { map[`${d.prof_id}-${d.creneau_id}`] = d.disponible; });
+      (r.data?.dispos || []).forEach(d => { map[`${d.prof_id}-${d.creneau_id}`] = statutDepuisDispoRow(d); });
       setDisposAffectations(map);
     } catch (err) {
       console.error(err);
@@ -445,7 +456,7 @@ export default function EmploiDuTemps() {
     ]);
     const map = {};
     creneaux.forEach(c => { map[c.id] = true; });
-    rDispos.data.forEach(d => { map[d.creneau_id] = d.disponible; });
+    rDispos.data.forEach(d => { map[d.creneau_id] = statutDepuisDispoRow(d); });
     setDispos(map);
     setRemarquesDispo(rRemarque?.data?.remarque || '');
     setProfSelectionne(prof_id);
@@ -463,7 +474,7 @@ export default function EmploiDuTemps() {
       );
       if (!ok) return;
     }
-    const liste = Object.entries(dispos).map(([creneau_id, disponible]) => ({ creneau_id: parseInt(creneau_id), disponible }));
+    const liste = Object.entries(dispos).map(([creneau_id, statut]) => payloadDepuisStatut(creneau_id, statut));
     try {
       const [rDispo] = await Promise.all([
         axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
@@ -484,7 +495,7 @@ export default function EmploiDuTemps() {
     }
   };
 
-  const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: !prev[creneau_id] }));
+  const toggleDispo = (creneau_id) => setDispos(prev => ({ ...prev, [creneau_id]: cycleStatutDispo(prev[creneau_id]) }));
 
   const creneauxParJourPeriode = (jour, periode) => creneaux.filter(c => c.jour===jour && c.periode===periode);
 
@@ -506,6 +517,16 @@ export default function EmploiDuTemps() {
     if (Number.isFinite(ps) && ps > 0) return ps;
     const viaTaux = getPeriodesRequisesPourTaux(complet);
     if (viaTaux > 0) return viaTaux;
+    return 0;
+  };
+
+  /** Paires de soutien CSC/CAL visées selon le taux : 40–60% → 1, 70–80% → 2, 90–100% → 3. */
+  const pairesSoutienSelonTaux = (prof) => {
+    const taux = parseFloat(prof?.taux_activite);
+    if (!Number.isFinite(taux)) return 0;
+    if (taux >= 90) return 3;
+    if (taux >= 70) return 2;
+    if (taux >= 40) return 1;
     return 0;
   };
 
@@ -1410,38 +1431,6 @@ export default function EmploiDuTemps() {
     showToast(`Salle « ${salleSelectionnee} » vidée. Pensez à sauvegarder.`);
   };
 
-  const resetAffectationsSallesSite = async () => {
-    if (!isAdmin()) return;
-    if (!sallesLieuTravailId) {
-      showToast('Sélectionnez d\'abord un lieu de travail.', 'info');
-      return;
-    }
-    const sallesSite = new Set((sallesDisponiblesLieu || []).map((s) => String(s).trim()));
-    if (!sallesSite.size) {
-      showToast('Aucune salle configurée pour ce lieu.', 'error');
-      return;
-    }
-    const ok = window.confirm(
-      `Vider les affectations salles de tout le site « ${sallesLieuTravailId} » ?\n\n` +
-      'Toutes les salles du lieu seront libérées immédiatement.'
-    );
-    if (!ok) return;
-    try {
-      const coursAVider = (coursEmploiDuTemps || []).filter((c) =>
-        sallesSite.has(String((c.salle || '').trim()))
-      );
-      for (const c of coursAVider) {
-        await updateCoursSalle(c, null);
-      }
-      setSallesDraftMap({});
-      setHasSallesUnsaved(false);
-      await chargerTout();
-      showToast(`Affectations salles du site « ${sallesLieuTravailId} » vidées.`);
-    } catch (err) {
-      showToast(err.response?.data?.message || err.message || 'Erreur lors de la réinitialisation des salles.', 'error');
-    }
-  };
-
   const proposerAffectationsSallesSite = async () => {
     if (!isAdmin()) return;
     if (!sallesLieuTravailId) {
@@ -1814,13 +1803,18 @@ export default function EmploiDuTemps() {
     }
     const ok = window.confirm(
       'Générer une proposition d\'affectations pour ce pool ?\n\n' +
-      'Règles : blocs de demi-journée (4 périodes) dans la même classe, sinon 2, sinon 1 ; ' +
-      'répartition entre tous les professeurs (titulaire prioritaire, puis les moins chargés) ; ' +
-      '1 période de titulariat par classe titulaire (max 2) ; 8 à 12 périodes par classe titulaire selon disponibilités/quota.\n\n' +
+      'Règles : blocs de 4 autant que possible ; 8 périodes par classe titulaire (idéalement 4 + 2 + 2 sur des jours différents) ; ' +
+      '1 titulariat par classe ; compléter 4 → 2 → 1 en tournant entre les moins chargés ; ' +
+      'idéalement 3 ou 4 professeurs par classe (maximum 5) ; ' +
+      'indisponibilités d\'abord, puis périodes orange à éviter ; ' +
+      'soutien CSC/CAL en paires selon le taux (40–60 % → 1 paire, 70–80 % → 2, 90–100 % → 3).\n\n' +
       'Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
     );
     if (!ok) return;
 
+    const MAX_PROFS_PAR_CLASSE = 5;
+    const CIBLE_PROFS_PAR_CLASSE = 4;
+    const CIBLE_TITULAIRE = 8;
     const draftId = () => `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const ordreJour = Object.fromEntries(JOURS.map((j, i) => [j, i]));
     const creneauxTries = [...(creneaux || [])].sort((a, b) => {
@@ -1832,6 +1826,7 @@ export default function EmploiDuTemps() {
     });
 
     const isProfDispo = (profId, creneauId) => disposAffectations[`${profId}-${creneauId}`] !== false;
+    const isProfEviter = (profId, creneauId) => disposAffectations[`${profId}-${creneauId}`] === STATUT_DISPO_EVITER;
     const getRequisClasse = (cl) => {
       const fallbackNiveau = niveauxPoolSelectionne.length === 1 ? niveauxPoolSelectionne[0] : '';
       const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
@@ -1843,7 +1838,6 @@ export default function EmploiDuTemps() {
       const r = getRequisClasse(cl);
       return sum + (r.normales || 0) + (r.soutien || 0);
     }, 0);
-    // Si aucun quota n'est renseigné, répartir équitablement la charge du pool
     const quotaPartageDefaut = Math.max(
       2,
       Math.ceil(totalRequisPool / Math.max(1, profsPool.length) / 2) * 2
@@ -1853,7 +1847,6 @@ export default function EmploiDuTemps() {
       return q > 0 ? q : quotaPartageDefaut;
     };
 
-    // Titulariats de départ (jusqu'à 2 classes par professeur)
     const titulariatsParProf = {};
     const classesTitulairesPrises = new Set();
     listerTitulariatsPairs(titulariatsDraftByProf).forEach(({ profId, classeId }) => {
@@ -1888,9 +1881,9 @@ export default function EmploiDuTemps() {
       titulariatsParProf[pid].push(cid);
       classesTitulairesPrises.add(cid);
     });
-    const titulariatsPairs = Object.entries(titulariatsParProf).flatMap(([profId, classesIds]) =>
-      (classesIds || []).map((classeId) => ({ profId, classeId }))
-    );
+    const titulariatsPairs = Object.entries(titulariatsParProf)
+      .flatMap(([profId, classesIds]) => (classesIds || []).map((classeId) => ({ profId, classeId })))
+      .sort((a, b) => String(a.profId).localeCompare(String(b.profId)) || String(a.classeId).localeCompare(String(b.classeId)));
     const estTitulaireDe = (profId, classeId) =>
       (titulariatsParProf[String(profId)] || []).includes(String(classeId));
     const loadTitulaireParClasse = Object.fromEntries(
@@ -1903,11 +1896,15 @@ export default function EmploiDuTemps() {
     });
     const nextModes = {};
     const occupiedProf = new Set();
-    const occupiedClasse = new Set(); // clé: classeId|creneauId|classe|soutien
+    const occupiedClasse = new Set();
     const loadProf = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
     const loadClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
     const loadSoutien = Object.fromEntries(classesPool.map((c) => [String(c.id), 0]));
+    const loadSoutienProf = Object.fromEntries(profsPool.map((p) => [String(p.id), 0]));
     const quotaProf = Object.fromEntries(profsPool.map((p) => [String(p.id), getQuotaProf(p)]));
+    const pairesCiblesProf = Object.fromEntries(
+      profsPool.map((p) => [String(p.id), pairesSoutienSelonTaux(p)])
+    );
     const requisParClasse = Object.fromEntries(classesPool.map((c) => [String(c.id), getRequisClasse(c)]));
     nextDraft.forEach((a) => {
       const pid = String(a.prof_id);
@@ -1942,8 +1939,10 @@ export default function EmploiDuTemps() {
       occupiedProf.add(`${pid}|${crid}`);
       if (cid) occupiedClasse.add(cleOccupationClasse(cid, crid, modeOcc));
       loadProf[pid] += 1;
-      if (cid && modeOcc === 'soutien') loadSoutien[cid] += 1;
-      else if (cid) {
+      if (cid && modeOcc === 'soutien') {
+        loadSoutien[cid] += 1;
+        loadSoutienProf[pid] = (loadSoutienProf[pid] || 0) + 1;
+      } else if (cid && typeSpecialFinal !== 'titulariat') {
         loadClasse[cid] += 1;
         const cleTit = `${pid}|${cid}`;
         if (Object.prototype.hasOwnProperty.call(loadTitulaireParClasse, cleTit)) {
@@ -1953,7 +1952,6 @@ export default function EmploiDuTemps() {
       return true;
     };
 
-    // Blocs d'une demi-journée : 4 périodes, sinon paires de 2, sinon unités
     const listerBlocs = (taille) => {
       const blocs = [];
       JOURS.forEach((jour) => {
@@ -1965,7 +1963,7 @@ export default function EmploiDuTemps() {
           if (taille === 4 && crs.length >= 4) {
             blocs.push({ jour, periode, crs: crs.slice(0, 4), taille: 4 });
           } else if (taille === 2) {
-            for (let i = 0; i <= crs.length - 2; i += 1) {
+            for (let i = 0; i + 1 < crs.length; i += 2) {
               blocs.push({ jour, periode, crs: crs.slice(i, i + 2), taille: 2 });
             }
           } else if (taille === 1) {
@@ -1980,24 +1978,35 @@ export default function EmploiDuTemps() {
     const blocs4 = listerBlocs(4);
     const blocs2 = listerBlocs(2);
     const blocs1 = listerBlocs(1);
+    const blocsParTaille = (taille) => (taille === 4 ? blocs4 : (taille === 2 ? blocs2 : blocs1));
 
-    const blocCompatibleClasse = (bloc, classeId) =>
-      classeAHoraire(classeId, bloc.jour, bloc.periode);
+    const profsDansClasse = (classeId) => {
+      const ids = new Set();
+      nextDraft.forEach((a) => {
+        if (String(a.classe_id) !== String(classeId) || a.prof_id == null) return;
+        ids.add(String(a.prof_id));
+      });
+      return ids;
+    };
 
-    const peutAssignerBloc = (profId, classeId, bloc) => {
+    const peutAssignerBloc = (profId, classeId, bloc, { mode = 'classe', autoriserEviter = true, maxSoutienProf = null } = {}) => {
       const pid = String(profId);
       const cid = String(classeId);
-      if (!blocCompatibleClasse(bloc, cid)) return false;
+      const modeOcc = mode === 'soutien' ? 'soutien' : 'classe';
+      if (!classeAHoraire(cid, bloc.jour, bloc.periode)) return false;
       if ((loadProf[pid] || 0) + bloc.crs.length > (quotaProf[pid] || 0)) return false;
+      if (mode === 'soutien' && maxSoutienProf != null && (loadSoutienProf[pid] || 0) + bloc.crs.length > maxSoutienProf) {
+        return false;
+      }
       return bloc.crs.every((cr) =>
         isProfDispo(pid, cr.id)
+        && (autoriserEviter || !isProfEviter(pid, cr.id))
         && !occupiedProf.has(`${pid}|${cr.id}`)
-        && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'classe'))
+        && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, modeOcc))
       );
     };
 
     const assignerBloc = (profId, classeId, bloc, mode = 'classe') => {
-      if (!peutAssignerBloc(profId, classeId, bloc)) return false;
       let okAll = true;
       for (const cr of bloc.crs) {
         if (!ajouterAffectation({ profId, creneauId: cr.id, classeId, mode })) {
@@ -2008,87 +2017,139 @@ export default function EmploiDuTemps() {
       return okAll;
     };
 
-    const trouverBloc = (profId, classeId, taille, exclureKeys = new Set()) => {
-      const source = taille === 4 ? blocs4 : (taille === 2 ? blocs2 : blocs1);
-      return source.find((bloc) => {
-        const key = `${bloc.jour}|${bloc.periode}|${bloc.crs.map((c) => c.id).join('-')}`;
-        if (exclureKeys.has(key)) return false;
-        return peutAssignerBloc(profId, classeId, bloc);
-      }) || null;
-    };
-
-    /** Classe les candidats : titulaire d'abord, puis les moins chargés (répartition), léger aléa */
-    const trierCandidatsRepartis = (candidats, classeId) => {
-      const cleTitPour = (pid) => `${pid}|${classeId}`;
+    const trierCandidats = (candidats, classeId, { mode = 'classe' } = {}) => {
+      const deja = profsDansClasse(classeId);
       return [...candidats].sort((a, b) => {
+        const inA = deja.has(a) ? 0 : 1;
+        const inB = deja.has(b) ? 0 : 1;
+        if (inA !== inB) return inA - inB;
         const titA = estTitulaireDe(a, classeId) ? 0 : 1;
         const titB = estTitulaireDe(b, classeId) ? 0 : 1;
         if (titA !== titB) return titA - titB;
-        if (estTitulaireDe(a, classeId) && (loadTitulaireParClasse[cleTitPour(a)] || 0) >= 12) return 1;
-        if (estTitulaireDe(b, classeId) && (loadTitulaireParClasse[cleTitPour(b)] || 0) >= 12) return -1;
+        if (mode === 'soutien') {
+          const cibleA = (pairesCiblesProf[a] || 0) * 2;
+          const cibleB = (pairesCiblesProf[b] || 0) * 2;
+          const defA = cibleA - (loadSoutienProf[a] || 0);
+          const defB = cibleB - (loadSoutienProf[b] || 0);
+          if (defB !== defA) return defB - defA;
+        }
         const loadA = loadProf[a] || 0;
         const loadB = loadProf[b] || 0;
         if (loadA !== loadB) return loadA - loadB;
         const ratioA = loadA / Math.max(1, quotaProf[a] || 1);
         const ratioB = loadB / Math.max(1, quotaProf[b] || 1);
         if (ratioA !== ratioB) return ratioA - ratioB;
-        return Math.random() - 0.5;
+        return String(a).localeCompare(String(b), 'fr');
       });
     };
 
-    // Phase 1 — classe(s) titulaire(s) en blocs 4 puis 2 (cible 8–12 par classe)
-    // Ordre mélangé pour ne pas toujours prioriser le même professeur
-    const titulariatsPairsMelanges = [...titulariatsPairs].sort(() => Math.random() - 0.5);
-    titulariatsPairsMelanges.forEach(({ profId, classeId }) => {
-      const nbTitulariatsProf = (titulariatsParProf[profId] || []).length;
-      const quotaPourClasse = Math.max(0, (quotaProf[profId] || 0) - nbTitulariatsProf);
-      const requisRestants = Math.max(0, (requisParClasse[classeId]?.normales || 0) - (loadClasse[classeId] || 0));
-      const cleTit = `${profId}|${classeId}`;
-      let cible = Math.min(12, quotaPourClasse);
-      if (quotaPourClasse >= 8) cible = Math.min(12, Math.max(8, Math.min(10, quotaPourClasse)));
-      if (requisRestants > 0) cible = Math.min(cible, requisRestants);
-      else cible = 0;
+    const assignerUnBloc = (classeId, taille, opts = {}) => {
+      const mode = opts.mode || 'classe';
+      const joursExclus = opts.joursExclus || new Set();
+      const profsFiltres = opts.profsFiltres || null;
+      const strictSoutien = opts.strictSoutien === true;
+      const deja = profsDansClasse(classeId);
+      const source = blocsParTaille(taille).filter((bloc) =>
+        !joursExclus.has(bloc.jour) && classeAHoraire(classeId, bloc.jour, bloc.periode)
+      );
+      const essais = [
+        { seulementDeja: true, maxNouveaux: 0, autoriserEviter: false },
+        { seulementDeja: true, maxNouveaux: 0, autoriserEviter: true },
+        { seulementDeja: false, maxNouveaux: CIBLE_PROFS_PAR_CLASSE, autoriserEviter: false },
+        { seulementDeja: false, maxNouveaux: CIBLE_PROFS_PAR_CLASSE, autoriserEviter: true },
+        { seulementDeja: false, maxNouveaux: MAX_PROFS_PAR_CLASSE, autoriserEviter: false },
+        { seulementDeja: false, maxNouveaux: MAX_PROFS_PAR_CLASSE, autoriserEviter: true },
+      ];
+      for (const essai of essais) {
+        const candidats = trierCandidats(
+          [...profsPool]
+            .map((p) => String(p.id))
+            .filter((pid) => {
+              if (profsFiltres && !profsFiltres.has(pid)) return false;
+              if ((loadProf[pid] || 0) + taille > (quotaProf[pid] || 0)) return false;
+              if (mode === 'classe' && estTitulaireDe(pid, classeId) && (loadTitulaireParClasse[`${pid}|${classeId}`] || 0) + taille > 12) {
+                return false;
+              }
+              if (mode === 'soutien' && strictSoutien) {
+                const cible = (pairesCiblesProf[pid] || 0) * 2;
+                if ((loadSoutienProf[pid] || 0) + taille > cible) return false;
+              }
+              if (essai.seulementDeja && !deja.has(pid)) return false;
+              if (!deja.has(pid) && deja.size >= essai.maxNouveaux) return false;
+              if (!deja.has(pid) && deja.size >= MAX_PROFS_PAR_CLASSE) return false;
+              return true;
+            }),
+          classeId,
+          { mode }
+        );
+        for (const pid of candidats) {
+          const maxSoutienProf = (mode === 'soutien' && strictSoutien)
+            ? (pairesCiblesProf[pid] || 0) * 2
+            : null;
+          const bloc = source.find((b) =>
+            peutAssignerBloc(pid, classeId, b, { mode, autoriserEviter: essai.autoriserEviter, maxSoutienProf })
+          );
+          if (!bloc) continue;
+          if (assignerBloc(pid, classeId, bloc, mode)) return bloc;
+        }
+      }
+      return null;
+    };
 
-      while ((loadTitulaireParClasse[cleTit] || 0) + 4 <= cible) {
-        const bloc = trouverBloc(profId, classeId, 4);
-        if (!bloc) break;
-        if (!assignerBloc(profId, classeId, bloc)) break;
+    // Phase 1 — 8 périodes titulaire : 1 bloc de 4 puis 2 blocs de 2 sur des jours différents
+    titulariatsPairs.forEach(({ profId, classeId }) => {
+      const requisRestants = Math.max(0, (requisParClasse[classeId]?.normales || 0) - (loadClasse[classeId] || 0));
+      const quotaRestant = Math.max(0, (quotaProf[profId] || 0) - (loadProf[profId] || 0));
+      const cible = Math.min(CIBLE_TITULAIRE, requisRestants, quotaRestant);
+      if (cible < 2) return;
+      const filtres = new Set([String(profId)]);
+      const jours = new Set();
+      const cleTit = `${profId}|${classeId}`;
+      if (cible >= 4) {
+        const b4 = assignerUnBloc(classeId, 4, { profsFiltres: filtres });
+        if (b4) jours.add(b4.jour);
+      }
+      for (let n = 0; n < 2 && (loadTitulaireParClasse[cleTit] || 0) + 2 <= cible; n += 1) {
+        const b2 = assignerUnBloc(classeId, 2, { profsFiltres: filtres, joursExclus: jours });
+        if (!b2) break;
+        jours.add(b2.jour);
       }
       while ((loadTitulaireParClasse[cleTit] || 0) + 2 <= cible) {
-        const bloc = trouverBloc(profId, classeId, 2);
-        if (!bloc) break;
-        if (!assignerBloc(profId, classeId, bloc)) break;
+        const b2 = assignerUnBloc(classeId, 2, { profsFiltres: filtres });
+        if (!b2) break;
+      }
+      while ((loadTitulaireParClasse[cleTit] || 0) + 1 <= cible) {
+        const b1 = assignerUnBloc(classeId, 1, { profsFiltres: filtres });
+        if (!b1) break;
       }
     });
 
-    // Phase 2 — 1 période de titulariat par classe titulaire
-    titulariatsPairsMelanges.forEach(({ profId, classeId }) => {
+    // Phase 2 — 1 période de titulariat par classe
+    titulariatsPairs.forEach(({ profId, classeId }) => {
       const dejaTitulariat = nextDraft.some((a) =>
         String(a.prof_id) === String(profId)
         && a.type_special === 'titulariat'
         && String(a.classe_id || '') === String(classeId)
       );
       if (dejaTitulariat) return;
-      const slotsPref = creneauxTries.filter((cr) =>
-        classeAHoraire(classeId, cr.jour, cr.periode)
-        && isProfDispo(profId, cr.id)
-        && !occupiedProf.has(`${profId}|${cr.id}`)
+      const slots = creneauxTries.filter((cr) =>
+        isProfDispo(profId, cr.id) && !occupiedProf.has(`${profId}|${cr.id}`)
       );
-      const slotsAutres = creneauxTries.filter((cr) =>
-        isProfDispo(profId, cr.id)
-        && !occupiedProf.has(`${profId}|${cr.id}`)
-        && !slotsPref.some((s) => String(s.id) === String(cr.id))
-      );
-      const candidat = slotsPref[0] || slotsAutres[0];
+      const scorer = (cr) => {
+        const horaire = classeAHoraire(classeId, cr.jour, cr.periode) ? 0 : 1;
+        const eviter = isProfEviter(profId, cr.id) ? 1 : 0;
+        return horaire * 10 + eviter;
+      };
+      const candidat = [...slots].sort((a, b) => scorer(a) - scorer(b) || (ordreJour[a.jour] ?? 99) - (ordreJour[b.jour] ?? 99) || Number(a.ordre || 0) - Number(b.ordre || 0))[0];
       if (candidat) ajouterAffectation({ profId, creneauId: candidat.id, classeId, typeSpecial: 'titulariat' });
     });
 
-    // Phase 3 — compléter les classes en tours (répartition entre professeurs), blocs 4 → 2 → 1
+    // Phase 3 — compléter les normales 4 → 2 → 1, moins chargés, cap 3–4 (max 5)
     const assignerBesoinParTours = (tailles = [4, 2, 1]) => {
       tailles.forEach((taille) => {
         let progres = true;
         let gardeFou = 0;
-        while (progres && gardeFou < 300) {
+        while (progres && gardeFou < 400) {
           progres = false;
           gardeFou += 1;
           const classesNeeding = [...classesPool]
@@ -2098,97 +2159,36 @@ export default function EmploiDuTemps() {
               const ra = (requisParClasse[a]?.normales || 0) - (loadClasse[a] || 0);
               const rb = (requisParClasse[b]?.normales || 0) - (loadClasse[b] || 0);
               if (rb !== ra) return rb - ra;
-              return Math.random() - 0.5;
+              return String(a).localeCompare(String(b), 'fr');
             });
-
           classesNeeding.forEach((classeId) => {
-            const cleTitPour = (pid) => `${pid}|${classeId}`;
-            const candidats = trierCandidatsRepartis(
-              [...profsPool]
-                .map((p) => String(p.id))
-                .filter((pid) => (loadProf[pid] || 0) + taille <= (quotaProf[pid] || 0)),
-              classeId
-            );
-
-            for (const pid of candidats) {
-              if (estTitulaireDe(pid, classeId) && (loadTitulaireParClasse[cleTitPour(pid)] || 0) + taille > 12) {
-                // Le titulaire a atteint son plafond dans cette classe : laisser les autres
-                continue;
-              }
-              const bloc = trouverBloc(pid, classeId, taille);
-              if (!bloc) continue;
-              if (assignerBloc(pid, classeId, bloc)) {
-                progres = true;
-                break; // 1 bloc max par classe et par tour → répartit entre les profs
-              }
-            }
+            if (assignerUnBloc(classeId, taille)) progres = true;
           });
         }
       });
     };
-
     assignerBesoinParTours([4, 2, 1]);
 
-    // Phase 4 — soutien CSC/CAL (paires puis unités)
-    classesPool.forEach((cl) => {
-      const cid = String(cl.id);
-      let besoinSoutien = (requisParClasse[cid]?.soutien || 0) - (loadSoutien[cid] || 0);
-      if (besoinSoutien <= 0) return;
-
-      // paires de soutien
-      while (besoinSoutien >= 2) {
-        const candidats = [...profsPool]
-          .map((p) => String(p.id))
-          .filter((pid) => (loadProf[pid] || 0) + 2 <= (quotaProf[pid] || 0))
-          .sort((a, b) => (loadProf[a] || 0) - (loadProf[b] || 0) || Math.random() - 0.5);
-        let assigne = false;
-        for (const pid of candidats) {
-          const bloc = (blocs2 || []).find((b) => {
-            if (!classeAHoraire(cid, b.jour, b.periode)) return false;
-            return b.crs.every((cr) =>
-              isProfDispo(pid, cr.id)
-              && !occupiedProf.has(`${pid}|${cr.id}`)
-              && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'soutien'))
-            ) && (loadProf[pid] || 0) + 2 <= (quotaProf[pid] || 0);
-          });
-          if (!bloc) continue;
-          let okBloc = true;
-          for (const cr of bloc.crs) {
-            if (!ajouterAffectation({ profId: pid, creneauId: cr.id, classeId: cid, mode: 'soutien' })) {
-              okBloc = false;
-              break;
-            }
-          }
-          if (okBloc) {
-            besoinSoutien -= 2;
-            assigne = true;
-            break;
-          }
-        }
-        if (!assigne) break;
+    // Phase 4 — soutien CSC/CAL : paires puis unités, selon le taux, en restant dans le cap de profs
+    const classesSoutien = classesPool.filter((cl) => (requisParClasse[String(cl.id)]?.soutien || 0) > 0);
+    const poserSoutien = (taille, strictSoutien) => {
+      let progres = true;
+      let gardeFou = 0;
+      while (progres && gardeFou < 300) {
+        progres = false;
+        gardeFou += 1;
+        classesSoutien.forEach((cl) => {
+          const cid = String(cl.id);
+          const besoin = (requisParClasse[cid]?.soutien || 0) - (loadSoutien[cid] || 0);
+          if (besoin < taille) return;
+          if (assignerUnBloc(cid, taille, { mode: 'soutien', strictSoutien })) progres = true;
+        });
       }
-
-      // unités restantes
-      const slots = creneauxTries.filter((cr) =>
-        classeAHoraire(cid, cr.jour, cr.periode) && !occupiedClasse.has(cleOccupationClasse(cid, cr.id, 'soutien'))
-      );
-      for (const cr of slots) {
-        if (besoinSoutien <= 0) break;
-        const candidats = [...profsPool]
-          .map((p) => String(p.id))
-          .filter((pid) =>
-            (loadProf[pid] || 0) < (quotaProf[pid] || 0)
-            && isProfDispo(pid, cr.id)
-            && !occupiedProf.has(`${pid}|${cr.id}`)
-          )
-          .sort((a, b) => (loadProf[a] || 0) - (loadProf[b] || 0) || Math.random() - 0.5);
-        const choisi = candidats[0];
-        if (!choisi) continue;
-        if (ajouterAffectation({ profId: choisi, creneauId: cr.id, classeId: cid, mode: 'soutien' })) {
-          besoinSoutien -= 1;
-        }
-      }
-    });
+    };
+    poserSoutien(2, true);
+    poserSoutien(2, false);
+    poserSoutien(1, true);
+    poserSoutien(1, false);
 
     setAffectationsDraft(nextDraft);
     setAffectationModes((prev) => {
@@ -2751,6 +2751,166 @@ export default function EmploiDuTemps() {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+  const htmlCartesSuiviPeriodes = (titre, cartes) => {
+    const lignes = repartirCartesParLigne(cartes, 5);
+    const rows = lignes.map((ligne) => {
+      const cells = ligne.map((cl) => {
+        const ok = cl.totalRequis > 0 && cl.totalAffectees === cl.totalRequis;
+        const profsHtml = (cl.profsClasse || []).length
+          ? cl.profsClasse.map((p) => (
+            `<div style="display:flex;justify-content:space-between;gap:6px;min-width:0;">
+              <span style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nom)}</span>
+              <span style="font-size:10px;font-weight:800;flex-shrink:0;">${p.periodes}</span>
+            </div>`
+          )).join('')
+          : '<div style="font-size:10px;font-weight:600;opacity:0.7;text-align:center;">Aucun professeur</div>';
+        return `<div style="flex:1;min-width:0;border:1px solid ${ok ? '#c7d2fe' : '#e2e8f0'};background:${ok ? '#eef2ff' : '#ffffff'};border-radius:10px;padding:8px 10px;color:${ok ? '#3730a3' : '#0f172a'};">
+          <div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:6px;">${escapeHtml(cl.nom)} — Périodes ${cl.totalAffectees}/${cl.totalRequis}</div>
+          ${profsHtml}
+        </div>`;
+      }).join('');
+      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:stretch;">${cells}</div>`;
+    }).join('');
+    return `<div class="section">
+      <h2 style="font-size:13pt;margin:0 0 12px;font-weight:800;">${escapeHtml(titre)}</h2>
+      ${rows || '<p style="color:#64748b;font-size:11px;">Aucune classe dans ce pool.</p>'}
+    </div>`;
+  };
+
+  const htmlCartesPreferencesPool = (titre, cartes) => {
+    const lignes = repartirCartesParLigne(cartes, 5);
+    const rows = lignes.map((ligne) => {
+      const cells = ligne.map((item) => {
+        const cols = ORDRE_COLONNES_SPECIALITES.map((cat, catIdx) => {
+          const items = item.colonnes?.[cat] || [];
+          const lignesCol = items.length
+            ? items.map((b) => (
+              b.separator
+                ? `<div style="border-top:1px solid #6366f1;margin:6px 0 4px;"></div>`
+                : `<div style="display:flex;justify-content:space-between;gap:4px;min-width:0;color:${b.theme ? '#6366f1' : 'inherit'};">
+                    <span style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.label)}</span>
+                    <span style="font-size:10px;font-weight:800;flex-shrink:0;">${b.compte}</span>
+                  </div>`
+            )).join('')
+            : '<div style="font-size:10px;font-weight:600;opacity:0.7;">Aucune</div>';
+          return `<div style="flex:1;min-width:0;padding-left:${catIdx ? 6 : 0}px;padding-right:${catIdx < ORDRE_COLONNES_SPECIALITES.length - 1 ? 6 : 0}px;border-left:${catIdx ? '1px solid #6366f1' : 'none'};">
+            <div style="font-size:10px;font-weight:800;color:#6366f1;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(LIBELLES_PREFS_CARTES[cat] || cat)}</div>
+            ${lignesCol}
+          </div>`;
+        }).join('');
+        return `<div style="flex:1;min-width:0;border:1px solid #e2e8f0;background:#ffffff;border-radius:10px;padding:8px;color:#0f172a;">
+          <div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:6px;">${escapeHtml(item.nom)}</div>
+          <div style="display:flex;align-items:stretch;min-width:0;width:100%;">${cols}</div>
+        </div>`;
+      }).join('');
+      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:stretch;">${cells}</div>`;
+    }).join('');
+    return `<div class="section">
+      <h2 style="font-size:13pt;margin:0 0 12px;font-weight:800;">${escapeHtml(titre)}</h2>
+      ${rows || '<p style="color:#64748b;font-size:11px;">Aucun professeur dans ce pool.</p>'}
+    </div>`;
+  };
+
+  const calculerCartesSuiviPeriodesPool = (pool, affectationsListe) => {
+    const classesP = trierClassesParNom(pool?.classes || []);
+    const profsP = pool?.profs || [];
+    const niveauxP = parseNiveaux(pool?.niveau);
+    const estSoutien = (a) => String(a?.type_special || '').toLowerCase() === 'soutien';
+    const estSpecial = (a) => {
+      const t = String(a?.type_special || '').toLowerCase();
+      return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
+    };
+    return classesP.map((cl) => {
+      const fallbackNiveau = niveauxP.length === 1 ? niveauxP[0] : '';
+      const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
+      const affsClasse = (affectationsListe || []).filter((a) => String(a.classe_id) === String(cl.id));
+      const periodesNormalesAffectees = affsClasse.filter((a) => !estSoutien(a) && !estSpecial(a)).length;
+      const periodesSoutienAffectees = affsClasse.filter((a) => estSoutien(a)).length;
+      const requis = getRequisPeriodesNiveau(niveauClasse);
+      const avecSoutien = niveauAvecSoutien(niveauClasse);
+      const periodesParProf = new Map();
+      affsClasse.forEach((a) => {
+        if (!a?.prof_id || estSpecial(a)) return;
+        const key = String(a.prof_id);
+        const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0 };
+        prev.periodes += 1;
+        periodesParProf.set(key, prev);
+      });
+      const profsClasse = Array.from(periodesParProf.values()).map((row) => {
+        const prof = (profsP || []).find((p) => String(p.id) === String(row.profId))
+          || (profs || []).find((p) => String(p.id) === String(row.profId));
+        const nom = prof
+          ? `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim()
+          : `Prof ${row.profId}`;
+        return { ...row, nom };
+      }).sort((a, b) => (b.periodes - a.periodes) || String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+      const totalAffectees = periodesNormalesAffectees + (avecSoutien ? periodesSoutienAffectees : 0);
+      const totalRequis = (requis.normales || 0) + (avecSoutien ? (requis.soutien || 0) : 0);
+      return { id: cl.id, nom: cl.nom, totalAffectees, totalRequis, profsClasse };
+    });
+  };
+
+  const calculerCartesPreferencesPool = (pool, affectationsListe) => {
+    const classesP = pool?.classes || [];
+    const profsP = [...(pool?.profs || [])].sort((a, b) =>
+      String(a?.nom || '').localeCompare(String(b?.nom || ''), 'fr')
+      || String(a?.prenom || '').localeCompare(String(b?.prenom || ''), 'fr')
+    );
+    const niveauxP = parseNiveaux(pool?.niveau).map((n) => String(n).toUpperCase());
+    const matieresPool = (matieres || []).filter((m) => {
+      const nivM = String(m.niveau || '').toUpperCase();
+      if (!niveauxP.length) return true;
+      return niveauxP.includes(nivM);
+    });
+    const groupes = regrouperBranchesParCode(matieresPool);
+    const idsClasses = new Set(classesP.map((c) => String(c.id)));
+    const estSpecial = (a) => {
+      const t = String(a?.type_special || '').toLowerCase();
+      return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
+    };
+    const affsPref = (affectationsListe || []).filter((a) =>
+      idsClasses.has(String(a.classe_id)) && !estSpecial(a)
+    );
+    const groupePour = (matiereId) => {
+      if (matiereId == null || matiereId === '') return null;
+      const mid = String(matiereId);
+      return groupes.find((g) => (g.ids || []).map(String).includes(mid)) || null;
+    };
+    const comptes = compterPreferencesSoutienParProf(affsPref, matieresParId, groupePour);
+    const poolAvecS = niveauxP.some((n) => niveauAvecSoutien(n))
+      || classesP.some((cl) => niveauAvecSoutien(resoudreNiveauClasse(cl)));
+    return profsP.map((p) => {
+      const prof = (profs || []).find((x) => String(x.id) === String(p.id)) || p;
+      const totaux = comptes[String(prof.id)] || { parCode: {}, frS: 0, maS: 0, recu: 0 };
+      const comptesSoutien = { fr: totaux.frS || 0, ma: totaux.maS || 0 };
+      const afficherSoutien = poolAvecS || comptesSoutien.fr > 0 || comptesSoutien.ma > 0 || (totaux.recu || 0) > 0;
+      const colonnes = {};
+      ORDRE_COLONNES_SPECIALITES.forEach((cat) => {
+        const items = listerGroupesColonneOrdonnes(groupes, prof.branches_specialites, cat).map((g, idx) => {
+          const code = String(g.code || g.id).toUpperCase();
+          return {
+            id: g.id,
+            code,
+            label: g.labelCourt || g.label || code,
+            designation_courte: g.code || g.labelCourt,
+            nom: g.labelComplet || g.label,
+            rang: idx + 1,
+            compte: (totaux.parCode || {})[code] || 0,
+          };
+        });
+        colonnes[cat] = cat === 'principales'
+          ? insererSoutienSousFrMa(items, comptesSoutien, afficherSoutien, totaux.recu || 0)
+          : items;
+      });
+      return {
+        profId: String(prof.id),
+        nom: `${prof.prenom || ''} ${nomSansSuffixe(prof.nom || '')}`.trim() || `Prof ${prof.id}`,
+        colonnes,
+      };
+    });
+  };
+
   const toPrintColor = (val) => {
     const c = String(val || '').trim();
     if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
@@ -2987,7 +3147,7 @@ export default function EmploiDuTemps() {
           const cells = (profs || []).map(p => {
             const aff = (affectations || []).find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
             const dispo = (dispos || []).find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
-            const indispo = dispo && !dispo.disponible;
+            const videDispo = styleCelluleDispoVide(dispo);
             let bg = '#fff', content = '';
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
@@ -3008,9 +3168,11 @@ export default function EmploiDuTemps() {
                 ? ''
                 : `<div style="font-size:7.5pt;font-weight:600;margin-top:2px;line-height:1.15;opacity:0.95;">${escapeHtml(branche)}</div>`;
               content = `<div style="font-weight:700;color:${fg};font-size:9pt;">${ligne1}</div>${ligne2}`;
-            } else if (indispo) {
-              bg = '#eee';
-              content = '<span style="color:#9ca3af;font-size:8pt;">Indispo</span>';
+            } else {
+              bg = videDispo.bg;
+              content = videDispo.text
+                ? `<span style="color:${videDispo.color};font-size:8pt;">${videDispo.text}</span>`
+                : '';
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 4px;">${content}</td>`;
           }).join('');
@@ -3138,7 +3300,7 @@ export default function EmploiDuTemps() {
             const dispo = listeDispos.find(
               (d) => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id)
             );
-            const indispo = dispo && !dispo.disponible;
+            const videDispo = styleCelluleDispoVide(dispo);
             let bg = '#fff';
             let content = '';
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {
@@ -3160,9 +3322,11 @@ export default function EmploiDuTemps() {
                 ? ''
                 : `<div style="font-size:5.5pt;font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;">${escapeHtml(branche)}</div>`;
               content = `<div style="font-weight:700;color:${fg};font-size:7pt;line-height:1.15;">${ligne1}</div>${ligne2}`;
-            } else if (indispo) {
-              bg = '#eee';
-              content = '<span style="color:#9ca3af;font-size:6.5pt;">Indispo</span>';
+            } else {
+              bg = videDispo.bg;
+              content = videDispo.text
+                ? `<span style="color:${videDispo.color};font-size:6.5pt;">${videDispo.text}</span>`
+                : '';
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;">${content}</td>`;
           });
@@ -3398,9 +3562,8 @@ export default function EmploiDuTemps() {
                   color: getCouleurTexteSurFond(bg),
                 };
               }
-              const dispo = (data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id));
-              if (dispo && !dispo.disponible) return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
-              return { text: '' };
+              const vide = styleCelluleDispoVide((data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id)));
+              return { text: vide.text, bg: vide.bg, color: vide.color };
             },
           });
           const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
@@ -3675,6 +3838,31 @@ export default function EmploiDuTemps() {
         }
       }
 
+      // —— Cartes suivi (nombre de périodes) + préférences, un PDF par pool ——
+      setExportPdfProgress('Cartes de suivi par pool…');
+      for (const pool of poolsExport) {
+        if (checkCancel()) break;
+        const poolId = String(pool.id);
+        const data = generalParPoolId.get(poolId) || {};
+        const affsPool = (data.affectations || []).filter((a) => a?.dans_pool_courant !== false);
+        const site = nomSiteSafe(pool);
+        const poolFolder = nomPoolSafe(pool);
+        const titrePeriodes = `Suivi périodes — ${pool.nom || poolFolder}`;
+        const cartesPeriodes = calculerCartesSuiviPeriodesPool(pool, affsPool);
+        documents.push({
+          relativePath: `Suivi/${poolFolder}/${pdfNomAvecSite(site, 'Suivi-periodes')}`,
+          html: buildHtmlPrintDoc(titrePeriodes, htmlCartesSuiviPeriodes(titrePeriodes, cartesPeriodes), { paysage: true }),
+          pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+        });
+        const titrePrefs = `Préférences — ${pool.nom || poolFolder}`;
+        const cartesPrefs = calculerCartesPreferencesPool(pool, affsPool);
+        documents.push({
+          relativePath: `Suivi/${poolFolder}/${pdfNomAvecSite(site, 'Suivi-preferences')}`,
+          html: buildHtmlPrintDoc(titrePrefs, htmlCartesPreferencesPool(titrePrefs, cartesPrefs), { paysage: true }),
+          pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+        });
+      }
+
       if (!documents.length) {
         alert('Aucun planning à exporter.');
         setExportPdfEnCours(false);
@@ -3762,9 +3950,8 @@ export default function EmploiDuTemps() {
                 color: getCouleurTexteSurFond(bg),
               };
             }
-            const dispo = (planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id));
-            if (dispo && !dispo.disponible) return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
-            return { text: '' };
+            const vide = styleCelluleDispoVide((planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id)));
+            return { text: vide.text, bg: vide.bg, color: vide.color };
           }
         });
         const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
@@ -3892,11 +4079,8 @@ export default function EmploiDuTemps() {
                   color: getCouleurTexteSurFond(bg)
                 };
               }
-              const dispo = (data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id));
-              if (dispo && !dispo.disponible) {
-                return { text: 'Indispo', bg: '#eeeeee', color: '#9ca3af' };
-              }
-              return { text: '' };
+              const vide = styleCelluleDispoVide((data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id)));
+              return { text: vide.text, bg: vide.bg, color: vide.color };
             }
           });
           return `<div class="section">${table}</div>`;
@@ -4121,19 +4305,6 @@ export default function EmploiDuTemps() {
                     <polyline points="1 4 1 10 7 10" />
                     <polyline points="23 20 23 14 17 14" />
                     <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  title="Réinitialiser toutes les salles du site"
-                  aria-label="Réinitialiser toutes les salles du site"
-                  onClick={resetAffectationsSallesSite}
-                  style={{...styles.btnResetAff, color:'#b45309', borderColor:'#fde68a', background:'#fffbeb'}}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M3 21h18" />
-                    <path d="M5 21V8l7-5 7 5v13" />
-                    <path d="M9 21v-6h6v6" />
                   </svg>
                 </button>
                 <button
@@ -4392,7 +4563,7 @@ export default function EmploiDuTemps() {
                           const total = creneauxJour.length;
                           const dispoCount = creneauxJour.filter(cr => {
                             const stored = profDispos.find(d => Number(d.creneau_id) === Number(cr.id));
-                            return stored ? stored.disponible !== false : true;
+                            return stored ? statutDepuisDispoRow(stored) !== false : true;
                           }).length;
                           const color = dispoCount === total && total > 0 ? '#16a34a' : dispoCount === 0 ? '#dc2626' : '#f59e0b';
                           const title = `${dispoCount}/${total} périodes`;
@@ -4424,6 +4595,12 @@ export default function EmploiDuTemps() {
               </div>
               <div style={{overflowX:'auto', marginTop:16}}>
                 <div style={{minWidth:860, width:'100%'}}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:14,alignItems:'center',margin:'4px 0 10px',fontSize:12,color:'#475569'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{width:12,height:12,borderRadius:'50%',background:'#16a34a',display:'inline-block'}} /> Disponible</span>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{width:12,height:12,borderRadius:'50%',background:'#ea580c',display:'inline-block'}} /> À éviter (disponible)</span>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}><span style={{width:12,height:12,borderRadius:'50%',background:'#dc2626',display:'inline-block'}} /> Indisponible</span>
+                    <span style={{fontWeight:600}}>Cliquer pour cycler les 3 états.</span>
+                  </div>
                   <div style={{marginBottom:12}}>
                     <label style={{...styles.lbl, marginBottom: 6}}>Remarques</label>
                     <textarea
@@ -4456,15 +4633,21 @@ export default function EmploiDuTemps() {
                               {JOURS.map(jour => {
                                 const cr = creneaux.find(c => c.jour===jour && c.periode===periode && c.ordre===crBase.ordre);
                                 if (!cr) return <td key={jour} style={{...styles.tdDispo, background:'#f0f0f0'}}></td>;
-                                const ok = dispos[cr.id] !== false;
+                                const statut = statutDepuisDispoRow(dispos[cr.id]);
                                 return (
                                   <td
                                     key={jour}
-                                    style={{...styles.tdDispo, cursor:isAdmin()?'pointer':'default', textAlign:'center', verticalAlign:'middle'}}
+                                    style={{
+                                      ...styles.tdDispo,
+                                      cursor:isAdmin()?'pointer':'default',
+                                      textAlign:'center',
+                                      verticalAlign:'middle',
+                                      background: fondCelluleStatutDispo(statut),
+                                    }}
                                     onClick={() => { if (isAdmin()) toggleDispo(cr.id); }}
-                                    title={isAdmin() ? (ok ? 'Disponible — cliquer pour basculer' : 'Indisponible — cliquer pour basculer') : (ok ? 'Disponible' : 'Indisponible')}
+                                    title={isAdmin() ? `${titreStatutDispo(statut)} — cliquer pour cycler` : titreStatutDispo(statut)}
                                   >
-                                    <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:ok?'#16a34a':'#dc2626',verticalAlign:'middle',pointerEvents:'none'}} />
+                                    <span style={{display:'inline-block',width:16,height:16,borderRadius:'50%',background:pastilleDispo(statut),verticalAlign:'middle',pointerEvents:'none'}} />
                                   </td>
                                 );
                               })}
@@ -5293,7 +5476,9 @@ export default function EmploiDuTemps() {
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
-                                const indispo = disposAffectations[`${prof.id}-${cr.id}`] === false;
+                                const statutDispo = statutDepuisDispoRow(disposAffectations[`${prof.id}-${cr.id}`]);
+                                const indispo = statutDispo === false;
+                                const eviter = statutDispo === STATUT_DISPO_EVITER;
                                 const horsPool = aff && estAffectationHorsPool(aff, poolSelectionne);
                                 if (horsPool) {
                                   const nomPoolExt = nomPoolAffectationExterne(aff, poolSelectionne);
@@ -5323,13 +5508,14 @@ export default function EmploiDuTemps() {
                                   : '';
                                 const classeIdCouleur = getClasseIdDepuisValeurAffectation(valeurSelect);
                                 const estSpecialSelectionne = String(valeurSelect || '').startsWith('special:');
+                                const videEviter = eviter && !valeurSelect;
                                 const couleurSelectProf = indispo
                                   ? '#e5e7eb'
-                                  : (estSpecialSelectionne ? '#111111' : (classeIdCouleur ? getCouleurClasse(classeIdCouleur) : '#ffffff'));
+                                  : (estSpecialSelectionne ? '#111111' : (classeIdCouleur ? getCouleurClasse(classeIdCouleur) : (videEviter ? COULEUR_FOND_EVITER : '#ffffff')));
                                 const couleurTexteSelectProf = indispo ? '#6b7280' : (estSpecialSelectionne ? '#ffffff' : '#1f2937');
                                 const poidsTexteSelectProf = estSpecialSelectionne ? 700 : 500;
                                 return (
-                                  <td key={prof.id} style={{...styles.td,padding:'8px 4px',background:'#fff',textAlign:'center'}}>
+                                  <td key={prof.id} style={{...styles.td,padding:'8px 4px',background: indispo ? '#eeeeee' : (videEviter ? COULEUR_FOND_EVITER : '#fff'),textAlign:'center'}} title={eviter && !indispo ? titreStatutDispo(STATUT_DISPO_EVITER) : undefined}>
                                     <select style={{...styles.cellSel,background:couleurSelectProf,color:couleurTexteSelectProf,fontWeight:poidsTexteSelectProf}}
                                       value={valeurSelect}
                                       onChange={e => {
@@ -6085,15 +6271,18 @@ export default function EmploiDuTemps() {
                             if (!cr) return <td key={jour} style={{...styles.td,background:'#f5f5f5',width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,textAlign:'center',verticalAlign:'middle',height:HAUTEUR_LIGNE_COURS_UI}}></td>;
                             const aff = (planningProf.affectations||[]).find(a=>a.creneau_id===cr.id);
                             const dispo = planningProf.dispos?.find(d=>d.creneau_id===cr.id);
-                            const indispo = dispo && !dispo.disponible;
+                            const statutDispo = statutDepuisDispoRow(dispo);
+                            const indispo = statutDispo === false;
+                            const eviter = statutDispo === STATUT_DISPO_EVITER;
                             const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
                             const estSoutienAff = classeAffectee && estAffectationSoutien(aff);
                             const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
                             const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
                             const ligneSoutienLie = estSoutienAff ? formatLigneSoutienLie(aff) : '';
+                            const fondVide = indispo ? '#eeeeee' : (eviter ? COULEUR_FOND_EVITER : '#eeeeee');
                             return (
                               <td key={jour} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:(!classeAffectee||indispo)?'#eeeeee':'#fff'}}>
+                                background:(classeAffectee && !indispo)?'#fff':fondVide}}>
                                 {classeAffectee ? (
                                   <>
                                     <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>
@@ -6410,7 +6599,8 @@ export default function EmploiDuTemps() {
                               {genProfs.map(p => {
                                 const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
                                 const dispo = genDispos.find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
-                                const indispo = dispo && !dispo.disponible;
+                                const videDispo = styleCelluleDispoVide(dispo);
+                                const indispo = statutDepuisDispoRow(dispo) === false;
                                 const poolCourantGen = pools.find((pp) => String(pp.id) === String(planningPoolId));
                                 const horsPool = aff && estAffectationHorsPool(aff, poolCourantGen);
                                 const estSoutien = String(aff?.type_special || '').toLowerCase() === 'soutien';
@@ -6428,7 +6618,7 @@ export default function EmploiDuTemps() {
                                   } else {
                                     couleurFond = aff
                                       ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
-                                      : (indispo ? '#eeeeee' : '#fff');
+                                      : videDispo.bg;
                                     couleurTexte = aff
                                       ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
                                       : '#111827';
@@ -6437,7 +6627,7 @@ export default function EmploiDuTemps() {
                                       : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : (aff.classe_nom || ''));
                                   }
                                 } catch (_) {
-                                  couleurFond = indispo ? '#eeeeee' : '#fff';
+                                  couleurFond = videDispo.bg;
                                   couleurTexte = '#111827';
                                   libelleAff = aff?.classe_nom || '';
                                 }
