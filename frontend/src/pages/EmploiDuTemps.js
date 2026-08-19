@@ -234,6 +234,7 @@ export default function EmploiDuTemps() {
   const [planningPoolId, setPlanningPoolId] = useState('');
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
+  const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
   const [profPlanningId, setProfPlanningId] = useState('');
   const [planningClasse, setPlanningClasse] = useState(null);
@@ -3036,7 +3037,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3154,7 +3155,7 @@ export default function EmploiDuTemps() {
               const ligne1 = estSpecial
                 ? getLibelleTypeSpecial(aff.type_special)
                 : (estSoutien ? `${nomClasse} - Soutien` : nomClasse);
-              const branche = libelleBrancheAffectation(aff);
+              const branche = afficherNomsBranches ? libelleBrancheAffectation(aff) : '';
               const ligne2 = estSpecial || !branche
                 ? ''
                 : `<div style="font-size:5.5pt;font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;">${escapeHtml(branche)}</div>`;
@@ -3223,6 +3224,7 @@ export default function EmploiDuTemps() {
         dispos: data.dispos || [],
         titulaires: data.titulaires || [],
         poolId: planningPoolId,
+        afficherNomsBranches: afficherNomsBranchesGeneral,
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
       const siteComplet = (
@@ -3589,6 +3591,7 @@ export default function EmploiDuTemps() {
             dispos: data.dispos || [],
             titulaires: data.titulaires || [],
             poolId,
+            afficherNomsBranches: afficherNomsBranchesGeneral,
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-général.pdf`,
@@ -3656,6 +3659,7 @@ export default function EmploiDuTemps() {
             dispos: merged.dispos || [],
             titulaires: merged.titulaires || [],
             poolIds,
+            afficherNomsBranches: afficherNomsBranchesGeneral,
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-général.pdf`,
@@ -6278,7 +6282,7 @@ export default function EmploiDuTemps() {
             </div>
           )}
           {planningPoolId && !planningGeneralLoading && planningGeneral && (
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10,flexWrap:'wrap'}}>
               {!showJoursFiltres ? (
                 <button onClick={() => setShowJoursFiltres(true)}
                   style={{padding:'7px 14px',borderRadius:17,border:'1.5px solid #e2e8f0',background:'white',cursor:'pointer',fontWeight:600,color:'#94a3b8',fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap'}}>
@@ -6297,6 +6301,56 @@ export default function EmploiDuTemps() {
                   ))}
                 </div>
               )}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={afficherNomsBranchesGeneral}
+                aria-label="Afficher les noms des branches"
+                title="Afficher ou masquer les noms de branches (PDF A3 inclus)"
+                onClick={() => setAfficherNomsBranchesGeneral((v) => !v)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginLeft: 'auto',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#334155',
+                  background: 'transparent',
+                  border: 'none',
+                  fontFamily: 'inherit',
+                  padding: 0,
+                }}
+              >
+                Noms des branches
+                <span
+                  style={{
+                    width: 40,
+                    height: 22,
+                    borderRadius: 99,
+                    background: afficherNomsBranchesGeneral ? '#6366f1' : '#cbd5e1',
+                    position: 'relative',
+                    flexShrink: 0,
+                    display: 'inline-block',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: afficherNomsBranchesGeneral ? 20 : 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
+                      transition: 'left 0.15s ease',
+                    }}
+                  />
+                </span>
+              </button>
             </div>
           )}
           {planningPoolId && !planningGeneralLoading && planningGeneral && (
@@ -6387,7 +6441,9 @@ export default function EmploiDuTemps() {
                                   couleurTexte = '#111827';
                                   libelleAff = aff?.classe_nom || '';
                                 }
-                                const brancheAff = (!horsPool && !estSpecial) ? libelleBrancheAffectation(aff) : '';
+                                const brancheAff = (afficherNomsBranchesGeneral && !horsPool && !estSpecial)
+                                  ? libelleBrancheAffectation(aff)
+                                  : '';
                                 return (
                                   <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                     background:couleurFond,color:couleurTexte}}>
