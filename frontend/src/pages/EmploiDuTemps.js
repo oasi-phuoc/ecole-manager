@@ -884,8 +884,10 @@ export default function EmploiDuTemps() {
     affectationsClasse.forEach((a) => {
       if (!a?.prof_id || estAffectationSpecialSansClasse(a)) return;
       const key = String(a.prof_id);
-      const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0 };
-      prev.periodes += 1;
+      const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0, normales: 0, soutien: 0 };
+      if (estAffectationSoutien(a)) prev.soutien += 1;
+      else prev.normales += 1;
+      prev.periodes = prev.normales + prev.soutien;
       periodesParProf.set(key, prev);
     });
     const profsClasse = Array.from(periodesParProf.values()).map((row) => {
@@ -2781,19 +2783,38 @@ export default function EmploiDuTemps() {
   const htmlCartesSuiviPeriodes = (titre, cartes) => {
     const liste = Array.isArray(cartes) ? cartes : [];
     const maxProfs = Math.max(1, ...liste.map((cl) => (cl.profsClasse || []).length));
-    const minHeight = Math.max(200, 70 + maxProfs * 26);
+    const minHeight = Math.max(220, 96 + maxProfs * 26);
     const cartesHtml = liste.map((cl) => {
+      const avecSoutien = !!cl.avecSoutien;
+      const normalesOk = (cl.periodesNormalesRequises || 0) > 0
+        && cl.periodesNormalesAffectees === cl.periodesNormalesRequises;
+      const soutienOk = !avecSoutien || (
+        (cl.periodesSoutienRequises || 0) > 0
+        && cl.periodesSoutienAffectees === cl.periodesSoutienRequises
+      );
+      const classeOk = cl.classeOk || (normalesOk && soutienOk);
+      const compteHtml = (p) => {
+        const n = p.normales != null ? p.normales : p.periodes;
+        const s = p.soutien || 0;
+        if (s > 0) {
+          return `${n}<span style="color:#6366f1">+${s}</span>`;
+        }
+        return String(n || 0);
+      };
       const profsHtml = (cl.profsClasse || []).length
         ? cl.profsClasse.map((p) => (
           `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0;line-height:1.35;">
             <span style="font-size:13pt;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nom)}</span>
-            <span style="font-size:13pt;font-weight:800;flex-shrink:0;">${p.periodes}</span>
+            <span style="font-size:13pt;font-weight:800;flex-shrink:0;">${compteHtml(p)}</span>
           </div>`
         )).join('')
         : '<div style="font-size:13pt;font-weight:600;opacity:0.7;">Aucun professeur</div>';
-      return `<div style="${styleCarteSuiviPdf(minHeight)}">
+      const titres = `<div style="font-size:12pt;font-weight:800;text-align:center;margin-bottom:4px;">Normal ${cl.periodesNormalesAffectees || 0}/${cl.periodesNormalesRequises || 0}</div>
+        ${avecSoutien ? `<div style="font-size:12pt;font-weight:800;color:#6366f1;text-align:center;margin-bottom:8px;">Soutien ${cl.periodesSoutienAffectees || 0}/${cl.periodesSoutienRequises || 0}</div>` : '<div style="margin-bottom:8px;"></div>'}`;
+      return `<div style="${styleCarteSuiviPdf(minHeight)};position:relative;">
+        ${classeOk ? '<div style="position:absolute;top:8px;left:10px;font-size:16pt;font-weight:800;color:#6366f1;line-height:1;">V</div>' : ''}
         <div style="font-size:15pt;font-weight:800;text-align:center;margin-bottom:4px;line-height:1.2;">${escapeHtml(cl.nom)}</div>
-        <div style="font-size:12pt;font-weight:800;color:#6366f1;text-align:center;margin-bottom:10px;">Périodes ${cl.totalAffectees}/${cl.totalRequis}</div>
+        ${titres}
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">${profsHtml}</div>
       </div>`;
     });
@@ -2856,8 +2877,10 @@ export default function EmploiDuTemps() {
       affsClasse.forEach((a) => {
         if (!a?.prof_id || estSpecial(a)) return;
         const key = String(a.prof_id);
-        const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0 };
-        prev.periodes += 1;
+        const prev = periodesParProf.get(key) || { profId: a.prof_id, periodes: 0, normales: 0, soutien: 0 };
+        if (estSoutien(a)) prev.soutien += 1;
+        else prev.normales += 1;
+        prev.periodes = prev.normales + prev.soutien;
         periodesParProf.set(key, prev);
       });
       const profsClasse = Array.from(periodesParProf.values()).map((row) => {
@@ -2868,9 +2891,24 @@ export default function EmploiDuTemps() {
           : `Prof ${row.profId}`;
         return { ...row, nom };
       }).sort((a, b) => (b.periodes - a.periodes) || String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
-      const totalAffectees = periodesNormalesAffectees + (avecSoutien ? periodesSoutienAffectees : 0);
-      const totalRequis = (requis.normales || 0) + (avecSoutien ? (requis.soutien || 0) : 0);
-      return { id: cl.id, nom: cl.nom, totalAffectees, totalRequis, profsClasse };
+      const normalesReq = requis.normales || 0;
+      const soutienReq = avecSoutien ? (requis.soutien || 0) : 0;
+      const classeOk = (normalesReq <= 0 || periodesNormalesAffectees === normalesReq)
+        && (!avecSoutien || periodesSoutienAffectees === soutienReq)
+        && (normalesReq + soutienReq) > 0;
+      return {
+        id: cl.id,
+        nom: cl.nom,
+        avecSoutien,
+        periodesNormalesAffectees,
+        periodesSoutienAffectees,
+        periodesNormalesRequises: normalesReq,
+        periodesSoutienRequises: soutienReq,
+        totalAffectees: periodesNormalesAffectees + (avecSoutien ? periodesSoutienAffectees : 0),
+        totalRequis: normalesReq + soutienReq,
+        classeOk,
+        profsClasse,
+      };
     });
   };
 
@@ -5385,12 +5423,15 @@ export default function EmploiDuTemps() {
                 <div style={{display:'flex',gap:8,width:'100%'}}>
                   {suiviClasses.map(cl => {
                     const avecSoutien = niveauAvecSoutien(cl.niveauClasse);
-                    const totalAffectees = (cl.periodesNormalesAffectees || 0) + (avecSoutien ? (cl.periodesSoutienAffectees || 0) : 0);
-                    const totalRequis = (cl.periodesNormalesRequises || 0) + (avecSoutien ? (cl.periodesSoutienRequises || 0) : 0);
-                    const classeOk = totalRequis > 0 && totalAffectees === totalRequis;
+                    const normalesReq = cl.periodesNormalesRequises || 0;
+                    const soutienReq = avecSoutien ? (cl.periodesSoutienRequises || 0) : 0;
+                    const normalesOk = normalesReq > 0 && (cl.periodesNormalesAffectees || 0) === normalesReq;
+                    const soutienOk = !avecSoutien || (soutienReq > 0 && (cl.periodesSoutienAffectees || 0) === soutienReq);
+                    const classeOk = (normalesReq + soutienReq) > 0 && normalesOk && soutienOk;
                     return (
                       <div key={cl.id} style={{
                         ...styles.suiviClasseChip,
+                        position: 'relative',
                         flex:1,
                         width:'auto',
                         minWidth:0,
@@ -5398,22 +5439,39 @@ export default function EmploiDuTemps() {
                         alignItems:'stretch',
                         justifyContent:'flex-start',
                         textAlign:'left',
-                        border: classeOk ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
-                        background: classeOk ? '#eef2ff' : '#ffffff',
-                        color: classeOk ? '#3730a3' : '#0f172a'
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        color: '#0f172a'
                       }}>
+                        {classeOk && (
+                          <div title="Classe complète" style={{position:'absolute',top:6,left:8,fontSize:14,fontWeight:800,color:'#6366f1',lineHeight:1}}>V</div>
+                        )}
                         <div style={{...styles.suiviClasseNom,textAlign:'center'}}>
-                          {cl.nom} - Périodes {totalAffectees}/{totalRequis}
+                          {cl.nom}
                         </div>
+                        <div style={{textAlign:'center',fontSize:11,fontWeight:800,marginTop:2}}>
+                          Normal {cl.periodesNormalesAffectees || 0}/{normalesReq}
+                        </div>
+                        {avecSoutien && (
+                          <div style={{textAlign:'center',fontSize:11,fontWeight:800,color:'#6366f1',marginTop:1}}>
+                            Soutien {cl.periodesSoutienAffectees || 0}/{soutienReq}
+                          </div>
+                        )}
                         <div style={{display:'flex',flexDirection:'column',justifyContent:'flex-start',gap:3,minWidth:0,marginTop:6}}>
                           {(cl.profsClasse || []).length === 0 ? (
                             <div style={{...styles.suiviClasseLigne,fontWeight:600,opacity:0.7,textAlign:'center'}}>Aucun professeur</div>
-                          ) : (cl.profsClasse || []).map((p) => (
-                            <div key={`${cl.id}-${p.profId}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
-                              <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
-                              <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>{p.periodes}</span>
-                            </div>
-                          ))}
+                          ) : (cl.profsClasse || []).map((p) => {
+                            const n = p.normales != null ? p.normales : p.periodes;
+                            const s = p.soutien || 0;
+                            return (
+                              <div key={`${cl.id}-${p.profId}`} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:6,minWidth:0}}>
+                                <span style={{fontSize:11,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
+                                <span style={{fontSize:11,fontWeight:800,flexShrink:0}}>
+                                  {s > 0 ? <>{n}<span style={{color:'#6366f1'}}>+{s}</span></> : n}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
