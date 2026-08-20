@@ -91,8 +91,8 @@ function cropCanvasToContent(canvas, padding = 8) {
     let minY = height;
     let maxX = -1;
     let maxY = -1;
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
+    for (let y = 0; y < height; y += 2) {
+      for (let x = 0; x < width; x += 2) {
         const i = (y * width + x) * 4;
         if (data[i + 3] < 12) continue;
         if (data[i] >= bg && data[i + 1] >= bg && data[i + 2] >= bg) continue;
@@ -113,7 +113,9 @@ function cropCanvasToContent(canvas, padding = 8) {
     const out = document.createElement('canvas');
     out.width = w;
     out.height = h;
-    out.getContext('2d').drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+    const octx = out.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    octx.drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
     return out;
   } catch {
     return canvas;
@@ -127,12 +129,12 @@ function cropCanvasToContent(canvas, padding = 8) {
 export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
   const orientation = options.orientation || (options.paysage === false ? 'portrait' : 'landscape');
   const format = String(options.format || 'a4').toLowerCase();
-  const scale = options.scale || 1.5;
+  const scale = options.scale || 2.4;
   const margins = parsePageMarginsMm(options);
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText = 'position:fixed;left:-12000px;top:0;width:1600px;height:1100px;border:0;opacity:0;pointer-events:none;';
+  iframe.style.cssText = 'position:fixed;left:-12000px;top:0;width:1600px;height:1200px;border:0;opacity:0;pointer-events:none;';
   document.body.appendChild(iframe);
 
   try {
@@ -150,7 +152,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
-    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: true });
+    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: false });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const usableW = Math.max(1, pageW - margins.left - margins.right);
@@ -164,10 +166,10 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: Math.max(el.scrollWidth, 1200),
+        windowWidth: Math.max(el.scrollWidth, 1400),
       });
       const cropped = cropCanvasToContent(canvas);
-      const imgData = cropped.toDataURL('image/jpeg', 0.9);
+      const imgData = cropped.toDataURL('image/png');
       const ratio = cropped.height / Math.max(1, cropped.width);
       let drawW = usableW;
       let drawH = drawW * ratio;
@@ -179,7 +181,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       if (i > 0) pdf.addPage(format, orientation);
       const x = margins.left + (usableW - drawW) / 2;
       const y = margins.top + (usableH - drawH) / 2;
-      pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
+      pdf.addImage(imgData, 'PNG', x, y, drawW, drawH, undefined, 'FAST');
     }
 
     return pdf.output('blob');
