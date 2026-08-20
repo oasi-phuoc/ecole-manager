@@ -114,7 +114,11 @@ export default function Login() {
       let nextUser = { ...(getSessionUser() || {}), doit_changer_mdp: false };
       try {
         const st = await axios.get(API + '/auth/mfa/status');
-        nextUser = { ...nextUser, mfa_enabled: st.data?.mfa_enabled === true };
+        nextUser = {
+          ...nextUser,
+          mfa_enabled: st.data?.mfa_enabled === true,
+          mfa_exempt: st.data?.mfa_exempt === true,
+        };
       } catch {
         nextUser = { ...nextUser, mfa_enabled: false };
       }

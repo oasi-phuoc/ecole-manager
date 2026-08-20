@@ -40,6 +40,7 @@ const publicUser = (user) => ({
   role: user.role,
   doit_changer_mdp: user.doit_changer_mdp || false,
   mfa_enabled: user.mfa_enabled === true,
+  mfa_exempt: user.mfa_exempt === true,
 });
 const writeAuthCookie = (res, payload) => {
   const token = signerToken(payload, '8h');
@@ -119,7 +120,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
     const secret = decryptText(user.mfa_secret || '');
-    if (user.mfa_enabled === true && secret) {
+    if (user.mfa_exempt !== true && user.mfa_enabled === true && secret) {
       const mfaToken = signerToken({ purpose: 'mfa-login', id: user.id }, '5m');
       return res.json({ message: 'Code MFA requis', mfa_required: true, mfa_token: mfaToken });
     }
@@ -179,10 +180,14 @@ const loginMfa = async (req, res) => {
 
 const mfaStatus = async (req, res) => {
   try {
-    const r = await pool.query('SELECT mfa_enabled, mfa_backup_codes FROM utilisateurs WHERE id = $1', [req.user.id]);
+    const r = await pool.query('SELECT mfa_enabled, mfa_exempt, mfa_backup_codes FROM utilisateurs WHERE id = $1', [req.user.id]);
     const row = r.rows[0] || {};
     const backupCount = parseBackupHashes(row.mfa_backup_codes).length;
-    return res.json({ mfa_enabled: row.mfa_enabled === true, backup_codes_remaining: backupCount });
+    return res.json({
+      mfa_enabled: row.mfa_enabled === true,
+      mfa_exempt: row.mfa_exempt === true,
+      backup_codes_remaining: backupCount,
+    });
   } catch (err) {
     return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
   }
@@ -190,6 +195,9 @@ const mfaStatus = async (req, res) => {
 
 const mfaSetup = async (req, res) => {
   try {
+    if (req.user?.mfa_exempt === true) {
+      return res.status(403).json({ message: 'La 2FA est desactivee pour ce compte.' });
+    }
     const r = await pool.query('SELECT email FROM utilisateurs WHERE id = $1', [req.user.id]);
     const email = r.rows[0]?.email || `user-${req.user.id}`;
     const secret = generateSecret();
@@ -205,6 +213,9 @@ const mfaSetup = async (req, res) => {
 const mfaEnable = async (req, res) => {
   const { setup_token, code } = req.body || {};
   if (!setup_token || !code) return res.status(400).json({ message: 'Token setup ou code manquant' });
+  if (req.user?.mfa_exempt === true) {
+    return res.status(403).json({ message: 'La 2FA est desactivee pour ce compte.' });
+  }
   try {
     const decoded = jwt.verify(setup_token, process.env.JWT_SECRET);
     if (decoded?.purpose !== 'mfa-setup' || Number(decoded?.id) !== Number(req.user.id) || !decoded?.secret) {
@@ -270,12 +281,12 @@ const changerMdp = async (req, res) => {
 const moi = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nom, prenom, email, role, created_at, mfa_enabled, doit_changer_mdp FROM utilisateurs WHERE id = $1',
+      'SELECT id, nom, prenom, email, role, created_at, mfa_enabled, mfa_exempt, doit_changer_mdp FROM utilisateurs WHERE id = $1',
       [req.user.id]
     );
     const row = result.rows[0];
     if (!row) return res.status(404).json({ message: 'Utilisateur non trouve' });
-    res.json({ ...row, mfa_enabled: row.mfa_enabled === true, doit_changer_mdp: row.doit_changer_mdp || false });
+    res.json({ ...row, mfa_enabled: row.mfa_enabled === true, mfa_exempt: row.mfa_exempt === true, doit_changer_mdp: row.doit_changer_mdp || false });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -484,7 +495,7 @@ const passkeyLoginVerify = async (req, res) => {
     if (!credentialId) return res.status(400).json({ message: 'Identifiant passkey manquant' });
 
     const credRes = await pool.query(
-      `SELECT c.*, u.id AS uid, u.nom, u.prenom, u.email, u.role, u.doit_changer_mdp, u.mfa_enabled, u.actif
+      `SELECT c.*, u.id AS uid, u.nom, u.prenom, u.email, u.role, u.doit_changer_mdp, u.mfa_enabled, u.mfa_exempt, u.actif
        FROM webauthn_credentials c
        JOIN utilisateurs u ON u.id = c.user_id
        WHERE c.credential_id = $1`,
@@ -526,6 +537,7 @@ const passkeyLoginVerify = async (req, res) => {
       role: row.role,
       doit_changer_mdp: row.doit_changer_mdp || false,
       mfa_enabled: row.mfa_enabled === true,
+      mfa_exempt: row.mfa_exempt === true,
     };
     writeAuthCookie(res, userPayload(user));
     return res.json({

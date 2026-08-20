@@ -23,9 +23,13 @@ export default function ActiverMfa() {
       try {
         const res = await axios.get(API + '/auth/mfa/status');
         if (!active) return;
-        if (res.data?.mfa_enabled === true) {
+        if (res.data?.mfa_enabled === true || res.data?.mfa_exempt === true) {
           const current = getSessionUser() || {};
-          setSessionUser({ ...current, mfa_enabled: true });
+          setSessionUser({
+            ...current,
+            mfa_enabled: res.data?.mfa_enabled === true,
+            mfa_exempt: res.data?.mfa_exempt === true,
+          });
           navigate('/dashboard', { replace: true });
           return;
         }

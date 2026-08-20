@@ -2,8 +2,9 @@ const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../services/mailer');
 const storage = require('../services/storageService');
+const { appliquerMfaExempt } = require('../utils/mfaExempt');
 
-const CHAMPS = 'id, nom, prenom, email, actif, created_at, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis, niveau_prefere, branches_specialites, lieu_travail_prefere, remarque_lieu_travail, role_acces, identifiant';
+const CHAMPS = 'id, nom, prenom, email, actif, created_at, telephone, specialite, adresse, npa, lieu, sexe, taux_activite, periodes_semaine, date_naissance, avs, type_contrat, type_permis, niveau_prefere, branches_specialites, lieu_travail_prefere, remarque_lieu_travail, role_acces, identifiant, mfa_enabled, mfa_exempt';
 
 const getEmployes = async (req, res) => {
   try {
@@ -36,6 +37,7 @@ const creerEmploye = async (req, res) => {
        VALUES ($1,$2,$3,$4,'admin',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING id, nom, prenom, email`,
       [nom, prenom, email, hash, telephone||null, specialite||null, adresse||null, npa||null, lieu||null, sexe||null, (taux_activite ? parseInt(taux_activite) : null), (periodes_semaine ? parseInt(periodes_semaine) : null), (date_naissance && date_naissance !== '' ? date_naissance : null), avs||null, type_contrat||null, type_permis||null, niveau_prefere||null, branches_specialites||null, lieu_travail_prefere||null, remarque_lieu_travail||null, role_acces||'employe', identifiantFinal]
     );
+    await appliquerMfaExempt(pool, result.rows[0].id, req.body?.mfa_exempt);
     res.status(201).json({ message: 'Employe administratif cree', employe: result.rows[0] });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };
@@ -54,6 +56,7 @@ const modifierEmploye = async (req, res) => {
     }
     const result = await pool.query(query, params);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Employe administratif non trouve' });
+    await appliquerMfaExempt(pool, req.params.id, req.body?.mfa_exempt);
     res.json({ message: 'Employe administratif modifie' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur', erreur: err.message }); }
 };

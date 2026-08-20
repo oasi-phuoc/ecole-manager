@@ -38,10 +38,10 @@ const verifierToken = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Token manquant' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await pool.query('SELECT id, nom, prenom, email, role, permissions, mfa_enabled FROM utilisateurs WHERE id=$1', [decoded.id]);
+    const result = await pool.query('SELECT id, nom, prenom, email, role, permissions, mfa_enabled, mfa_exempt FROM utilisateurs WHERE id=$1', [decoded.id]);
     if (result.rows.length === 0) return res.status(401).json({ message: 'Utilisateur non trouve' });
     req.user = result.rows[0];
-    if (req.user.mfa_enabled !== true && !MFA_ALLOWED_PATHS.has(requestPath(req))) {
+    if (req.user.mfa_exempt !== true && req.user.mfa_enabled !== true && !MFA_ALLOWED_PATHS.has(requestPath(req))) {
       return res.status(403).json({
         message: 'Double authentification obligatoire. Activez-la pour continuer.',
         mfa_required: true,

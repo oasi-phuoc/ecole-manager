@@ -36,7 +36,7 @@ export default function Professeurs({
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [showInactif, setShowInactif] = useState(false);
-  const [form, setForm] = useState({ nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'' });
+  const [form, setForm] = useState({ nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'',mfa_exempt:false });
   const [roleAccesErreur, setRoleAccesErreur] = useState(false);
   const [formToast, setFormToast] = useState({ message: '', type: 'success' });
   const formToastTimeoutRef = useRef(null);
@@ -182,6 +182,7 @@ export default function Professeurs({
         telephone: telephoneDigitsOnly(form.telephone),
         npa: npaDigits || null,
         branches_specialites: normaliserBranchesSpecialites(form.branches_specialites),
+        mfa_exempt: form.mfa_exempt === true,
       };
       if (hidePeriodesSemaine) payload.periodes_semaine = null;
       if (hidePreferences) {
@@ -204,7 +205,7 @@ export default function Professeurs({
       formToastTimeoutRef.current = null;
     }
     setFormToast({ message: '', type: 'success' });
-    setForm({nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:''});
+    setForm({nom:'',prenom:'',email:'',identifiant:'',mot_de_passe:'',telephone:'',specialite:'',adresse:'',npa:'',lieu:'',sexe:'',taux_activite:'',periodes_semaine:'',date_naissance:'',avs:'',type_contrat:'',type_permis:'',type_prof:'Interne',niveau_prefere:'',branches_specialites:[],lieu_travail_prefere:'',remarque_lieu_travail:'',priorite_pref:'',role_acces:'',mfa_exempt:false});
     setRoleAccesErreur(false);
   };
 
@@ -224,7 +225,7 @@ export default function Professeurs({
     }
     setFormToast({ message: '', type: 'success' });
     setProfEdit(p);
-    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',identifiant:p.identifiant||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe'});
+    setForm({nom:p.nom||'',prenom:p.prenom||'',email:p.email||'',identifiant:p.identifiant||'',mot_de_passe:'',telephone:p.telephone||'',specialite:p.specialite||'',adresse:p.adresse||'',npa:p.npa||'',lieu:p.lieu||'',sexe:p.sexe||'',taux_activite:p.taux_activite||'',periodes_semaine:p.periodes_semaine||'',date_naissance:p.date_naissance?p.date_naissance.substring(0,10):'',avs:p.avs||'',type_contrat:p.type_contrat||'',type_permis:p.type_permis||'',type_prof:p.type_prof||'Interne',niveau_prefere:p.niveau_prefere||'',branches_specialites:normaliserBranchesSpecialites(p.branches_specialites),lieu_travail_prefere:p.lieu_travail_prefere||'',remarque_lieu_travail:p.remarque_lieu_travail||'',priorite_pref:p.priorite_pref||'niveau',actif:p.actif!==false,role_acces:p.role_acces||'employe',mfa_exempt:p.mfa_exempt===true});
     setShowForm(true);
   };
 
@@ -537,9 +538,9 @@ export default function Professeurs({
 
                   {!hidePreferences && (
                     <div style={{display:'flex',flexDirection:'column',marginBottom:12}}>
-                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Spécialité(s) — {libelleNiveauxBranches}</label>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Préférences branches — {libelleNiveauxBranches}</label>
                       {branchesDisponibles.length === 0 ? (
-                        <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune spécialité disponible pour le(s) niveau(x) sélectionné(s).</div>
+                        <div style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>Aucune préférence de branche disponible pour le(s) niveau(x) sélectionné(s).</div>
                       ) : (
                         <div style={{display:'grid',gridTemplateColumns:'repeat(3, minmax(0, 1fr))',gap:10}}>
                           {ORDRE_COLONNES_SPECIALITES.map((cat) => {
@@ -655,14 +656,34 @@ export default function Professeurs({
                     </div>
                   )}
 
-                  <div style={{display:'flex',flexDirection:'column', marginTop: showRoleToggle ? 20 : 0}}>
-                    <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Statut</label>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div onClick={()=>setForm({...form,actif:(form.actif===false||form.actif==='false')})} style={{width:44,height:24,borderRadius:12,background:(form.actif===false||form.actif==='false')?'#ccc':'#34a853',cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0}}>
-                        <span style={{position:'absolute',top:2,left:(form.actif===false||form.actif==='false')?2:22,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:28, marginTop: showRoleToggle ? 20 : 0}}>
+                    <div style={{display:'flex',flexDirection:'column'}}>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Statut</label>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div onClick={()=>setForm({...form,actif:(form.actif===false||form.actif==='false')})} style={{width:44,height:24,borderRadius:12,background:(form.actif===false||form.actif==='false')?'#ccc':'#34a853',cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0}}>
+                          <span style={{position:'absolute',top:2,left:(form.actif===false||form.actif==='false')?2:22,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                        </div>
+                        <span style={{fontSize:13,fontWeight:600,color:(form.actif===false||form.actif==='false')?'#94a3b8':'#34a853'}}>
+                          {(form.actif===false||form.actif==='false')?'Inactif':'Actif'}
+                        </span>
                       </div>
-                      <span style={{fontSize:13,fontWeight:600,color:(form.actif===false||form.actif==='false')?'#94a3b8':'#34a853'}}>
-                        {(form.actif===false||form.actif==='false')?'Inactif':'Actif'}
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column'}}>
+                      <label style={{fontSize:11,fontWeight:600,marginBottom:8,color:'#475569'}}>Double authentification (2FA)</label>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div
+                          onClick={()=>setForm({...form, mfa_exempt: form.mfa_exempt !== true})}
+                          style={{width:44,height:24,borderRadius:12,background:form.mfa_exempt===true?'#f59e0b':'#34a853',cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0}}
+                          title={form.mfa_exempt===true?'2FA désactivée pour ce compte':'2FA obligatoire'}
+                        >
+                          <span style={{position:'absolute',top:2,left:form.mfa_exempt===true?2:22,width:20,height:20,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                        </div>
+                        <span style={{fontSize:13,fontWeight:600,color:form.mfa_exempt===true?'#b45309':'#34a853'}}>
+                          {form.mfa_exempt===true?'Désactivée':'Obligatoire'}
+                        </span>
+                      </div>
+                      <span style={{fontSize:11,color:'#94a3b8',marginTop:6,maxWidth:280,lineHeight:1.4}}>
+                        Si désactivée, ce compte n’est plus obligé d’activer la 2FA. Une 2FA déjà configurée est alors retirée.
                       </span>
                     </div>
                   </div>

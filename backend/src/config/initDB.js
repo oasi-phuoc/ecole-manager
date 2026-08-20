@@ -40,6 +40,7 @@ const initDB = async () => {
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_secret TEXT`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_enabled_at TIMESTAMP`);
     await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB DEFAULT '[]'::jsonb`);
+    await pool.query(`ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_exempt BOOLEAN DEFAULT false`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS webauthn_credentials (
         id SERIAL PRIMARY KEY,

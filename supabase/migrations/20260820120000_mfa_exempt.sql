@@ -1,0 +1,1 @@
+ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mfa_exempt BOOLEAN DEFAULT false;

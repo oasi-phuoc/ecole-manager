@@ -15,9 +15,10 @@ export default function MfaGate({ children }) {
       try {
         const res = await axios.get(API + '/auth/mfa/status');
         const enabled = res.data?.mfa_enabled === true;
+        const exempt = res.data?.mfa_exempt === true;
         const current = getSessionUser() || {};
-        setSessionUser({ ...current, mfa_enabled: enabled });
-        if (active) setState(enabled ? 'ok' : 'need');
+        setSessionUser({ ...current, mfa_enabled: enabled, mfa_exempt: exempt });
+        if (active) setState(exempt || enabled ? 'ok' : 'need');
       } catch {
         if (active) setState('need');
       }

@@ -1250,12 +1250,12 @@ export default function Parametres() {
                       </div>
 
                       <div style={styles.formChamp}>
-                        <label style={styles.label}>Spécialité(s) — {profil.niveau_prefere || 'Tous niveaux'}</label>
+                        <label style={styles.label}>Préférences branches — {profil.niveau_prefere || 'Tous niveaux'}</label>
                         <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
                           Glissez-déposez pour classer les branches : le numéro 1 est votre priorité la plus forte, puis 2, 3, etc.
                         </p>
                         {branchesDisponiblesProfil.length === 0 ? (
-                          <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune spécialité disponible.</div>
+                          <div style={{ fontSize: 12, color: '#94a3b8' }}>Aucune préférence de branche disponible.</div>
                         ) : (
                           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                             {ORDRE_COLONNES_SPECIALITES.map((cat) => {
