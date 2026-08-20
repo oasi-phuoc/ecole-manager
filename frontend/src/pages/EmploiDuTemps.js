@@ -2812,7 +2812,7 @@ export default function EmploiDuTemps() {
       const titres = `<div style="font-size:12pt;font-weight:800;text-align:center;margin-bottom:4px;">Normal ${cl.periodesNormalesAffectees || 0}/${cl.periodesNormalesRequises || 0}</div>
         ${avecSoutien ? `<div style="font-size:12pt;font-weight:800;color:#6366f1;text-align:center;margin-bottom:8px;">Soutien ${cl.periodesSoutienAffectees || 0}/${cl.periodesSoutienRequises || 0}</div>` : '<div style="margin-bottom:8px;"></div>'}`;
       return `<div style="${styleCarteSuiviPdf(minHeight)};position:relative;">
-        ${classeOk ? '<div style="position:absolute;top:8px;left:10px;font-size:16pt;font-weight:800;color:#6366f1;line-height:1;">V</div>' : ''}
+        ${classeOk ? '<div style="position:absolute;top:8px;left:10px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#16a34a;color:#ffffff;font-size:12pt;font-weight:800;line-height:1;">✓</div>' : ''}
         <div style="font-size:15pt;font-weight:800;text-align:center;margin-bottom:4px;line-height:1.2;">${escapeHtml(cl.nom)}</div>
         ${titres}
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">${profsHtml}</div>
@@ -5444,7 +5444,7 @@ export default function EmploiDuTemps() {
                         color: '#0f172a'
                       }}>
                         {classeOk && (
-                          <div title="Classe complète" style={{position:'absolute',top:6,left:8,fontSize:14,fontWeight:800,color:'#6366f1',lineHeight:1}}>V</div>
+                          <span title="Classe complète" style={{...styles.pastillePeriodeOk, position:'absolute', top:6, left:8}} aria-label="Classe complète">✓</span>
                         )}
                         <div style={{...styles.suiviClasseNom,textAlign:'center'}}>
                           {cl.nom}
