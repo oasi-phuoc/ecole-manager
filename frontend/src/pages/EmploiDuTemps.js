@@ -1805,12 +1805,12 @@ export default function EmploiDuTemps() {
     }
     const ok = window.confirm(
       'Générer une proposition d\'affectations pour ce pool ?\n\n' +
-      'Règles : blocs de 4 autant que possible ; 8 périodes par classe titulaire (idéalement 4 + 2 + 2 sur des jours différents) ; ' +
-      '1 titulariat par classe ; compléter 4 → 2 → 1 en tournant entre les moins chargés ; ' +
+      'Règles : uniquement des périodes normales en blocs de 4 puis de 2 ; ' +
+      '8 périodes par classe titulaire (idéalement 4 + 2 + 2 sur des jours différents) ; ' +
+      'compléter 4 → 2 en tournant entre les moins chargés ; ' +
       'idéalement 3 ou 4 professeurs par classe (maximum 5) ; ' +
-      'indisponibilités d\'abord, puis périodes orange à éviter ; ' +
-      'soutien CSC/CAL en paires selon le taux (40–60 % → 1 paire, 70–80 % → 2, 90–100 % → 3).\n\n' +
-      'Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+      'indisponibilités d\'abord, puis périodes orange à éviter.\n\n' +
+      'Titulariat et soutien ne sont pas placés. Le tableau actuel du pool sera remplacé. Cliquez ensuite sur Sauvegarder pour enregistrer.'
     );
     if (!ok) return;
 
@@ -1838,7 +1838,7 @@ export default function EmploiDuTemps() {
 
     const totalRequisPool = classesPool.reduce((sum, cl) => {
       const r = getRequisClasse(cl);
-      return sum + (r.normales || 0) + (r.soutien || 0);
+      return sum + (r.normales || 0);
     }, 0);
     const quotaPartageDefaut = Math.max(
       2,
@@ -2120,34 +2120,10 @@ export default function EmploiDuTemps() {
         const b2 = assignerUnBloc(classeId, 2, { profsFiltres: filtres });
         if (!b2) break;
       }
-      while ((loadTitulaireParClasse[cleTit] || 0) + 1 <= cible) {
-        const b1 = assignerUnBloc(classeId, 1, { profsFiltres: filtres });
-        if (!b1) break;
-      }
     });
 
-    // Phase 2 — 1 période de titulariat par classe
-    titulariatsPairs.forEach(({ profId, classeId }) => {
-      const dejaTitulariat = nextDraft.some((a) =>
-        String(a.prof_id) === String(profId)
-        && a.type_special === 'titulariat'
-        && String(a.classe_id || '') === String(classeId)
-      );
-      if (dejaTitulariat) return;
-      const slots = creneauxTries.filter((cr) =>
-        isProfDispo(profId, cr.id) && !occupiedProf.has(`${profId}|${cr.id}`)
-      );
-      const scorer = (cr) => {
-        const horaire = classeAHoraire(classeId, cr.jour, cr.periode) ? 0 : 1;
-        const eviter = isProfEviter(profId, cr.id) ? 1 : 0;
-        return horaire * 10 + eviter;
-      };
-      const candidat = [...slots].sort((a, b) => scorer(a) - scorer(b) || (ordreJour[a.jour] ?? 99) - (ordreJour[b.jour] ?? 99) || Number(a.ordre || 0) - Number(b.ordre || 0))[0];
-      if (candidat) ajouterAffectation({ profId, creneauId: candidat.id, classeId, typeSpecial: 'titulariat' });
-    });
-
-    // Phase 3 — compléter les normales 4 → 2 → 1, moins chargés, cap 3–4 (max 5)
-    const assignerBesoinParTours = (tailles = [4, 2, 1]) => {
+    // Phase 2 — compléter les normales 4 → 2, moins chargés, cap 3–4 (max 5)
+    const assignerBesoinParTours = (tailles = [4, 2]) => {
       tailles.forEach((taille) => {
         let progres = true;
         let gardeFou = 0;
@@ -2169,28 +2145,7 @@ export default function EmploiDuTemps() {
         }
       });
     };
-    assignerBesoinParTours([4, 2, 1]);
-
-    // Phase 4 — soutien CSC/CAL : paires puis unités, selon le taux, en restant dans le cap de profs
-    const classesSoutien = classesPool.filter((cl) => (requisParClasse[String(cl.id)]?.soutien || 0) > 0);
-    const poserSoutien = (taille, strictSoutien) => {
-      let progres = true;
-      let gardeFou = 0;
-      while (progres && gardeFou < 300) {
-        progres = false;
-        gardeFou += 1;
-        classesSoutien.forEach((cl) => {
-          const cid = String(cl.id);
-          const besoin = (requisParClasse[cid]?.soutien || 0) - (loadSoutien[cid] || 0);
-          if (besoin < taille) return;
-          if (assignerUnBloc(cid, taille, { mode: 'soutien', strictSoutien })) progres = true;
-        });
-      }
-    };
-    poserSoutien(2, true);
-    poserSoutien(2, false);
-    poserSoutien(1, true);
-    poserSoutien(1, false);
+    assignerBesoinParTours([4, 2]);
 
     setAffectationsDraft(nextDraft);
     setAffectationModes((prev) => {
@@ -2213,8 +2168,8 @@ export default function EmploiDuTemps() {
     const totalPosees = Object.values(loadProf).reduce((s, n) => s + n, 0);
     const classesIncompletes = classesPool.filter((cl) => {
       const cid = String(cl.id);
-      const req = requisParClasse[cid] || { normales: 0, soutien: 0 };
-      return (loadClasse[cid] || 0) < req.normales || (loadSoutien[cid] || 0) < req.soutien;
+      const req = requisParClasse[cid] || { normales: 0 };
+      return (loadClasse[cid] || 0) < req.normales;
     }).map((cl) => cl.nom);
     if (classesIncompletes.length) {
       showToast(`Proposition générée (${totalPosees} périodes). Classes incomplètes : ${classesIncompletes.join(', ')}.`, 'info');
