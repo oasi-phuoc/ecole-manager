@@ -49,6 +49,35 @@ async function writeBlobToDir(dirHandle, fileName, blob) {
   await writable.close();
 }
 
+/** Marge PDF (mm) sur les 4 côtés. Défaut 10 mm. */
+export function parsePageMarginsMm(options = {}) {
+  const fallback = 10;
+  if (Number.isFinite(Number(options.marginMm))) {
+    const n = Math.max(0, Number(options.marginMm));
+    return { top: n, right: n, bottom: n, left: n };
+  }
+  const raw = options.margin;
+  if (typeof raw === 'string' && raw.trim()) {
+    const parts = raw.trim().split(/\s+/).map((p) => {
+      const m = String(p).match(/^([\d.]+)/);
+      return m ? Number(m[1]) : NaN;
+    }).filter((n) => Number.isFinite(n));
+    if (parts.length === 1) {
+      return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
+    }
+    if (parts.length === 2) {
+      return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+    }
+    if (parts.length === 3) {
+      return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+    }
+    if (parts.length >= 4) {
+      return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+    }
+  }
+  return { top: fallback, right: fallback, bottom: fallback, left: fallback };
+}
+
 /**
  * Convertit un document HTML d'impression en Blob PDF.
  * Une page PDF par élément `.section` / `.section-a3` (sinon le body entier).
@@ -57,6 +86,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
   const orientation = options.orientation || (options.paysage === false ? 'portrait' : 'landscape');
   const format = String(options.format || 'a4').toLowerCase();
   const scale = options.scale || 1.5;
+  const margins = parsePageMarginsMm(options);
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
@@ -81,6 +111,8 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
+    const usableW = Math.max(1, pageW - margins.left - margins.right);
+    const usableH = Math.max(1, pageH - margins.top - margins.bottom);
 
     for (let i = 0; i < targets.length; i += 1) {
       const el = targets[i];
@@ -94,17 +126,16 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       });
       const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const ratio = canvas.height / Math.max(1, canvas.width);
-      let drawW = pageW;
+      let drawW = usableW;
       let drawH = drawW * ratio;
-      if (drawH > pageH) {
-        const s = pageH / drawH;
+      if (drawH > usableH) {
+        const s = usableH / drawH;
         drawW *= s;
         drawH *= s;
       }
       if (i > 0) pdf.addPage(format, orientation);
-      // Centrer le tableau horizontalement et verticalement sur la page
-      const x = (pageW - drawW) / 2;
-      const y = (pageH - drawH) / 2;
+      const x = margins.left + (usableW - drawW) / 2;
+      const y = margins.top + (usableH - drawH) / 2;
       pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
     }
 

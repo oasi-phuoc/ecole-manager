@@ -367,10 +367,62 @@ export default function EmploiDuTemps() {
     const h = paramH || parametresHoraires;
     const l = lieux || lieuxTravailDB;
     if (lieuNom) {
-      const lieu = l.find(x => x.nom === lieuNom);
+      const nomNorm = normaliserLieuTravail(lieuNom);
+      const lieu = (l || []).find((x) => x.nom === lieuNom)
+        || (l || []).find((x) => normaliserLieuTravail(x.nom) === nomNorm);
       if (lieu && h[String(lieu.id)]) return horaireParamToPool(h[String(lieu.id)]);
     }
     return horaireParamToPool(h['defaut']);
+  };
+
+  const formaterHeureAffichage = (h) => {
+    const s = String(h || '').trim();
+    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return s;
+    return `${String(m[1]).padStart(2, '0')}:${m[2]}`;
+  };
+
+  const horaireCreneauDepuisSite = (cr, poolHoraires) => {
+    const liste = (poolHoraires || []).filter((h) => h.periode === cr?.periode);
+    const byNum = liste.find((h) => Number(h.num) === Number(cr?.ordre));
+    const idx = Math.max(0, Number(cr?.ordre || 1) - 1);
+    const found = byNum || liste[idx];
+    if (!found) {
+      return {
+        debut: formaterHeureAffichage(cr?.heure_debut),
+        fin: formaterHeureAffichage(cr?.heure_fin),
+      };
+    }
+    return { debut: formaterHeureAffichage(found.debut), fin: formaterHeureAffichage(found.fin) };
+  };
+
+  const libelleHoraireCreneau = (cr, poolHoraires) => {
+    const h = horaireCreneauDepuisSite(cr, poolHoraires);
+    return `${h.debut}–${h.fin}`;
+  };
+
+  const libellePausePeriode = (periode, pauses) => {
+    const p = (pauses || {})[periode] || { debut: '', fin: '' };
+    return `${formaterHeureAffichage(p.debut)}–${formaterHeureAffichage(p.fin)}`;
+  };
+
+  const sitePourPoolId = (poolId) => {
+    const p = (pools || []).find((x) => String(x.id) === String(poolId));
+    return p?.site || '';
+  };
+
+  const sitePourClasseId = (classeId) => {
+    const p = (pools || []).find((pool) =>
+      (pool.classes || []).some((c) => String(c.id) === String(classeId))
+    );
+    return p?.site || '';
+  };
+
+  const sitePourProfId = (profId) => {
+    const p = (pools || []).find((pool) =>
+      (pool.profs || []).some((pr) => String(pr.id) === String(profId))
+    );
+    return p?.site || '';
   };
 
   const chargerTout = async () => {
@@ -530,12 +582,8 @@ export default function EmploiDuTemps() {
     return 0;
   };
 
-  // Horaires du pool sélectionné ou défaut
-  const getHorairesPool = (pool_id) => {
-    const p = pools.find(x => x.id == pool_id);
-    if (p && p.horaires && p.horaires.length === 8) return p.horaires;
-    return HORAIRES_DEFAUT;
-  };
+  // Horaires du pool = horaires du site (Paramètres école)
+  const getHorairesPool = (pool_id) => getHoraireForLieu(sitePourPoolId(pool_id)).poolHoraires;
 
   const handleSavePool = async () => {
     try {
@@ -548,13 +596,14 @@ export default function EmploiDuTemps() {
         const manque = totalPeriodesRequisesFormTotal - totalPeriodesProfsForm;
         window.alert(`Attention : il manque ${manque} période(s) professeur par rapport au total requis.`);
       }
-      const payload = { ...poolForm, niveau: niveauxSelectionnes.join(',') };
+      const { poolHoraires, pauses } = getHoraireForLieu(poolForm.site);
+      const payload = { ...poolForm, niveau: niveauxSelectionnes.join(','), horaires: poolHoraires };
       if (poolEdit) {
         await axios.put(API + '/planning/pools/' + poolEdit.id, payload, { headers });
       } else {
         await axios.post(API + '/planning/pools', payload, { headers });
       }
-      setPausesParPeriode(clonePausesParPeriode(pausesParPeriodeForm));
+      setPausesParPeriode(clonePausesParPeriode(pauses));
       setShowPoolForm(false);
       setPoolEdit(null);
       setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
@@ -2684,6 +2733,13 @@ export default function EmploiDuTemps() {
   const periodesRequisesDispo = profDispoSelectionne ? getPeriodesRequisesPourTaux(profDispoSelectionne) : 0;
   const periodesSelectionneesDispo = Object.values(dispos).filter(v => v !== false).length;
   const couleurCompteurDispo = periodesSelectionneesDispo < periodesRequisesDispo ? '#dc2626' : '#16a34a';
+  const horairesPoolAff = getHoraireForLieu(poolSelectionne?.site || '');
+  const horairesPoolClasse = getHoraireForLieu(sitePourPoolId(classePlanningPoolId) || sitePourClasseId(classePlanningId));
+  const horairesPoolGeneral = getHoraireForLieu(sitePourPoolId(planningPoolId));
+  const horairesLieuSalles = getHoraireForLieu(sallesLieuTravailId);
+  const horairesPlanningProf = getHoraireForLieu(
+    (planningProf?.pools || []).find((p) => p?.site)?.site || sitePourProfId(profPlanningId)
+  );
   const profsTriesPrenomNom = [...profs].sort((a, b) => {
     const prenomCmp = String(a?.prenom || '').localeCompare(String(b?.prenom || ''), 'fr', { sensitivity: 'base' });
     if (prenomCmp !== 0) return prenomCmp;
@@ -3026,9 +3082,10 @@ export default function EmploiDuTemps() {
   };
 
   /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
-  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '' }) => {
+  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', site = '' }) => {
     const ROW_H = 52;
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
+    const { poolHoraires, pauses } = getHoraireForLieu(site);
     const fetchCellData = (cr, jour, periode) => {
       if (!cr) return { text: '' };
       if (getCellData) return getCellData(cr, jour, periode) || { text: '' };
@@ -3065,12 +3122,11 @@ export default function EmploiDuTemps() {
           return `<td style="background:${bg};color:${fg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 4px;">${content}</td>`;
         }).join('');
         rows.push(
-          `<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(crBase.heure_debut)}–${escapeHtml(crBase.heure_fin)}</td>${cellules}</tr>`
+          `<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(libelleHoraireCreneau(crBase, poolHoraires))}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
-          const pause = pausesParPeriode[periode] || { debut: '', fin: '' };
           rows.push(
-            `<tr><td class="pause-banner" style="white-space:nowrap;">${escapeHtml(pause.debut)}–${escapeHtml(pause.fin)}</td><td colspan="5" class="pause-banner">PAUSE</td></tr>`
+            `<tr><td class="pause-banner" style="white-space:nowrap;">${escapeHtml(libellePausePeriode(periode, pauses))}</td><td colspan="5" class="pause-banner">PAUSE</td></tr>`
           );
         }
       });
@@ -3103,7 +3159,7 @@ export default function EmploiDuTemps() {
 
   const buildPlanningTableHtml = (args) => buildPlanningSemainePrintHtml(args);
 
-  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', creneauxAvecSoutien = null, labelsSoutien = null }) => {
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', creneauxAvecSoutien = null, labelsSoutien = null, site = '' }) => {
     const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
     const soutienSet = creneauxAvecSoutien instanceof Set
       ? creneauxAvecSoutien
@@ -3113,6 +3169,7 @@ export default function EmploiDuTemps() {
       creneauxListe,
       showPauseRows: true,
       titreBanniere,
+      site,
       getCellData: (cr) => {
         const aCours = horairesSet.has(`${cr.jour}|${cr.periode}`);
         if (!aCours) return { text: '', bg: '#f8fafc' };
@@ -3140,9 +3197,11 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null }) => {
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '' }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const ROW_H = 52;
+    const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
+    const { poolHoraires } = getHoraireForLieu(siteResolu);
     const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
     const parts = [];
     JOURS.forEach(jour => {
@@ -3192,7 +3251,7 @@ export default function EmploiDuTemps() {
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 4px;">${content}</td>`;
           }).join('');
-          rows.push(`<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(cr.heure_debut)}–${escapeHtml(cr.heure_fin)}</td>${cells}</tr>`);
+          rows.push(`<tr><td style="background:#f8fafc;font-weight:700;font-size:8pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${cells}</tr>`);
         });
       });
       const colgroup = `<colgroup><col style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>${(profs || []).map(() => '<col/>').join('')}</colgroup>`;
@@ -3215,7 +3274,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '' }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3225,6 +3284,8 @@ export default function EmploiDuTemps() {
     const listeAff = Array.isArray(affectations) ? affectations : [];
     const listeDispos = Array.isArray(dispos) ? dispos : [];
     const listeTit = Array.isArray(titulaires) ? titulaires : [];
+    const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
+    const { poolHoraires } = getHoraireForLieu(siteResolu);
     const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
     const classesParProf = {};
     listeTit.forEach((t) => {
@@ -3347,7 +3408,7 @@ export default function EmploiDuTemps() {
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;">${content}</td>`;
           });
           rows.push(
-            `<tr><td style="background:#f8fafc;font-weight:700;font-size:6.5pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;">${escapeHtml(cr.heure_debut)}–${escapeHtml(cr.heure_fin)}</td>${withSpacers(cells)}</tr>`
+            `<tr><td style="background:#f8fafc;font-weight:700;font-size:6.5pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
           );
         });
       });
@@ -3405,6 +3466,7 @@ export default function EmploiDuTemps() {
         titulaires: data.titulaires || [],
         poolId: planningPoolId,
         afficherNomsBranches: afficherNomsBranchesGeneral,
+        site: pool?.site || '',
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
       const siteComplet = (
@@ -3522,18 +3584,19 @@ export default function EmploiDuTemps() {
           const affsNormales = affs.filter((a) => String(a.type_special || '').toLowerCase() !== 'soutien');
           const labelsSoutien = labelsSoutienDepuisAffectations(affs);
           const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
-          const table = buildPlanningClassesPrintTableHtml({
-            creneauxListe: data?.creneaux || [],
-            affectationsListe: affsNormales,
-            horairesListe: data?.horaires || [],
-            titreBanniere: titre || 'Classe',
-            creneauxAvecSoutien: new Set(labelsSoutien.keys()),
-            labelsSoutien,
-          });
-          const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
           const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
           const poolsClasse = poolsParClasse.get(classeId) || [];
           poolsClasse.forEach((pool) => {
+            const table = buildPlanningClassesPrintTableHtml({
+              creneauxListe: data?.creneaux || [],
+              affectationsListe: affsNormales,
+              horairesListe: data?.horaires || [],
+              titreBanniere: titre || 'Classe',
+              creneauxAvecSoutien: new Set(labelsSoutien.keys()),
+              labelsSoutien,
+              site: pool.site || '',
+            });
+            const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
@@ -3559,33 +3622,34 @@ export default function EmploiDuTemps() {
           const profId = String(data?.prof?.id || profsExport[idx]?.id || '');
           if (!poolsParProf.has(profId)) return;
           const nom = `${data?.prof?.prenom || profsExport[idx]?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || profsExport[idx]?.nom || '')}`.trim() || `Prof_${idx + 1}`;
-          const table = buildPlanningTableHtml({
-            creneauxListe: data?.creneaux || [],
-            titreBanniere: nom,
-            showPauseRows: true,
-            getCellData: (cr) => {
-              const aff = (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id));
-              if (estAffectationSpecialSansClasse(aff)) {
-                return { text: getLibelleTypeSpecial(aff.type_special), bg: '#000000', color: '#ffffff' };
-              }
-              if (hasBrancheAffectee(aff) || aff?.classe_nom) {
-                const bg = aff.matiere_id
-                  ? getCouleurBranche(aff.matiere_id)
-                  : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-                return {
-                  text: texteCellulePlanningProf(aff),
-                  bg,
-                  color: getCouleurTexteSurFond(bg),
-                };
-              }
-              const vide = styleCelluleDispoVide((data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id)));
-              return { text: vide.text, bg: vide.bg, color: vide.color };
-            },
-          });
-          const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
           const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
           const poolsProf = poolsParProf.get(profId) || [];
           poolsProf.forEach((pool) => {
+            const table = buildPlanningTableHtml({
+              creneauxListe: data?.creneaux || [],
+              titreBanniere: nom,
+              showPauseRows: true,
+              site: pool.site || '',
+              getCellData: (cr) => {
+                const aff = (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id));
+                if (estAffectationSpecialSansClasse(aff)) {
+                  return { text: getLibelleTypeSpecial(aff.type_special), bg: '#000000', color: '#ffffff' };
+                }
+                if (hasBrancheAffectee(aff) || aff?.classe_nom) {
+                  const bg = aff.matiere_id
+                    ? getCouleurBranche(aff.matiere_id)
+                    : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
+                  return {
+                    text: texteCellulePlanningProf(aff),
+                    bg,
+                    color: getCouleurTexteSurFond(bg),
+                  };
+                }
+                const vide = styleCelluleDispoVide((data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id)));
+                return { text: vide.text, bg: vide.bg, color: vide.color };
+              },
+            });
+            const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
@@ -3621,6 +3685,7 @@ export default function EmploiDuTemps() {
             creneauxListe: creneaux || [],
             titreBanniere: `${lieu} — ${salle}`,
             showPauseRows: true,
+            site: lieu,
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find((c) =>
                 c.jour === cr.jour
@@ -3757,6 +3822,7 @@ export default function EmploiDuTemps() {
             affectations: data.affectations || [],
             dispos: data.dispos || [],
             poolId,
+            site: pool.site || '',
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
@@ -3771,6 +3837,7 @@ export default function EmploiDuTemps() {
             titulaires: data.titulaires || [],
             poolId,
             afficherNomsBranches: afficherNomsBranchesGeneral,
+            site: pool.site || '',
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-général.pdf`,
@@ -3825,6 +3892,7 @@ export default function EmploiDuTemps() {
             affectations: merged.affectations || [],
             dispos: merged.dispos || [],
             poolIds,
+            site: poolsGroupe[0]?.site || '',
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
@@ -3839,6 +3907,7 @@ export default function EmploiDuTemps() {
             titulaires: merged.titulaires || [],
             poolIds,
             afficherNomsBranches: afficherNomsBranchesGeneral,
+            site: poolsGroupe[0]?.site || '',
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-général.pdf`,
@@ -3939,6 +4008,7 @@ export default function EmploiDuTemps() {
           titreBanniere: nomClasse || 'Classe',
           creneauxAvecSoutien: creneauxAvecSoutienClasse,
           labelsSoutien: labelsSoutienClasse,
+          site: sitePourPoolId(classePlanningPoolId) || sitePourClasseId(classePlanningId),
         });
         const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
         return ouvrirPdfDepuisHtml(
@@ -3955,6 +4025,7 @@ export default function EmploiDuTemps() {
           creneauxListe: planningProf.creneaux || [],
           showPauseRows: true,
           titreBanniere: nomProf || 'Professeur',
+          site: (planningProf?.pools || []).find((p) => p?.site)?.site || sitePourProfId(profPlanningId),
           getCellData: (cr) => {
             const aff = (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
             if (estAffectationSpecialSansClasse(aff)) {
@@ -3993,6 +4064,7 @@ export default function EmploiDuTemps() {
           creneauxListe: creneaux || [],
           showPauseRows: true,
           titreBanniere: salleSelectionnee,
+          site: sallesLieuTravailId,
           getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
@@ -4063,6 +4135,7 @@ export default function EmploiDuTemps() {
               : 'Classe',
             creneauxAvecSoutien: new Set(labelsSoutien.keys()),
             labelsSoutien,
+            site: sitePourClasseId(data?.classe?.id),
           });
           return `<div class="section">${table}</div>`;
         });
@@ -4084,6 +4157,7 @@ export default function EmploiDuTemps() {
             creneauxListe: data?.creneaux || [],
             titreBanniere: nom || 'Professeur',
             showPauseRows: true,
+            site: sitePourProfId(data?.prof?.id),
             getCellData: (cr) => {
               const aff = (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
               if (estAffectationSpecialSansClasse(aff)) {
@@ -4124,6 +4198,7 @@ export default function EmploiDuTemps() {
             creneauxListe: creneaux || [],
             titreBanniere: `Salle ${salle}`,
             showPauseRows: true,
+            site: sallesLieuTravailId,
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
                 c.jour === cr.jour &&
@@ -5571,7 +5646,7 @@ export default function EmploiDuTemps() {
                             return (
                             <tr key={cr.id} style={styles.tr}>
                               <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                P{per==='Matin' ? idx+1 : idx+5} — {cr.heure_debut}–{cr.heure_fin}
+                                P{per==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(cr, horairesPoolAff.poolHoraires)}
                               </td>
                               {profsPool.map(prof => {
                                 const aff = affectationsDraft.find(a => a.prof_id==prof.id && a.creneau_id==cr.id);
@@ -5913,7 +5988,7 @@ export default function EmploiDuTemps() {
                                 ...crsBase.map((crBase, idx) => (
                                   <tr key={crBase.id} style={styles.tr}>
                                     <td style={{...styles.td,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap',width:LARGEUR_COLONNE_CRENEAU,minWidth:LARGEUR_COLONNE_CRENEAU,maxWidth:LARGEUR_COLONNE_CRENEAU}}>
-                                      P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                                      P{periode==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(crBase, horairesLieuSalles.poolHoraires)}
                                     </td>
                                     {JOURS.map(jour => {
                                       const classesCellule = getClassesAffectablesSalleCellule(jour, periode, crBase.ordre);
@@ -6167,7 +6242,7 @@ export default function EmploiDuTemps() {
                             ...crsBase.map((crBase,idx) => (
                               <tr key={`${periode}-${crBase.ordre || idx}`} style={styles.tr}>
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,background:'#f8f9fa',fontWeight:600,fontSize:12,whiteSpace:'nowrap'}}>
-                                  P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                                  P{periode==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(crBase, horairesPoolClasse.poolHoraires)}
                                 </td>
                                 {JOURS.map(jour => {
                                   const cr = allCrs.find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
@@ -6279,7 +6354,7 @@ export default function EmploiDuTemps() {
                                   </td>
                                 )}
                                 <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
-                                  P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                                  P{periode==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(crBase, horairesLieuSalles.poolHoraires)}
                                 </td>
                                 {JOURS.map(jour => {
                                   const classeAffectee = getClasseAffecteeSalleCellule(jour, periode, crBase.ordre);
@@ -6297,7 +6372,7 @@ export default function EmploiDuTemps() {
                               ...(idx === 1 ? [(
                                 <tr key={`planning-only-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
                                   <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
-                                    {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                                    {libellePausePeriode(periode, horairesLieuSalles.pauses)}
                                   </td>
                                   <td colSpan={5} style={{...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>PAUSE</td>
                                 </tr>
@@ -6363,7 +6438,7 @@ export default function EmploiDuTemps() {
                             </td>
                           )}
                           <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
-                            P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                            P{periode==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(crBase, horairesPlanningProf.poolHoraires)}
                           </td>
                           {JOURS.map(jour => {
                             const cr = (planningProf.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
@@ -6402,7 +6477,7 @@ export default function EmploiDuTemps() {
                         ...(idx === 1 ? [(
                           <tr key={`prof-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
                             <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
-                              {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                              {libellePausePeriode(periode, horairesPlanningProf.pauses)}
                             </td>
                             <td colSpan={5} style={{...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>PAUSE</td>
                           </tr>
@@ -6477,7 +6552,7 @@ export default function EmploiDuTemps() {
                               </td>
                             )}
                             <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
-                              P{periode==='Matin' ? idx+1 : idx+5} — {crBase.heure_debut}–{crBase.heure_fin}
+                              P{periode==='Matin' ? idx+1 : idx+5} — {libelleHoraireCreneau(crBase, horairesPoolClasse.poolHoraires)}
                             </td>
                             {JOURS.map(jour => {
                               const cr = (planningClasse.creneaux||[]).find(c=>c.jour===jour&&c.periode===periode&&c.ordre===crBase.ordre);
@@ -6510,7 +6585,7 @@ export default function EmploiDuTemps() {
                           ...(idx === 1 ? [(
                             <tr key={`classe-pause-${periode}`} style={{height:HAUTEUR_LIGNE_PAUSE_UI}}>
                               <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI,whiteSpace:'nowrap'}}>
-                                {pausesParPeriode[periode].debut}–{pausesParPeriode[periode].fin}
+                                {libellePausePeriode(periode, horairesPoolClasse.pauses)}
                               </td>
                               <td colSpan={5} style={{...styles.td,...STYLE_TD_PAUSE_UI,height:HAUTEUR_LIGNE_PAUSE_UI}}>
                                 PAUSE
@@ -6643,7 +6718,7 @@ export default function EmploiDuTemps() {
                           ...crsPer.map(cr => (
                             <tr key={cr.id} style={{...styles.tr, height:HAUTEUR_LIGNE_COURS_UI}}>
                               <td style={{...styles.td,...STYLE_COLONNE_CRENEAU,...STYLE_TD_HORAIRE_UI,height:HAUTEUR_LIGNE_COURS_UI}}>
-                                {cr.heure_debut}–{cr.heure_fin}
+                                {libelleHoraireCreneau(cr, horairesPoolGeneral.poolHoraires)}
                               </td>
                               {genProfs.map(p => {
                                 const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
