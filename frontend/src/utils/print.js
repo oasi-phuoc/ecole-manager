@@ -16,12 +16,12 @@ export function getForcedPrintCss(pageSize = 'A4 portrait', margin = '10mm') {
     @media print {
       html, body {
         width: 100%;
-        height: auto;
-        min-height: 0;
+        height: 100%;
+        min-height: 100%;
         overflow: visible !important;
         background: white !important;
       }
-      body:not(:has(.section)):not(:has(.section-a3)) {
+      body {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -29,8 +29,15 @@ export function getForcedPrintCss(pageSize = 'A4 portrait', margin = '10mm') {
       }
       .section, .section-a3 {
         width: 100%;
-        display: block !important;
-        min-height: 0;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: calc(100vh - 4mm);
+      }
+      .section table, .section-a3 table {
+        margin-left: auto !important;
+        margin-right: auto !important;
       }
       .no-print {
         display: none !important;

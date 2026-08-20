@@ -3024,15 +3024,22 @@ export default function EmploiDuTemps() {
             }
             html, body {
               width: 100%;
-              height: auto;
-              min-height: 0;
+              height: 100%;
+              min-height: 100%;
             }
-            /* Sans .section : centrer le contenu sur la page (ex. général par jours) */
-            body:not(:has(.section)):not(:has(.section-a3)) {
+            body {
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
+            }
+            .section, .section-a3 {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: calc(100vh - 4mm);
+              page-break-inside: avoid;
             }
           }
           h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; width: 100%; }
@@ -3042,13 +3049,10 @@ export default function EmploiDuTemps() {
             text-align: center;
             width: 100%;
             box-sizing: border-box;
-          }
-          @media print {
-            .section, .section-a3 {
-              display: block;
-              min-height: 0;
-              page-break-inside: avoid;
-            }
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; }
           th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '5px 4px'}; font-size: ${a3Semaine ? '7pt' : '9pt'}; text-align: center; vertical-align: middle; word-break: break-word; overflow-wrap: anywhere; }
@@ -3068,7 +3072,7 @@ export default function EmploiDuTemps() {
           ${compactClasses ? `
           h1 { margin-bottom: 14px; font-size: 24px; }
           h2 { margin: 10px 0 6px; font-size: 13px; }
-          table { margin: 4px 0 10px; }
+          table { margin: 4px auto 10px; }
           th, td { padding: 3px; font-size: 8pt; line-height: 1.15; }
           ` : ''}
         </style>
@@ -3140,7 +3144,7 @@ export default function EmploiDuTemps() {
       : '';
 
     return `
-      <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:16px;">
+      <table style="border-collapse:collapse;width:auto;max-width:100%;table-layout:fixed;margin:0 auto 16px;">
         <colgroup>
           <col class="creneau-col" />
           ${JOURS.map(() => '<col class="day-col" />').join('')}
@@ -3257,7 +3261,7 @@ export default function EmploiDuTemps() {
       const colgroup = `<colgroup><col style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>${(profs || []).map(() => '<col/>').join('')}</colgroup>`;
       parts.push(`
         <div class="section">
-          <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0 auto 20px;">
+          <table style="border-collapse:collapse;width:auto;max-width:100%;table-layout:fixed;margin:0 auto 20px;">
             ${colgroup}
             <tbody>
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;">

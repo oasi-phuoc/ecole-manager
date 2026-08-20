@@ -78,6 +78,48 @@ export function parsePageMarginsMm(options = {}) {
   return { top: fallback, right: fallback, bottom: fallback, left: fallback };
 }
 
+/** Recadre le canvas sur le contenu non blanc pour centrer le tableau sur la page. */
+function cropCanvasToContent(canvas, padding = 8) {
+  try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return canvas;
+    const { width, height } = canvas;
+    if (!width || !height) return canvas;
+    const { data } = ctx.getImageData(0, 0, width, height);
+    const bg = 248;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (y * width + x) * 4;
+        if (data[i + 3] < 12) continue;
+        if (data[i] >= bg && data[i + 1] >= bg && data[i + 2] >= bg) continue;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0 || maxY < 0) return canvas;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(width - 1, maxX + padding);
+    maxY = Math.min(height - 1, maxY + padding);
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    if (w >= width - 2 && h >= height - 2) return canvas;
+    const out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    out.getContext('2d').drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+    return out;
+  } catch {
+    return canvas;
+  }
+}
+
 /**
  * Convertit un document HTML d'impression en Blob PDF.
  * Une page PDF par élément `.section` / `.section-a3` (sinon le body entier).
@@ -124,8 +166,9 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         backgroundColor: '#ffffff',
         windowWidth: Math.max(el.scrollWidth, 1200),
       });
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      const ratio = canvas.height / Math.max(1, canvas.width);
+      const cropped = cropCanvasToContent(canvas);
+      const imgData = cropped.toDataURL('image/jpeg', 0.9);
+      const ratio = cropped.height / Math.max(1, cropped.width);
       let drawW = usableW;
       let drawH = drawW * ratio;
       if (drawH > usableH) {
