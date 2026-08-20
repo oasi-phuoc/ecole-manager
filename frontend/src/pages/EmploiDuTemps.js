@@ -5513,10 +5513,11 @@ export default function EmploiDuTemps() {
                 </div>
               </div>
               <div style={{overflowX:'auto'}}>
-              <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140,border:'none',boxShadow:'none'}}>
+              <table style={{...styles.tbl,tableLayout:'fixed',minWidth:200+profsPool.length*140+36,border:'none',boxShadow:'none'}}>
                 <colgroup>
                   <col style={{width: LARGEUR_COLONNE_CRENEAU}} />
                   {profsPool.map(p => <col key={`col-main-${p.id}`} />)}
+                  <col className="no-print-aff-ok" style={{width:36, minWidth:36, maxWidth:36}} />
                 </colgroup>
                 <thead>
                   <tr style={styles.theadRow}>
@@ -5535,6 +5536,18 @@ export default function EmploiDuTemps() {
                         </th>
                       );
                     })}
+                    <th
+                      className="no-print-aff-ok"
+                      style={{
+                        ...styles.th,
+                        width:36,
+                        minWidth:36,
+                        maxWidth:36,
+                        padding:0,
+                        border:'none',
+                        background:'transparent',
+                      }}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -5609,6 +5622,21 @@ export default function EmploiDuTemps() {
                           </td>
                         );
                       })}
+                      <td
+                        className="no-print-aff-ok"
+                        style={{
+                          ...styles.td,
+                          width:36,
+                          minWidth:36,
+                          maxWidth:36,
+                          padding:0,
+                          border:'none',
+                          background:'transparent',
+                          verticalAlign:'middle',
+                          textAlign:'center',
+                        }}
+                        aria-hidden="true"
+                      />
                     </tr>
                   ))}
                 </tbody>
