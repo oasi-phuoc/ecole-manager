@@ -1,13 +1,9 @@
+import { estMatiereSoutien } from './branchesSpecialites';
+
 /** Décompte Préférences : soutien donné (FR/MA du cours jumelé) et SOUTIEN REÇU. */
 
-const estMatiereSoutien = (m) => {
-  const nom = String(m?.nom || '').trim().toLowerCase();
-  const courte = String(m?.designation_courte || '').trim().toLowerCase();
-  return nom === 'soutien' || courte === 'soutien';
-};
-
 const estBrancheFrancais = (m) => {
-  if (m == null || m === '') return false;
+  if (m == null || m === '' || estMatiereSoutien(m)) return false;
   if (typeof m === 'string') {
     const s = m.trim().toLowerCase();
     if (['fr', 'fra'].includes(s)) return true;
@@ -20,7 +16,7 @@ const estBrancheFrancais = (m) => {
 };
 
 const estBrancheMath = (m) => {
-  if (m == null || m === '') return false;
+  if (m == null || m === '' || estMatiereSoutien(m)) return false;
   if (typeof m === 'string') {
     const s = m.trim().toLowerCase();
     if (['ma', 'mat', 'math'].includes(s)) return true;

@@ -48,6 +48,26 @@ describe('compterPreferencesSoutienParProf', () => {
     expect(totaux[String(VAN)]).toMatchObject({ frS: 6, maS: 0, recu: 2 });
   });
 
+  it('n’assimile pas Français soutien / Math soutien à des branches FR/MA à affecter', () => {
+    const matieres = new Map([
+      ['10', { id: 10, nom: 'Français', designation_courte: 'FR' }],
+      ['11', { id: 11, nom: 'Français soutien', designation_courte: 'FRS' }],
+      ['20', { id: 20, nom: 'Mathématiques', designation_courte: 'MA' }],
+      ['21', { id: 21, nom: 'Math soutien', designation_courte: 'MAS' }],
+    ]);
+    const affectations = [
+      slot(1, 1, 1, null, 11),
+      slot(1, 2, 1, null, 21),
+      slot(1, 3, 1, null, 10),
+    ];
+    const totaux = compterPreferencesSoutienParProf(affectations, matieres);
+    expect(totaux['1']?.parCode?.FRS).toBeUndefined();
+    expect(totaux['1']?.parCode?.MAS).toBeUndefined();
+    expect(totaux['1']?.parCode?.FR).toBe(1);
+    expect(totaux['1']?.frS).toBe(0);
+    expect(totaux['1']?.maS).toBe(0);
+  });
+
   it('utilise soutien_matiere_nom si le cours jumelé n’a pas encore de matiere_id dans la liste', () => {
     const affectations = [
       {

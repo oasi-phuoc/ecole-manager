@@ -13,11 +13,23 @@ export const normaliserBranchesSpecialites = (valeur) => {
   return Array.from(new Set(nettoye.split(',').map((v) => String(v).trim()).filter(Boolean)));
 };
 
+/** Branche de soutien (Soutien, Français soutien, Math soutien, …) : pas une branche à affecter. */
+export const estMatiereSoutien = (branche) => {
+  if (branche == null || branche === '') return false;
+  if (typeof branche === 'string') {
+    const s = branche.trim().toLowerCase();
+    return s === 'soutien' || s.includes('soutien');
+  }
+  const nom = String(branche?.nom || branche?.label || '').trim().toLowerCase();
+  const courte = String(branche?.designation_courte || branche?.code || '').trim().toLowerCase();
+  return nom === 'soutien' || courte === 'soutien' || nom.includes('soutien') || courte.includes('soutien');
+};
+
 /** Exclut Soutien (et AI) des spécialités proposées. */
 export const estBrancheExclueSpecialite = (branche) => {
   const code = String(branche?.designation_courte || branche?.code || '').trim().toUpperCase();
   const nom = String(branche?.nom || '').trim().toLowerCase();
-  if (code === 'SOUTIEN' || nom === 'soutien' || nom.includes('soutien')) return true;
+  if (estMatiereSoutien(branche)) return true;
   if (code === 'AI') return true;
   if (nom.includes('accompagnement individuelle')) return true;
   return false;

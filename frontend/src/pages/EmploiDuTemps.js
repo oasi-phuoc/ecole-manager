@@ -14,6 +14,7 @@ import {
   listerGroupesColonneOrdonnes,
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
+  estMatiereSoutien,
 } from '../utils/branchesSpecialites';
 import { compterPreferencesSoutienParProf } from '../utils/comptesSoutienPreferences';
 import {
@@ -1154,13 +1155,8 @@ export default function EmploiDuTemps() {
     if (niveauClassePlanning) return nivM === niveauClassePlanning;
     return niveauxPoolPlanning.length > 0 && niveauxPoolPlanning.includes(nivM);
   });
-  /** Branche « Soutien » : gérée via type_special, pas via le suivi des branches à placer. */
-  const estMatiereSoutien = (m) => {
-    const nom = String(m?.nom || '').trim().toLowerCase();
-    const courte = String(m?.designation_courte || '').trim().toLowerCase();
-    return nom === 'soutien' || courte === 'soutien';
-  };
   const estBrancheFrancais = (m) => {
+    if (estMatiereSoutien(m)) return false;
     if (typeof m === 'string') {
       const s = m.trim().toLowerCase();
       if (['fr', 'fra'].includes(s)) return true;
@@ -1172,6 +1168,7 @@ export default function EmploiDuTemps() {
     return /fran[cç]ais/.test(`${nom} ${courte}`);
   };
   const estBrancheMath = (m) => {
+    if (estMatiereSoutien(m)) return false;
     if (typeof m === 'string') {
       const s = m.trim().toLowerCase();
       if (['ma', 'mat', 'math'].includes(s)) return true;
@@ -1182,6 +1179,7 @@ export default function EmploiDuTemps() {
     if (['ma', 'mat', 'math'].includes(courte)) return true;
     return /math/.test(`${nom} ${courte}`);
   };
+  /** Hors Soutien / Français soutien / Math soutien : gérés via type_special, pas comme branches à placer. */
   const matieresPourSuiviBranches = matieresPourPlanningClasse.filter((m) => !estMatiereSoutien(m));
   const matieresParId = new Map(matieres.map(m => [String(m.id), m]));
   const planningClasseAffectations = (planningClasse?.affectations || []).map((a) => {
@@ -6585,7 +6583,7 @@ export default function EmploiDuTemps() {
                   <div style={{marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Couleurs</h3>
                     <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:8}}>
-                      {matieresPourPlanningClasse.map(m => {
+                      {matieresPourSuiviBranches.map(m => {
                         const selected = String(brancheCouleurEditionId) === String(m.id);
                         const bg = getCouleurBranche(m.id);
                         const fg = getCouleurTexteSurFond(bg);
@@ -6786,7 +6784,7 @@ export default function EmploiDuTemps() {
                                                 setPlanningClasse(prev => (prev ? { ...prev } : prev));
                                               }}>
                                               <option value="">— Branche —</option>
-                                              {matieresPourPlanningClasse.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+                                              {matieresPourSuiviBranches.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
                                             </select>
                                           ) : (
                                             aff.matiere_nom && <div style={{color:'#666',fontSize:11}}>{aff.matiere_nom}</div>
