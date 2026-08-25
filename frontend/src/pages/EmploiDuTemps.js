@@ -30,6 +30,22 @@ import {
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+const POLICE_PDF_GENERAL_MIN = 6;
+const POLICE_PDF_GENERAL_MAX = 16;
+const POLICE_PDF_GENERAL_DEFAUT = 10;
+const OPTIONS_PDF_A3 = { paysage: true, format: 'a3', orientation: 'landscape' };
+const clampPolicePdfGeneral = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return POLICE_PDF_GENERAL_DEFAUT;
+  return Math.min(POLICE_PDF_GENERAL_MAX, Math.max(POLICE_PDF_GENERAL_MIN, Math.round(n * 2) / 2));
+};
+const lirePolicePdfGeneral = () => {
+  try {
+    return clampPolicePdfGeneral(window.localStorage.getItem('oasis.policePdfGeneral'));
+  } catch {
+    return POLICE_PDF_GENERAL_DEFAUT;
+  }
+};
 const BASE_PERIODES_TAUX = 40;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
@@ -247,6 +263,7 @@ export default function EmploiDuTemps() {
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
+  const [policePdfGeneral, setPolicePdfGeneral] = useState(lirePolicePdfGeneral);
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
@@ -310,6 +327,12 @@ export default function EmploiDuTemps() {
   };
 
   useEffect(() => { chargerTout(); chargerDonnees(); }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('oasis.policePdfGeneral', String(policePdfGeneral));
+    } catch { /* ignore */ }
+  }, [policePdfGeneral]);
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
@@ -3125,6 +3148,11 @@ export default function EmploiDuTemps() {
         : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
     const compactClasses = !!options?.compactClasses;
     const a3Semaine = !!options?.a3Semaine;
+    const fontPtOpt = Number(options?.fontPt);
+    const fontPt = Number.isFinite(fontPtOpt) && fontPtOpt > 0
+      ? fontPtOpt
+      : (a3Semaine ? POLICE_PDF_GENERAL_DEFAUT : (format === 'A3' ? 11 : 8));
+    const fontCss = `${fontPt}pt`;
     const marginCss = options?.margin || (a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
     const titreDansBanniere = /class=["'][^"']*(?:section|section-a3)/.test(String(contenu || ''));
     return `
@@ -3180,7 +3208,7 @@ export default function EmploiDuTemps() {
             justify-content: ${a3Semaine ? 'flex-start' : 'center'};
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
-          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${a3Semaine ? '8pt' : '8pt'}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f8fafc; font-weight: 700; }
           col.creneau-col { width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; min-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; max-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; }
           col.day-col { width: calc((100% - ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px) / ${JOURS.length}); }
@@ -3194,9 +3222,9 @@ export default function EmploiDuTemps() {
           .a3-titulariat table { width:100% !important; margin:0 !important; }
           .a3-main { width:auto; }
           .a3-main table { width:100% !important; margin:0 !important; }
-          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? '8pt' : '11pt'};padding:${a3Semaine ? '3px 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
-          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${a3Semaine ? '8pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
-          .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${a3Semaine ? '8pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
+          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '3px 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
+          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
+          .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
           .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine ? '8px' : '14px'}; padding: 0 !important; }
           .spacer-cell { border: none !important; background: transparent !important; padding: 0 !important; width: 10px; }
           .titulaire-label { display:block; margin-top:2px; font-size:6.5pt; font-weight:600; color:#64748b; line-height:1.15; overflow:hidden; }
@@ -3218,9 +3246,9 @@ export default function EmploiDuTemps() {
 
   /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
   const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', titreBanniereGauche = '', site = '' }) => {
-    const ROW_H = 54;
+    const ROW_H = 68;
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
-    const FONT = '8pt';
+    const FONT = '11pt';
     const { poolHoraires, pauses } = getHoraireForLieu(site);
     const fetchCellData = (cr, jour, periode) => {
       if (!cr) return { text: '' };
@@ -3279,7 +3307,7 @@ export default function EmploiDuTemps() {
     const banniere = titreBanniere
       ? `<tr><td colspan="6" style="padding:0;border:none;background:transparent;">
           <div class="day-banner" style="position:relative;">
-            ${titreBanniereGauche ? `<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:600;text-transform:none;letter-spacing:0;font-size:9pt;white-space:nowrap;">${escapeHtml(titreBanniereGauche)}</span>` : ''}
+            ${titreBanniereGauche ? `<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:600;text-transform:none;letter-spacing:0;font-size:${FONT};white-space:nowrap;">${escapeHtml(titreBanniereGauche)}</span>` : ''}
             <span>${escapeHtml(titreBanniere)}</span>
           </div>
         </td></tr>`
@@ -3346,10 +3374,11 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '' }) => {
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
-    const ROW_H = 52;
-    const FONT = '9.5pt';
+    const fontPt = clampPolicePdfGeneral(taillePolice);
+    const FONT = `${fontPt}pt`;
+    const ROW_H = Math.max(40, Math.round(52 * (fontPt / 9.5)));
     const nProfs = Math.max(1, (profs || []).length);
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
@@ -3424,7 +3453,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '' }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3464,7 +3493,9 @@ export default function EmploiDuTemps() {
     const nProfs = listeProfs.length; // toujours A3_NB_COLONNES_PROF
     const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
     const CRENEAU_W = 72;
-    const ROW_H = 30;
+    const fontPt = clampPolicePdfGeneral(taillePolice);
+    const FONT = `${fontPt}pt`;
+    const ROW_H = Math.max(24, Math.round(30 * (fontPt / 8)));
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
@@ -3477,7 +3508,6 @@ export default function EmploiDuTemps() {
       return out.join('');
     };
 
-    const FONT = '8pt';
     const profHeaders = withSpacers(listeProfs.map((p) => {
       if (p._fake) {
         return `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};overflow:hidden;">&nbsp;</th>`;
@@ -3503,18 +3533,18 @@ export default function EmploiDuTemps() {
               <th colspan="2" style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#6366f1;color:#fff;font-weight:800;">Titulariat</th>
             </tr>
             <tr>
-              <th style="text-align:center;font-size:7pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Professeur</th>
-              <th style="text-align:center;font-size:7pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;width:72px;">Classe</th>
+              <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Professeur</th>
+              <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;width:72px;">Classe</th>
             </tr>
           </thead>
           <tbody>
             ${lignesTitulariat.length
               ? lignesTitulariat.map((row) => `
                 <tr>
-                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-size:${FONT};height:30px;">${htmlPrenomNomDeuxLignes(row.prenom, row.nom, FONT)}</td>
+                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;">${htmlPrenomNomDeuxLignes(row.prenom, row.nom, FONT)}</td>
                   <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-weight:700;font-size:${FONT};">${escapeHtml(row.classe)}</td>
                 </tr>`).join('')
-              : `<tr><td colspan="2" style="padding:6px 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:7pt;">Aucun titulaire</td></tr>`}
+              : `<tr><td colspan="2" style="padding:6px 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:${FONT};">Aucun titulaire</td></tr>`}
           </tbody>
         </table>
     `;
@@ -3629,9 +3659,7 @@ export default function EmploiDuTemps() {
   };
   const ouvrirPdfDepuisHtml = async (html, pdfOptions = {}, fileName = 'planning.pdf') => {
     const blob = await htmlDocumentToPdfBlob(html, {
-      paysage: true,
-      format: 'a4',
-      orientation: 'landscape',
+      ...OPTIONS_PDF_A3,
       ...pdfOptions,
     });
     const pdfUrl = URL.createObjectURL(blob);
@@ -3662,6 +3690,7 @@ export default function EmploiDuTemps() {
         titulaires: data.titulaires || [],
         poolId: planningPoolId,
         afficherNomsBranches: afficherNomsBranchesGeneral,
+        taillePolice: policePdfGeneral,
         site: pool?.site || '',
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
@@ -3677,10 +3706,11 @@ export default function EmploiDuTemps() {
         format: 'A3',
         a3Semaine: true,
         margin: '6mm 8mm',
+        fontPt: policePdfGeneral,
       });
       await ouvrirPdfDepuisHtml(
         html,
-        { paysage: true, format: 'a3', orientation: 'landscape' },
+        { ...OPTIONS_PDF_A3 },
         `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`
       );
     } catch (err) {
@@ -3780,7 +3810,7 @@ export default function EmploiDuTemps() {
           const affsNormales = affs.filter((a) => String(a.type_special || '').toLowerCase() !== 'soutien');
           const labelsSoutien = labelsSoutienDepuisAffectations(affs);
           const titre = nomClasse;
-          const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
+          const pdfOptions = { ...OPTIONS_PDF_A3 };
           const poolsClasse = poolsParClasse.get(classeId) || [];
           poolsClasse.forEach((pool) => {
             const table = buildPlanningClassesPrintTableHtml({
@@ -3793,7 +3823,7 @@ export default function EmploiDuTemps() {
               labelsSoutien,
               site: pool.site || '',
             });
-            const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+            const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3', compactClasses: true });
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
@@ -3819,7 +3849,7 @@ export default function EmploiDuTemps() {
           const profId = String(data?.prof?.id || profsExport[idx]?.id || '');
           if (!poolsParProf.has(profId)) return;
           const nom = `${data?.prof?.prenom || profsExport[idx]?.prenom || ''} ${nomSansSuffixe(data?.prof?.nom || profsExport[idx]?.nom || '')}`.trim() || `Prof_${idx + 1}`;
-          const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
+          const pdfOptions = { ...OPTIONS_PDF_A3 };
           const poolsProf = poolsParProf.get(profId) || [];
           poolsProf.forEach((pool) => {
             const table = buildPlanningTableHtml({
@@ -3833,7 +3863,7 @@ export default function EmploiDuTemps() {
                 (data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id))
               ),
             });
-            const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
+            const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
@@ -3906,8 +3936,8 @@ export default function EmploiDuTemps() {
           });
           documents.push({
             relativePath: `Salles/${sanitizeFilename(lieu)}/${pdfNomAvecSite(nomSiteSafe(lieu), salle)}`,
-            html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, { paysage: true }),
-            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+            html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' }),
+            pdfOptions: { ...OPTIONS_PDF_A3 },
           });
         });
       }
@@ -4007,11 +4037,12 @@ export default function EmploiDuTemps() {
             dispos: data.dispos || [],
             poolId,
             site: pool.site || '',
+            taillePolice: policePdfGeneral,
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreGeneral, contenuJours, { paysage: true }),
-            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+            html: buildHtmlPrintDoc(titreGeneral, contenuJours, { paysage: true, format: 'A3', fontPt: policePdfGeneral }),
+            pdfOptions: { ...OPTIONS_PDF_A3 },
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: data.creneaux || [],
@@ -4021,6 +4052,7 @@ export default function EmploiDuTemps() {
             titulaires: data.titulaires || [],
             poolId,
             afficherNomsBranches: afficherNomsBranchesGeneral,
+            taillePolice: policePdfGeneral,
             site: pool.site || '',
           });
           documents.push({
@@ -4030,9 +4062,9 @@ export default function EmploiDuTemps() {
                 ? `Planning général — semaine — ${siteComplet} — ${poolNom}`
                 : `Planning général — semaine — ${siteComplet}`,
               contenuA3,
-              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
+              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm', fontPt: policePdfGeneral }
             ),
-            pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
+            pdfOptions: { ...OPTIONS_PDF_A3 },
           });
         } catch (errPool) {
           console.error('Export général pool', poolId, errPool);
@@ -4077,11 +4109,12 @@ export default function EmploiDuTemps() {
             dispos: merged.dispos || [],
             poolIds,
             site: poolsGroupe[0]?.site || '',
+            taillePolice: policePdfGeneral,
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreSuper, contenuJours, { paysage: true }),
-            pdfOptions: { paysage: true, format: 'a4', orientation: 'landscape' },
+            html: buildHtmlPrintDoc(titreSuper, contenuJours, { paysage: true, format: 'A3', fontPt: policePdfGeneral }),
+            pdfOptions: { ...OPTIONS_PDF_A3 },
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: merged.creneaux || [],
@@ -4091,6 +4124,7 @@ export default function EmploiDuTemps() {
             titulaires: merged.titulaires || [],
             poolIds,
             afficherNomsBranches: afficherNomsBranchesGeneral,
+            taillePolice: policePdfGeneral,
             site: poolsGroupe[0]?.site || '',
           });
           documents.push({
@@ -4098,9 +4132,9 @@ export default function EmploiDuTemps() {
             html: buildHtmlPrintDoc(
               `${titreSuper} — semaine`,
               contenuA3,
-              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm' }
+              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm', fontPt: policePdfGeneral }
             ),
-            pdfOptions: { paysage: true, format: 'a3', orientation: 'landscape' },
+            pdfOptions: { ...OPTIONS_PDF_A3 },
           });
         } catch (errSuper) {
           console.error('Export super-général', label, errSuper);
@@ -4194,10 +4228,10 @@ export default function EmploiDuTemps() {
           labelsSoutien: labelsSoutienClasse,
           site: sitePourPoolId(classePlanningPoolId) || sitePourClasseId(classePlanningId),
         });
-        const html = buildHtmlPrintDoc(nomClasse || 'Classe', `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+        const html = buildHtmlPrintDoc(nomClasse || 'Classe', `<div class="section">${table}</div>`, { paysage: true, format: 'A3', compactClasses: true });
         return ouvrirPdfDepuisHtml(
           html,
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          { ...OPTIONS_PDF_A3 },
           `${sanitizeFilename(nomClasse || 'Classe')}.pdf`
         );
       }
@@ -4216,10 +4250,10 @@ export default function EmploiDuTemps() {
             (planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id))
           ),
         });
-        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
         return ouvrirPdfDepuisHtml(
           html,
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          { ...OPTIONS_PDF_A3 },
           `${sanitizeFilename(nomProf || 'Professeur')}.pdf`
         );
       }
@@ -4267,10 +4301,10 @@ export default function EmploiDuTemps() {
             };
           }
         });
-        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
         return ouvrirPdfDepuisHtml(
           html,
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          { ...OPTIONS_PDF_A3 },
           `${sanitizeFilename(salleSelectionnee || 'Salle')}.pdf`
         );
       }
@@ -4306,8 +4340,8 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc('Plannings classes — toutes les classes', sections.join(''), { paysage: true, compactClasses: true }),
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          buildHtmlPrintDoc('Plannings classes — toutes les classes', sections.join(''), { paysage: true, format: 'A3', compactClasses: true }),
+          { ...OPTIONS_PDF_A3 },
           'Plannings-classes.pdf'
         );
       }
@@ -4333,8 +4367,8 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true }),
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          buildHtmlPrintDoc('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true, format: 'A3' }),
+          { ...OPTIONS_PDF_A3 },
           'Plannings-professeurs.pdf'
         );
       }
@@ -4386,8 +4420,8 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true }),
-          { paysage: true, format: 'a4', orientation: 'landscape' },
+          buildHtmlPrintDoc(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true, format: 'A3' }),
+          { ...OPTIONS_PDF_A3 },
           `${sanitizeFilename(sallesLieuTravailId || 'Salles')}_Plannings-salles.pdf`
         );
       }
@@ -4761,6 +4795,38 @@ export default function EmploiDuTemps() {
                   />
                 </span>
               </button>
+              <label
+                title="Taille de police des PDF général (Imprimer A3 et Exporter tous les PDF)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  height: 36,
+                  padding: '0 12px',
+                  borderRadius: 8,
+                  border: '1px solid #c7d2fe',
+                  background: '#ffffff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#334155',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                Police PDF
+                <input
+                  type="range"
+                  min={POLICE_PDF_GENERAL_MIN}
+                  max={POLICE_PDF_GENERAL_MAX}
+                  step={0.5}
+                  value={policePdfGeneral}
+                  onChange={(e) => setPolicePdfGeneral(clampPolicePdfGeneral(e.target.value))}
+                  aria-label="Taille de police des PDF général"
+                  style={{ width: 110, accentColor: '#6366f1', cursor: 'pointer' }}
+                />
+                <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{policePdfGeneral} pt</span>
+              </label>
             </>
           )}
           {sousOngletPlanning === 'salle' && (
