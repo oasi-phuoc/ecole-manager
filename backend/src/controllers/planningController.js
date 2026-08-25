@@ -632,7 +632,27 @@ const getPlanningProf = async (req, res) => {
           AND a2.prof_id IS DISTINCT FROM a.prof_id
         ORDER BY a2.id
         LIMIT 1
-      ) ELSE NULL END AS soutien_matiere_nom
+      ) ELSE NULL END AS soutien_matiere_nom,
+      CASE WHEN a.type_special IS NULL OR a.type_special = '' THEN (
+        SELECT u3.prenom
+        FROM affectations a3
+        JOIN utilisateurs u3 ON u3.id = a3.prof_id
+        WHERE a3.classe_id = a.classe_id
+          AND a3.creneau_id = a.creneau_id
+          AND a3.type_special = 'soutien'
+        ORDER BY a3.id
+        LIMIT 1
+      ) ELSE NULL END AS recu_soutien_prenom,
+      CASE WHEN a.type_special IS NULL OR a.type_special = '' THEN (
+        SELECT u3.nom
+        FROM affectations a3
+        JOIN utilisateurs u3 ON u3.id = a3.prof_id
+        WHERE a3.classe_id = a.classe_id
+          AND a3.creneau_id = a.creneau_id
+          AND a3.type_special = 'soutien'
+        ORDER BY a3.id
+        LIMIT 1
+      ) ELSE NULL END AS recu_soutien_nom
     FROM affectations a
     LEFT JOIN classes c ON c.id=a.classe_id
     LEFT JOIN matieres m ON m.id=a.matiere_id

@@ -36,11 +36,29 @@ const base32Decode = (input) => {
   return Buffer.from(out);
 };
 
-const generateSecret = (bytes = 20) => base32Encode(crypto.randomBytes(bytes));
+/** Secret TOTP 20 octets, Base32 sans padding (Google / Microsoft Authenticator). */
+const generateSecret = (bytes = 20) => base32Encode(crypto.randomBytes(bytes)).replace(/=+$/g, '');
 
+/** Encode un fragment de label otpauth (RFC 3986) sans toucher au « : » séparateur ni à « @ ». */
+const encodeOtpLabelPart = (s) => encodeURIComponent(String(s || '')).replace(/%40/g, '@');
+
+/**
+ * URI otpauth Key URI (Google / Microsoft Authenticator).
+ * Le « : » du label issuer:compte n’est JAMAIS encodé (%3A cassait le scan).
+ */
 const generateOtpAuthUrl = ({ secret, accountName, issuer }) => {
-  const label = `${issuer}:${accountName}`;
-  return `otpauth://totp/${encodeURIComponent(label)}?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+  const iss = String(issuer || 'Oasis').trim() || 'Oasis';
+  const acc = String(accountName || 'user').trim() || 'user';
+  const sec = String(secret || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  const label = `${encodeOtpLabelPart(iss)}:${encodeOtpLabelPart(acc)}`;
+  const q = [
+    `secret=${sec}`,
+    `issuer=${encodeURIComponent(iss)}`,
+    'algorithm=SHA1',
+    'digits=6',
+    'period=30',
+  ].join('&');
+  return `otpauth://totp/${label}?${q}`;
 };
 
 const hotp = (secretBase32, counter) => {
@@ -64,15 +82,15 @@ const totp = (secretBase32, timestampMs = Date.now(), stepSec = 30) => {
   return hotp(secretBase32, counter);
 };
 
-const verifyTotp = (secretBase32, code, window = 1) => {
+const verifyTotp = (secretBase32, code, window = 2) => {
   const normalized = String(code || '').replace(/\s+/g, '');
   if (!/^\d{6}$/.test(normalized)) return false;
   const now = Date.now();
-  for (let w = -window; w <= window; w++) {
+  for (let w = -window; w <= window; w += 1) {
     const c = totp(secretBase32, now + w * 30000);
     if (c === normalized) return true;
   }
   return false;
 };
 
-module.exports = { generateSecret, generateOtpAuthUrl, verifyTotp };
+module.exports = { generateSecret, generateOtpAuthUrl, verifyTotp, totp, base32Encode, base32Decode };

@@ -1,23 +1,28 @@
-import { formaterNomPrint, libelleCourtPrint } from './nomsPrint';
+import { formaterNomComplet, lignesNomDepuisComplet, lignesPrenomPuisNom, libelleCourtPrint } from './nomsPrint';
 
-describe('formaterNomPrint', () => {
-  it('garde un nom court intact', () => {
-    expect(formaterNomPrint('Van Phuoc')).toBe('Van Phuoc');
+describe('lignesNomDepuisComplet', () => {
+  it('garde un nom court sur une ligne', () => {
+    expect(lignesNomDepuisComplet('Van Phuoc')).toEqual(['Van Phuoc']);
   });
 
-  it('abrège le nom de famille si trop long', () => {
-    expect(formaterNomPrint('Emilie Hishier')).toBe('Emilie H.');
+  it('passe sur deux lignes sans tronquer', () => {
+    expect(lignesNomDepuisComplet('Emilie Hishier', 12)).toEqual(['Emilie', 'Hishier']);
   });
 
-  it('retire un suffixe avant d’abréger', () => {
-    expect(formaterNomPrint('Emilie Hishier-prof')).toBe('Emilie H.');
+  it('retire un suffixe', () => {
+    expect(formaterNomComplet('Emilie Hishier-prof')).toBe('Emilie Hishier');
+  });
+});
+
+describe('lignesPrenomPuisNom', () => {
+  it('met le prénom puis le nom sur deux lignes', () => {
+    expect(lignesPrenomPuisNom('Emilie', 'Hishier')).toEqual(['Emilie', 'Hishier']);
   });
 });
 
 describe('libelleCourtPrint', () => {
-  it('abrège les libellés trop longs', () => {
-    expect(libelleCourtPrint('Aucun professeur affecté')).toBe('Aucun prof');
-    expect(libelleCourtPrint('Indisponible')).toBe('Indisp.');
-    expect(libelleCourtPrint('Indispo')).toBe('Indisp.');
+  it('retire le texte d’indisponibilité', () => {
+    expect(libelleCourtPrint('Indispo')).toBe('');
+    expect(libelleCourtPrint('Indisponible')).toBe('');
   });
 });

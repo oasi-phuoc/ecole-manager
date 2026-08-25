@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
-import { formaterNomPrint, libelleCourtPrint } from '../utils/nomsPrint';
+import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
@@ -145,7 +145,7 @@ const libelleBadgeSoutienAff = (affS) => {
 const labelsSoutienDepuisAffectations = (affs) => new Map(
   (affs || [])
     .filter((a) => String(a?.type_special || '').toLowerCase() === 'soutien')
-    .map((a) => [String(a.creneau_id), formaterNomPrint(a.prof_nom || '') || 'Sout.'])
+    .map((a) => [String(a.creneau_id), formaterNomComplet(a.prof_nom || '') || 'Soutien'])
 );
 const normaliserLieuTravail = (v) => String(v || '').trim().toLowerCase();
 const parseNiveaux = (valeur) => {
@@ -247,6 +247,8 @@ export default function EmploiDuTemps() {
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
+  const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
+  const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
   const [profPlanningId, setProfPlanningId] = useState('');
   const [planningClasse, setPlanningClasse] = useState(null);
@@ -790,22 +792,22 @@ export default function EmploiDuTemps() {
     if (aff.matiere_nom) return `${nomClasse}\n${aff.matiere_nom}`;
     return nomClasse;
   };
+  const nomPersonne = (prenom, nom) =>
+    [String(prenom || '').trim(), nomSansSuffixe(nom || '')].filter(Boolean).join(' ');
   const texteCellulePlanningProfPrint = (aff) => {
     if (!aff) return '';
-    const estSoutien = estAffectationSoutien(aff);
-    const nomClasse = estSoutien
-      ? `${aff.classe_nom || ''} - Sout.`
-      : (aff.classe_nom || '');
-    if (estSoutien) {
-      const personne = formaterNomPrint(
-        [String(aff.soutien_prof_prenom || '').trim(), nomSansSuffixe(aff.soutien_prof_nom || '')].filter(Boolean).join(' ')
-      );
-      const matiere = String(aff.soutien_matiere_nom || '').trim();
-      const ligne2 = [personne, matiere].filter(Boolean).join(' ');
-      if (ligne2) return `${nomClasse}\n${ligne2}`;
+    if (estAffectationSoutien(aff)) {
+      const principal = nomPersonne(aff.soutien_prof_prenom, aff.soutien_prof_nom);
+      const branche = String(aff.soutien_matiere_nom || aff.matiere_nom || '').trim();
+      return [aff.classe_nom || '', branche, principal ? `Je soutien ${principal}` : 'Je soutien']
+        .filter(Boolean)
+        .join('\n');
     }
-    if (aff.matiere_nom) return `${nomClasse}\n${aff.matiere_nom}`;
-    return nomClasse;
+    const lignes = [aff.classe_nom || ''];
+    if (aff.matiere_nom) lignes.push(aff.matiere_nom);
+    const recu = nomPersonne(aff.recu_soutien_prenom, aff.recu_soutien_nom);
+    if (recu) lignes.push(`${recu} est en soutien`);
+    return lignes.filter(Boolean).join('\n');
   };
   const estAffectationSpecialSansClasse = (aff) => {
     const t = String(aff?.type_special || '').toLowerCase();
@@ -1096,7 +1098,7 @@ export default function EmploiDuTemps() {
   const libelleBadgeSoutienCreneau = (creneauId) =>
     libelleBadgeSoutienAff(soutienParCreneauClasse.get(String(creneauId)));
   const labelsSoutienClasse = new Map(
-    [...soutienParCreneauClasse.entries()].map(([id, affS]) => [id, formaterNomPrint(affS.prof_nom || '') || 'Sout.'])
+    [...soutienParCreneauClasse.entries()].map(([id, affS]) => [id, formaterNomComplet(affS.prof_nom || '') || 'Soutien'])
   );
   const styleBadgeSoutien = {
     display: 'inline-block',
@@ -1761,6 +1763,100 @@ export default function EmploiDuTemps() {
     const nomOk = String(aff.matiere_nom || '').trim() !== '';
     return idOk || nomOk;
   };
+  const libelleBrancheComplet = (aff) => {
+    if (!aff) return '';
+    if (aff.matiere_id != null && aff.matiere_id !== '') {
+      const m = matieresParId.get(String(aff.matiere_id));
+      if (m) return String(m.nom || m.designation_courte || '').trim();
+    }
+    return String(aff.matiere_nom || '').trim();
+  };
+  const couleurCellulePlanningProf = (aff) => {
+    if (!aff) return '#e8f5e9';
+    if (afficherCouleursBranchesProf && aff.matiere_id) return getCouleurBranche(aff.matiere_id);
+    if (aff.classe_id) return getCouleurClasse(aff.classe_id);
+    if (aff.matiere_id) return getCouleurBranche(aff.matiere_id);
+    return '#e8f5e9';
+  };
+  const couleurCellulePlanningClasse = (aff) => {
+    if (!aff) return '#ffffff';
+    if (afficherCouleursBranchesClasse && aff.matiere_id) return getCouleurBranche(aff.matiere_id);
+    return getCouleurProf(aff.prof_id) || '#e8f5e9';
+  };
+  const titreGaucheTitulaireProf = (classesTitulaire) => {
+    const noms = (classesTitulaire || []).map((c) => String(c?.nom || '').trim()).filter(Boolean);
+    return noms.length ? `Titulaire : ${noms.join(', ')}` : '';
+  };
+  const titreGaucheTitulaireClasse = (titulaireNom) => {
+    const n = formaterNomComplet(titulaireNom || '').trim();
+    return n ? `Titulaire : ${n}` : '';
+  };
+  const texteNomProfCellule = (nomComplet) => {
+    const lignes = lignesNomDepuisComplet(nomComplet);
+    return lignes.length ? lignes.join('\n') : 'Aucun prof';
+  };
+  const htmlPrenomNomDeuxLignes = (prenom, nom, fontSize) => {
+    const lignes = lignesPrenomPuisNom(formaterPrenomEntete(prenom || ''), nomSansSuffixe(nom || ''));
+    if (!lignes.length) return '&nbsp;';
+    return lignes.map((l) =>
+      `<div style="font-weight:700;font-size:${fontSize};line-height:1.12;overflow:hidden;">${escapeHtml(l)}</div>`
+    ).join('');
+  };
+  const renderTogglePlanning = ({ checked, onToggle, label, title }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      title={title}
+      onClick={() => onToggle((v) => !v)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 36,
+        padding: '0 12px',
+        borderRadius: 8,
+        border: '1px solid #c7d2fe',
+        background: checked ? '#eef2ff' : '#ffffff',
+        cursor: 'pointer',
+        userSelect: 'none',
+        fontSize: 13,
+        fontWeight: 600,
+        color: '#334155',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      {label}
+      <span
+        style={{
+          width: 40,
+          height: 22,
+          borderRadius: 99,
+          background: checked ? '#6366f1' : '#cbd5e1',
+          position: 'relative',
+          flexShrink: 0,
+          display: 'inline-block',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: checked ? 20 : 2,
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            background: '#ffffff',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
+            transition: 'left 0.15s ease',
+          }}
+        />
+      </span>
+    </button>
+  );
   const sauverCouleurBranche = async (matiereId, couleur) => {
     if (!isAdmin()) return;
     try {
@@ -3006,6 +3102,17 @@ export default function EmploiDuTemps() {
     if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
     return '';
   };
+  const cellulePdfPlanningProf = (aff, dispo) => {
+    if (estAffectationSpecialSansClasse(aff)) {
+      return { text: getLibelleTypeSpecial(aff.type_special), bg: '#000000', color: '#ffffff' };
+    }
+    if (hasBrancheAffectee(aff) || aff?.classe_nom) {
+      const bg = toPrintColor(couleurCellulePlanningProf(aff)) || '#e8f5e9';
+      return { text: texteCellulePlanningProfPrint(aff), bg, color: getCouleurTexteSurFond(bg) };
+    }
+    const vide = styleCelluleDispoVide(dispo);
+    return { text: vide.text, bg: vide.bg, color: vide.color };
+  };
   const baseCreneauxPeriode = (liste, periode) =>
     (liste || [])
       .filter(c => c.jour === 'Lundi' && c.periode === periode)
@@ -3069,11 +3176,11 @@ export default function EmploiDuTemps() {
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            align-items: ${a3Semaine ? 'flex-start' : 'center'};
+            justify-content: ${a3Semaine ? 'flex-start' : 'center'};
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
-          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${a3Semaine ? '6.5pt' : '8pt'}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${a3Semaine ? '8pt' : '8pt'}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
           th { background: #f8fafc; font-weight: 700; }
           col.creneau-col { width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; min-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; max-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; }
           col.day-col { width: calc((100% - ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px) / ${JOURS.length}); }
@@ -3081,9 +3188,15 @@ export default function EmploiDuTemps() {
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
           .section:last-child { page-break-after: auto; break-after: auto; }
           .section-a3 { page-break-inside: avoid; page-break-after: auto; break-inside: avoid; margin: 0; }
+          .a3-wrap { width:100%; border-collapse:collapse; table-layout:fixed; margin:0; }
+          .a3-wrap > tbody > tr > td { border:none !important; background:transparent !important; padding:0 !important; vertical-align:top; }
+          .a3-titulariat { width:196px; }
+          .a3-titulariat table { width:100% !important; margin:0 !important; }
+          .a3-main { width:auto; }
+          .a3-main table { width:100% !important; margin:0 !important; }
           .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? '8pt' : '11pt'};padding:${a3Semaine ? '3px 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
-          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${a3Semaine ? '6.5pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
-          .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${a3Semaine ? '6.5pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
+          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${a3Semaine ? '8pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
+          .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${a3Semaine ? '8pt' : '8pt'};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
           .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine ? '8px' : '14px'}; padding: 0 !important; }
           .spacer-cell { border: none !important; background: transparent !important; padding: 0 !important; width: 10px; }
           .titulaire-label { display:block; margin-top:2px; font-size:6.5pt; font-weight:600; color:#64748b; line-height:1.15; overflow:hidden; }
@@ -3104,7 +3217,7 @@ export default function EmploiDuTemps() {
   };
 
   /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
-  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', site = '' }) => {
+  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', titreBanniereGauche = '', site = '' }) => {
     const ROW_H = 54;
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const FONT = '8pt';
@@ -3164,7 +3277,12 @@ export default function EmploiDuTemps() {
     });
 
     const banniere = titreBanniere
-      ? `<tr><td colspan="6" style="padding:0;border:none;background:transparent;"><div class="day-banner">${escapeHtml(titreBanniere)}</div></td></tr>`
+      ? `<tr><td colspan="6" style="padding:0;border:none;background:transparent;">
+          <div class="day-banner" style="position:relative;">
+            ${titreBanniereGauche ? `<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:600;text-transform:none;letter-spacing:0;font-size:9pt;white-space:nowrap;">${escapeHtml(titreBanniereGauche)}</span>` : ''}
+            <span>${escapeHtml(titreBanniere)}</span>
+          </div>
+        </td></tr>`
       : '';
 
     return `
@@ -3187,7 +3305,7 @@ export default function EmploiDuTemps() {
 
   const buildPlanningTableHtml = (args) => buildPlanningSemainePrintHtml(args);
 
-  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', creneauxAvecSoutien = null, labelsSoutien = null, site = '' }) => {
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', titreBanniereGauche = '', creneauxAvecSoutien = null, labelsSoutien = null, site = '' }) => {
     const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
     const soutienSet = creneauxAvecSoutien instanceof Set
       ? creneauxAvecSoutien
@@ -3197,6 +3315,7 @@ export default function EmploiDuTemps() {
       creneauxListe,
       showPauseRows: true,
       titreBanniere,
+      titreBanniereGauche,
       site,
       getCellData: (cr) => {
         const aCours = horairesSet.has(`${cr.jour}|${cr.periode}`);
@@ -3213,12 +3332,12 @@ export default function EmploiDuTemps() {
             color: '#ffffff',
           };
         }
-        const bg = toPrintColor(getCouleurProf(aff.prof_id)) || '#e8f5e9';
-        const lignes = [formaterNomPrint(aff.prof_nom || '')];
-        if (soutienSet.has(String(cr.id))) {
-          lignes.push(labels.get(String(cr.id)) || 'Sout.');
-        }
-        if (aff.matiere_nom) lignes.push(aff.matiere_nom);
+        const bg = toPrintColor(couleurCellulePlanningClasse(aff)) || '#e8f5e9';
+        const lignes = [
+          ...lignesNomDepuisComplet(aff.prof_nom || ''),
+          ...(soutienSet.has(String(cr.id)) ? lignesNomDepuisComplet(labels.get(String(cr.id)) || '') : []),
+          libelleBrancheComplet(aff),
+        ];
         return {
           text: lignes.filter(Boolean).join('\n'),
           bg,
@@ -3230,7 +3349,7 @@ export default function EmploiDuTemps() {
   const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '' }) => {
     const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
     const ROW_H = 52;
-    const FONT = '8pt';
+    const FONT = '9.5pt';
     const nProfs = Math.max(1, (profs || []).length);
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
@@ -3242,11 +3361,7 @@ export default function EmploiDuTemps() {
       if (!crs.length) return;
       const nCols = (profs || []).length + 1;
       const profHeaders = (profs || []).map(p => {
-        const nomAffiche = formaterNomPrint(
-          `${formaterPrenomEntete(p.prenom || '')} ${nomSansSuffixe(p.nom || '')}`.trim(),
-          14
-        );
-        return `<th style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;width:${PROF_COL_W};">${escapeHtml(nomAffiche)}</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;width:${PROF_COL_W};">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
       }).join('');
       const rows = [];
       ['Matin', 'Après-midi'].forEach(per => {
@@ -3274,9 +3389,10 @@ export default function EmploiDuTemps() {
               const nomClasse = escapeHtml(aff.classe_nom || '');
               const ligne1 = estSpecial
                 ? getLibelleTypeSpecial(aff.type_special)
-                : (estSoutien ? `${nomClasse} - Sout.` : nomClasse);
-              const branche = libelleBrancheAffectation(aff);
-              content = `${ligneHtml(ligne1, fg)}${estSpecial || !branche ? '' : ligneHtml(escapeHtml(branche), fg, false)}`;
+                : nomClasse;
+              const branche = libelleBrancheComplet(aff);
+              const ligneSoutien = estSoutien && !estSpecial ? 'Soutien' : '';
+              content = `${ligneHtml(ligne1, fg)}${ligneSoutien ? ligneHtml(escapeHtml(ligneSoutien), fg, false) : ''}${estSpecial || !branche ? '' : ligneHtml(escapeHtml(branche), fg, false)}`;
             } else {
               bg = videDispo.bg;
               content = videDispo.text
@@ -3361,22 +3477,47 @@ export default function EmploiDuTemps() {
       return out.join('');
     };
 
+    const FONT = '8pt';
     const profHeaders = withSpacers(listeProfs.map((p) => {
       if (p._fake) {
-        return `<th style="text-align:center;font-size:6.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;width:${PROF_COL_W};overflow:hidden;">&nbsp;</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};overflow:hidden;">&nbsp;</th>`;
       }
-      const nomAffiche = formaterNomPrint(
-        `${formaterPrenomEntete(p.prenom || '')} ${nomSansSuffixe(p.nom || '')}`.trim()
-          || nomSansSuffixe(p.nom || '')
-          || 'Professeur',
-        12
-      );
-      const classesTit = (classesParProf[String(p.id)] || []).join(', ');
-      const titulaireHtml = classesTit
-        ? `<span class="titulaire-label">Tit. ${escapeHtml(classesTit)}</span>`
-        : '';
-      return `<th style="text-align:center;font-size:6.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.2;width:${PROF_COL_W};overflow:hidden;">${escapeHtml(nomAffiche)}${titulaireHtml}</th>`;
+      return `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};overflow:hidden;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
     }));
+
+    const lignesTitulariat = [];
+    listeProfsReels.forEach((p) => {
+      (classesParProf[String(p.id)] || []).forEach((classeNom) => {
+        lignesTitulariat.push({
+          prenom: p.prenom,
+          nom: p.nom,
+          classe: classeNom,
+        });
+      });
+    });
+    lignesTitulariat.sort((a, b) => String(a.classe).localeCompare(String(b.classe), 'fr', { sensitivity: 'base' }));
+    const tableTitulariat = `
+        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
+          <thead>
+            <tr>
+              <th colspan="2" style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#6366f1;color:#fff;font-weight:800;">Titulariat</th>
+            </tr>
+            <tr>
+              <th style="text-align:center;font-size:7pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Professeur</th>
+              <th style="text-align:center;font-size:7pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;width:72px;">Classe</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lignesTitulariat.length
+              ? lignesTitulariat.map((row) => `
+                <tr>
+                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-size:${FONT};height:30px;">${htmlPrenomNomDeuxLignes(row.prenom, row.nom, FONT)}</td>
+                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-weight:700;font-size:${FONT};">${escapeHtml(row.classe)}</td>
+                </tr>`).join('')
+              : `<tr><td colspan="2" style="padding:6px 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:7pt;">Aucun titulaire</td></tr>`}
+          </tbody>
+        </table>
+    `;
 
     const colgroup = `<colgroup>
       <col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>
@@ -3421,7 +3562,7 @@ export default function EmploiDuTemps() {
               bg = '#e2e8f0';
               const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
               const periodeExt = escapeHtml(libellePeriodeAffectation(aff));
-              content = `<div style="font-weight:700;color:#475569;font-size:6.5pt;line-height:1.15;overflow:hidden;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:6.5pt;margin-top:1px;line-height:1.1;overflow:hidden;">${periodeExt}</div>` : ''}`;
+              content = `<div style="font-weight:700;color:#475569;font-size:${FONT};line-height:1.12;overflow:hidden;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:${FONT};margin-top:1px;line-height:1.1;overflow:hidden;">${periodeExt}</div>` : ''}`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
@@ -3430,22 +3571,25 @@ export default function EmploiDuTemps() {
               const nomClasse = escapeHtml(aff.classe_nom || '');
               const ligne1 = estSpecial
                 ? getLibelleTypeSpecial(aff.type_special)
-                : (estSoutien ? `${nomClasse} - Sout.` : nomClasse);
-              const branche = afficherNomsBranches ? libelleBrancheAffectation(aff) : '';
+                : nomClasse;
+              const branche = afficherNomsBranches ? libelleBrancheComplet(aff) : '';
+              const ligneSoutien = (!estSpecial && estSoutien)
+                ? `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;overflow:hidden;">Soutien</div>`
+                : '';
               const ligne2 = estSpecial || !branche
                 ? ''
-                : `<div style="font-size:6.5pt;font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;overflow:hidden;">${escapeHtml(branche)}</div>`;
-              content = `<div style="font-weight:700;color:${fg};font-size:6.5pt;line-height:1.15;overflow:hidden;">${ligne1}</div>${ligne2}`;
+                : `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;overflow:hidden;">${escapeHtml(branche)}</div>`;
+              content = `<div style="font-weight:700;color:${fg};font-size:${FONT};line-height:1.12;overflow:hidden;">${ligne1}</div>${ligneSoutien}${ligne2}`;
             } else {
               bg = videDispo.bg;
               content = videDispo.text
-                ? `<span style="color:${videDispo.color};font-size:6.5pt;">${escapeHtml(libelleCourtPrint(videDispo.text))}</span>`
+                ? `<span style="color:${videDispo.color};font-size:${FONT};">${escapeHtml(libelleCourtPrint(videDispo.text))}</span>`
                 : '';
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;">${content}</td>`;
           });
           rows.push(
-            `<tr><td style="background:#f8fafc;font-weight:700;font-size:6.5pt;text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
+            `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
           );
         });
       });
@@ -3453,16 +3597,31 @@ export default function EmploiDuTemps() {
 
     return `
       <div class="section-a3">
-        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0 auto;">
-          ${colgroup}
-          <thead>
-            <tr>
-              <th style="text-align:center;font-size:6.5pt;padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;">Horaire</th>
-              ${profHeaders}
-            </tr>
-          </thead>
+        <table class="a3-wrap">
+          <colgroup>
+            <col style="width:196px;" />
+            <col style="width:8px;" />
+            <col />
+          </colgroup>
           <tbody>
-            ${rows.join('')}
+            <tr>
+              <td class="a3-titulariat">${tableTitulariat}</td>
+              <td style="width:8px;border:none !important;background:transparent !important;padding:0 !important;"></td>
+              <td class="a3-main">
+                <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
+                  ${colgroup}
+                  <thead>
+                    <tr>
+                      <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;">Horaire</th>
+                      ${profHeaders}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows.join('')}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -3620,7 +3779,7 @@ export default function EmploiDuTemps() {
           const affs = data?.affectations || [];
           const affsNormales = affs.filter((a) => String(a.type_special || '').toLowerCase() !== 'soutien');
           const labelsSoutien = labelsSoutienDepuisAffectations(affs);
-          const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
+          const titre = nomClasse;
           const pdfOptions = { paysage: true, format: 'a4', orientation: 'landscape' };
           const poolsClasse = poolsParClasse.get(classeId) || [];
           poolsClasse.forEach((pool) => {
@@ -3629,6 +3788,7 @@ export default function EmploiDuTemps() {
               affectationsListe: affsNormales,
               horairesListe: data?.horaires || [],
               titreBanniere: titre || 'Classe',
+              titreBanniereGauche: titreGaucheTitulaireClasse(titulaireClasse),
               creneauxAvecSoutien: new Set(labelsSoutien.keys()),
               labelsSoutien,
               site: pool.site || '',
@@ -3665,26 +3825,13 @@ export default function EmploiDuTemps() {
             const table = buildPlanningTableHtml({
               creneauxListe: data?.creneaux || [],
               titreBanniere: nom,
+              titreBanniereGauche: titreGaucheTitulaireProf(data?.classesTitulaire),
               showPauseRows: true,
               site: pool.site || '',
-              getCellData: (cr) => {
-                const aff = (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id));
-                if (estAffectationSpecialSansClasse(aff)) {
-                  return { text: getLibelleTypeSpecial(aff.type_special), bg: '#000000', color: '#ffffff' };
-                }
-                if (hasBrancheAffectee(aff) || aff?.classe_nom) {
-                  const bg = aff.matiere_id
-                    ? getCouleurBranche(aff.matiere_id)
-                    : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-                  return {
-                    text: texteCellulePlanningProfPrint(aff),
-                    bg,
-                    color: getCouleurTexteSurFond(bg),
-                  };
-                }
-                const vide = styleCelluleDispoVide((data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id)));
-                return { text: vide.text, bg: vide.bg, color: vide.color };
-              },
+              getCellData: (cr) => cellulePdfPlanningProf(
+                (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id)),
+                (data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id))
+              ),
             });
             const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true });
             const site = nomSiteSafe(pool);
@@ -3751,7 +3898,7 @@ export default function EmploiDuTemps() {
               const bg = getCouleurClasse(cl.id);
               const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
               return {
-                text: `${nom}\n${aff?.prof_nom ? formaterNomPrint(aff.prof_nom) : 'Aucun prof'}`,
+                text: `${nom}\n${aff?.prof_nom ? texteNomProfCellule(aff.prof_nom) : 'Aucun prof'}`,
                 bg,
                 color: getCouleurTexteSurFond(bg),
               };
@@ -4037,17 +4184,17 @@ export default function EmploiDuTemps() {
         if (!classePlanningId || !planningClasse) return alert("Sélectionnez d'abord une classe.");
         const nomClasse = planningClasse?.classe?.nom || '';
         const titulaireClasse = planningClasse?.classe?.titulaire_nom || '';
-        const titre = `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`;
         const table = buildPlanningClassesPrintTableHtml({
           creneauxListe: planningClasse.creneaux || [],
           affectationsListe: planningClasseAffectationsNormales || [],
           horairesListe: planningClasse.horaires || [],
           titreBanniere: nomClasse || 'Classe',
+          titreBanniereGauche: titreGaucheTitulaireClasse(titulaireClasse),
           creneauxAvecSoutien: creneauxAvecSoutienClasse,
           labelsSoutien: labelsSoutienClasse,
           site: sitePourPoolId(classePlanningPoolId) || sitePourClasseId(classePlanningId),
         });
-        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
+        const html = buildHtmlPrintDoc(nomClasse || 'Classe', `<div class="section">${table}</div>`, { paysage: true, compactClasses: true });
         return ouvrirPdfDepuisHtml(
           html,
           { paysage: true, format: 'a4', orientation: 'landscape' },
@@ -4062,29 +4209,12 @@ export default function EmploiDuTemps() {
           creneauxListe: planningProf.creneaux || [],
           showPauseRows: true,
           titreBanniere: nomProf || 'Professeur',
+          titreBanniereGauche: titreGaucheTitulaireProf(planningProf.classesTitulaire),
           site: (planningProf?.pools || []).find((p) => p?.site)?.site || sitePourProfId(profPlanningId),
-          getCellData: (cr) => {
-            const aff = (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
-            if (estAffectationSpecialSansClasse(aff)) {
-              return {
-                text: getLibelleTypeSpecial(aff.type_special),
-                bg: '#000000',
-                color: '#ffffff',
-              };
-            }
-            if (hasBrancheAffectee(aff) || aff?.classe_nom) {
-              const bg = aff.matiere_id
-                ? getCouleurBranche(aff.matiere_id)
-                : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-              return {
-                text: texteCellulePlanningProfPrint(aff),
-                bg,
-                color: getCouleurTexteSurFond(bg),
-              };
-            }
-            const vide = styleCelluleDispoVide((planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id)));
-            return { text: vide.text, bg: vide.bg, color: vide.color };
-          }
+          getCellData: (cr) => cellulePdfPlanningProf(
+            (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id)),
+            (planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id))
+          ),
         });
         const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true });
         return ouvrirPdfDepuisHtml(
@@ -4131,7 +4261,7 @@ export default function EmploiDuTemps() {
             const bg = getCouleurClasse(cl.id);
             const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
             return {
-              text: `${nom}\n${aff?.prof_nom ? formaterNomPrint(aff.prof_nom) : 'Aucun prof'}`,
+              text: `${nom}\n${aff?.prof_nom ? texteNomProfCellule(aff.prof_nom) : 'Aucun prof'}`,
               bg,
               color: getCouleurTexteSurFond(bg)
             };
@@ -4167,9 +4297,8 @@ export default function EmploiDuTemps() {
             creneauxListe: data?.creneaux || [],
             affectationsListe: affsNormales,
             horairesListe: data?.horaires || [],
-            titreBanniere: nomClasse
-              ? `${nomClasse}${titulaireClasse ? ` — Titulaire : ${titulaireClasse}` : ''}`
-              : 'Classe',
+            titreBanniere: nomClasse || 'Classe',
+            titreBanniereGauche: titreGaucheTitulaireClasse(titulaireClasse),
             creneauxAvecSoutien: new Set(labelsSoutien.keys()),
             labelsSoutien,
             site: sitePourClasseId(data?.classe?.id),
@@ -4193,30 +4322,13 @@ export default function EmploiDuTemps() {
           const table = buildPlanningTableHtml({
             creneauxListe: data?.creneaux || [],
             titreBanniere: nom || 'Professeur',
+            titreBanniereGauche: titreGaucheTitulaireProf(data?.classesTitulaire),
             showPauseRows: true,
             site: sitePourProfId(data?.prof?.id),
-            getCellData: (cr) => {
-              const aff = (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id));
-              if (estAffectationSpecialSansClasse(aff)) {
-                return {
-                  text: getLibelleTypeSpecial(aff.type_special),
-                  bg: '#000000',
-                  color: '#ffffff'
-                };
-              }
-              if (hasBrancheAffectee(aff) || aff?.classe_nom) {
-                const bg = aff.matiere_id
-                  ? getCouleurBranche(aff.matiere_id)
-                  : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9');
-                return {
-                  text: texteCellulePlanningProfPrint(aff),
-                  bg,
-                  color: getCouleurTexteSurFond(bg)
-                };
-              }
-              const vide = styleCelluleDispoVide((data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id)));
-              return { text: vide.text, bg: vide.bg, color: vide.color };
-            }
+            getCellData: (cr) => cellulePdfPlanningProf(
+              (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id)),
+              (data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id))
+            ),
           });
           return `<div class="section">${table}</div>`;
         });
@@ -4265,7 +4377,7 @@ export default function EmploiDuTemps() {
               const bg = getCouleurClasse(cl.id);
               const nom = estAffectationSoutien(aff) ? `${cl.nom} - Soutien` : cl.nom;
               return {
-                text: `${nom}\n${aff?.prof_nom ? formaterNomPrint(aff.prof_nom) : 'Aucun prof'}`,
+                text: `${nom}\n${aff?.prof_nom ? texteNomProfCellule(aff.prof_nom) : 'Aucun prof'}`,
                 bg,
                 color: getCouleurTexteSurFond(bg)
               };
@@ -4543,6 +4655,7 @@ export default function EmploiDuTemps() {
             ))}
           </div>
           {sousOngletPlanning === 'classes' && (
+            <>
             <CustomSelect
               style={styles.selAff}
               value={classePlanningId || ''}
@@ -4558,8 +4671,16 @@ export default function EmploiDuTemps() {
                 } else { setClassePlanningPoolId(''); setPlanningClasse(null); }
               }}
             />
+            {renderTogglePlanning({
+              checked: afficherCouleursBranchesClasse,
+              onToggle: setAfficherCouleursBranchesClasse,
+              label: 'Couleurs des branches',
+              title: 'Désactivé : couleurs des professeurs. Activé : couleurs des branches (écran et PDF).',
+            })}
+            </>
           )}
           {sousOngletPlanning === 'professeurs' && (
+            <>
             <CustomSelect
               style={styles.selAff}
               value={profPlanningId || ''}
@@ -4570,6 +4691,13 @@ export default function EmploiDuTemps() {
                 if (id) chargerPlanningProf(id); else setPlanningProf(null);
               }}
             />
+            {renderTogglePlanning({
+              checked: afficherCouleursBranchesProf,
+              onToggle: setAfficherCouleursBranchesProf,
+              label: 'Couleurs des branches',
+              title: 'Désactivé : couleurs des classes. Activé : couleurs des branches (écran et PDF).',
+            })}
+            </>
           )}
           {sousOngletPlanning === 'general' && (
             <>
@@ -6465,14 +6593,13 @@ export default function EmploiDuTemps() {
           )}
           {planningProf && profPlanningId && (
             <div style={{overflowX:'auto'}}>
-              <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
+              <div style={{position:'relative',fontSize:18,marginBottom:12,color:'#0f172a',minHeight:28,textAlign:'center'}}>
+                {titreGaucheTitulaireProf(planningProf.classesTitulaire) ? (
+                  <span style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',fontWeight:600,fontSize:14,whiteSpace:'nowrap'}}>
+                    {titreGaucheTitulaireProf(planningProf.classesTitulaire)}
+                  </span>
+                ) : null}
                 <span style={{fontWeight:700}}>{planningProf.prof?.prenom} {nomSansSuffixe(planningProf.prof?.nom)}</span>
-                {planningProf.classesTitulaire?.length > 0 && (
-                  <>
-                    <span style={{fontWeight:700}}> - Titulaire :</span>
-                    <span style={{fontWeight:400}}> {planningProf.classesTitulaire.map(c=>c.nom).join(', ')}</span>
-                  </>
-                )}
                 {Array.isArray(planningProf.pools) && planningProf.pools.length > 1 && (
                   <div style={{fontSize:13,fontWeight:600,color:'#6366f1',marginTop:6}}>
                     Pools : {planningProf.pools.map((p) => p.nom).join(' · ')}
@@ -6513,26 +6640,29 @@ export default function EmploiDuTemps() {
                             const statutDispo = statutDepuisDispoRow(dispo);
                             const indispo = statutDispo === false;
                             const eviter = statutDispo === STATUT_DISPO_EVITER;
-                            const classeAffectee = !!(aff && String(aff.classe_nom || '').trim());
-                            const estSoutienAff = classeAffectee && estAffectationSoutien(aff);
-                            const couleurFondClasse = classeAffectee ? getCouleurClasse(aff.classe_id) : '#ffffff';
-                            const couleurTexteClasse = classeAffectee ? getCouleurTexteSurFond(couleurFondClasse) : '#111827';
-                            const ligneSoutienLie = estSoutienAff ? formatLigneSoutienLie(aff) : '';
+                            const specialSansClasse = estAffectationSpecialSansClasse(aff);
+                            const aCours = !!(aff && (hasBrancheAffectee(aff) || String(aff.classe_nom || '').trim() || specialSansClasse));
                             const fondVide = indispo ? '#eeeeee' : (eviter ? COULEUR_FOND_EVITER : '#eeeeee');
+                            const lignesCours = aCours && !specialSansClasse
+                              ? String(texteCellulePlanningProfPrint(aff) || '').split('\n').filter(Boolean)
+                              : [];
+                            const bgCours = specialSansClasse ? '#000000' : (aCours ? couleurCellulePlanningProf(aff) : fondVide);
+                            const fgCours = specialSansClasse ? '#ffffff' : (aCours ? getCouleurTexteSurFond(bgCours) : '#111827');
                             return (
                               <td key={jour} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
-                                background:(classeAffectee && !indispo)?'#fff':fondVide}}>
-                                {classeAffectee ? (
+                                background:aCours && !specialSansClasse ? '#fff' : fondVide}}>
+                                {specialSansClasse ? (
+                                  <div style={{fontWeight:700,color:'#ffffff',background:'#000000',borderRadius:6,padding:'3px 8px',textAlign:'center'}}>
+                                    {getLibelleTypeSpecial(aff.type_special)}
+                                  </div>
+                                ) : aCours ? (
                                   <>
-                                    <div style={{fontWeight:700,color:couleurTexteClasse,background:couleurFondClasse,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>
-                                      {estSoutienAff ? `${aff.classe_nom} - Soutien` : aff.classe_nom}
+                                    <div style={{fontWeight:700,color:fgCours,background:bgCours,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>
+                                      {lignesCours[0] || aff.classe_nom}
                                     </div>
-                                    {aff.pool_nom ? <div style={{color:'#6366f1',fontWeight:600,fontSize:10,marginTop:2,textAlign:'center'}}>{aff.pool_nom}</div> : null}
-                                    {ligneSoutienLie ? (
-                                      <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{ligneSoutienLie}</div>
-                                    ) : (
-                                      aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>
-                                    )}
+                                    {lignesCours.slice(1).map((l) => (
+                                      <div key={l} style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{l}</div>
+                                    ))}
                                   </>
                                 ) : ''}
                               </td>
@@ -6566,15 +6696,13 @@ export default function EmploiDuTemps() {
           )}
           {planningClasse && classePlanningId && (
             <div>
-              <div style={{fontSize:18,marginBottom:12,color:'#0f172a'}}>
-                <span style={{fontWeight:700}}>Classe :</span>
-                <span style={{fontWeight:400}}> {planningClasse.classe?.nom}</span>
-                {planningClasse.classe?.titulaire_nom && (
-                  <>
-                    <span style={{fontWeight:700}}> - Titulaire :</span>
-                    <span style={{fontWeight:400}}> {planningClasse.classe.titulaire_nom}</span>
-                  </>
-                )}
+              <div style={{position:'relative',fontSize:18,marginBottom:12,color:'#0f172a',minHeight:28,textAlign:'center'}}>
+                {titreGaucheTitulaireClasse(planningClasse.classe?.titulaire_nom) ? (
+                  <span style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',fontWeight:600,fontSize:14,whiteSpace:'nowrap'}}>
+                    {titreGaucheTitulaireClasse(planningClasse.classe?.titulaire_nom)}
+                  </span>
+                ) : null}
+                <span style={{fontWeight:700}}>{planningClasse.classe?.nom}</span>
               </div>
 
               <div style={{overflowX:'auto'}}>
@@ -6625,16 +6753,19 @@ export default function EmploiDuTemps() {
                               const aCours = classeAHorairePlanning(jour, periode);
                               const aff = aCours ? getAffectationNormaleCreneau(cr.id) : null;
                               const aSoutien = aCours && creneauxAvecSoutienClasse.has(String(cr.id));
-                              const couleurFondProf = aff ? getCouleurProf(aff.prof_id) : '#ffffff';
+                              const couleurFondProf = aff ? couleurCellulePlanningClasse(aff) : '#ffffff';
                               const couleurTexteProf = aff ? getCouleurTexteSurFond(couleurFondProf) : '#111827';
+                              const lignesNomProf = aff ? lignesNomDepuisComplet(aff.prof_nom || '') : [];
                               return (
                                 <td key={`classe-tab-${periode}-${jour}-${cr.id}`} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
                                   width:LARGEUR_COLONNE_JOUR,minWidth:LARGEUR_COLONNE_JOUR,maxWidth:LARGEUR_COLONNE_JOUR,
                                   background:aCours?'#fff':'#f5f5f5', position:'relative'}}>
                                   {aff ? (
                                     <>
-                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center'}}>{formaterNomComplet(aff.prof_nom)}</div>
-                                      {aff.matiere_nom && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{aff.matiere_nom}</div>}
+                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center',lineHeight:1.2}}>
+                                        {lignesNomProf.map((l) => <div key={l}>{l}</div>)}
+                                      </div>
+                                      {libelleBrancheComplet(aff) && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{libelleBrancheComplet(aff)}</div>}
                                       {aSoutien && renderBadgeSoutien(cr.id)}
                                     </>
                                   ) : aCours ? (
@@ -6821,7 +6952,7 @@ export default function EmploiDuTemps() {
                                   libelleAff = aff?.classe_nom || '';
                                 }
                                 const brancheAff = (afficherNomsBranchesGeneral && !horsPool && !estSpecial)
-                                  ? libelleBrancheAffectation(aff)
+                                  ? libelleBrancheComplet(aff)
                                   : '';
                                 return (
                                   <td key={p.id} style={{...styles.td,...STYLE_TD_COURS_UI,height:HAUTEUR_LIGNE_COURS_UI,
