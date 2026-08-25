@@ -78,6 +78,29 @@ export function parsePageMarginsMm(options = {}) {
   return { top: fallback, right: fallback, bottom: fallback, left: fallback };
 }
 
+const PX_PAR_MM = 96 / 25.4;
+
+/** Dimensions physiques d’une page PDF (mm). */
+export function pageDimensionsMm(format, orientation) {
+  const f = String(format || 'a4').toLowerCase();
+  const paysage = orientation !== 'portrait';
+  if (f === 'a3') return paysage ? { w: 420, h: 297 } : { w: 297, h: 420 };
+  return paysage ? { w: 297, h: 210 } : { w: 210, h: 297 };
+}
+
+/** Échelle html2canvas ≈ 300 dpi (A3 un peu plus haut pour rester lisible). */
+export function rasterScaleForFormat(format) {
+  return String(format || 'a4').toLowerCase() === 'a3' ? 3.2 : 2.8;
+}
+
+function canvasVersImage(canvas) {
+  try {
+    const png = canvas.toDataURL('image/png');
+    if (png && png.length > 64) return { data: png, format: 'PNG' };
+  } catch { /* canvas trop grand pour PNG */ }
+  return { data: canvas.toDataURL('image/jpeg', 0.95), format: 'JPEG' };
+}
+
 /** Recadre le canvas sur le contenu non blanc pour centrer le tableau sur la page. */
 function cropCanvasToContent(canvas, padding = 8) {
   try {
@@ -129,12 +152,15 @@ function cropCanvasToContent(canvas, padding = 8) {
 export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
   const orientation = options.orientation || (options.paysage === false ? 'portrait' : 'landscape');
   const format = String(options.format || 'a4').toLowerCase();
-  const scale = options.scale || 2.4;
+  const dim = pageDimensionsMm(format, orientation);
+  const cssW = Math.round(dim.w * PX_PAR_MM);
+  const cssH = Math.round(dim.h * PX_PAR_MM);
+  const scale = Number(options.scale) > 0 ? Number(options.scale) : rasterScaleForFormat(format);
   const margins = parsePageMarginsMm(options);
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText = 'position:fixed;left:-12000px;top:0;width:1600px;height:1200px;border:0;opacity:0;pointer-events:none;';
+  iframe.style.cssText = `position:fixed;left:-12000px;top:0;width:${cssW}px;height:${cssH}px;border:0;opacity:0;pointer-events:none;`;
   document.body.appendChild(iframe);
 
   try {
@@ -143,11 +169,20 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     idoc.write(htmlDocument);
     idoc.close();
     await new Promise((resolve) => {
-      const done = () => setTimeout(resolve, 120);
+      const done = () => setTimeout(resolve, 160);
       if (idoc.readyState === 'complete') done();
       else iframe.onload = done;
-      setTimeout(resolve, 800);
+      setTimeout(resolve, 900);
     });
+    if (idoc.documentElement) {
+      idoc.documentElement.style.width = `${cssW}px`;
+      idoc.documentElement.style.height = 'auto';
+    }
+    if (idoc.body) {
+      idoc.body.style.width = `${cssW}px`;
+      idoc.body.style.margin = '0';
+      idoc.body.style.maxWidth = `${cssW}px`;
+    }
 
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
@@ -166,10 +201,22 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: Math.max(el.scrollWidth, 1400),
+        letterRendering: true,
+        windowWidth: cssW,
+        windowHeight: Math.max(cssH, el.scrollHeight || cssH),
+        onclone: (clonedDoc) => {
+          const root = clonedDoc.documentElement;
+          const body = clonedDoc.body;
+          if (root) root.style.width = `${cssW}px`;
+          if (body) {
+            body.style.width = `${cssW}px`;
+            body.style.maxWidth = `${cssW}px`;
+            body.style.margin = '0';
+          }
+        },
       });
       const cropped = cropCanvasToContent(canvas);
-      const imgData = cropped.toDataURL('image/png');
+      const image = canvasVersImage(cropped);
       const ratio = cropped.height / Math.max(1, cropped.width);
       let drawW = usableW;
       let drawH = drawW * ratio;
@@ -181,7 +228,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       if (i > 0) pdf.addPage(format, orientation);
       const x = margins.left + (usableW - drawW) / 2;
       const y = margins.top + (usableH - drawH) / 2;
-      pdf.addImage(imgData, 'PNG', x, y, drawW, drawH, undefined, 'FAST');
+      pdf.addImage(image.data, image.format, x, y, drawW, drawH, undefined, 'NONE');
     }
 
     return pdf.output('blob');
