@@ -67,6 +67,53 @@ const lirePolicePdfGeneral = () => {
     return POLICE_PDF_GENERAL_DEFAUT;
   }
 };
+
+/** Valeurs actuelles des PDF (hauteur / largeur horaire) — conservées comme défauts. */
+const PDF_LAYOUT_DEFAUTS = {
+  general: { hauteurLigne: 38, largeurColonne: 72 },
+  profs: { hauteurLigne: 68, largeurColonne: 128 },
+  classes: { hauteurLigne: 68, largeurColonne: 128 },
+  salles: { hauteurLigne: 68, largeurColonne: 128 },
+};
+const PDF_LAYOUT_LIMITES = {
+  general: { hauteurLigne: { min: 20, max: 56 }, largeurColonne: { min: 48, max: 140 } },
+  profs: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
+  classes: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
+  salles: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
+};
+const PDF_LAYOUT_STORAGE = {
+  general: 'oasis.pdfLayout.general',
+  profs: 'oasis.pdfLayout.profs',
+  classes: 'oasis.pdfLayout.classes',
+  salles: 'oasis.pdfLayout.salles',
+};
+const clampPdfLayout = (onglet, raw) => {
+  const def = PDF_LAYOUT_DEFAUTS[onglet] || PDF_LAYOUT_DEFAUTS.general;
+  const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const h = Number(src.hauteurLigne);
+  const w = Number(src.largeurColonne);
+  return {
+    hauteurLigne: Number.isFinite(h)
+      ? Math.min(lim.hauteurLigne.max, Math.max(lim.hauteurLigne.min, Math.round(h)))
+      : def.hauteurLigne,
+    largeurColonne: Number.isFinite(w)
+      ? Math.min(lim.largeurColonne.max, Math.max(lim.largeurColonne.min, Math.round(w)))
+      : def.largeurColonne,
+  };
+};
+const lirePdfLayout = () => {
+  const out = {};
+  Object.keys(PDF_LAYOUT_DEFAUTS).forEach((onglet) => {
+    try {
+      const raw = window.localStorage.getItem(PDF_LAYOUT_STORAGE[onglet]);
+      out[onglet] = clampPdfLayout(onglet, raw ? JSON.parse(raw) : null);
+    } catch {
+      out[onglet] = { ...PDF_LAYOUT_DEFAUTS[onglet] };
+    }
+  });
+  return out;
+};
 const BASE_PERIODES_TAUX = 40;
 const SALLES_FIXES_PAR_LIEU = {
   creuset: ['Salle 1', 'Salle 2', 'Salle 3'],
@@ -286,6 +333,7 @@ export default function EmploiDuTemps() {
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
   const [policePdfGeneral, setPolicePdfGeneral] = useState(lirePolicePdfGeneral);
   const [orientationPdfGeneral, setOrientationPdfGeneral] = useState(lireOrientationPdfGeneral);
+  const [pdfLayout, setPdfLayout] = useState(lirePdfLayout);
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
@@ -361,6 +409,17 @@ export default function EmploiDuTemps() {
       window.localStorage.setItem('oasis.orientationPdfGeneral', orientationPdfGeneral);
     } catch { /* ignore */ }
   }, [orientationPdfGeneral]);
+
+  useEffect(() => {
+    Object.keys(PDF_LAYOUT_STORAGE).forEach((onglet) => {
+      try {
+        window.localStorage.setItem(
+          PDF_LAYOUT_STORAGE[onglet],
+          JSON.stringify(clampPdfLayout(onglet, pdfLayout[onglet]))
+        );
+      } catch { /* ignore */ }
+    });
+  }, [pdfLayout]);
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
@@ -1853,6 +1912,79 @@ export default function EmploiDuTemps() {
       `<div style="font-weight:700;font-size:${fontSize};line-height:1.12;overflow:hidden;">${escapeHtml(l)}</div>`
     ).join('');
   };
+  const htmlPrenomNomUneLigne = (prenom, nom) => {
+    const p = formaterPrenomEntete(prenom || '');
+    const n = nomSansSuffixe(nom || '');
+    const full = [p, n].filter(Boolean).join(' ').trim();
+    return full ? escapeHtml(full) : '&nbsp;';
+  };
+  const layoutPdfOnglet = (onglet) => clampPdfLayout(onglet, pdfLayout[onglet]);
+  const setLayoutPdfOnglet = (onglet, patch) => {
+    setPdfLayout((prev) => ({
+      ...prev,
+      [onglet]: clampPdfLayout(onglet, { ...(prev[onglet] || {}), ...patch }),
+    }));
+  };
+  const renderSliderPdf = ({ label, title, min, max, step = 1, value, onChange, suffix }) => (
+    <label
+      title={title}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 36,
+        padding: '0 12px',
+        borderRadius: 8,
+        border: '1px solid #c7d2fe',
+        background: '#ffffff',
+        fontSize: 13,
+        fontWeight: 600,
+        color: '#334155',
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      {label}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={title || label}
+        style={{ width: 110, accentColor: '#6366f1', cursor: 'pointer' }}
+      />
+      <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{value}{suffix}</span>
+    </label>
+  );
+  const renderSlidersLayoutPdf = (onglet) => {
+    const layout = layoutPdfOnglet(onglet);
+    const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
+    return (
+      <>
+        {renderSliderPdf({
+          label: 'Hauteur lignes',
+          title: 'Hauteur des lignes du PDF (impression et export tous les PDF)',
+          min: lim.hauteurLigne.min,
+          max: lim.hauteurLigne.max,
+          value: layout.hauteurLigne,
+          onChange: (v) => setLayoutPdfOnglet(onglet, { hauteurLigne: v }),
+          suffix: ' px',
+        })}
+        {renderSliderPdf({
+          label: 'Largeur colonnes',
+          title: 'Largeur de la colonne horaire du PDF (impression et export tous les PDF)',
+          min: lim.largeurColonne.min,
+          max: lim.largeurColonne.max,
+          value: layout.largeurColonne,
+          onChange: (v) => setLayoutPdfOnglet(onglet, { largeurColonne: v }),
+          suffix: ' px',
+        })}
+      </>
+    );
+  };
   const renderTogglePlanning = ({ checked, onToggle, label, title }) => (
     <button
       type="button"
@@ -3181,6 +3313,16 @@ export default function EmploiDuTemps() {
       ? fontPtOpt
       : (a3Semaine ? POLICE_PDF_GENERAL_DEFAUT : (format === 'A3' ? 11 : 8));
     const fontCss = `${fontPt}pt`;
+    const layoutOnglet = options?.layoutOnglet;
+    const layout = layoutOnglet ? layoutPdfOnglet(layoutOnglet) : null;
+    const largeurColonnePdf = Number(options?.largeurColonne);
+    const hauteurLignePdf = Number(options?.hauteurLigne);
+    const largeurColonne = Number.isFinite(largeurColonnePdf) && largeurColonnePdf > 0
+      ? Math.round(largeurColonnePdf)
+      : (layout?.largeurColonne || (a3Semaine ? PDF_LAYOUT_DEFAUTS.general.largeurColonne : LARGEUR_COLONNE_CRENEAU));
+    const hauteurLigne = Number.isFinite(hauteurLignePdf) && hauteurLignePdf > 0
+      ? Math.round(hauteurLignePdf)
+      : (layout?.hauteurLigne || (a3Semaine ? PDF_LAYOUT_DEFAUTS.general.hauteurLigne : 0));
     const marginCss = options?.margin || (a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
     const titreDansBanniere = /class=["'][^"']*(?:section|section-a3)/.test(String(contenu || ''));
     return `
@@ -3236,10 +3378,10 @@ export default function EmploiDuTemps() {
             justify-content: ${a3Semaine ? 'flex-start' : 'center'};
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
-          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; }
           th { background: #f8fafc; font-weight: 700; }
-          col.creneau-col { width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; min-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; max-width: ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px; }
-          col.day-col { width: calc((100% - ${a3Semaine ? 72 : LARGEUR_COLONNE_CRENEAU}px) / ${JOURS.length}); }
+          col.creneau-col { width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px; }
+          col.day-col { width: calc((100% - ${largeurColonne}px) / ${JOURS.length}); }
           col.spacer-col { width: 10px; min-width: 8px; max-width: 14px; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
           .section:last-child { page-break-after: auto; break-after: auto; }
@@ -3250,8 +3392,8 @@ export default function EmploiDuTemps() {
           .a3-titulariat table { width:100% !important; margin:0 !important; }
           .a3-main { width:auto; }
           .a3-main table { width:100% !important; margin:0 !important; }
-          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '3px 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0; }
-          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:left;border:none; }
+          .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '0 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;` : ''} }
+          .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '0 6px' : '4px 8px'};text-align:left;border:none;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;line-height:${hauteurLigne}px;overflow:hidden;` : ''} }
           .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
           .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine ? '8px' : '14px'}; padding: 0 !important; }
           .spacer-cell { border: none !important; background: transparent !important; padding: 0 !important; width: 10px; }
@@ -3273,9 +3415,10 @@ export default function EmploiDuTemps() {
   };
 
   /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
-  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', titreBanniereGauche = '', site = '' }) => {
-    const ROW_H = 68;
-    const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
+  const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', titreBanniereGauche = '', site = '', layoutOnglet = 'classes' }) => {
+    const layout = layoutPdfOnglet(layoutOnglet);
+    const ROW_H = layout.hauteurLigne;
+    const CRENEAU_W = layout.largeurColonne;
     const FONT = '11pt';
     const { poolHoraires, pauses } = getHoraireForLieu(site);
     const fetchCellData = (cr, jour, periode) => {
@@ -3304,7 +3447,7 @@ export default function EmploiDuTemps() {
         const cellules = JOURS.map((jour) => {
           const cr = (creneauxListe || []).find(c => c.jour === jour && c.periode === periode && c.ordre === crBase.ordre);
           if (!cr) {
-            return `<td style="background:#f8fafc;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;"></td>`;
+            return `<td style="background:#f8fafc;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;"></td>`;
           }
           const raw = fetchCellData(cr, jour, periode) || { text: '' };
           const lignesBrutes = String(raw.text || '').split('\n').map((l) => libelleCourtPrint(l)).filter(Boolean);
@@ -3317,10 +3460,10 @@ export default function EmploiDuTemps() {
             fg = '#9ca3af';
           }
           const content = htmlLignes(lignesBrutes, fg);
-          return `<td style="background:${bg};color:${fg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;">${content}</td>`;
+          return `<td style="background:${bg};color:${fg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;box-sizing:border-box;">${content}</td>`;
         }).join('');
         rows.push(
-          `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;overflow:hidden;">${escapeHtml(libelleHoraireCreneau(crBase, poolHoraires))}</td>${cellules}</tr>`
+          `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(crBase, poolHoraires))}</td>${cellules}</tr>`
         );
         if (showPauseRows && idx === 1) {
           rows.push(
@@ -3362,7 +3505,7 @@ export default function EmploiDuTemps() {
 
   const buildPlanningTableHtml = (args) => buildPlanningSemainePrintHtml(args);
 
-  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', titreBanniereGauche = '', creneauxAvecSoutien = null, labelsSoutien = null, site = '' }) => {
+  const buildPlanningClassesPrintTableHtml = ({ creneauxListe, affectationsListe, horairesListe, titreBanniere = '', titreBanniereGauche = '', creneauxAvecSoutien = null, labelsSoutien = null, site = '', layoutOnglet = 'classes' }) => {
     const horairesSet = new Set((horairesListe || []).map(h => `${h.jour}|${h.periode}`));
     const soutienSet = creneauxAvecSoutien instanceof Set
       ? creneauxAvecSoutien
@@ -3374,6 +3517,7 @@ export default function EmploiDuTemps() {
       titreBanniere,
       titreBanniereGauche,
       site,
+      layoutOnglet,
       getCellData: (cr) => {
         const aCours = horairesSet.has(`${cr.jour}|${cr.periode}`);
         if (!aCours) return { text: '', bg: '#f8fafc' };
@@ -3521,10 +3665,12 @@ export default function EmploiDuTemps() {
 
     const nProfs = listeProfs.length; // toujours A3_NB_COLONNES_PROF
     const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
-    const CRENEAU_W = 72;
+    const layout = layoutPdfOnglet('general');
+    const CRENEAU_W = layout.largeurColonne;
     const fontPt = clampPolicePdfGeneral(taillePolice);
     const FONT = `${fontPt}pt`;
-    const ROW_H = Math.max(24, Math.round(30 * (fontPt / 8)));
+    const ROW_H = layout.hauteurLigne;
+    const PROF_HEADER_H = Math.max(32, Math.round(fontPt * 2.6) + 12);
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
@@ -3538,10 +3684,11 @@ export default function EmploiDuTemps() {
     };
 
     const profHeaders = withSpacers(listeProfs.map((p) => {
+      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;`;
       if (p._fake) {
-        return `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};overflow:hidden;">&nbsp;</th>`;
+        return `<th style="${thBase}">&nbsp;</th>`;
       }
-      return `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};overflow:hidden;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+      return `<th style="${thBase}">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
     }));
 
     const lignesTitulariat = [];
@@ -3559,21 +3706,22 @@ export default function EmploiDuTemps() {
         <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
           <thead>
             <tr>
-              <th colspan="2" style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#6366f1;color:#fff;font-weight:800;">Titulariat</th>
+              <th colspan="2" style="height:${PROF_HEADER_H}px;border:none !important;background:transparent !important;padding:0 !important;font-size:0;line-height:0;box-sizing:border-box;">&nbsp;</th>
             </tr>
             <tr>
-              <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;">Professeur</th>
-              <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;width:72px;">Classe</th>
+              <th colspan="2" style="padding:0;border:none !important;background:transparent !important;height:${ROW_H}px;box-sizing:border-box;">
+                <div class="day-banner">Titulariat</div>
+              </th>
             </tr>
           </thead>
           <tbody>
             ${lignesTitulariat.length
               ? lignesTitulariat.map((row) => `
                 <tr>
-                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;">${htmlPrenomNomDeuxLignes(row.prenom, row.nom, FONT)}</td>
-                  <td style="text-align:center;vertical-align:middle;padding:3px 2px;border:1px solid #e2e8f0;font-weight:700;font-size:${FONT};">${escapeHtml(row.classe)}</td>
+                  <td style="text-align:center;vertical-align:middle;padding:0 3px;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</td>
+                  <td style="text-align:center;vertical-align:middle;padding:0 2px;border:1px solid #e2e8f0;font-weight:700;font-size:${FONT};height:${ROW_H}px;line-height:1.1;width:56px;white-space:nowrap;overflow:hidden;box-sizing:border-box;">${escapeHtml(row.classe)}</td>
                 </tr>`).join('')
-              : `<tr><td colspan="2" style="padding:6px 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:${FONT};">Aucun titulaire</td></tr>`}
+              : `<tr><td colspan="2" style="padding:0 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:${FONT};height:${ROW_H}px;line-height:${ROW_H}px;">Aucun titulaire</td></tr>`}
           </tbody>
         </table>
     `;
@@ -3593,7 +3741,7 @@ export default function EmploiDuTemps() {
         rows.push(`<tr class="day-gap"><td colspan="${nCols}"></td></tr>`);
       }
       rows.push(
-        `<tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;"><div class="day-banner">${escapeHtml(jour)}</div></td></tr>`
+        `<tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;"><div class="day-banner">${escapeHtml(jour)}</div></td></tr>`
       );
       ['Matin', 'Après-midi'].forEach((per) => {
         const crsPer = crs
@@ -3601,12 +3749,12 @@ export default function EmploiDuTemps() {
           .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
         if (!crsPer.length) return;
         rows.push(
-          `<tr><td colspan="${nCols}" class="periode-banner">${escapeHtml(per)}</td></tr>`
+          `<tr><td colspan="${nCols}" class="periode-banner" style="height:${ROW_H}px;">${escapeHtml(per)}</td></tr>`
         );
         crsPer.forEach((cr) => {
           const cells = listeProfs.map((p) => {
             if (p._fake) {
-              return `<td style="background:#fff;height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;"></td>`;
+              return `<td style="background:#fff;height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;"></td>`;
             }
             const aff = listeAff.find(
               (a) => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id)
@@ -3645,10 +3793,10 @@ export default function EmploiDuTemps() {
                 ? `<span style="color:${videDispo.color};font-size:${FONT};">${escapeHtml(libelleCourtPrint(videDispo.text))}</span>`
                 : '';
             }
-            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;">${content}</td>`;
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;">${content}</td>`;
           });
           rows.push(
-            `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
+            `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
           );
         });
       });
@@ -3671,7 +3819,7 @@ export default function EmploiDuTemps() {
                   ${colgroup}
                   <thead>
                     <tr>
-                      <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;">Horaire</th>
+                      <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;box-sizing:border-box;">Horaire</th>
                       ${profHeaders}
                     </tr>
                   </thead>
@@ -3706,12 +3854,30 @@ export default function EmploiDuTemps() {
   const pdfOptsGeneralA3 = () => optionsPdfA3General(orientationPdfGeneral);
   const htmlOptsGeneralA3 = (extra = {}) => {
     const paysage = orientationPdfGeneral !== 'portrait';
-    return {
+    const layout = layoutPdfOnglet('general');
+    const opts = {
       paysage,
       format: 'A3',
       fontPt: policePdfGeneral,
       margin: paysage ? '6mm 8mm' : '8mm 6mm',
       ...extra,
+    };
+    if (opts.a3Semaine) {
+      opts.layoutOnglet = 'general';
+      opts.hauteurLigne = layout.hauteurLigne;
+      opts.largeurColonne = layout.largeurColonne;
+    }
+    return opts;
+  };
+  const htmlOptsPdfOnglet = (onglet, extra = {}) => {
+    const layout = layoutPdfOnglet(onglet);
+    return {
+      paysage: true,
+      format: 'A3',
+      ...extra,
+      layoutOnglet: onglet,
+      hauteurLigne: layout.hauteurLigne,
+      largeurColonne: layout.largeurColonne,
     };
   };
   const imprimerPlanningGeneralA3Semaine = async () => {
@@ -3857,7 +4023,7 @@ export default function EmploiDuTemps() {
               labelsSoutien,
               site: pool.site || '',
             });
-            const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3', compactClasses: true });
+            const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, htmlOptsPdfOnglet('classes', { compactClasses: true }));
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Classes/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nomClasse)}`,
@@ -3892,12 +4058,13 @@ export default function EmploiDuTemps() {
               titreBanniereGauche: titreGaucheTitulaireProf(data?.classesTitulaire),
               showPauseRows: true,
               site: pool.site || '',
+              layoutOnglet: 'profs',
               getCellData: (cr) => cellulePdfPlanningProf(
                 (data?.affectations || []).find((a) => String(a.creneau_id) === String(cr.id)),
                 (data?.dispos || []).find((d) => String(d.creneau_id) === String(cr.id))
               ),
             });
-            const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
+            const html = buildHtmlPrintDoc(`Planning professeur — ${nom}`, `<div class="section">${table}</div>`, htmlOptsPdfOnglet('profs'));
             const site = nomSiteSafe(pool);
             documents.push({
               relativePath: `Professeurs/${nomPoolSafe(pool)}/${pdfNomAvecSite(site, nom)}`,
@@ -3934,6 +4101,7 @@ export default function EmploiDuTemps() {
             titreBanniere: `${lieu} — ${salle}`,
             showPauseRows: true,
             site: lieu,
+            layoutOnglet: 'salles',
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find((c) =>
                 c.jour === cr.jour
@@ -3970,7 +4138,7 @@ export default function EmploiDuTemps() {
           });
           documents.push({
             relativePath: `Salles/${sanitizeFilename(lieu)}/${pdfNomAvecSite(nomSiteSafe(lieu), salle)}`,
-            html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' }),
+            html: buildHtmlPrintDoc(`Planning salle — ${lieu} — ${salle}`, `<div class="section">${table}</div>`, htmlOptsPdfOnglet('salles')),
             pdfOptions: { ...OPTIONS_PDF_A3 },
           });
         });
@@ -4262,7 +4430,7 @@ export default function EmploiDuTemps() {
           labelsSoutien: labelsSoutienClasse,
           site: sitePourPoolId(classePlanningPoolId) || sitePourClasseId(classePlanningId),
         });
-        const html = buildHtmlPrintDoc(nomClasse || 'Classe', `<div class="section">${table}</div>`, { paysage: true, format: 'A3', compactClasses: true });
+        const html = buildHtmlPrintDoc(nomClasse || 'Classe', `<div class="section">${table}</div>`, htmlOptsPdfOnglet('classes', { compactClasses: true }));
         return ouvrirPdfDepuisHtml(
           html,
           { ...OPTIONS_PDF_A3 },
@@ -4279,12 +4447,13 @@ export default function EmploiDuTemps() {
           titreBanniere: nomProf || 'Professeur',
           titreBanniereGauche: titreGaucheTitulaireProf(planningProf.classesTitulaire),
           site: (planningProf?.pools || []).find((p) => p?.site)?.site || sitePourProfId(profPlanningId),
+          layoutOnglet: 'profs',
           getCellData: (cr) => cellulePdfPlanningProf(
             (planningProf.affectations || []).find(a => String(a.creneau_id) === String(cr.id)),
             (planningProf.dispos || []).find(d => String(d.creneau_id) === String(cr.id))
           ),
         });
-        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, htmlOptsPdfOnglet('profs'));
         return ouvrirPdfDepuisHtml(
           html,
           { ...OPTIONS_PDF_A3 },
@@ -4300,6 +4469,7 @@ export default function EmploiDuTemps() {
           showPauseRows: true,
           titreBanniere: salleSelectionnee,
           site: sallesLieuTravailId,
+          layoutOnglet: 'salles',
           getCellData: (cr) => {
             const cours = (coursEmploiDuTemps || []).find(c =>
               c.jour === cr.jour &&
@@ -4335,7 +4505,7 @@ export default function EmploiDuTemps() {
             };
           }
         });
-        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, { paysage: true, format: 'A3' });
+        const html = buildHtmlPrintDoc(titre, `<div class="section">${table}</div>`, htmlOptsPdfOnglet('salles'));
         return ouvrirPdfDepuisHtml(
           html,
           { ...OPTIONS_PDF_A3 },
@@ -4374,7 +4544,7 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc('Plannings classes — toutes les classes', sections.join(''), { paysage: true, format: 'A3', compactClasses: true }),
+          buildHtmlPrintDoc('Plannings classes — toutes les classes', sections.join(''), htmlOptsPdfOnglet('classes', { compactClasses: true })),
           { ...OPTIONS_PDF_A3 },
           'Plannings-classes.pdf'
         );
@@ -4393,6 +4563,7 @@ export default function EmploiDuTemps() {
             titreBanniereGauche: titreGaucheTitulaireProf(data?.classesTitulaire),
             showPauseRows: true,
             site: sitePourProfId(data?.prof?.id),
+            layoutOnglet: 'profs',
             getCellData: (cr) => cellulePdfPlanningProf(
               (data?.affectations || []).find(a => String(a.creneau_id) === String(cr.id)),
               (data?.dispos || []).find(d => String(d.creneau_id) === String(cr.id))
@@ -4401,7 +4572,7 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc('Plannings professeurs — tous les professeurs', sections.join(''), { paysage: true, format: 'A3' }),
+          buildHtmlPrintDoc('Plannings professeurs — tous les professeurs', sections.join(''), htmlOptsPdfOnglet('profs')),
           { ...OPTIONS_PDF_A3 },
           'Plannings-professeurs.pdf'
         );
@@ -4416,6 +4587,7 @@ export default function EmploiDuTemps() {
             titreBanniere: `Salle ${salle}`,
             showPauseRows: true,
             site: sallesLieuTravailId,
+            layoutOnglet: 'salles',
             getCellData: (cr) => {
               const cours = (coursEmploiDuTemps || []).find(c =>
                 c.jour === cr.jour &&
@@ -4454,7 +4626,7 @@ export default function EmploiDuTemps() {
           return `<div class="section">${table}</div>`;
         });
         return ouvrirPdfDepuisHtml(
-          buildHtmlPrintDoc(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), { paysage: true, format: 'A3' }),
+          buildHtmlPrintDoc(`Plannings salles — ${sallesLieuTravailId}`, sections.join(''), htmlOptsPdfOnglet('salles')),
           { ...OPTIONS_PDF_A3 },
           `${sanitizeFilename(sallesLieuTravailId || 'Salles')}_Plannings-salles.pdf`
         );
@@ -4745,6 +4917,7 @@ export default function EmploiDuTemps() {
               label: 'Couleurs des branches',
               title: 'Désactivé : couleurs des professeurs. Activé : couleurs des branches (écran et PDF).',
             })}
+            {renderSlidersLayoutPdf('classes')}
             </>
           )}
           {sousOngletPlanning === 'professeurs' && (
@@ -4765,6 +4938,7 @@ export default function EmploiDuTemps() {
               label: 'Couleurs des branches',
               title: 'Désactivé : couleurs des classes. Activé : couleurs des branches (écran et PDF).',
             })}
+            {renderSlidersLayoutPdf('profs')}
             </>
           )}
           {sousOngletPlanning === 'general' && (
@@ -4861,6 +5035,7 @@ export default function EmploiDuTemps() {
                 />
                 <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{policePdfGeneral} pt</span>
               </label>
+              {renderSlidersLayoutPdf('general')}
               <div
                 role="group"
                 aria-label="Orientation PDF général"
@@ -4925,6 +5100,7 @@ export default function EmploiDuTemps() {
                 options={sallesDisponiblesLieu.map(salle => ({value: salle, label: salle}))}
                 onChange={(v) => setSalleSelectionnee(v)}
               />
+              {renderSlidersLayoutPdf('salles')}
             </>
           )}
         </div>
