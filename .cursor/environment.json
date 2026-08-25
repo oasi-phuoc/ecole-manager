@@ -1,0 +1,21 @@
+{
+  "name": "Oasis (Ecole Manager)",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "backend",
+      "command": "cd backend && node server.js"
+    },
+    {
+      "name": "frontend",
+      "command": "cd frontend && REACT_APP_API_URL=http://localhost:5000/api HOST=0.0.0.0 PORT=3000 BROWSER=none WDS_SOCKET_PORT=0 npm start"
+    }
+  ],
+  "ports": [3000, 5000]
+}
