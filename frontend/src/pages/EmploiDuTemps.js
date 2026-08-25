@@ -15,7 +15,9 @@ import {
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
   estMatiereSoutien,
+  estBrancheAI,
 } from '../utils/branchesSpecialites';
+import { proposerPairesBranches } from '../utils/proposerBranches';
 import { compterPreferencesSoutienParProf } from '../utils/comptesSoutienPreferences';
 import {
   STATUT_DISPO_EVITER,
@@ -2635,154 +2637,51 @@ export default function EmploiDuTemps() {
       .map((a) => {
         const cr = creneauxPlanningParId.get(String(a.creneau_id));
         if (!cr) return null;
-        return { aff: a, cr };
+        return {
+          affId: a.id,
+          jour: cr.jour,
+          periode: cr.periode,
+          ordre: Number(cr.ordre || 0),
+          profId: a.prof_id,
+        };
       })
       .filter(Boolean)
       .sort((a, b) => {
-        const dj = JOURS.indexOf(a.cr.jour) - JOURS.indexOf(b.cr.jour);
+        const dj = JOURS.indexOf(a.jour) - JOURS.indexOf(b.jour);
         if (dj !== 0) return dj;
-        const dp = String(a.cr.periode || '').localeCompare(String(b.cr.periode || ''), 'fr');
+        const dp = String(a.periode || '').localeCompare(String(b.periode || ''), 'fr');
         if (dp !== 0) return dp;
-        return Number(a.cr.ordre || 0) - Number(b.cr.ordre || 0);
+        return Number(a.ordre || 0) - Number(b.ordre || 0);
       });
 
     if (!slots.length) {
       showToast('Aucune période avec professeur affecté à planifier.', 'info');
       return;
     }
-    if (!matieresPourPlanningClasse.length) {
+    if (!matieresPourSuiviBranches.length) {
       showToast('Aucune branche disponible pour ce niveau.', 'error');
       return;
     }
 
     const ok = window.confirm(
       'Générer une proposition de branches pour cette classe ?\n\n' +
-      'Règles : max 2 fois la même branche à la suite ; Français et Math 1 fois/jour si possible.\n\n' +
-      'Les branches actuelles seront remplacées. Cliquez ensuite sur Sauvegarder pour enregistrer.'
+      'Règles : paires de 2 périodes avant ou après la pause ; Français et Math 1 fois/jour si possible ; 1 Français restant apparié avec Accompagnement individuel.\n\n' +
+      'Les branches actuelles seront replacées. Cliquez ensuite sur Sauvegarder pour enregistrer.'
     );
     if (!ok) return;
 
-    const requis = Object.fromEntries(
-      matieresPourSuiviBranches.map((m) => [String(m.id), parseInt(m.periodes_semaine, 10) || 0])
-    );
-    const compte = Object.fromEntries(matieresPourSuiviBranches.map((m) => [String(m.id), 0]));
-    const assignment = {}; // affId -> matiereId
-    const byJour = {};
-    slots.forEach((s) => {
-      const j = s.cr.jour;
-      if (!byJour[j]) byJour[j] = [];
-      byJour[j].push(s);
+    const prefsParProf = {};
+    (profs || []).forEach((p) => {
+      if (p?.id == null) return;
+      prefsParProf[String(p.id)] = normaliserIdsPrefBranches(p.branches_specialites);
     });
 
-    const matiereFr = matieresPourSuiviBranches.find(estBrancheFrancais) || null;
-    const matiereMa = matieresPourSuiviBranches.find(estBrancheMath) || null;
-
-    const peutEncher = (matiereId, sequencePrecedente) => {
-      const mid = String(matiereId);
-      if ((compte[mid] || 0) >= (requis[mid] || 0)) return false;
-      // max 2 à la suite
-      if (sequencePrecedente.length >= 2
-        && String(sequencePrecedente[sequencePrecedente.length - 1]) === mid
-        && String(sequencePrecedente[sequencePrecedente.length - 2]) === mid) {
-        return false;
-      }
-      return true;
-    };
-
-    const scoreCandidat = (m, slot, sequencePrecedente, dejaFrJour, dejaMaJour) => {
-      const mid = String(m.id);
-      if (!peutEncher(mid, sequencePrecedente)) return -9999;
-      let score = 0;
-      const restant = (requis[mid] || 0) - (compte[mid] || 0);
-      score += restant * 10;
-      // Préférence prof
-      const prof = (profs || []).find((p) => String(p.id) === String(slot.aff.prof_id));
-      const prefs = normaliserIdsPrefBranches(prof?.branches_specialites);
-      if (prefs.includes(mid)) score += 25;
-      // Éviter 2e consécutive sauf si utile
-      if (sequencePrecedente.length && String(sequencePrecedente[sequencePrecedente.length - 1]) === mid) {
-        score -= 5;
-      }
-      // Bonus FR/MA une fois par jour
-      if (matiereFr && mid === String(matiereFr.id) && !dejaFrJour) score += 40;
-      if (matiereMa && mid === String(matiereMa.id) && !dejaMaJour) score += 40;
-      // Pénalité si déjà placé FR/MA ce jour et on en remet
-      if (matiereFr && mid === String(matiereFr.id) && dejaFrJour) score -= 30;
-      if (matiereMa && mid === String(matiereMa.id) && dejaMaJour) score -= 30;
-      return score;
-    };
-
-    JOURS.forEach((jour) => {
-      const daySlots = byJour[jour] || [];
-      if (!daySlots.length) return;
-      const sequence = [];
-      let dejaFr = false;
-      let dejaMa = false;
-
-      // Passe 1 : essayer de placer FR et MA tôt dans la journée
-      const prioritaires = [matiereFr, matiereMa].filter(Boolean);
-      daySlots.forEach((slot) => {
-        let meilleur = null;
-        let meilleurScore = -9999;
-        // d'abord candidats prioritaires du jour si pas encore placés
-        const candidats = [
-          ...prioritaires.filter((m) => {
-            if (estBrancheFrancais(m) && dejaFr) return false;
-            if (estBrancheMath(m) && dejaMa) return false;
-            return true;
-          }),
-          ...matieresPourSuiviBranches,
-        ];
-        // unique by id preserving order
-        const seen = new Set();
-        candidats.forEach((m) => {
-          const mid = String(m.id);
-          if (seen.has(mid)) return;
-          seen.add(mid);
-          const sc = scoreCandidat(m, slot, sequence, dejaFr, dejaMa);
-          if (sc > meilleurScore) {
-            meilleurScore = sc;
-            meilleur = m;
-          }
-        });
-        if (!meilleur || meilleurScore <= -9999) {
-          sequence.push(null);
-          return;
-        }
-        const mid = String(meilleur.id);
-        assignment[String(slot.aff.id)] = mid;
-        compte[mid] = (compte[mid] || 0) + 1;
-        sequence.push(mid);
-        if (matiereFr && mid === String(matiereFr.id)) dejaFr = true;
-        if (matiereMa && mid === String(matiereMa.id)) dejaMa = true;
-      });
-    });
-
-    // Remplir les slots non assignés (si FR/MA n'ont rien trouvé etc.)
-    slots.forEach((slot) => {
-      const key = String(slot.aff.id);
-      if (assignment[key]) return;
-      const jourSlots = byJour[slot.cr.jour] || [];
-      const idx = jourSlots.findIndex((s) => String(s.aff.id) === key);
-      const sequence = jourSlots.slice(0, idx).map((s) => assignment[String(s.aff.id)] || null).filter(Boolean);
-      let meilleur = null;
-      let meilleurScore = -9999;
-      matieresPourSuiviBranches.forEach((m) => {
-        const sc = scoreCandidat(m, slot, sequence, false, false);
-        // ignore daily FR/MA bonus recalculation for fill — use restant mainly
-        const mid = String(m.id);
-        if (!peutEncher(mid, sequence)) return;
-        const restant = (requis[mid] || 0) - (compte[mid] || 0);
-        const fillScore = restant * 10 + (sc > -9999 ? 1 : 0);
-        if (fillScore > meilleurScore) {
-          meilleurScore = fillScore;
-          meilleur = m;
-        }
-      });
-      if (!meilleur) return;
-      const mid = String(meilleur.id);
-      assignment[key] = mid;
-      compte[mid] = (compte[mid] || 0) + 1;
+    const { assignment, comptes } = proposerPairesBranches(slots, matieresPourSuiviBranches, {
+      estFrancais: estBrancheFrancais,
+      estMath: estBrancheMath,
+      estAI: estBrancheAI,
+      prefsParProf,
+      ordreJours: JOURS,
     });
 
     const next = { ...branchesMatiereDraftMap };
@@ -2795,8 +2694,8 @@ export default function EmploiDuTemps() {
     setPlanningClasse((prev) => (prev ? { ...prev } : prev));
 
     const incompletes = matieresPourSuiviBranches
-      .filter((m) => (compte[String(m.id)] || 0) < (requis[String(m.id)] || 0))
-      .map((m) => `${m.nom} ${compte[String(m.id)] || 0}/${requis[String(m.id)] || 0}`);
+      .filter((m) => (comptes[String(m.id)] || 0) < (parseInt(m.periodes_semaine, 10) || 0))
+      .map((m) => `${m.nom} ${comptes[String(m.id)] || 0}/${parseInt(m.periodes_semaine, 10) || 0}`);
     if (incompletes.length) {
       showToast(`Proposition générée. Branches incomplètes : ${incompletes.join(', ')}.`, 'info');
     } else {

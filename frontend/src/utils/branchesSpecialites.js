@@ -25,12 +25,23 @@ export const estMatiereSoutien = (branche) => {
   return nom === 'soutien' || courte === 'soutien' || nom.includes('soutien') || courte.includes('soutien');
 };
 
+/** Accompagnement individuel (AI) : peut compléter un Français restant (ex. CSC). */
+export const estBrancheAI = (branche) => {
+  if (branche == null || branche === '') return false;
+  if (typeof branche === 'string') {
+    const s = branche.trim().toLowerCase();
+    return s === 'ai' || /accompagnement individuel/.test(s);
+  }
+  const code = String(branche?.designation_courte || branche?.code || '').trim().toUpperCase();
+  const nom = String(branche?.nom || branche?.label || '').trim().toLowerCase();
+  if (code === 'AI') return true;
+  return /accompagnement individuel/.test(nom);
+};
+
 /** Exclut Soutien (et AI) des spécialités proposées. */
 export const estBrancheExclueSpecialite = (branche) => {
-  const code = String(branche?.designation_courte || branche?.code || '').trim().toUpperCase();
+  if (estMatiereSoutien(branche) || estBrancheAI(branche)) return true;
   const nom = String(branche?.nom || '').trim().toLowerCase();
-  if (estMatiereSoutien(branche)) return true;
-  if (code === 'AI') return true;
   if (nom.includes('accompagnement individuelle')) return true;
   return false;
 };
