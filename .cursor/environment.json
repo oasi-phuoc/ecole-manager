@@ -1,5 +1,10 @@
 {
   "name": "Oasis (Ecole Manager)",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
   "install": "bash .cursor/install.sh",
   "start": "bash .cursor/start.sh",
   "terminals": [
