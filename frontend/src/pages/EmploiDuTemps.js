@@ -34,6 +34,27 @@ const POLICE_PDF_GENERAL_MIN = 6;
 const POLICE_PDF_GENERAL_MAX = 16;
 const POLICE_PDF_GENERAL_DEFAUT = 10;
 const OPTIONS_PDF_A3 = { paysage: true, format: 'a3', orientation: 'landscape' };
+const optionsPdfA3General = (orientation) => {
+  const paysage = orientation !== 'portrait';
+  return {
+    paysage,
+    format: 'a3',
+    orientation: paysage ? 'landscape' : 'portrait',
+  };
+};
+const estLignePhraseSoutien = (texte) => {
+  const t = String(texte || '').trim();
+  return /^Je soutien\b/i.test(t) || /est en soutien$/i.test(t);
+};
+const lireOrientationPdfGeneral = () => {
+  try {
+    return window.localStorage.getItem('oasis.orientationPdfGeneral') === 'landscape'
+      ? 'landscape'
+      : 'portrait';
+  } catch {
+    return 'portrait';
+  }
+};
 const clampPolicePdfGeneral = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return POLICE_PDF_GENERAL_DEFAUT;
@@ -264,6 +285,7 @@ export default function EmploiDuTemps() {
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
   const [policePdfGeneral, setPolicePdfGeneral] = useState(lirePolicePdfGeneral);
+  const [orientationPdfGeneral, setOrientationPdfGeneral] = useState(lireOrientationPdfGeneral);
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
@@ -333,6 +355,12 @@ export default function EmploiDuTemps() {
       window.localStorage.setItem('oasis.policePdfGeneral', String(policePdfGeneral));
     } catch { /* ignore */ }
   }, [policePdfGeneral]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('oasis.orientationPdfGeneral', orientationPdfGeneral);
+    } catch { /* ignore */ }
+  }, [orientationPdfGeneral]);
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
@@ -3261,9 +3289,10 @@ export default function EmploiDuTemps() {
     const htmlLignes = (lignes, fg) => {
       const list = (lignes || []).map((l) => String(l || '').trim()).filter(Boolean);
       if (!list.length) return '';
-      return list.map((l, i) =>
-        `<div style="font-weight:${i === 0 ? 700 : 600};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}overflow:hidden;">${escapeHtml(l)}</div>`
-      ).join('');
+      return list.map((l, i) => {
+        const poids = estLignePhraseSoutien(l) ? 400 : (i === 0 ? 700 : 600);
+        return `<div style="font-weight:${poids};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}overflow:hidden;">${escapeHtml(l)}</div>`;
+      }).join('');
     };
 
     const rows = [];
@@ -3674,6 +3703,17 @@ export default function EmploiDuTemps() {
     }
     setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
   };
+  const pdfOptsGeneralA3 = () => optionsPdfA3General(orientationPdfGeneral);
+  const htmlOptsGeneralA3 = (extra = {}) => {
+    const paysage = orientationPdfGeneral !== 'portrait';
+    return {
+      paysage,
+      format: 'A3',
+      fontPt: policePdfGeneral,
+      margin: paysage ? '6mm 8mm' : '8mm 6mm',
+      ...extra,
+    };
+  };
   const imprimerPlanningGeneralA3Semaine = async () => {
     try {
       if (!planningPoolId) return alert("Sélectionnez d'abord un pool.");
@@ -3701,16 +3741,10 @@ export default function EmploiDuTemps() {
         || 'Site'
       ).trim();
       const titre = `Planning général — semaine — ${siteComplet}`;
-      const html = buildHtmlPrintDoc(titre, contenu, {
-        paysage: true,
-        format: 'A3',
-        a3Semaine: true,
-        margin: '6mm 8mm',
-        fontPt: policePdfGeneral,
-      });
+      const html = buildHtmlPrintDoc(titre, contenu, htmlOptsGeneralA3({ a3Semaine: true }));
       await ouvrirPdfDepuisHtml(
         html,
-        { ...OPTIONS_PDF_A3 },
+        pdfOptsGeneralA3(),
         `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`
       );
     } catch (err) {
@@ -4041,8 +4075,8 @@ export default function EmploiDuTemps() {
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreGeneral, contenuJours, { paysage: true, format: 'A3', fontPt: policePdfGeneral }),
-            pdfOptions: { ...OPTIONS_PDF_A3 },
+            html: buildHtmlPrintDoc(titreGeneral, contenuJours, htmlOptsGeneralA3()),
+            pdfOptions: pdfOptsGeneralA3(),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: data.creneaux || [],
@@ -4062,9 +4096,9 @@ export default function EmploiDuTemps() {
                 ? `Planning général — semaine — ${siteComplet} — ${poolNom}`
                 : `Planning général — semaine — ${siteComplet}`,
               contenuA3,
-              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm', fontPt: policePdfGeneral }
+              htmlOptsGeneralA3({ a3Semaine: true })
             ),
-            pdfOptions: { ...OPTIONS_PDF_A3 },
+            pdfOptions: pdfOptsGeneralA3(),
           });
         } catch (errPool) {
           console.error('Export général pool', poolId, errPool);
@@ -4113,8 +4147,8 @@ export default function EmploiDuTemps() {
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreSuper, contenuJours, { paysage: true, format: 'A3', fontPt: policePdfGeneral }),
-            pdfOptions: { ...OPTIONS_PDF_A3 },
+            html: buildHtmlPrintDoc(titreSuper, contenuJours, htmlOptsGeneralA3()),
+            pdfOptions: pdfOptsGeneralA3(),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: merged.creneaux || [],
@@ -4132,9 +4166,9 @@ export default function EmploiDuTemps() {
             html: buildHtmlPrintDoc(
               `${titreSuper} — semaine`,
               contenuA3,
-              { paysage: true, format: 'A3', a3Semaine: true, margin: '6mm 8mm', fontPt: policePdfGeneral }
+              htmlOptsGeneralA3({ a3Semaine: true })
             ),
-            pdfOptions: { ...OPTIONS_PDF_A3 },
+            pdfOptions: pdfOptsGeneralA3(),
           });
         } catch (errSuper) {
           console.error('Export super-général', label, errSuper);
@@ -4827,6 +4861,51 @@ export default function EmploiDuTemps() {
                 />
                 <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{policePdfGeneral} pt</span>
               </label>
+              <div
+                role="group"
+                aria-label="Orientation PDF général"
+                title="Orientation A3 du planning général et super-général (impression et export)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 36,
+                  padding: 3,
+                  borderRadius: 8,
+                  border: '1px solid #c7d2fe',
+                  background: '#ffffff',
+                  flexShrink: 0,
+                  gap: 2,
+                }}
+              >
+                {[
+                  { id: 'portrait', label: 'Portrait' },
+                  { id: 'landscape', label: 'Paysage' },
+                ].map((opt) => {
+                  const actif = orientationPdfGeneral === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setOrientationPdfGeneral(opt.id)}
+                      style={{
+                        height: 30,
+                        padding: '0 10px',
+                        border: 'none',
+                        borderRadius: 6,
+                        background: actif ? '#6366f1' : 'transparent',
+                        color: actif ? '#ffffff' : '#334155',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </>
           )}
           {sousOngletPlanning === 'salle' && (
@@ -6727,7 +6806,7 @@ export default function EmploiDuTemps() {
                                       {lignesCours[0] || aff.classe_nom}
                                     </div>
                                     {lignesCours.slice(1).map((l) => (
-                                      <div key={l} style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{l}</div>
+                                      <div key={l} style={{color:'#334155',fontWeight:estLignePhraseSoutien(l) ? 400 : 600,fontSize:11,marginTop:3,textAlign:'center'}}>{l}</div>
                                     ))}
                                   </>
                                 ) : ''}
