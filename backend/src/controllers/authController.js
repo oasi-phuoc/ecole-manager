@@ -159,7 +159,7 @@ const loginMfa = async (req, res) => {
     if (!user) return res.status(401).json({ message: 'Utilisateur introuvable' });
     const secret = decryptText(user.mfa_secret || '');
     if (user.mfa_enabled !== true || !secret) return res.status(400).json({ message: 'MFA non active pour cet utilisateur' });
-    const isTotp = verifyTotp(secret, code, 1);
+    const isTotp = verifyTotp(secret, code, 2);
     if (!isTotp) {
       const hashes = parseBackupHashes(user.mfa_backup_codes);
       const inputHash = hashBackupCode(code);
@@ -198,12 +198,14 @@ const mfaSetup = async (req, res) => {
     if (req.user?.mfa_exempt === true) {
       return res.status(403).json({ message: 'La 2FA est desactivee pour ce compte.' });
     }
-    const r = await pool.query('SELECT email FROM utilisateurs WHERE id = $1', [req.user.id]);
-    const email = r.rows[0]?.email || `user-${req.user.id}`;
+    const r = await pool.query('SELECT email, identifiant FROM utilisateurs WHERE id = $1', [req.user.id]);
+    const email = String(r.rows[0]?.email || '').trim()
+      || String(r.rows[0]?.identifiant || '').trim()
+      || `user-${req.user.id}`;
     const secret = generateSecret();
     const issuer = process.env.MFA_ISSUER || 'Oasis';
     const otpauth_url = generateOtpAuthUrl({ secret, accountName: email, issuer });
-    const setup_token = signerToken({ purpose: 'mfa-setup', id: req.user.id, secret }, '10m');
+    const setup_token = signerToken({ purpose: 'mfa-setup', id: req.user.id, secret }, '30m');
     return res.json({ secret, otpauth_url, setup_token, issuer, account: email });
   } catch (err) {
     return res.status(500).json({ message: 'Erreur serveur', erreur: err.message });
@@ -221,7 +223,7 @@ const mfaEnable = async (req, res) => {
     if (decoded?.purpose !== 'mfa-setup' || Number(decoded?.id) !== Number(req.user.id) || !decoded?.secret) {
       return res.status(401).json({ message: 'Token setup invalide' });
     }
-    if (!verifyTotp(decoded.secret, code, 1)) return res.status(401).json({ message: 'Code MFA invalide' });
+    if (!verifyTotp(decoded.secret, code, 2)) return res.status(401).json({ message: 'Code MFA invalide' });
     const backup = generateBackupCodes();
     await pool.query(
       'UPDATE utilisateurs SET mfa_enabled = true, mfa_secret = $1, mfa_enabled_at = NOW(), mfa_backup_codes = $2::jsonb WHERE id = $3',
@@ -241,7 +243,7 @@ const mfaRegenerateBackupCodes = async (req, res) => {
     const row = r.rows[0];
     if (!row || row.mfa_enabled !== true) return res.status(400).json({ message: 'MFA non activee' });
     const secret = decryptText(row.mfa_secret || '');
-    if (!secret || !verifyTotp(secret, code, 1)) return res.status(401).json({ message: 'Code MFA invalide' });
+    if (!secret || !verifyTotp(secret, code, 2)) return res.status(401).json({ message: 'Code MFA invalide' });
     const backup = generateBackupCodes();
     await pool.query('UPDATE utilisateurs SET mfa_backup_codes = $1::jsonb WHERE id = $2', [JSON.stringify(backup.hashes), req.user.id]);
     return res.json({ message: 'Nouveaux codes de secours generes', backup_codes: backup.plain, backup_codes_remaining: backup.plain.length });

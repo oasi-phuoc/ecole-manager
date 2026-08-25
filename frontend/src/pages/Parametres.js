@@ -23,6 +23,7 @@ import {
   statutDepuisDispoRow,
   titreStatutDispo,
 } from '../utils/disponibilites';
+import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
@@ -155,6 +156,7 @@ export default function Parametres() {
   const [mfaSetupToken, setMfaSetupToken] = useState('');
   const [mfaSecret, setMfaSecret] = useState('');
   const [mfaOtpAuthUrl, setMfaOtpAuthUrl] = useState('');
+  const [mfaQrDataUrl, setMfaQrDataUrl] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [mfaBackupCodes, setMfaBackupCodes] = useState([]);
   const [mfaBackupRemaining, setMfaBackupRemaining] = useState(0);
@@ -615,9 +617,20 @@ export default function Parametres() {
     setMfaLoading(true);
     try {
       const res = await axios.post(API + '/auth/mfa/setup', {}, { headers });
+      const secret = res.data?.secret || '';
+      const otpUrl = buildOtpAuthUrl({
+        secret,
+        accountName: res.data?.account || '',
+        issuer: res.data?.issuer || 'Oasis',
+      }) || res.data?.otpauth_url || '';
       setMfaSetupToken(res.data?.setup_token || '');
-      setMfaSecret(res.data?.secret || '');
-      setMfaOtpAuthUrl(res.data?.otpauth_url || '');
+      setMfaSecret(secret);
+      setMfaOtpAuthUrl(otpUrl);
+      try {
+        setMfaQrDataUrl(otpUrl ? await otpauthQrDataUrl(otpUrl) : '');
+      } catch {
+        setMfaQrDataUrl('');
+      }
       setMfaBackupCodes([]);
       setMsgMfa('Scannez le QR code puis saisissez le code à 6 chiffres pour activer.');
     } catch (err) {
@@ -1062,18 +1075,24 @@ export default function Parametres() {
                               {mfaSetupToken && (
                                 <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#f8fafc' }}>
                                   <div style={{ fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>1) Scanner le QR code</div>
-                                  {mfaOtpAuthUrl && (
+                                  {mfaQrDataUrl ? (
                                     <img
                                       alt="QR code MFA"
-                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mfaOtpAuthUrl)}`}
+                                      src={mfaQrDataUrl}
                                       style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', marginBottom: 10 }}
                                     />
-                                  )}
+                                  ) : mfaOtpAuthUrl ? (
+                                    <img
+                                      alt="QR code MFA"
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&ecc=M&data=${encodeURIComponent(mfaOtpAuthUrl)}`}
+                                      style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', marginBottom: 10 }}
+                                    />
+                                  ) : null}
                                   <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>
-                                    En cas de problème de scan, clé manuelle:
+                                    En cas de problème de scan, clé manuelle (Google ou Microsoft Authenticator) :
                                   </div>
                                   <code style={{ display: 'inline-block', padding: '6px 8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }}>
-                                    {mfaSecret}
+                                    {secretGroupePar4(mfaSecret)}
                                   </code>
                                   <div style={{ fontWeight: 700, marginTop: 14, marginBottom: 8, color: '#0f172a' }}>2) Saisir le code à 6 chiffres</div>
                                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

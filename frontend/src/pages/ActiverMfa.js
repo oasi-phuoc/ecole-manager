@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 import { clearSessionUser, getSessionUser, setSessionUser } from '../utils/session';
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
@@ -13,6 +14,7 @@ export default function ActiverMfa() {
   const [setupToken, setSetupToken] = useState('');
   const [secret, setSecret] = useState('');
   const [otpAuthUrl, setOtpAuthUrl] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const [code, setCode] = useState('');
   const [backupCodes, setBackupCodes] = useState([]);
   const [enabled, setEnabled] = useState(false);
@@ -44,9 +46,20 @@ export default function ActiverMfa() {
     setLoading(true);
     try {
       const res = await axios.post(API + '/auth/mfa/setup', {});
+      const secret = res.data?.secret || '';
+      const otpUrl = buildOtpAuthUrl({
+        secret,
+        accountName: res.data?.account || '',
+        issuer: res.data?.issuer || 'Oasis',
+      }) || res.data?.otpauth_url || '';
       setSetupToken(res.data?.setup_token || '');
-      setSecret(res.data?.secret || '');
-      setOtpAuthUrl(res.data?.otpauth_url || '');
+      setSecret(secret);
+      setOtpAuthUrl(otpUrl);
+      try {
+        setQrDataUrl(otpUrl ? await otpauthQrDataUrl(otpUrl) : '');
+      } catch {
+        setQrDataUrl('');
+      }
       setBackupCodes([]);
       setMsg('Scannez le QR code avec Google Authenticator, puis saisissez le code à 6 chiffres.');
     } catch (err) {
@@ -70,6 +83,7 @@ export default function ActiverMfa() {
       setSetupToken('');
       setSecret('');
       setOtpAuthUrl('');
+      setQrDataUrl('');
       setCode('');
       const current = getSessionUser() || {};
       setSessionUser({ ...current, mfa_enabled: true });
@@ -122,15 +136,17 @@ export default function ActiverMfa() {
         {!enabled && setupToken && (
           <div style={styles.setupBox}>
             <div style={styles.etape}>1) Scanner le QR code</div>
-            {otpAuthUrl && (
+            {qrDataUrl ? (
+              <img alt="QR code MFA" src={qrDataUrl} style={styles.qr} />
+            ) : otpAuthUrl ? (
               <img
                 alt="QR code MFA"
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpAuthUrl)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&ecc=M&data=${encodeURIComponent(otpAuthUrl)}`}
                 style={styles.qr}
               />
-            )}
-            <div style={styles.hint}>Si le scan échoue, saisissez cette clé manuellement :</div>
-            <code style={styles.secret}>{secret}</code>
+            ) : null}
+            <div style={styles.hint}>Si le scan échoue, saisissez cette clé manuellement dans Google ou Microsoft Authenticator :</div>
+            <code style={styles.secret}>{secretGroupePar4(secret)}</code>
 
             <div style={{ ...styles.etape, marginTop: 16 }}>2) Saisir le code à 6 chiffres</div>
             <input
