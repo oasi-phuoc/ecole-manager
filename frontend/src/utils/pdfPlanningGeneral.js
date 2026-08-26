@@ -16,6 +16,8 @@ export const A3_NB_COLONNES_PROF = 10;
 export const A3_NB_COLONNES_PROF_SUPER = 20;
 export const A3_NB_COLONNES_PROF_MEGA = 40;
 export const PDF_SPACER_COLONNE_PX = 10;
+/** Largeur mini d’une colonne (horaire ou prof) pour garder le texte à l’horizontale (08:20–09:05). */
+export const PDF_COLONNE_MIN_PX = PDF_COLONNE_HORAIRE_GENERAL;
 
 export function nProfsRefPlanningGeneral({ mega = false, superGeneral = false } = {}) {
   if (mega) return A3_NB_COLONNES_PROF_MEGA;
@@ -35,34 +37,59 @@ export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
 
 /**
  * Largeur d’une colonne (horaire ou prof) calée sur 10 / 20 / 40 profs + 2 horaires.
- * S’il y a moins de profs que la référence, les colonnes ne s’élargissent pas.
+ * La largeur unitaire ne dépend pas du nombre réel de profs : s’il y en a plus,
+ * le tableau dépasse la page et le PDF le réduit ensuite.
  */
 export function largeurColonneGrilleGeneralCss(nProfsVisibles, {
   nProfsRef = A3_NB_COLONNES_PROF,
   nHoraires = 2,
   spacerPx = PDF_SPACER_COLONNE_PX,
 } = {}) {
-  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
-  const nRef = Math.max(nVis, nProfsRef);
+  const nRef = Math.max(1, Number(nProfsRef) || 1);
   const nEqual = nRef + nHoraires;
   const nSpacers = nRef + 1;
   return `calc((100% - ${nSpacers * spacerPx}px) / ${nEqual})`;
 }
 
-/** Largeur du tableau si moins de profs que la grille de référence (évite d’étirer les colonnes). */
+/** Largeur du tableau proportionnelle au nombre de profs réels, sur la grille de référence. */
 export function largeurTableauGrilleGeneralCss(nProfsVisibles, {
   nProfsRef = A3_NB_COLONNES_PROF,
   nHoraires = 2,
   spacerPx = PDF_SPACER_COLONNE_PX,
 } = {}) {
   const nVis = Math.max(0, Number(nProfsVisibles) || 0);
-  const nRef = Math.max(nVis, nProfsRef);
-  if (nVis >= nProfsRef) return '100%';
+  const nRef = Math.max(1, Number(nProfsRef) || 1);
   const nEqualRef = nRef + nHoraires;
   const nEqualVis = nVis + nHoraires;
   const nSpacersRef = nRef + 1;
   const nSpacersVis = nVis + 1;
+  if (nVis === nRef) return '100%';
   return `calc(${nEqualVis} / ${nEqualRef} * (100% - ${nSpacersRef * spacerPx}px) + ${nSpacersVis * spacerPx}px)`;
+}
+
+/** Largeur pixel d’une colonne pour que 10 / 20 / 40 profs remplissent la zone utile. */
+export function largeurColonneGrilleGeneralPx({
+  nProfsRef = A3_NB_COLONNES_PROF,
+  usableWidthPx,
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+  minPx = PDF_COLONNE_MIN_PX,
+} = {}) {
+  const nRef = Math.max(1, Number(nProfsRef) || 1);
+  const nEqual = nRef + nHoraires;
+  const nSpacers = nRef + 1;
+  const usable = Math.max(1, Number(usableWidthPx) || 1);
+  const fromPage = Math.floor((usable - nSpacers * spacerPx) / nEqual);
+  return Math.max(minPx, fromPage);
+}
+
+export function largeurTableauGrilleGeneralPx(nProfsVisibles, colPx, {
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+} = {}) {
+  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
+  const col = Math.max(1, Number(colPx) || 1);
+  return (nVis + nHoraires) * col + (nVis + 1) * spacerPx;
 }
 
 /** Horaire gauche + écarts + profs + horaire droite. */
@@ -96,13 +123,14 @@ export function encadrerColonnesProfsHtml(cellsHtmlArr, horaireGaucheHtml, horai
 
 export function htmlColgroupGrilleGeneral(nProfsVisibles, colW) {
   const n = Math.max(0, Number(nProfsVisibles) || 0);
-  const parts = [`<col class="creneau-col" style="width:${colW};"/>`, '<col class="spacer-col" />'];
+  const colStyle = `width:${colW};min-width:${colW};`;
+  const parts = [`<col class="creneau-col" style="${colStyle}"/>`, '<col class="spacer-col" />'];
   for (let i = 0; i < n; i += 1) {
-    parts.push(`<col style="width:${colW};" />`);
+    parts.push(`<col style="${colStyle}" />`);
     if (i < n - 1) parts.push('<col class="spacer-col" />');
   }
   if (n > 0) parts.push('<col class="spacer-col" />');
-  parts.push(`<col class="creneau-col" style="width:${colW};"/>`);
+  parts.push(`<col class="creneau-col" style="${colStyle}"/>`);
   return `<colgroup>${parts.join('')}</colgroup>`;
 }
 
