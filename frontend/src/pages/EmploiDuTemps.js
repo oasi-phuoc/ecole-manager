@@ -6,6 +6,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
+import {
+  clampPolicePdfGeneral,
+  layoutPlanningGeneralA3,
+  lirePolicePdfGeneral,
+  marginPdfA3,
+  PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
+  PDF_LIGNE_CLASSE_SALLE_PROF,
+  POLICE_PDF_GENERAL_DEFAUT,
+  POLICE_PDF_GENERAL_MAX,
+  POLICE_PDF_GENERAL_MIN,
+} from '../utils/pdfPlanningGeneral';
 import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeursColonnesTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -33,16 +44,15 @@ import {
 
 const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-const POLICE_PDF_GENERAL_MIN = 6;
-const POLICE_PDF_GENERAL_MAX = 16;
-const POLICE_PDF_GENERAL_DEFAUT = 10;
-const OPTIONS_PDF_A3 = { paysage: true, format: 'a3', orientation: 'landscape' };
+const OPTIONS_PDF_A3 = { paysage: true, format: 'a3', orientation: 'landscape', margin: marginPdfA3('landscape') };
 const optionsPdfA3General = (orientation) => {
   const paysage = orientation !== 'portrait';
   return {
     paysage,
     format: 'a3',
     orientation: paysage ? 'landscape' : 'portrait',
+    margin: marginPdfA3(orientation),
+    crop: false,
   };
 };
 const estLignePhraseSoutien = (texte) => {
@@ -57,65 +67,6 @@ const lireOrientationPdfGeneral = () => {
   } catch {
     return 'portrait';
   }
-};
-const clampPolicePdfGeneral = (v) => {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return POLICE_PDF_GENERAL_DEFAUT;
-  return Math.min(POLICE_PDF_GENERAL_MAX, Math.max(POLICE_PDF_GENERAL_MIN, Math.round(n * 2) / 2));
-};
-const lirePolicePdfGeneral = () => {
-  try {
-    return clampPolicePdfGeneral(window.localStorage.getItem('oasis.policePdfGeneral'));
-  } catch {
-    return POLICE_PDF_GENERAL_DEFAUT;
-  }
-};
-
-/** Valeurs actuelles des PDF (hauteur / largeur horaire) — conservées comme défauts. */
-const PDF_LAYOUT_DEFAUTS = {
-  general: { hauteurLigne: 38, largeurColonne: 72 },
-  profs: { hauteurLigne: 68, largeurColonne: 128 },
-  classes: { hauteurLigne: 68, largeurColonne: 128 },
-  salles: { hauteurLigne: 68, largeurColonne: 128 },
-};
-const PDF_LAYOUT_LIMITES = {
-  general: { hauteurLigne: { min: 20, max: 100 }, largeurColonne: { min: 48, max: 140 } },
-  profs: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
-  classes: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
-  salles: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
-};
-const PDF_LAYOUT_STORAGE = {
-  general: 'oasis.pdfLayout.general',
-  profs: 'oasis.pdfLayout.profs',
-  classes: 'oasis.pdfLayout.classes',
-  salles: 'oasis.pdfLayout.salles',
-};
-const clampPdfLayout = (onglet, raw) => {
-  const def = PDF_LAYOUT_DEFAUTS[onglet] || PDF_LAYOUT_DEFAUTS.general;
-  const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
-  const src = raw && typeof raw === 'object' ? raw : {};
-  const h = Number(src.hauteurLigne);
-  const w = Number(src.largeurColonne);
-  return {
-    hauteurLigne: Number.isFinite(h)
-      ? Math.min(lim.hauteurLigne.max, Math.max(lim.hauteurLigne.min, Math.round(h)))
-      : def.hauteurLigne,
-    largeurColonne: Number.isFinite(w)
-      ? Math.min(lim.largeurColonne.max, Math.max(lim.largeurColonne.min, Math.round(w)))
-      : def.largeurColonne,
-  };
-};
-const lirePdfLayout = () => {
-  const out = {};
-  Object.keys(PDF_LAYOUT_DEFAUTS).forEach((onglet) => {
-    try {
-      const raw = window.localStorage.getItem(PDF_LAYOUT_STORAGE[onglet]);
-      out[onglet] = clampPdfLayout(onglet, raw ? JSON.parse(raw) : null);
-    } catch {
-      out[onglet] = { ...PDF_LAYOUT_DEFAUTS[onglet] };
-    }
-  });
-  return out;
 };
 const BASE_PERIODES_TAUX = 40;
 const SALLES_FIXES_PAR_LIEU = {
@@ -336,7 +287,6 @@ export default function EmploiDuTemps() {
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
   const [policePdfGeneral, setPolicePdfGeneral] = useState(lirePolicePdfGeneral);
   const [orientationPdfGeneral, setOrientationPdfGeneral] = useState(lireOrientationPdfGeneral);
-  const [pdfLayout, setPdfLayout] = useState(lirePdfLayout);
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
@@ -412,17 +362,6 @@ export default function EmploiDuTemps() {
       window.localStorage.setItem('oasis.orientationPdfGeneral', orientationPdfGeneral);
     } catch { /* ignore */ }
   }, [orientationPdfGeneral]);
-
-  useEffect(() => {
-    Object.keys(PDF_LAYOUT_STORAGE).forEach((onglet) => {
-      try {
-        window.localStorage.setItem(
-          PDF_LAYOUT_STORAGE[onglet],
-          JSON.stringify(clampPdfLayout(onglet, pdfLayout[onglet]))
-        );
-      } catch { /* ignore */ }
-    });
-  }, [pdfLayout]);
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
@@ -1918,75 +1857,6 @@ export default function EmploiDuTemps() {
     const full = [p, n].filter(Boolean).join(' ').trim();
     return full ? escapeHtml(full) : '&nbsp;';
   };
-  const layoutPdfOnglet = (onglet) => clampPdfLayout(onglet, pdfLayout[onglet]);
-  const setLayoutPdfOnglet = (onglet, patch) => {
-    setPdfLayout((prev) => ({
-      ...prev,
-      [onglet]: clampPdfLayout(onglet, { ...(prev[onglet] || {}), ...patch }),
-    }));
-  };
-  const renderSliderPdf = ({ label, title, min, max, step = 1, value, onChange, suffix }) => (
-    <label
-      title={title}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '118px 110px 52px',
-        alignItems: 'center',
-        columnGap: 8,
-        width: 322,
-        height: 36,
-        padding: '0 12px',
-        boxSizing: 'border-box',
-        borderRadius: 8,
-        border: '1px solid #c7d2fe',
-        background: '#ffffff',
-        fontSize: 13,
-        fontWeight: 600,
-        color: '#334155',
-        fontFamily: 'inherit',
-        flexShrink: 0,
-      }}
-    >
-      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label={title || label}
-        style={{ width: '100%', accentColor: '#6366f1', cursor: 'pointer' }}
-      />
-      <span style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right', whiteSpace: 'nowrap' }}>{value}{suffix}</span>
-    </label>
-  );
-  const renderSlidersLayoutPdf = (onglet) => {
-    const layout = layoutPdfOnglet(onglet);
-    const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
-    return (
-      <>
-        {renderSliderPdf({
-          label: 'Hauteur lignes',
-          title: 'Hauteur des lignes du PDF (impression et export tous les PDF)',
-          min: lim.hauteurLigne.min,
-          max: lim.hauteurLigne.max,
-          value: layout.hauteurLigne,
-          onChange: (v) => setLayoutPdfOnglet(onglet, { hauteurLigne: v }),
-          suffix: ' px',
-        })}
-        {renderSliderPdf({
-          label: 'Largeur colonnes',
-          title: 'Largeur de la colonne horaire du PDF (impression et export tous les PDF)',
-          min: lim.largeurColonne.min,
-          max: lim.largeurColonne.max,
-          value: layout.largeurColonne,
-          onChange: (v) => setLayoutPdfOnglet(onglet, { largeurColonne: v }),
-          suffix: ' px',
-        })}
-      </>
-    );
-  };
   const renderTogglePlanning = ({ checked, onToggle, label, title }) => (
     <button
       type="button"
@@ -3207,22 +3077,21 @@ export default function EmploiDuTemps() {
         : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
     const compactClasses = !!options?.compactClasses;
     const a3Semaine = !!options?.a3Semaine;
+    const fitPage = a3Semaine || !!options?.fitPage;
     const fontPtOpt = Number(options?.fontPt);
     const fontPt = Number.isFinite(fontPtOpt) && fontPtOpt > 0
-      ? fontPtOpt
-      : (a3Semaine ? POLICE_PDF_GENERAL_DEFAUT : (format === 'A3' ? 11 : 8));
+      ? clampPolicePdfGeneral(fontPtOpt)
+      : POLICE_PDF_GENERAL_DEFAUT;
     const fontCss = `${fontPt}pt`;
-    const layoutOnglet = options?.layoutOnglet;
-    const layout = layoutOnglet ? layoutPdfOnglet(layoutOnglet) : null;
     const largeurColonnePdf = Number(options?.largeurColonne);
     const hauteurLignePdf = Number(options?.hauteurLigne);
     const largeurColonne = Number.isFinite(largeurColonnePdf) && largeurColonnePdf > 0
       ? Math.round(largeurColonnePdf)
-      : (layout?.largeurColonne || (a3Semaine ? PDF_LAYOUT_DEFAUTS.general.largeurColonne : LARGEUR_COLONNE_CRENEAU));
+      : (a3Semaine ? 72 : PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF);
     const hauteurLigne = Number.isFinite(hauteurLignePdf) && hauteurLignePdf > 0
       ? Math.round(hauteurLignePdf)
-      : (layout?.hauteurLigne || (a3Semaine ? PDF_LAYOUT_DEFAUTS.general.hauteurLigne : 0));
-    const marginCss = options?.margin || (a3Semaine ? '6mm 8mm' : (format === 'A3' ? '8mm 10mm' : '12mm 20mm'));
+      : (a3Semaine ? 0 : PDF_LIGNE_CLASSE_SALLE_PROF);
+    const marginCss = options?.margin || (format === 'A3' ? marginPdfA3(options?.paysage === false ? 'portrait' : 'landscape') : '12mm 20mm');
     const titreDansBanniere = /class=["'][^"']*(?:section|section-a3)/.test(String(contenu || ''));
     return `
     <html>
@@ -3231,10 +3100,11 @@ export default function EmploiDuTemps() {
         <title>${escapeHtml(titre)}</title>
         <style>
           @page { size: ${pageSize}; margin: ${marginCss}; }
-          html, body { height: auto; }
+          html, body { height: ${fitPage ? '100%' : 'auto'}; width: 100%; }
           body {
             font-family: Arial, sans-serif;
-            margin: ${a3Semaine ? '4px' : '16px'};
+            margin: 0;
+            padding: 0;
             color: #111827;
             text-align: center;
             box-sizing: border-box;
@@ -3270,13 +3140,16 @@ export default function EmploiDuTemps() {
           .section, .section-a3 {
             text-align: center;
             width: 100%;
+            height: ${fitPage ? '100%' : 'auto'};
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            align-items: ${a3Semaine ? 'flex-start' : 'center'};
-            justify-content: ${a3Semaine ? 'flex-start' : 'center'};
+            align-items: stretch;
+            justify-content: ${fitPage ? 'stretch' : 'center'};
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
+          .section-a3 .a3-wrap { height: 100%; }
+          .section-a3 .a3-wrap > tbody > tr { height: 100%; }
           th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; }
           th { background: #f8fafc; font-weight: 700; }
           col.creneau-col { width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px; }
@@ -3294,7 +3167,7 @@ export default function EmploiDuTemps() {
           .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '0 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;` : ''} }
           .periode-banner { background:#000;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '0 6px' : '4px 8px'};text-align:left;border:none;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;line-height:${hauteurLigne}px;overflow:hidden;` : ''} }
           .pause-banner { background:#111827;color:#fff;font-weight:700;font-size:${fontCss};padding:${a3Semaine ? '2px 6px' : '4px 8px'};text-align:center;border:1px solid #111827; }
-          .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine ? '8px' : '14px'}; padding: 0 !important; }
+          .day-gap td { border: none !important; background: transparent !important; height: ${a3Semaine && hauteurLigne ? `${hauteurLigne}px` : (a3Semaine ? '0' : '14px')}; padding: 0 !important; }
           .spacer-cell { border: none !important; background: transparent !important; padding: 0 !important; width: 10px; }
           .titulaire-label { display:block; margin-top:2px; font-size:6.5pt; font-weight:600; color:#64748b; line-height:1.15; overflow:hidden; }
           ${compactClasses ? `
@@ -3315,9 +3188,8 @@ export default function EmploiDuTemps() {
 
   /** Impression semaine (classe / salle / professeur) — style aligné sur le planning général */
   const buildPlanningSemainePrintHtml = ({ creneauxListe, getCellText, getCellData, showPauseRows = true, titreBanniere = '', titreBanniereGauche = '', site = '', layoutOnglet = 'classes' }) => {
-    const layout = layoutPdfOnglet(layoutOnglet);
-    const ROW_H = layout.hauteurLigne;
-    const CRENEAU_W = layout.largeurColonne;
+    const ROW_H = PDF_LIGNE_CLASSE_SALLE_PROF;
+    const CRENEAU_W = PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF;
     const FONT = '11pt';
     const { poolHoraires, pauses } = getHoraireForLieu(site);
     const fetchCellData = (cr, jour, periode) => {
@@ -3448,13 +3320,10 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT }) => {
-    const CRENEAU_W = LARGEUR_COLONNE_CRENEAU;
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT, orientation = 'portrait' }) => {
     const fontPt = clampPolicePdfGeneral(taillePolice);
     const FONT = `${fontPt}pt`;
-    const ROW_H = Math.max(40, Math.round(52 * (fontPt / 9.5)));
     const nProfs = Math.max(1, (profs || []).length);
-    const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
     const { poolHoraires } = getHoraireForLieu(siteResolu);
     const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
@@ -3462,15 +3331,24 @@ export default function EmploiDuTemps() {
     JOURS.forEach(jour => {
       const crs = (allCrs || []).filter(c => c.jour === jour);
       if (!crs.length) return;
+      const layoutJour = layoutPlanningGeneralA3({
+        creneaux: crs,
+        orientation,
+        taillePolice: fontPt,
+        mode: 'jour',
+      });
+      const ROW_H = layoutJour.rowH;
+      const CRENEAU_W = layoutJour.creneauW;
+      const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
       const nCols = (profs || []).length + 1;
       const profHeaders = (profs || []).map(p => {
-        return `<th style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;width:${PROF_COL_W};">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;width:${PROF_COL_W};height:${ROW_H}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
       }).join('');
       const rows = [];
       ['Matin', 'Après-midi'].forEach(per => {
         const crsPer = crs.filter(c => c.periode === per).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
         if (!crsPer.length) return;
-        rows.push(`<tr><td colspan="${nCols}" style="background:#000;color:#fff;font-weight:700;font-size:${FONT};padding:4px 8px;text-align:left;border:none;">${escapeHtml(per)}</td></tr>`);
+        rows.push(`<tr><td colspan="${nCols}" style="background:#000;color:#fff;font-weight:700;font-size:${FONT};padding:0 8px;text-align:left;border:none;height:${ROW_H}px;line-height:${ROW_H}px;box-sizing:border-box;overflow:hidden;">${escapeHtml(per)}</td></tr>`);
         crsPer.forEach(cr => {
           const cells = (profs || []).map(p => {
             const aff = (affectations || []).find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
@@ -3510,13 +3388,13 @@ export default function EmploiDuTemps() {
       const colgroup = `<colgroup><col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;max-width:${CRENEAU_W}px;"/>${(profs || []).map(() => `<col style="width:${PROF_COL_W};" />`).join('')}</colgroup>`;
       parts.push(`
         <div class="section">
-          <table style="border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:0 auto 20px;">
+          <table style="border-collapse:collapse;width:100%;height:100%;max-width:100%;table-layout:fixed;margin:0;">
             ${colgroup}
             <tbody>
-              <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;">
-                <div style="background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:11pt;padding:5px 14px;text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;">${escapeHtml(jour)}</div>
+              <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;">
+                <div class="day-banner" style="height:${ROW_H}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:${FONT};">${escapeHtml(jour)}</div>
               </td></tr>
-              <tr><th style="text-align:center;font-size:${FONT};padding:4px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;">Horaire</th>${profHeaders}</tr>
+              <tr><th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;box-sizing:border-box;">Horaire</th>${profHeaders}</tr>
               ${rows.join('')}
             </tbody>
           </table>
@@ -3527,7 +3405,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT, orientation = 'portrait' }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3567,12 +3445,17 @@ export default function EmploiDuTemps() {
 
     const nProfs = listeProfs.length; // toujours A3_NB_COLONNES_PROF
     const nCols = 1 + nProfs + Math.max(0, nProfs - 1);
-    const layout = layoutPdfOnglet('general');
-    const CRENEAU_W = layout.largeurColonne;
-    const fontPt = clampPolicePdfGeneral(taillePolice);
+    const layoutA3 = layoutPlanningGeneralA3({
+      creneaux: listeCrs,
+      orientation,
+      taillePolice,
+      mode: 'semaine',
+    });
+    const CRENEAU_W = layoutA3.creneauW;
+    const fontPt = layoutA3.fontPt;
     const FONT = `${fontPt}pt`;
-    const ROW_H = layout.hauteurLigne;
-    const PROF_HEADER_H = Math.max(32, Math.round(fontPt * 2.6) + 12);
+    const ROW_H = layoutA3.rowH;
+    const PROF_HEADER_H = ROW_H;
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
@@ -3655,12 +3538,9 @@ export default function EmploiDuTemps() {
     </colgroup>`;
 
     const rows = [];
-    JOURS.forEach((jour, jourIdx) => {
+    JOURS.forEach((jour) => {
       const crs = listeCrs.filter((c) => c.jour === jour);
       if (!crs.length) return;
-      if (jourIdx > 0) {
-        rows.push(`<tr class="day-gap"><td colspan="${nCols}"></td></tr>`);
-      }
       rows.push(
         `<tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;"><div class="day-banner">${escapeHtml(jour)}</div></td></tr>`
       );
@@ -3774,31 +3654,42 @@ export default function EmploiDuTemps() {
   };
   const pdfOptsGeneralA3 = () => optionsPdfA3General(orientationPdfGeneral);
   const htmlOptsGeneralA3 = (extra = {}) => {
-    const paysage = orientationPdfGeneral !== 'portrait';
-    const layout = layoutPdfOnglet('general');
     const opts = {
-      paysage,
+      paysage: orientationPdfGeneral !== 'portrait',
       format: 'A3',
       fontPt: policePdfGeneral,
-      margin: paysage ? '6mm 8mm' : '8mm 6mm',
+      margin: marginPdfA3(orientationPdfGeneral),
       ...extra,
     };
-    if (opts.a3Semaine) {
-      opts.layoutOnglet = 'general';
-      opts.hauteurLigne = layout.hauteurLigne;
-      opts.largeurColonne = layout.largeurColonne;
-    }
+    if (opts.fitPage == null) opts.fitPage = !!opts.a3Semaine;
     return opts;
   };
+  const htmlOptsGeneralDepuisCreneaux = (creneaux, extra = {}) => {
+    const jourRef = (creneaux || []).find((c) => c.jour === 'Lundi') ? 'Lundi' : ((creneaux || [])[0]?.jour);
+    const creneauxLayout = extra.a3Semaine
+      ? creneaux
+      : (creneaux || []).filter((c) => c.jour === jourRef);
+    const layout = layoutPlanningGeneralA3({
+      creneaux: creneauxLayout,
+      orientation: orientationPdfGeneral,
+      taillePolice: policePdfGeneral,
+      mode: extra.a3Semaine ? 'semaine' : 'jour',
+    });
+    return htmlOptsGeneralA3({
+      hauteurLigne: layout.rowH,
+      largeurColonne: layout.creneauW,
+      ...extra,
+    });
+  };
   const htmlOptsPdfOnglet = (onglet, extra = {}) => {
-    const layout = layoutPdfOnglet(onglet);
     return {
       paysage: true,
       format: 'A3',
+      margin: marginPdfA3('landscape'),
       ...extra,
       layoutOnglet: onglet,
-      hauteurLigne: layout.hauteurLigne,
-      largeurColonne: layout.largeurColonne,
+      hauteurLigne: PDF_LIGNE_CLASSE_SALLE_PROF,
+      largeurColonne: PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
     };
   };
   const imprimerPlanningGeneralA3Semaine = async () => {
@@ -3818,6 +3709,7 @@ export default function EmploiDuTemps() {
         poolId: planningPoolId,
         afficherNomsBranches: afficherNomsBranchesGeneral,
         taillePolice: policePdfGeneral,
+        orientation: orientationPdfGeneral,
         site: pool?.site || '',
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
@@ -3828,7 +3720,7 @@ export default function EmploiDuTemps() {
         || 'Site'
       ).trim();
       const titre = `Planning général — semaine — ${siteComplet}`;
-      const html = buildHtmlPrintDoc(titre, contenu, htmlOptsGeneralA3({ a3Semaine: true }));
+      const html = buildHtmlPrintDoc(titre, contenu, htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true }));
       await ouvrirPdfDepuisHtml(
         html,
         pdfOptsGeneralA3(),
@@ -4161,10 +4053,11 @@ export default function EmploiDuTemps() {
             poolId,
             site: pool.site || '',
             taillePolice: policePdfGeneral,
+            orientation: orientationPdfGeneral,
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreGeneral, contenuJours, htmlOptsGeneralA3()),
+            html: buildHtmlPrintDoc(titreGeneral, contenuJours, htmlOptsGeneralDepuisCreneaux(data.creneaux || [])),
             pdfOptions: pdfOptsGeneralA3(),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
@@ -4176,6 +4069,7 @@ export default function EmploiDuTemps() {
             poolId,
             afficherNomsBranches: afficherNomsBranchesGeneral,
             taillePolice: policePdfGeneral,
+            orientation: orientationPdfGeneral,
             site: pool.site || '',
           });
           documents.push({
@@ -4185,7 +4079,7 @@ export default function EmploiDuTemps() {
                 ? `Planning général — semaine — ${siteComplet} — ${poolNom}`
                 : `Planning général — semaine — ${siteComplet}`,
               contenuA3,
-              htmlOptsGeneralA3({ a3Semaine: true })
+              htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true })
             ),
             pdfOptions: pdfOptsGeneralA3(),
           });
@@ -4233,10 +4127,11 @@ export default function EmploiDuTemps() {
             poolIds,
             site: poolsGroupe[0]?.site || '',
             taillePolice: policePdfGeneral,
+            orientation: orientationPdfGeneral,
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreSuper, contenuJours, htmlOptsGeneralA3()),
+            html: buildHtmlPrintDoc(titreSuper, contenuJours, htmlOptsGeneralDepuisCreneaux(merged.creneaux || [])),
             pdfOptions: pdfOptsGeneralA3(),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
@@ -4248,6 +4143,7 @@ export default function EmploiDuTemps() {
             poolIds,
             afficherNomsBranches: afficherNomsBranchesGeneral,
             taillePolice: policePdfGeneral,
+            orientation: orientationPdfGeneral,
             site: poolsGroupe[0]?.site || '',
           });
           documents.push({
@@ -4255,7 +4151,7 @@ export default function EmploiDuTemps() {
             html: buildHtmlPrintDoc(
               `${titreSuper} — semaine`,
               contenuA3,
-              htmlOptsGeneralA3({ a3Semaine: true })
+              htmlOptsGeneralDepuisCreneaux(merged.creneaux || [], { a3Semaine: true })
             ),
             pdfOptions: pdfOptsGeneralA3(),
           });
@@ -4838,7 +4734,6 @@ export default function EmploiDuTemps() {
               label: 'Couleurs des branches',
               title: 'Désactivé : couleurs des professeurs. Activé : couleurs des branches (écran et PDF).',
             })}
-            {renderSlidersLayoutPdf('classes')}
             </>
           )}
           {sousOngletPlanning === 'professeurs' && (
@@ -4859,7 +4754,6 @@ export default function EmploiDuTemps() {
               label: 'Couleurs des branches',
               title: 'Désactivé : couleurs des classes. Activé : couleurs des branches (écran et PDF).',
             })}
-            {renderSlidersLayoutPdf('profs')}
             </>
           )}
           {sousOngletPlanning === 'general' && (
@@ -4925,7 +4819,7 @@ export default function EmploiDuTemps() {
                 </span>
               </button>
               <label
-                title="Taille de police des PDF général (Imprimer A3 et Exporter tous les PDF)"
+                title="Taille de police des PDF général (impression et export)"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -4956,7 +4850,6 @@ export default function EmploiDuTemps() {
                 />
                 <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{policePdfGeneral} pt</span>
               </label>
-              {renderSlidersLayoutPdf('general')}
               <div
                 role="group"
                 aria-label="Orientation PDF général"
@@ -5021,7 +4914,6 @@ export default function EmploiDuTemps() {
                 options={sallesDisponiblesLieu.map(salle => ({value: salle, label: salle}))}
                 onChange={(v) => setSalleSelectionnee(v)}
               />
-              {renderSlidersLayoutPdf('salles')}
             </>
           )}
         </div>

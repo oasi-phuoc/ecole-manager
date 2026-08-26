@@ -1,6 +1,9 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
+import { parsePageMarginsMm, PX_PAR_MM, pageDimensionsMm, rasterScaleForFormat } from './pdfPage';
+
+export { parsePageMarginsMm, PX_PAR_MM, pageDimensionsMm, pageUsablePx, rasterScaleForFormat } from './pdfPage';
 
 /** Nom de fichier sûr pour le système de fichiers. */
 export function sanitizeFilename(name, fallback = 'document') {
@@ -47,50 +50,6 @@ async function writeBlobToDir(dirHandle, fileName, blob) {
   const writable = await fileHandle.createWritable();
   await writable.write(blob);
   await writable.close();
-}
-
-/** Marge PDF (mm) sur les 4 côtés. Défaut 10 mm. */
-export function parsePageMarginsMm(options = {}) {
-  const fallback = 10;
-  if (Number.isFinite(Number(options.marginMm))) {
-    const n = Math.max(0, Number(options.marginMm));
-    return { top: n, right: n, bottom: n, left: n };
-  }
-  const raw = options.margin;
-  if (typeof raw === 'string' && raw.trim()) {
-    const parts = raw.trim().split(/\s+/).map((p) => {
-      const m = String(p).match(/^([\d.]+)/);
-      return m ? Number(m[1]) : NaN;
-    }).filter((n) => Number.isFinite(n));
-    if (parts.length === 1) {
-      return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
-    }
-    if (parts.length === 2) {
-      return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
-    }
-    if (parts.length === 3) {
-      return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
-    }
-    if (parts.length >= 4) {
-      return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
-    }
-  }
-  return { top: fallback, right: fallback, bottom: fallback, left: fallback };
-}
-
-const PX_PAR_MM = 96 / 25.4;
-
-/** Dimensions physiques d’une page PDF (mm). */
-export function pageDimensionsMm(format, orientation) {
-  const f = String(format || 'a4').toLowerCase();
-  const paysage = orientation !== 'portrait';
-  if (f === 'a3') return paysage ? { w: 420, h: 297 } : { w: 297, h: 420 };
-  return paysage ? { w: 297, h: 210 } : { w: 210, h: 297 };
-}
-
-/** Échelle html2canvas ≈ 300 dpi (A3 un peu plus haut pour rester lisible). */
-export function rasterScaleForFormat(format) {
-  return String(format || 'a4').toLowerCase() === 'a3' ? 3.2 : 2.8;
 }
 
 function canvasVersImage(canvas) {
@@ -174,19 +133,33 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       else iframe.onload = done;
       setTimeout(resolve, 900);
     });
-    if (idoc.documentElement) {
-      idoc.documentElement.style.width = `${cssW}px`;
-      idoc.documentElement.style.height = 'auto';
-    }
-    if (idoc.body) {
-      idoc.body.style.width = `${cssW}px`;
-      idoc.body.style.margin = '0';
-      idoc.body.style.maxWidth = `${cssW}px`;
-    }
+    const padTop = Math.round(margins.top * PX_PAR_MM);
+    const padRight = Math.round(margins.right * PX_PAR_MM);
+    const padBottom = Math.round(margins.bottom * PX_PAR_MM);
+    const padLeft = Math.round(margins.left * PX_PAR_MM);
+    const appliquerCadrePage = (root, body, figerHauteur) => {
+      if (root) {
+        root.style.width = `${cssW}px`;
+        root.style.height = figerHauteur ? `${cssH}px` : 'auto';
+        root.style.overflow = figerHauteur ? 'hidden' : 'visible';
+      }
+      if (body) {
+        body.style.width = `${cssW}px`;
+        body.style.maxWidth = `${cssW}px`;
+        body.style.margin = '0';
+        body.style.padding = `${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`;
+        body.style.boxSizing = 'border-box';
+        body.style.height = figerHauteur ? `${cssH}px` : 'auto';
+        body.style.overflow = figerHauteur ? 'hidden' : 'visible';
+      }
+    };
+    appliquerCadrePage(idoc.documentElement, idoc.body, false);
 
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
+    const pageUnique = targets.length <= 1;
+    if (pageUnique) appliquerCadrePage(idoc.documentElement, idoc.body, true);
     const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: false });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
@@ -203,19 +176,12 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         backgroundColor: '#ffffff',
         letterRendering: true,
         windowWidth: cssW,
-        windowHeight: Math.max(cssH, el.scrollHeight || cssH),
+        windowHeight: pageUnique ? cssH : Math.max(cssH, el.scrollHeight || cssH),
         onclone: (clonedDoc) => {
-          const root = clonedDoc.documentElement;
-          const body = clonedDoc.body;
-          if (root) root.style.width = `${cssW}px`;
-          if (body) {
-            body.style.width = `${cssW}px`;
-            body.style.maxWidth = `${cssW}px`;
-            body.style.margin = '0';
-          }
+          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, pageUnique);
         },
       });
-      const cropped = cropCanvasToContent(canvas);
+      const cropped = options.crop === false ? canvas : cropCanvasToContent(canvas);
       const image = canvasVersImage(cropped);
       const ratio = cropped.height / Math.max(1, cropped.width);
       let drawW = usableW;
