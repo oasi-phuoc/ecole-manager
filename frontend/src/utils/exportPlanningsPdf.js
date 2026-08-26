@@ -1,9 +1,23 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { parsePageMarginsMm, PX_PAR_MM, pageDimensionsMm, rasterScaleForFormat } from './pdfPage';
+import {
+  echelleRasterPourPage,
+  parsePageMarginsMm,
+  PX_PAR_MM,
+  pageDimensionsMm,
+  rasterScaleForFormat,
+} from './pdfPage';
 
-export { parsePageMarginsMm, PX_PAR_MM, pageDimensionsMm, pageUsablePx, rasterScaleForFormat } from './pdfPage';
+export {
+  parsePageMarginsMm,
+  PX_PAR_MM,
+  pageDimensionsMm,
+  pageUsablePx,
+  rasterScaleForFormat,
+  echelleCanvasSecurisee,
+  echelleRasterPourPage,
+} from './pdfPage';
 
 /** Nom de fichier sûr pour le système de fichiers. */
 export function sanitizeFilename(name, fallback = 'document') {
@@ -53,20 +67,27 @@ async function writeBlobToDir(dirHandle, fileName, blob) {
 }
 
 function canvasVersImage(canvas) {
+  const pixels = (canvas.width || 0) * (canvas.height || 0);
+  const jpegQuality = pixels > 3_000_000 ? 0.82 : 0.88;
+  try {
+    const jpeg = canvas.toDataURL('image/jpeg', jpegQuality);
+    if (jpeg && jpeg.length > 64) return { data: jpeg, format: 'JPEG' };
+  } catch { /* canvas trop grand */ }
   try {
     const png = canvas.toDataURL('image/png');
     if (png && png.length > 64) return { data: png, format: 'PNG' };
   } catch { /* canvas trop grand pour PNG */ }
-  return { data: canvas.toDataURL('image/jpeg', 0.95), format: 'JPEG' };
+  return { data: canvas.toDataURL('image/jpeg', 0.7), format: 'JPEG' };
 }
 
 /** Recadre le canvas sur le contenu non blanc pour centrer le tableau sur la page. */
 function cropCanvasToContent(canvas, padding = 8) {
   try {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return canvas;
     const { width, height } = canvas;
     if (!width || !height) return canvas;
+    if (width * height > 4_000_000) return canvas;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return canvas;
     const { data } = ctx.getImageData(0, 0, width, height);
     const bg = 248;
     let minX = width;
@@ -102,6 +123,41 @@ function cropCanvasToContent(canvas, padding = 8) {
   } catch {
     return canvas;
   }
+}
+
+function relacherCanvas(canvas) {
+  try {
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  } catch { /* ignore */ }
+}
+
+async function capturerElementHtml(el, { scale, elW, captureH, appliquerCadrePage }) {
+  let s = scale;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await html2canvas(el, {
+        scale: s,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        letterRendering: false,
+        windowWidth: elW,
+        windowHeight: captureH,
+        onclone: (clonedDoc) => {
+          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, false, elW);
+        },
+      });
+    } catch (err) {
+      lastErr = err;
+      s = Math.max(0.35, Math.round(s * 0.6 * 100) / 100);
+    }
+  }
+  throw lastErr || new Error('Impossible de rasteriser la page PDF.');
 }
 
 /**
@@ -160,11 +216,13 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
-    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: false });
+    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const usableW = Math.max(1, pageW - margins.left - margins.right);
     const usableH = Math.max(1, pageH - margins.top - margins.bottom);
+    const pageInnerW = Math.max(1, cssW - padLeft - padRight);
+    const pageInnerH = Math.max(1, cssH - padTop - padBottom);
 
     let captureW = cssW;
     targets.forEach((el) => {
@@ -177,23 +235,23 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
 
     for (let i = 0; i < targets.length; i += 1) {
       const el = targets[i];
-      const elW = Math.max(cssW, el.scrollWidth || 0, el.offsetWidth || 0);
-      const captureH = Math.max(cssH, el.scrollHeight || cssH);
+      const elW = Math.max(1, el.scrollWidth || 0, el.offsetWidth || 0, cssW);
+      const captureH = Math.max(1, el.scrollHeight || 0, el.offsetHeight || 0, cssH);
       el.style.width = `${elW}px`;
       el.style.maxWidth = 'none';
       el.style.overflow = 'visible';
-      const canvas = await html2canvas(el, {
-        scale,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        letterRendering: true,
-        windowWidth: elW,
-        windowHeight: captureH,
-        onclone: (clonedDoc) => {
-          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, false, elW);
-        },
+      const scalePage = echelleRasterPourPage({
+        contentW: elW,
+        contentH: captureH,
+        pageW: pageInnerW,
+        pageH: pageInnerH,
+        scaleDemandee: scale,
+      });
+      const canvas = await capturerElementHtml(el, {
+        scale: scalePage,
+        elW,
+        captureH,
+        appliquerCadrePage,
       });
       const cropped = options.crop === false ? canvas : cropCanvasToContent(canvas);
       const image = canvasVersImage(cropped);
@@ -209,6 +267,8 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
       const x = margins.left + (usableW - drawW) / 2;
       const y = margins.top + (usableH - drawH) / 2;
       pdf.addImage(image.data, image.format, x, y, drawW, drawH, undefined, 'NONE');
+      if (cropped !== canvas) relacherCanvas(cropped);
+      relacherCanvas(canvas);
     }
 
     return pdf.output('blob');
