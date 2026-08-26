@@ -7,9 +7,9 @@ export const MARGIN_PDF_A3_PORTRAIT = '8mm 6mm';
 /** Police fixe des PDF général (défaut de l’époque sliders, sans curseur). */
 export const POLICE_PDF_GENERAL = 10;
 
-/** Hauteur / largeur du planning général A3 (commit 522f268 : 38 × 72). */
+/** Hauteur / largeur du planning général A3 (horaire assez large pour 08:20–09:05). */
 export const PDF_LIGNE_GENERAL = 38;
-export const PDF_COLONNE_HORAIRE_GENERAL = 72;
+export const PDF_COLONNE_HORAIRE_GENERAL = 112;
 
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;

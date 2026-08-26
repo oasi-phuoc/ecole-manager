@@ -38,6 +38,7 @@ import {
   payloadDepuisStatut,
   statutDepuisDispoRow,
   styleCelluleDispoVide,
+  styleCelluleDispoVidePrint,
   titreStatutDispo,
 } from '../utils/disponibilites';
 
@@ -3347,7 +3348,7 @@ export default function EmploiDuTemps() {
           const cells = (profs || []).map(p => {
             const aff = (affectations || []).find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
             const dispo = (dispos || []).find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
-            const videDispo = styleCelluleDispoVide(dispo);
+            const videDispo = styleCelluleDispoVidePrint(dispo);
             let bg = '#fff', content = '';
             const ligneHtml = (texte, fg, premier = true) =>
               `<div style="font-weight:${premier ? 700 : 600};color:${fg};font-size:${FONT};line-height:1.15;overflow:hidden;${premier ? '' : 'margin-top:1px;'}">${texte}</div>`;
@@ -3562,7 +3563,7 @@ export default function EmploiDuTemps() {
             const dispo = listeDispos.find(
               (d) => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id)
             );
-            const videDispo = styleCelluleDispoVide(dispo);
+            const videDispo = styleCelluleDispoVidePrint(dispo);
             let bg = '#fff';
             let content = '';
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {

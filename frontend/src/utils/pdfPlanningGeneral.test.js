@@ -18,7 +18,7 @@ describe('layoutPlanningGeneralA3', () => {
     expect(compterLignesPlanningGeneralA3(creneauxSemaine)).toBe(56);
   });
 
-  it('reprend la hauteur 38 et la largeur 72 du layout général', () => {
+  it('reprend la hauteur 38 et une largeur horaire suffisante pour 08:20–09:05', () => {
     const peu = layoutPlanningGeneralA3({
       creneaux: [{ jour: 'Lundi', periode: 'Matin', ordre: 1 }],
       orientation: 'landscape',
@@ -28,9 +28,9 @@ describe('layoutPlanningGeneralA3', () => {
       orientation: 'landscape',
     });
     expect(peu.rowH).toBe(38);
-    expect(peu.creneauW).toBe(72);
+    expect(peu.creneauW).toBe(112);
     expect(semaine.rowH).toBe(38);
-    expect(semaine.creneauW).toBe(72);
+    expect(semaine.creneauW).toBe(112);
     expect(semaine.fontPt).toBe(10);
     expect(semaine.headerH).toBeGreaterThanOrEqual(38);
   });
