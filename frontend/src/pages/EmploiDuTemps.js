@@ -3373,10 +3373,8 @@ export default function EmploiDuTemps() {
               const ligneSoutien = estSoutien && !estSpecial ? 'Soutien' : '';
               content = `${ligneHtml(ligne1, fg)}${ligneSoutien ? ligneHtml(escapeHtml(ligneSoutien), fg, false) : ''}${estSpecial || !branche ? '' : ligneHtml(escapeHtml(branche), fg, false)}`;
             } else {
-              bg = videDispo.bg;
-              content = videDispo.text
-                ? ligneHtml(escapeHtml(libelleCourtPrint(videDispo.text)), videDispo.color)
-                : '';
+              bg = videDispo.bg || '#ffffff';
+              content = '';
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;width:${COL_W};">${content}</td>`;
           }).join('');
@@ -3591,10 +3589,8 @@ export default function EmploiDuTemps() {
                 : `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;overflow:hidden;">${escapeHtml(branche)}</div>`;
               content = `<div style="font-weight:700;color:${fg};font-size:${FONT};line-height:1.12;overflow:hidden;">${ligne1}</div>${ligneSoutien}${ligne2}`;
             } else {
-              bg = videDispo.bg;
-              content = videDispo.text
-                ? `<span style="color:${videDispo.color};font-size:${FONT};">${escapeHtml(libelleCourtPrint(videDispo.text))}</span>`
-                : '';
+              bg = videDispo.bg || '#ffffff';
+              content = '';
             }
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;">${content}</td>`;
           });
@@ -7086,7 +7082,7 @@ export default function EmploiDuTemps() {
                               {genProfs.map(p => {
                                 const aff = genAffectations.find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
                                 const dispo = genDispos.find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
-                                const videDispo = styleCelluleDispoVide(dispo);
+                                const videDispo = styleCelluleDispoVidePrint(dispo);
                                 const indispo = statutDepuisDispoRow(dispo) === false;
                                 const poolCourantGen = pools.find((pp) => String(pp.id) === String(planningPoolId));
                                 const horsPool = aff && estAffectationHorsPool(aff, poolCourantGen);
@@ -7105,7 +7101,7 @@ export default function EmploiDuTemps() {
                                   } else {
                                     couleurFond = aff
                                       ? (estSpecial ? '#000000' : (aff.classe_id ? getCouleurClasse(aff.classe_id) : '#e8f5e9'))
-                                      : videDispo.bg;
+                                      : (videDispo.bg || '#ffffff');
                                     couleurTexte = aff
                                       ? (estSpecial ? '#ffffff' : getCouleurTexteSurFond(couleurFond))
                                       : '#111827';
@@ -7114,7 +7110,7 @@ export default function EmploiDuTemps() {
                                       : (estSoutien ? `${aff.classe_nom || ''} - Soutien` : (aff.classe_nom || ''));
                                   }
                                 } catch (_) {
-                                  couleurFond = videDispo.bg;
+                                  couleurFond = videDispo.bg || '#ffffff';
                                   couleurTexte = '#111827';
                                   libelleAff = aff?.classe_nom || '';
                                 }

@@ -78,14 +78,11 @@ export function titreStatutDispo(statut) {
 /** Style d'une case vide (planning / PDF) selon la dispo. */
 export function styleCelluleDispoVide(dispo) {
   const s = statutDepuisDispoRow(dispo);
-    if (s === false) return { text: '', bg: COULEUR_FOND_INDISPO, color: '#9ca3af' };
   if (s === STATUT_DISPO_EVITER) return { text: '', bg: COULEUR_FOND_EVITER, color: '#c2410c' };
   return { text: '', bg: '#ffffff', color: '#111827' };
 }
 
-/** PDF général : indisponible et vide en blanc (pas de gris). */
+/** PDF / planning général : indisponible identique à une case non affectée (blanc). */
 export function styleCelluleDispoVidePrint(dispo) {
-  const s = statutDepuisDispoRow(dispo);
-  if (s === STATUT_DISPO_EVITER) return { text: '', bg: COULEUR_FOND_EVITER, color: '#c2410c' };
-  return { text: '', bg: '#ffffff', color: '#111827' };
+  return styleCelluleDispoVide(dispo);
 }
