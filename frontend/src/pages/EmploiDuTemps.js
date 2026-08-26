@@ -7,6 +7,7 @@ import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import {
+  colonnesTitulariatParSites,
   layoutPlanningGeneralA3,
   marginPdfA3,
   PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
@@ -3152,6 +3153,8 @@ export default function EmploiDuTemps() {
           .a3-wrap > tbody > tr > td { border:none !important; background:transparent !important; padding:0 !important; vertical-align:top; }
           .a3-titulariat { width:auto; vertical-align:top !important; }
           .a3-titulariat .titu-cartes { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; width:100%; box-sizing:border-box; }
+          .a3-titulariat .titu-colonnes { display:flex; flex-direction:row; align-items:flex-start; justify-content:flex-start; gap:6px; width:100%; box-sizing:border-box; }
+          .a3-titulariat .titu-col { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; box-sizing:border-box; }
           .a3-titulariat .titu-carte { border-radius:10px; padding:7px 8px; text-align:center; box-sizing:border-box; overflow:hidden; }
           .a3-main { width:auto; }
           .a3-main table { width:100% !important; margin:0 !important; }
@@ -3395,7 +3398,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', orientation = 'landscape' }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', orientation = 'landscape', colonnesTitulariatParSite = false, clesSitesTitulariat = null }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3408,17 +3411,18 @@ export default function EmploiDuTemps() {
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
     const { poolHoraires } = getHoraireForLieu(siteResolu);
     const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
-    const pousserClasseProf = (map, pid, nomClasse, classeId) => {
+    const pousserClasseProf = (map, pid, nomClasse, classeId, siteClasse = '') => {
       if (!pid || !nomClasse) return;
       if (!map[pid]) map[pid] = [];
       if (map[pid].some((c) => c.nom === nomClasse)) return;
-      map[pid].push({ nom: nomClasse, id: classeId || null });
+      map[pid].push({ nom: nomClasse, id: classeId || null, site: siteClasse || '' });
     };
     const classesParProf = {};
     listeTit.forEach((t) => {
       const pid = t?.prof_id != null ? String(t.prof_id) : '';
       const nomClasse = String(t?.classe_nom || '').trim();
-      pousserClasseProf(classesParProf, pid, nomClasse, t?.classe_id);
+      const siteClasse = t?.site || sitePourClasseId(t?.classe_id) || '';
+      pousserClasseProf(classesParProf, pid, nomClasse, t?.classe_id, siteClasse);
     });
     if (Object.keys(classesParProf).length === 0) {
       listeTit.forEach((t) => {
@@ -3429,7 +3433,8 @@ export default function EmploiDuTemps() {
           return n && n === nomTit;
         });
         if (!prof) return;
-        pousserClasseProf(classesParProf, String(prof.id), String(t.classe_nom).trim(), t?.classe_id);
+        const siteClasse = t?.site || sitePourClasseId(t?.classe_id) || '';
+        pousserClasseProf(classesParProf, String(prof.id), String(t.classe_nom).trim(), t?.classe_id, siteClasse);
       });
     }
 
@@ -3473,6 +3478,7 @@ export default function EmploiDuTemps() {
           nom: p.nom,
           classe: classeInfo.nom,
           classeId: classeInfo.id,
+          site: classeInfo.site || sitePourClasseId(classeInfo.id) || sitePourProfId(p.id) || siteResolu,
         });
       });
     });
@@ -3486,22 +3492,39 @@ export default function EmploiDuTemps() {
       }
       return getCouleurClasse(classeId);
     };
+    const htmlCarteTitulariat = (row) => {
+      const bg = couleurClasseTitulariat(row) || '#ffffff';
+      const fg = getCouleurTexteSurFond(bg);
+      return `<div class="titu-carte" style="background:${bg};color:${fg};font-size:${FONT};">
+                <div style="font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(row.classe)}</div>
+                <div style="font-weight:400;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</div>
+              </div>`;
+    };
+    const clesSites = (clesSitesTitulariat || []).length
+      ? clesSitesTitulariat
+      : (poolIds || []).map((id) => sitePourPoolId(id)).filter(Boolean);
+    const tituColonnes = colonnesTitulariatParSite
+      ? colonnesTitulariatParSites(lignesTitulariat, (row) => row.site, clesSites)
+      : [];
+    const multiTitu = tituColonnes.length >= 2;
+    const TITU_GAP = 6;
+    const TITU_TOTAL_W = multiTitu
+      ? (TITU_W * tituColonnes.length) + (TITU_GAP * (tituColonnes.length - 1))
+      : TITU_W;
+    const htmlColonnesTitulariat = multiTitu
+      ? `<div class="titu-colonnes">${tituColonnes.map((col) =>
+          `<div class="titu-col" style="width:${TITU_W}px;">${col.length ? col.map(htmlCarteTitulariat).join('') : '&nbsp;'}</div>`
+        ).join('')}</div>`
+      : (lignesTitulariat.length
+        ? lignesTitulariat.map(htmlCarteTitulariat).join('')
+        : `<div style="color:#94a3b8;font-size:${FONT};padding:8px 4px;text-align:center;">Aucun titulaire</div>`);
     const cartesTitulariat = `
-        <div class="titu-cartes" style="width:${TITU_W}px;">
+        <div class="titu-cartes" style="width:${TITU_TOTAL_W}px;">
           <div style="height:${PROF_HEADER_H}px;box-sizing:border-box;"></div>
           <div class="titu-carte" style="background:#000;color:#ffffff;font-size:${FONT};margin-bottom:0;">
             <div style="font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Titulariat</div>
           </div>
-          ${lignesTitulariat.length
-            ? lignesTitulariat.map((row) => {
-              const bg = couleurClasseTitulariat(row) || '#ffffff';
-              const fg = getCouleurTexteSurFond(bg);
-              return `<div class="titu-carte" style="background:${bg};color:${fg};font-size:${FONT};">
-                <div style="font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(row.classe)}</div>
-                <div style="font-weight:400;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</div>
-              </div>`;
-            }).join('')
-            : `<div style="color:#94a3b8;font-size:${FONT};padding:8px 4px;text-align:center;">Aucun titulaire</div>`}
+          ${htmlColonnesTitulariat}
         </div>
     `;
 
@@ -3582,13 +3605,13 @@ export default function EmploiDuTemps() {
       <div class="section-a3">
         <table class="a3-wrap">
           <colgroup>
-            <col style="width:${TITU_W}px;" />
+            <col style="width:${TITU_TOTAL_W}px;" />
             <col style="width:8px;" />
             <col />
           </colgroup>
           <tbody>
             <tr>
-              <td class="a3-titulariat" style="width:${TITU_W}px;vertical-align:top;">${cartesTitulariat}</td>
+              <td class="a3-titulariat" style="width:${TITU_TOTAL_W}px;vertical-align:top;">${cartesTitulariat}</td>
               <td style="width:8px;border:none !important;background:transparent !important;padding:0 !important;"></td>
               <td class="a3-main">
                 <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
@@ -3954,7 +3977,7 @@ export default function EmploiDuTemps() {
         const premier = String(label).split(/[-–—_\s]+/).filter(Boolean)[0] || label;
         return String(premier).trim() || 'Site';
       };
-      const fusionnerPlanningsGeneraux = (datas) => {
+      const fusionnerPlanningsGeneraux = (datas, sitesParIndex = []) => {
         const profMap = new Map();
         const affKeys = new Set();
         const affectations = [];
@@ -3962,8 +3985,9 @@ export default function EmploiDuTemps() {
         const dispos = [];
         const titMap = new Map();
         let creneaux = [];
-        (datas || []).forEach((data) => {
+        (datas || []).forEach((data, idx) => {
           if (!data) return;
+          const siteData = sitesParIndex[idx] || '';
           (data.profs || []).forEach((p) => {
             if (p?.id == null) return;
             if (!profMap.has(String(p.id))) profMap.set(String(p.id), p);
@@ -3987,7 +4011,7 @@ export default function EmploiDuTemps() {
           (data.titulaires || []).forEach((t) => {
             const k = String(t.classe_id != null ? t.classe_id : t.classe_nom || '');
             if (!k || titMap.has(k)) return;
-            titMap.set(k, t);
+            titMap.set(k, { ...t, site: t.site || siteData });
           });
         });
         const profsMerged = Array.from(profMap.values()).sort((a, b) =>
@@ -4136,10 +4160,13 @@ export default function EmploiDuTemps() {
       // —— Méga-général : tous les sites, tous les professeurs, A3 paysage fixe ——
       if (poolsExport.length >= 2) {
         setExportPdfProgress('Planning méga-général…');
-        const datasMega = poolsExport
-          .map((p) => generalParPoolId.get(String(p.id)))
-          .filter(Boolean);
-        const mergedMega = fusionnerPlanningsGeneraux(datasMega);
+        const itemsMega = poolsExport
+          .map((p) => ({ pool: p, data: generalParPoolId.get(String(p.id)) }))
+          .filter((x) => x.data);
+        const mergedMega = fusionnerPlanningsGeneraux(
+          itemsMega.map((x) => x.data),
+          itemsMega.map((x) => x.pool.site || x.pool.nom || '')
+        );
         if ((mergedMega.profs || []).length) {
           const poolIdsMega = poolsExport.map((p) => p.id);
           try {
@@ -4172,6 +4199,8 @@ export default function EmploiDuTemps() {
               afficherNomsBranches: afficherNomsBranchesGeneral,
               orientation: 'landscape',
               site: '',
+              colonnesTitulariatParSite: true,
+              clesSitesTitulariat: poolsExport.map((p) => p.site || p.nom || ''),
             });
             documents.push({
               relativePath: 'Mega_General/Planning-général.pdf',

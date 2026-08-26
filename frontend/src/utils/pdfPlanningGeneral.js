@@ -67,6 +67,73 @@ export function hauteurLigneContenuPrint(fontPt = POLICE_PDF_GENERAL) {
  * Layout auto du planning général : lignes compactes (jamais plus hautes
  * que le texte), réduites seulement si la semaine ne tient pas dans la feuille.
  */
+/** Ordre des colonnes titulariat du méga-planning (sans afficher les noms). */
+export const ORDRE_SITES_TITULARIAT_MEGA = ['botza', 'synecom', 'creuset'];
+
+export function normaliserCleSiteTitulariat(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+export function canoniserCleSiteTitulariat(v, clesConnues = ORDRE_SITES_TITULARIAT_MEGA) {
+  const raw = normaliserCleSiteTitulariat(v);
+  if (!raw) return '';
+  const connus = (clesConnues || []).map(normaliserCleSiteTitulariat).filter(Boolean);
+  if (connus.includes(raw)) return raw;
+  const premier = raw.split(/[-–—_\s/]+/).filter(Boolean)[0] || raw;
+  if (connus.includes(premier)) return premier;
+  const prefix = connus.find((k) => raw.startsWith(k));
+  return prefix || raw;
+}
+
+export function trierClesSitesTitulariat(cles) {
+  const pref = ORDRE_SITES_TITULARIAT_MEGA;
+  const uniq = [];
+  const seen = new Set();
+  (cles || []).forEach((c) => {
+    const k = canoniserCleSiteTitulariat(c);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    uniq.push(k);
+  });
+  return uniq.sort((a, b) => {
+    const ia = pref.indexOf(a);
+    const ib = pref.indexOf(b);
+    if (ia !== -1 || ib !== -1) {
+      return (ia === -1 ? pref.length : ia) - (ib === -1 ? pref.length : ib);
+    }
+    return a.localeCompare(b, 'fr');
+  });
+}
+
+/**
+ * Une colonne par site, sans libellé. Les sites connus restent présents
+ * même sans titulaire ; les cartes sans site vont dans une colonne extra.
+ */
+export function colonnesTitulariatParSites(lignes, siteDeLigne, clesSites) {
+  const ordre = trierClesSitesTitulariat(clesSites);
+  const map = new Map(ordre.map((k) => [k, []]));
+  const horsSite = [];
+  (lignes || []).forEach((row) => {
+    const key = canoniserCleSiteTitulariat(
+      typeof siteDeLigne === 'function' ? siteDeLigne(row) : row?.site
+    );
+    if (map.has(key)) {
+      map.get(key).push(row);
+    } else if (key) {
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(row);
+    } else {
+      horsSite.push(row);
+    }
+  });
+  const extraKeys = [...map.keys()]
+    .filter((k) => !ordre.includes(k))
+    .sort((a, b) => a.localeCompare(b, 'fr'));
+  const cols = [...ordre, ...extraKeys].map((k) => map.get(k) || []);
+  if (horsSite.length) cols.push(horsSite);
+  return cols;
+}
+
 export function layoutPlanningGeneralA3({
   creneaux,
   orientation = 'landscape',
