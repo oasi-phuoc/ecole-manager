@@ -79,10 +79,10 @@ const PDF_LAYOUT_DEFAUTS = {
   salles: { hauteurLigne: 68, largeurColonne: 128 },
 };
 const PDF_LAYOUT_LIMITES = {
-  general: { hauteurLigne: { min: 20, max: 56 }, largeurColonne: { min: 48, max: 140 } },
-  profs: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
-  classes: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
-  salles: { hauteurLigne: { min: 40, max: 110 }, largeurColonne: { min: 80, max: 200 } },
+  general: { hauteurLigne: { min: 20, max: 100 }, largeurColonne: { min: 48, max: 140 } },
+  profs: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
+  classes: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
+  salles: { hauteurLigne: { min: 40, max: 100 }, largeurColonne: { min: 80, max: 200 } },
 };
 const PDF_LAYOUT_STORAGE = {
   general: 'oasis.pdfLayout.general',
@@ -1929,11 +1929,14 @@ export default function EmploiDuTemps() {
     <label
       title={title}
       style={{
-        display: 'inline-flex',
+        display: 'grid',
+        gridTemplateColumns: '118px 110px 52px',
         alignItems: 'center',
-        gap: 8,
+        columnGap: 8,
+        width: 322,
         height: 36,
         padding: '0 12px',
+        boxSizing: 'border-box',
         borderRadius: 8,
         border: '1px solid #c7d2fe',
         background: '#ffffff',
@@ -1941,11 +1944,10 @@ export default function EmploiDuTemps() {
         fontWeight: 600,
         color: '#334155',
         fontFamily: 'inherit',
-        whiteSpace: 'nowrap',
         flexShrink: 0,
       }}
     >
-      {label}
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       <input
         type="range"
         min={min}
@@ -1954,16 +1956,16 @@ export default function EmploiDuTemps() {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={title || label}
-        style={{ width: 110, accentColor: '#6366f1', cursor: 'pointer' }}
+        style={{ width: '100%', accentColor: '#6366f1', cursor: 'pointer' }}
       />
-      <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{value}{suffix}</span>
+      <span style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right', whiteSpace: 'nowrap' }}>{value}{suffix}</span>
     </label>
   );
   const renderSlidersLayoutPdf = (onglet) => {
     const layout = layoutPdfOnglet(onglet);
     const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
     return (
-      <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, width: 322 }}>
         {renderSliderPdf({
           label: 'Hauteur lignes',
           title: 'Hauteur des lignes du PDF (impression et export tous les PDF)',
@@ -1982,7 +1984,7 @@ export default function EmploiDuTemps() {
           onChange: (v) => setLayoutPdfOnglet(onglet, { largeurColonne: v }),
           suffix: ' px',
         })}
-      </>
+      </div>
     );
   };
   const renderTogglePlanning = ({ checked, onToggle, label, title }) => (
