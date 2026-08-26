@@ -47,15 +47,45 @@ export function pageUsablePx(format, orientation, margin) {
   };
 }
 
-/** Échelle html2canvas visée (plafonnée ensuite pour éviter l’overflow canvas / PDF). */
+/** Échelle html2canvas visée (plafonnée ensuite selon le poste). */
 export function rasterScaleForFormat(format) {
-  return String(format || 'a4').toLowerCase() === 'a3' ? 2.4 : 2.2;
+  return String(format || 'a4').toLowerCase() === 'a3' ? 2.0 : 1.8;
 }
 
-/** Côté max d’un canvas (Firefox casse vers 8k–16k, et le PDF explose avant). */
-export const MAX_CANVAS_SIDE_PX = 4096;
-/** Surface max (≈ 8 Mo RGBA) : au-delà, jsPDF `buildDocument` peut faire « allocation size overflow ». */
-export const MAX_CANVAS_PIXELS = 8_000_000;
+/** Plafonds « confortables » (Chrome récent, assez de RAM). */
+export const MAX_CANVAS_SIDE_PX = 3072;
+export const MAX_CANVAS_PIXELS = 5_000_000;
+
+/** Plafonds pour Firefox / PC peu de RAM — évite « allocation size overflow ». */
+export const MAX_CANVAS_SIDE_PX_FAIBLE = 2048;
+export const MAX_CANVAS_PIXELS_FAIBLE = 2_200_000;
+
+/**
+ * Limites canvas/PDF selon le poste (navigateur + RAM).
+ * Firefox lève « allocation size overflow » bien avant Chrome.
+ */
+export function limitesCanvasPoste(nav = typeof navigator !== 'undefined' ? navigator : {}) {
+  const ua = String(nav.userAgent || '');
+  const firefox = /firefox/i.test(ua) && !/seamonkey/i.test(ua);
+  const mem = Number(nav.deviceMemory);
+  const peuDeRam = Number.isFinite(mem) && mem > 0 && mem <= 4;
+  if (firefox || peuDeRam) {
+    return {
+      maxSide: MAX_CANVAS_SIDE_PX_FAIBLE,
+      maxPixels: MAX_CANVAS_PIXELS_FAIBLE,
+      jpegQuality: 0.68,
+      scaleDemandee: 1.35,
+      recadrer: false,
+    };
+  }
+  return {
+    maxSide: MAX_CANVAS_SIDE_PX,
+    maxPixels: MAX_CANVAS_PIXELS,
+    jpegQuality: 0.82,
+    scaleDemandee: 2.0,
+    recadrer: true,
+  };
+}
 
 /**
  * Réduit l’échelle html2canvas pour rester sous les limites canvas du navigateur.
@@ -66,13 +96,13 @@ export function echelleCanvasSecurisee(cssW, cssH, scaleDemandee, {
 } = {}) {
   const w = Math.max(1, Number(cssW) || 1);
   const h = Math.max(1, Number(cssH) || 1);
-  let s = Math.max(0.35, Number(scaleDemandee) || 1);
+  let s = Math.max(0.25, Number(scaleDemandee) || 1);
   s = Math.min(s, maxSide / w, maxSide / h);
   const pixels = w * h * s * s;
   if (pixels > maxPixels) {
     s *= Math.sqrt(maxPixels / pixels);
   }
-  return Math.max(0.35, Math.round(s * 100) / 100);
+  return Math.max(0.25, Math.round(s * 100) / 100);
 }
 
 /**
