@@ -47,7 +47,52 @@ export function pageUsablePx(format, orientation, margin) {
   };
 }
 
-/** Échelle html2canvas ≈ 300 dpi (A3 un peu plus haut pour rester lisible). */
+/** Échelle html2canvas visée (plafonnée ensuite pour éviter l’overflow canvas / PDF). */
 export function rasterScaleForFormat(format) {
-  return String(format || 'a4').toLowerCase() === 'a3' ? 3.2 : 2.8;
+  return String(format || 'a4').toLowerCase() === 'a3' ? 2.4 : 2.2;
+}
+
+/** Côté max d’un canvas (Firefox casse vers 8k–16k, et le PDF explose avant). */
+export const MAX_CANVAS_SIDE_PX = 4096;
+/** Surface max (≈ 8 Mo RGBA) : au-delà, jsPDF `buildDocument` peut faire « allocation size overflow ». */
+export const MAX_CANVAS_PIXELS = 8_000_000;
+
+/**
+ * Réduit l’échelle html2canvas pour rester sous les limites canvas du navigateur.
+ */
+export function echelleCanvasSecurisee(cssW, cssH, scaleDemandee, {
+  maxSide = MAX_CANVAS_SIDE_PX,
+  maxPixels = MAX_CANVAS_PIXELS,
+} = {}) {
+  const w = Math.max(1, Number(cssW) || 1);
+  const h = Math.max(1, Number(cssH) || 1);
+  let s = Math.max(0.35, Number(scaleDemandee) || 1);
+  s = Math.min(s, maxSide / w, maxSide / h);
+  const pixels = w * h * s * s;
+  if (pixels > maxPixels) {
+    s *= Math.sqrt(maxPixels / pixels);
+  }
+  return Math.max(0.35, Math.round(s * 100) / 100);
+}
+
+/**
+ * Échelle de raster : si le HTML dépasse la page, on capture déjà à la résolution
+ * de la page (pas un canvas géant ensuite réduit dans le PDF).
+ */
+export function echelleRasterPourPage({
+  contentW,
+  contentH,
+  pageW,
+  pageH,
+  scaleDemandee,
+  maxSide = MAX_CANVAS_SIDE_PX,
+  maxPixels = MAX_CANVAS_PIXELS,
+} = {}) {
+  const cw = Math.max(1, Number(contentW) || 1);
+  const ch = Math.max(1, Number(contentH) || 1);
+  const pw = Math.max(1, Number(pageW) || 1);
+  const ph = Math.max(1, Number(pageH) || 1);
+  const sFit = Math.min(pw / cw, ph / ch);
+  const s = (sFit >= 1 ? Number(scaleDemandee) || 1 : (Number(scaleDemandee) || 1) * sFit);
+  return echelleCanvasSecurisee(cw, ch, s, { maxSide, maxPixels });
 }
