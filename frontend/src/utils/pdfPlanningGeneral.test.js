@@ -3,13 +3,17 @@ import {
   colonnesTitulariatParSites,
   compterLignesPlanningGeneralA3,
   encadrerColonnesProfsHtml,
+  fusionnerPlanningsGeneraux,
   htmlColgroupGrilleGeneral,
+  interpreterSelectionPlanningGeneral,
   largeurColonneEgaleCss,
   largeurColonneGrilleGeneralCss,
   largeurTableauGrilleGeneralCss,
   layoutPlanningGeneralA3,
   nbColonnesGrilleGeneral,
+  optionsPlanningGeneral,
   trierClesSitesTitulariat,
+  VALEUR_PLANNING_MEGA,
 } from './pdfPlanningGeneral';
 
 const creneauxSemaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].flatMap((jour) => (
@@ -101,5 +105,63 @@ describe('colonnesTitulariatParSites', () => {
     expect(cols[0].map((r) => r.classe)).toEqual(['BOT 02']);
     expect(cols[1].map((r) => r.classe)).toEqual(['CFR 01', 'CFR 03']);
     expect(cols[2]).toEqual([]);
+  });
+});
+
+describe('menu Général Tout / Complet', () => {
+  const pools = [
+    { id: 1, nom: 'Botza 7-8H', site: 'Botza' },
+    { id: 2, nom: 'SYNECOM-CFR 7-8H', site: 'SYNECOM-CFR' },
+    { id: 3, nom: 'SYNECOM-CSC 7-8H', site: 'SYNECOM-CSC' },
+    { id: 4, nom: 'Creuset 7-8H', site: 'Creuset' },
+  ];
+
+  it('ajoute Tout {site} pour chaque super-général et Complet pour le méga', () => {
+    const options = optionsPlanningGeneral(pools);
+    expect(options.map((o) => o.label)).toEqual([
+      'Botza 7-8H',
+      'SYNECOM-CFR 7-8H',
+      'SYNECOM-CSC 7-8H',
+      'Creuset 7-8H',
+      'Tout Synecom',
+      'Complet',
+    ]);
+    expect(options.find((o) => o.label === 'Complet').value).toBe(VALEUR_PLANNING_MEGA);
+  });
+
+  it('sélectionne les pools du site pour Tout et tous les pools pour Complet', () => {
+    const options = optionsPlanningGeneral(pools);
+    const toutSynecom = options.find((o) => o.label === 'Tout Synecom').value;
+    const superSel = interpreterSelectionPlanningGeneral(toutSynecom, pools);
+    expect(superSel.mode).toBe('super');
+    expect(superSel.poolIds).toEqual([2, 3]);
+    const megaSel = interpreterSelectionPlanningGeneral(VALEUR_PLANNING_MEGA, pools);
+    expect(megaSel.mode).toBe('mega');
+    expect(megaSel.poolIds).toEqual([1, 2, 3, 4]);
+    expect(megaSel.label).toBe('Complet');
+  });
+
+  it('fusionne les profs et titulaires de plusieurs pools', () => {
+    const merged = fusionnerPlanningsGeneraux([
+      {
+        profs: [{ id: 10, nom: 'A', prenom: 'Anne' }],
+        creneaux: [{ id: 1, jour: 'Lundi' }],
+        affectations: [{ prof_id: 10, creneau_id: 1, classe_id: 1, dans_pool_courant: true }],
+        dispos: [{ prof_id: 10, creneau_id: 1 }],
+        titulaires: [{ classe_id: 1, classe_nom: 'CFR 01' }],
+      },
+      {
+        profs: [{ id: 11, nom: 'B', prenom: 'Bob' }, { id: 10, nom: 'A', prenom: 'Anne' }],
+        creneaux: [{ id: 1, jour: 'Lundi' }],
+        affectations: [{ prof_id: 11, creneau_id: 1, classe_id: 2 }],
+        dispos: [],
+        titulaires: [{ classe_id: 2, classe_nom: 'CSC 01' }],
+      },
+    ], ['SYNECOM-CFR', 'SYNECOM-CSC']);
+    expect(merged.profs.map((p) => p.id)).toEqual([10, 11]);
+    expect(merged.titulaires).toHaveLength(2);
+    expect(merged.titulaires[0].site).toBe('SYNECOM-CFR');
+    expect(merged.affectations).toHaveLength(2);
+    expect(merged.affectations[0].dans_pool_courant).toBeUndefined();
   });
 });

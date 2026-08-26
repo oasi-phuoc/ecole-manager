@@ -255,3 +255,168 @@ export function colonnesTitulariatParSites(lignes, siteDeLigne, clesSites) {
   return cols;
 }
 
+/** Valeur du menu Général pour le méga-planning (tous les sites). */
+export const VALEUR_PLANNING_MEGA = '__mega__';
+export const PREFIXE_PLANNING_SUPER = '__super__:';
+
+export function valeurPlanningSuper(cle) {
+  const key = String(cle || '').trim().toUpperCase();
+  return key ? `${PREFIXE_PLANNING_SUPER}${key}` : '';
+}
+
+export function estSelectionMega(valeur) {
+  return String(valeur || '') === VALEUR_PLANNING_MEGA;
+}
+
+export function estSelectionSuper(valeur) {
+  return String(valeur || '').startsWith(PREFIXE_PLANNING_SUPER);
+}
+
+export function cleSelectionSuper(valeur) {
+  if (!estSelectionSuper(valeur)) return '';
+  return String(valeur).slice(PREFIXE_PLANNING_SUPER.length).trim().toUpperCase();
+}
+
+export function labelComposePool(pool, resoudreNomSite) {
+  const site = String(pool?.site || '').trim();
+  const nom = String(pool?.nom || '').trim();
+  if (/[-–—]/.test(site)) return site;
+  if (/[-–—]/.test(nom)) return nom;
+  if (typeof resoudreNomSite === 'function') {
+    const resolu = String(resoudreNomSite(pool) || '').trim();
+    if (resolu) return resolu;
+  }
+  return site || nom;
+}
+
+export function prefixeSitePool(pool, resoudreNomSite) {
+  const label = labelComposePool(pool, resoudreNomSite);
+  const premier = String(label).split(/[-–—_\s]+/).filter(Boolean)[0] || label;
+  return String(premier).trim() || 'Site';
+}
+
+export function nomAfficheSiteGeneral(label) {
+  const brut = String(label || '').trim();
+  if (!brut) return 'Site';
+  if (brut === brut.toUpperCase() && /[A-Z]/.test(brut)) {
+    return brut.charAt(0) + brut.slice(1).toLowerCase();
+  }
+  return brut.charAt(0).toUpperCase() + brut.slice(1);
+}
+
+/** Sites qui ont un super-général (plusieurs libellés distincts, même préfixe). */
+export function groupesSuperGeneral(pools, resoudreNomSite) {
+  const groupesPrefixe = new Map();
+  (pools || []).forEach((pool) => {
+    const labelComplet = labelComposePool(pool, resoudreNomSite);
+    const prefixe = prefixeSitePool(pool, resoudreNomSite);
+    const key = prefixe.toUpperCase();
+    if (!groupesPrefixe.has(key)) {
+      groupesPrefixe.set(key, { key, label: prefixe, pools: [], labelsComplets: new Set() });
+    }
+    const g = groupesPrefixe.get(key);
+    g.pools.push(pool);
+    g.labelsComplets.add(String(labelComplet).trim().toUpperCase());
+  });
+  return Array.from(groupesPrefixe.values()).filter((g) => g.labelsComplets.size >= 2);
+}
+
+export function optionsPlanningGeneral(pools, resoudreNomSite) {
+  const liste = Array.isArray(pools) ? pools : [];
+  const options = liste.map((p) => ({
+    value: String(p.id),
+    label: String(p.nom || `Pool ${p.id}`),
+  }));
+  groupesSuperGeneral(liste, resoudreNomSite).forEach((g) => {
+    options.push({
+      value: valeurPlanningSuper(g.key),
+      label: `Tout ${nomAfficheSiteGeneral(g.label)}`,
+    });
+  });
+  if (liste.length >= 2) {
+    options.push({ value: VALEUR_PLANNING_MEGA, label: 'Complet' });
+  }
+  return options;
+}
+
+export function interpreterSelectionPlanningGeneral(valeur, pools, resoudreNomSite) {
+  const v = valeur == null ? '' : String(valeur);
+  const liste = Array.isArray(pools) ? pools : [];
+  if (!v) return { mode: '', poolIds: [], label: '', groupe: null };
+  if (estSelectionMega(v)) {
+    return {
+      mode: 'mega',
+      poolIds: liste.map((p) => p.id),
+      label: 'Complet',
+      groupe: null,
+    };
+  }
+  if (estSelectionSuper(v)) {
+    const cle = cleSelectionSuper(v);
+    const groupe = groupesSuperGeneral(liste, resoudreNomSite).find((g) => g.key === cle) || null;
+    return {
+      mode: 'super',
+      poolIds: (groupe?.pools || []).map((p) => p.id),
+      label: groupe ? `Tout ${nomAfficheSiteGeneral(groupe.label)}` : `Tout ${nomAfficheSiteGeneral(cle)}`,
+      groupe,
+    };
+  }
+  const pool = liste.find((p) => String(p.id) === v) || null;
+  return {
+    mode: 'pool',
+    poolIds: pool ? [pool.id] : (v ? [v] : []),
+    label: pool?.nom || '',
+    groupe: null,
+  };
+}
+
+export function fusionnerPlanningsGeneraux(datas, sitesParIndex = []) {
+  const profMap = new Map();
+  const affKeys = new Set();
+  const affectations = [];
+  const dispoKeys = new Set();
+  const dispos = [];
+  const titMap = new Map();
+  let creneaux = [];
+  (datas || []).forEach((data, idx) => {
+    if (!data) return;
+    const siteData = sitesParIndex[idx] || '';
+    (data.profs || []).forEach((p) => {
+      if (p?.id == null) return;
+      if (!profMap.has(String(p.id))) profMap.set(String(p.id), p);
+    });
+    if (!creneaux.length && Array.isArray(data.creneaux) && data.creneaux.length) {
+      creneaux = data.creneaux;
+    }
+    (data.affectations || []).forEach((a) => {
+      const k = `${a.prof_id}|${a.creneau_id}|${a.classe_id || ''}|${a.type_special || ''}|${a.matiere_id || ''}`;
+      if (affKeys.has(k)) return;
+      affKeys.add(k);
+      const { dans_pool_courant, ...rest } = a;
+      affectations.push(rest);
+    });
+    (data.dispos || []).forEach((d) => {
+      const k = `${d.prof_id}|${d.creneau_id}`;
+      if (dispoKeys.has(k)) return;
+      dispoKeys.add(k);
+      dispos.push(d);
+    });
+    (data.titulaires || []).forEach((t) => {
+      const k = String(t.classe_id != null ? t.classe_id : t.classe_nom || '');
+      if (!k || titMap.has(k)) return;
+      titMap.set(k, { ...t, site: t.site || siteData });
+    });
+  });
+  const profsMerged = Array.from(profMap.values()).sort((a, b) =>
+    String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+    || String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr')
+  );
+  return {
+    profs: profsMerged,
+    creneaux,
+    affectations,
+    dispos,
+    titulaires: Array.from(titMap.values()),
+  };
+}
+
