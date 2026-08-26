@@ -11,6 +11,7 @@ import {
   largeurTableauGrilleGeneralCss,
   layoutPlanningGeneralA3,
   nbColonnesGrilleGeneral,
+  nProfsRefPlanningGeneral,
   optionsPlanningGeneral,
   trierClesSitesTitulariat,
   VALEUR_PLANNING_MEGA,
@@ -81,6 +82,22 @@ describe('grille planning général (2 horaires, sans colonnes vides)', () => {
     expect((htmlColgroupGrilleGeneral(10, '10%').match(/<col /g) || []).length).toBe(23);
     expect(largeurColonneGrilleGeneralCss(12)).toBe('calc((100% - 130px) / 14)');
     expect(largeurTableauGrilleGeneralCss(12)).toBe('100%');
+  });
+
+  it('cale super sur 20 profs fictifs et méga sur 40', () => {
+    expect(nProfsRefPlanningGeneral({ superGeneral: true })).toBe(20);
+    expect(nProfsRefPlanningGeneral({ mega: true })).toBe(40);
+    expect(nProfsRefPlanningGeneral({})).toBe(10);
+    expect(largeurColonneGrilleGeneralCss(12, { nProfsRef: 20 }))
+      .toBe(largeurColonneGrilleGeneralCss(20, { nProfsRef: 20 }));
+    expect(largeurColonneGrilleGeneralCss(20, { nProfsRef: 20 })).toBe('calc((100% - 210px) / 22)');
+    expect(largeurTableauGrilleGeneralCss(12, { nProfsRef: 20 })).toBe('calc(14 / 22 * (100% - 210px) + 130px)');
+    expect(largeurTableauGrilleGeneralCss(20, { nProfsRef: 20 })).toBe('100%');
+    expect(largeurColonneGrilleGeneralCss(25, { nProfsRef: 40 }))
+      .toBe(largeurColonneGrilleGeneralCss(40, { nProfsRef: 40 }));
+    expect(largeurColonneGrilleGeneralCss(40, { nProfsRef: 40 })).toBe('calc((100% - 410px) / 42)');
+    expect(largeurTableauGrilleGeneralCss(25, { nProfsRef: 40 })).toBe('calc(27 / 42 * (100% - 410px) + 260px)');
+    expect(largeurTableauGrilleGeneralCss(40, { nProfsRef: 40 })).toBe('100%');
   });
 });
 
