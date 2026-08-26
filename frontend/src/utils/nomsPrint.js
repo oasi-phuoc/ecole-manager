@@ -3,11 +3,14 @@ export function formaterNomComplet(s) {
   return String(s || '').replace(/(^|\s)(\S*?)-\S+$/, '$1$2').trim();
 }
 
+/** Seuil par défaut : prénom + nom usuels (ex. Isabelle Valloton) tiennent sur une ligne. */
+export const MAX_NOM_UNE_LIGNE_PRINT = 26;
+
 /**
  * Nom complet pour PDF. Si trop long pour une ligne, prénom puis nom en dessous.
  * Jamais d’abréviation du type « Emilie H. ».
  */
-export function lignesNomDepuisComplet(nomComplet, maxUneLigne = 16) {
+export function lignesNomDepuisComplet(nomComplet, maxUneLigne = MAX_NOM_UNE_LIGNE_PRINT) {
   const s = formaterNomComplet(nomComplet).replace(/\s+/g, ' ').trim();
   if (!s) return [];
   if (s.length <= maxUneLigne) return [s];
@@ -16,10 +19,34 @@ export function lignesNomDepuisComplet(nomComplet, maxUneLigne = 16) {
   return [parts[0], parts.slice(1).join(' ')];
 }
 
-export function lignesNomPrenomNom(prenom, nom, maxUneLigne = 16) {
+export function lignesNomPrenomNom(prenom, nom, maxUneLigne = MAX_NOM_UNE_LIGNE_PRINT) {
   const p = String(prenom || '').trim();
   const n = formaterNomComplet(String(nom || '').split('-')[0].trim());
   return lignesNomDepuisComplet([p, n].filter(Boolean).join(' '), maxUneLigne);
+}
+
+/** Largeur approximative d’un libellé Arial en pixels CSS (impression PDF). */
+export function estimerLargeurTextePrintPx(texte, fontPt) {
+  const s = String(texte || '');
+  const pt = Number(fontPt);
+  const taille = Number.isFinite(pt) && pt > 0 ? pt : 10;
+  return Math.ceil(s.length * taille * 0.78) + 12;
+}
+
+/**
+ * Largeurs auto du tableau Titulariat : colonne noms selon le plus long prénom+nom,
+ * colonne classes selon le plus long libellé (bornée pour rester étroite).
+ */
+export function largeursColonnesTitulariatPrint(lignes, fontPt) {
+  const noms = (lignes || []).map((r) =>
+    [r.prenom, r.nom].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+  );
+  const classesNoms = (lignes || []).map((r) => String(r.classe || '').trim());
+  const plusLongNom = noms.reduce((acc, n) => (n.length > acc.length ? n : acc), 'W'.repeat(14));
+  const plusLongClasse = classesNoms.reduce((acc, n) => (n.length > acc.length ? n : acc), '8P');
+  const nomW = Math.min(280, Math.max(128, estimerLargeurTextePrintPx(plusLongNom, fontPt)));
+  const classeW = Math.min(42, Math.max(26, estimerLargeurTextePrintPx(plusLongClasse, fontPt)));
+  return { nomW, classeW, totalW: nomW + classeW };
 }
 
 /** Toujours prénom puis nom de famille, pour les en-têtes PDF général. */

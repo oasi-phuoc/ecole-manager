@@ -1,8 +1,19 @@
-import { formaterNomComplet, lignesNomDepuisComplet, lignesPrenomPuisNom, libelleCourtPrint } from './nomsPrint';
+import {
+  formaterNomComplet,
+  lignesNomDepuisComplet,
+  lignesPrenomPuisNom,
+  libelleCourtPrint,
+  largeursColonnesTitulariatPrint,
+} from './nomsPrint';
 
 describe('lignesNomDepuisComplet', () => {
   it('garde un nom court sur une ligne', () => {
     expect(lignesNomDepuisComplet('Van Phuoc')).toEqual(['Van Phuoc']);
+  });
+
+  it('garde Isabelle Valloton et Charlotte Scherperel sur une ligne', () => {
+    expect(lignesNomDepuisComplet('Isabelle Valloton')).toEqual(['Isabelle Valloton']);
+    expect(lignesNomDepuisComplet('Charlotte Scherperel')).toEqual(['Charlotte Scherperel']);
   });
 
   it('passe sur deux lignes sans tronquer', () => {
@@ -11,6 +22,20 @@ describe('lignesNomDepuisComplet', () => {
 
   it('retire un suffixe', () => {
     expect(formaterNomComplet('Emilie Hishier-prof')).toBe('Emilie Hishier');
+  });
+});
+
+describe('largeursColonnesTitulariatPrint', () => {
+  it('élargit la colonne noms et resserre la colonne classes selon le texte', () => {
+    const { nomW, classeW, totalW } = largeursColonnesTitulariatPrint([
+      { prenom: 'Charlotte', nom: 'Scherperel', classe: '7P' },
+      { prenom: 'Isabelle', nom: 'Valloton', classe: '8H' },
+    ], 10);
+    expect(classeW).toBeLessThanOrEqual(42);
+    expect(classeW).toBeGreaterThanOrEqual(26);
+    expect(nomW).toBeGreaterThan(classeW);
+    expect(nomW).toBeGreaterThanOrEqual(128);
+    expect(totalW).toBe(nomW + classeW);
   });
 });
 

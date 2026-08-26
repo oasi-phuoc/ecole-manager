@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
-import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom } from '../utils/nomsPrint';
+import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeursColonnesTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
@@ -3287,8 +3287,8 @@ export default function EmploiDuTemps() {
           .section-a3 { page-break-inside: avoid; page-break-after: auto; break-inside: avoid; margin: 0; }
           .a3-wrap { width:100%; border-collapse:collapse; table-layout:fixed; margin:0; }
           .a3-wrap > tbody > tr > td { border:none !important; background:transparent !important; padding:0 !important; vertical-align:top; }
-          .a3-titulariat { width:196px; }
-          .a3-titulariat table { width:100% !important; margin:0 !important; }
+          .a3-titulariat { width:auto; }
+          .a3-titulariat table { width:100% !important; margin:0 !important; table-layout:fixed; }
           .a3-main { width:auto; }
           .a3-main table { width:100% !important; margin:0 !important; }
           .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '0 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;` : ''} }
@@ -3333,7 +3333,9 @@ export default function EmploiDuTemps() {
       if (!list.length) return '';
       return list.map((l, i) => {
         const poids = estLignePhraseSoutien(l) ? 400 : (i === 0 ? 700 : 600);
-        return `<div style="font-weight:${poids};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}overflow:hidden;">${escapeHtml(l)}</div>`;
+        const uneLigne = i === 0 || l.length <= 28;
+        const antiWrap = uneLigne ? 'white-space:nowrap;word-break:keep-all;overflow-wrap:normal;' : '';
+        return `<div style="font-weight:${poids};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}${antiWrap}overflow:hidden;">${escapeHtml(l)}</div>`;
       }).join('');
     };
 
@@ -3538,13 +3540,17 @@ export default function EmploiDuTemps() {
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
     const { poolHoraires } = getHoraireForLieu(siteResolu);
     const poolsCourants = resoudrePoolsPourGeneral(poolId, poolIds);
+    const pousserClasseProf = (map, pid, nomClasse, classeId) => {
+      if (!pid || !nomClasse) return;
+      if (!map[pid]) map[pid] = [];
+      if (map[pid].some((c) => c.nom === nomClasse)) return;
+      map[pid].push({ nom: nomClasse, id: classeId || null });
+    };
     const classesParProf = {};
     listeTit.forEach((t) => {
       const pid = t?.prof_id != null ? String(t.prof_id) : '';
       const nomClasse = String(t?.classe_nom || '').trim();
-      if (!pid || !nomClasse) return;
-      if (!classesParProf[pid]) classesParProf[pid] = [];
-      if (!classesParProf[pid].includes(nomClasse)) classesParProf[pid].push(nomClasse);
+      pousserClasseProf(classesParProf, pid, nomClasse, t?.classe_id);
     });
     if (Object.keys(classesParProf).length === 0) {
       listeTit.forEach((t) => {
@@ -3555,10 +3561,7 @@ export default function EmploiDuTemps() {
           return n && n === nomTit;
         });
         if (!prof) return;
-        const pid = String(prof.id);
-        if (!classesParProf[pid]) classesParProf[pid] = [];
-        const cn = String(t.classe_nom).trim();
-        if (cn && !classesParProf[pid].includes(cn)) classesParProf[pid].push(cn);
+        pousserClasseProf(classesParProf, String(prof.id), String(t.classe_nom).trim(), t?.classe_id);
       });
     }
 
@@ -3592,17 +3595,31 @@ export default function EmploiDuTemps() {
 
     const lignesTitulariat = [];
     listeProfsReels.forEach((p) => {
-      (classesParProf[String(p.id)] || []).forEach((classeNom) => {
+      (classesParProf[String(p.id)] || []).forEach((classeInfo) => {
         lignesTitulariat.push({
           prenom: p.prenom,
           nom: p.nom,
-          classe: classeNom,
+          classe: classeInfo.nom,
+          classeId: classeInfo.id,
         });
       });
     });
     lignesTitulariat.sort((a, b) => String(a.classe).localeCompare(String(b.classe), 'fr', { sensitivity: 'base' }));
+    const { nomW: TITU_NOM_W, classeW: TITU_CLASSE_W, totalW: TITU_W } = largeursColonnesTitulariatPrint(lignesTitulariat, fontPt);
+    const couleurClasseTitulariat = (row) => {
+      let classeId = row.classeId;
+      if (classeId == null || classeId === '') {
+        const cl = (classes || []).find((c) => String(c.nom || '').trim() === String(row.classe || '').trim());
+        classeId = cl?.id;
+      }
+      return getCouleurClasse(classeId);
+    };
     const tableTitulariat = `
-        <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
+        <table style="border-collapse:collapse;width:${TITU_W}px;table-layout:fixed;margin:0;">
+          <colgroup>
+            <col style="width:${TITU_NOM_W}px;" />
+            <col style="width:${TITU_CLASSE_W}px;" />
+          </colgroup>
           <thead>
             <tr>
               <th colspan="2" style="height:${PROF_HEADER_H}px;border:none !important;background:transparent !important;padding:0 !important;font-size:0;line-height:0;box-sizing:border-box;">&nbsp;</th>
@@ -3615,11 +3632,16 @@ export default function EmploiDuTemps() {
           </thead>
           <tbody>
             ${lignesTitulariat.length
-              ? lignesTitulariat.map((row) => `
+              ? lignesTitulariat.map((row) => {
+                const bg = couleurClasseTitulariat(row) || '#ffffff';
+                const fg = getCouleurTexteSurFond(bg);
+                const cellBase = `text-align:center;vertical-align:middle;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${bg};color:${fg};`;
+                return `
                 <tr>
-                  <td style="text-align:center;vertical-align:middle;padding:0 3px;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</td>
-                  <td style="text-align:center;vertical-align:middle;padding:0 2px;border:1px solid #e2e8f0;font-weight:700;font-size:${FONT};height:${ROW_H}px;line-height:1.1;width:56px;white-space:nowrap;overflow:hidden;box-sizing:border-box;">${escapeHtml(row.classe)}</td>
-                </tr>`).join('')
+                  <td style="${cellBase}padding:0 4px;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</td>
+                  <td style="${cellBase}padding:0 1px;font-weight:700;width:${TITU_CLASSE_W}px;">${escapeHtml(row.classe)}</td>
+                </tr>`;
+              }).join('')
               : `<tr><td colspan="2" style="padding:0 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:${FONT};height:${ROW_H}px;line-height:${ROW_H}px;">Aucun titulaire</td></tr>`}
           </tbody>
         </table>
@@ -3705,13 +3727,13 @@ export default function EmploiDuTemps() {
       <div class="section-a3">
         <table class="a3-wrap">
           <colgroup>
-            <col style="width:196px;" />
+            <col style="width:${TITU_W}px;" />
             <col style="width:8px;" />
             <col />
           </colgroup>
           <tbody>
             <tr>
-              <td class="a3-titulariat">${tableTitulariat}</td>
+              <td class="a3-titulariat" style="width:${TITU_W}px;">${tableTitulariat}</td>
               <td style="width:8px;border:none !important;background:transparent !important;padding:0 !important;"></td>
               <td class="a3-main">
                 <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
@@ -6982,8 +7004,8 @@ export default function EmploiDuTemps() {
                                   background:aCours?'#fff':'#f5f5f5', position:'relative'}}>
                                   {aff ? (
                                     <>
-                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center',lineHeight:1.2}}>
-                                        {lignesNomProf.map((l) => <div key={l}>{l}</div>)}
+                                      <div style={{fontWeight:700,color:couleurTexteProf,background:couleurFondProf,borderRadius:6,padding:'3px 8px',textAlign:'center',lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden'}}>
+                                        {lignesNomProf.map((l) => <div key={l} style={{whiteSpace:'nowrap'}}>{l}</div>)}
                                       </div>
                                       {libelleBrancheComplet(aff) && <div style={{color:'#334155',fontWeight:600,fontSize:11,marginTop:3,textAlign:'center'}}>{libelleBrancheComplet(aff)}</div>}
                                       {aSoutien && renderBadgeSoutien(cr.id)}
