@@ -18,7 +18,9 @@ import {
   layoutPlanningGeneralA3,
   marginPdfA3,
   nbColonnesGrilleGeneral,
+  nProfsRefPlanningGeneral,
   optionsPlanningGeneral,
+  A3_NB_COLONNES_PROF,
   PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
   PDF_COLONNE_HORAIRE_GENERAL,
   PDF_LIGNE_CLASSE_SALLE_PROF,
@@ -66,7 +68,7 @@ const optionsPdfA3General = (orientation) => {
 };
 const estLignePhraseSoutien = (texte) => {
   const t = String(texte || '').trim();
-  return /^Je soutien\b/i.test(t) || /est en soutien$/i.test(t);
+  return /^Je soutiens?\b/i.test(t) || /est en soutien$/i.test(t);
 };
 const lireOrientationPdfGeneral = () => {
   try {
@@ -886,7 +888,7 @@ export default function EmploiDuTemps() {
     if (estAffectationSoutien(aff)) {
       const principal = nomPersonne(aff.soutien_prof_prenom, aff.soutien_prof_nom);
       const branche = String(aff.soutien_matiere_nom || aff.matiere_nom || '').trim();
-      return [aff.classe_nom || '', branche, principal ? `Je soutien ${principal}` : 'Je soutien']
+      return [aff.classe_nom || '', branche, principal ? `Je soutiens ${principal}` : 'Je soutiens']
         .filter(Boolean)
         .join('\n');
     }
@@ -3252,13 +3254,20 @@ export default function EmploiDuTemps() {
       `<th style="text-align:center;font-size:${FONT};padding:5px 4px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;">${escapeHtml(j)}</th>`
     ).join('');
     const htmlLignes = (lignes, fg) => {
-      const list = (lignes || []).map((l) => String(l || '').trim()).filter(Boolean);
+      const list = (lignes || []).map((l) => {
+        if (l && typeof l === 'object') {
+          return { text: String(l.text || '').trim(), poids: l.poids };
+        }
+        return { text: String(l || '').trim(), poids: undefined };
+      }).filter((l) => l.text);
       if (!list.length) return '';
       return list.map((l, i) => {
-        const poids = estLignePhraseSoutien(l) ? 400 : (i === 0 ? 700 : 600);
-        const uneLigne = i === 0 || l.length <= 28;
+        const poids = estLignePhraseSoutien(l.text)
+          ? 400
+          : (l.poids != null ? l.poids : (i === 0 ? 700 : 600));
+        const uneLigne = i === 0 || l.text.length <= 28;
         const antiWrap = uneLigne ? 'white-space:nowrap;word-break:keep-all;overflow-wrap:normal;' : '';
-        return `<div style="font-weight:${poids};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}${antiWrap}overflow:hidden;">${escapeHtml(l)}</div>`;
+        return `<div style="font-weight:${poids};color:${fg};font-size:${FONT};line-height:1.2;${i ? 'margin-top:1px;' : ''}${antiWrap}overflow:hidden;">${escapeHtml(l.text)}</div>`;
       }).join('');
     };
 
@@ -3274,8 +3283,13 @@ export default function EmploiDuTemps() {
             return `<td style="background:#f8fafc;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;"></td>`;
           }
           const raw = fetchCellData(cr, jour, periode) || { text: '' };
-          const lignesBrutes = String(raw.text || '').split('\n').map((l) => libelleCourtPrint(l)).filter(Boolean);
-          const texteBrut = lignesBrutes.join('\n');
+          const lignesBrutes = Array.isArray(raw.lignes) && raw.lignes.length
+            ? raw.lignes.map((l) => ({
+                text: libelleCourtPrint(typeof l === 'string' ? l : (l?.text || '')),
+                poids: typeof l === 'object' && l != null ? l.poids : undefined,
+              })).filter((l) => l.text)
+            : String(raw.text || '').split('\n').map((t) => ({ text: libelleCourtPrint(t) })).filter((l) => l.text);
+          const texteBrut = lignesBrutes.map((l) => l.text).join('\n');
           const isIndispo = /indisp/i.test(texteBrut);
           let bg = toPrintColor(raw.bg) || (isIndispo ? '#eeeeee' : '#ffffff');
           let fg = toPrintColor(raw.color) || (isIndispo ? '#9ca3af' : '#1e293b');
@@ -3358,20 +3372,26 @@ export default function EmploiDuTemps() {
           };
         }
         const bg = toPrintColor(couleurCellulePlanningClasse(aff)) || '#e8f5e9';
+        const nomsProf = lignesNomDepuisComplet(aff.prof_nom || '');
+        const lignesSoutien = soutienSet.has(String(cr.id))
+          ? lignesNomDepuisComplet(labels.get(String(cr.id)) || '')
+          : [];
+        const branche = libelleBrancheComplet(aff);
         const lignes = [
-          ...lignesNomDepuisComplet(aff.prof_nom || ''),
-          ...(soutienSet.has(String(cr.id)) ? lignesNomDepuisComplet(labels.get(String(cr.id)) || '') : []),
-          libelleBrancheComplet(aff),
-        ];
+          ...(branche ? [{ text: branche, poids: 600 }] : []),
+          ...nomsProf.map((t) => ({ text: t, poids: 400 })),
+          ...lignesSoutien.map((t) => ({ text: t, poids: 400 })),
+        ].filter((l) => String(l.text || '').trim());
         return {
-          text: lignes.filter(Boolean).join('\n'),
+          lignes,
+          text: lignes.map((l) => l.text).join('\n'),
           bg,
           color: getCouleurTexteSurFond(bg),
         };
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', orientation = 'landscape' }) => {
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', orientation = 'landscape', nProfsRef = A3_NB_COLONNES_PROF } = {}) => {
     const fontPt = POLICE_PDF_GENERAL;
     const FONT = `${fontPt}pt`;
     const listeProfs = Array.isArray(profs) ? profs : [];
@@ -3389,7 +3409,8 @@ export default function EmploiDuTemps() {
         mode: 'jour',
       });
       const ROW_H = layoutJour.rowH;
-      const COL_W = largeurColonneGrilleGeneralCss(nProfs, { nProfsRef: nProfs });
+      const COL_W = largeurColonneGrilleGeneralCss(nProfs, { nProfsRef });
+      const tableWidth = largeurTableauGrilleGeneralCss(nProfs, { nProfsRef });
       const nCols = nbColonnesGrilleGeneral(nProfs);
       const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>`;
       const profHeaders = listeProfs.map(p => {
@@ -3438,7 +3459,7 @@ export default function EmploiDuTemps() {
       const colgroup = htmlColgroupGrilleGeneral(nProfs, COL_W);
       parts.push(`
         <div class="section">
-          <table class="a3-grille" style="border-collapse:collapse;height:auto;max-width:100%;table-layout:fixed;margin:0;--a3-grille-w:100%;">
+          <table class="a3-grille" style="border-collapse:collapse;height:auto;max-width:100%;table-layout:fixed;margin:0;--a3-grille-w:${tableWidth};">
             ${colgroup}
             <tbody>
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;">
@@ -3453,8 +3474,8 @@ export default function EmploiDuTemps() {
     });
     return parts.join('');
   };
-  /** Planning général A3 paysage : semaine entière, largeur calée sur 10 profs (sans colonnes vides). */
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', orientation = 'landscape', colonnesTitulariatParSite = false, clesSitesTitulariat = null }) => {
+  /** Planning général A3 paysage : semaine entière, largeur calée sur 10 / 20 / 40 profs (sans colonnes vides). */
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', orientation = 'landscape', colonnesTitulariatParSite = false, clesSitesTitulariat = null, nProfsRef = null } = {}) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     const listeCrs = Array.isArray(allCrs) ? allCrs : [];
@@ -3493,6 +3514,12 @@ export default function EmploiDuTemps() {
 
     const nProfs = listeProfs.length;
     const nCols = nbColonnesGrilleGeneral(nProfs);
+    const nProfsRefGrille = Number(nProfsRef) > 0
+      ? Number(nProfsRef)
+      : nProfsRefPlanningGeneral({
+        mega: !!colonnesTitulariatParSite,
+        superGeneral: !colonnesTitulariatParSite && Array.isArray(poolIds) && poolIds.length >= 2,
+      });
     const layoutA3 = layoutPlanningGeneralA3({
       creneaux: listeCrs,
       orientation,
@@ -3502,8 +3529,8 @@ export default function EmploiDuTemps() {
     const FONT = `${fontPt}pt`;
     const ROW_H = layoutA3.rowH;
     const PROF_HEADER_H = layoutA3.headerH;
-    const COL_W = largeurColonneGrilleGeneralCss(nProfs);
-    const tableWidth = largeurTableauGrilleGeneralCss(nProfs);
+    const COL_W = largeurColonneGrilleGeneralCss(nProfs, { nProfsRef: nProfsRefGrille });
+    const tableWidth = largeurTableauGrilleGeneralCss(nProfs, { nProfsRef: nProfsRefGrille });
     const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>`;
 
     const profHeaders = listeProfs.map((p) => {
@@ -3751,6 +3778,7 @@ export default function EmploiDuTemps() {
         site: estMega ? '' : (pool?.site || ''),
         colonnesTitulariatParSite: estMega,
         clesSitesTitulariat: estMega ? pools.map((p) => p.site || p.nom || '') : null,
+        nProfsRef: nProfsRefPlanningGeneral({ mega: estMega, superGeneral: estSuper }),
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
       const siteComplet = (
@@ -4095,6 +4123,7 @@ export default function EmploiDuTemps() {
             poolIds,
             site: poolsGroupe[0]?.site || '',
             orientation: 'landscape',
+            nProfsRef: nProfsRefPlanningGeneral({ superGeneral: true }),
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
@@ -4111,6 +4140,7 @@ export default function EmploiDuTemps() {
             afficherNomsBranches: afficherNomsBranchesGeneral,
             orientation: 'landscape',
             site: poolsGroupe[0]?.site || '',
+            nProfsRef: nProfsRefPlanningGeneral({ superGeneral: true }),
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-général.pdf`,
@@ -4148,6 +4178,7 @@ export default function EmploiDuTemps() {
               poolIds: poolIdsMega,
               site: '',
               orientation: 'landscape',
+              nProfsRef: nProfsRefPlanningGeneral({ mega: true }),
             });
             documents.push({
               relativePath: 'Mega_General/Planning-jours.pdf',
@@ -4170,6 +4201,7 @@ export default function EmploiDuTemps() {
               site: '',
               colonnesTitulariatParSite: true,
               clesSitesTitulariat: poolsExport.map((p) => p.site || p.nom || ''),
+              nProfsRef: nProfsRefPlanningGeneral({ mega: true }),
             });
             documents.push({
               relativePath: 'Mega_General/Planning-général.pdf',

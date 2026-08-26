@@ -11,9 +11,17 @@ export const POLICE_PDF_GENERAL = 10;
 export const PDF_LIGNE_GENERAL = 38;
 export const PDF_COLONNE_HORAIRE_GENERAL = 112;
 
-/** Grille de largeur : 10 colonnes profs identiques (sans colonnes vides affichées). */
+/** Grille de largeur : 10 / 20 / 40 colonnes profs identiques (sans colonnes vides affichées). */
 export const A3_NB_COLONNES_PROF = 10;
+export const A3_NB_COLONNES_PROF_SUPER = 20;
+export const A3_NB_COLONNES_PROF_MEGA = 40;
 export const PDF_SPACER_COLONNE_PX = 10;
+
+export function nProfsRefPlanningGeneral({ mega = false, superGeneral = false } = {}) {
+  if (mega) return A3_NB_COLONNES_PROF_MEGA;
+  if (superGeneral) return A3_NB_COLONNES_PROF_SUPER;
+  return A3_NB_COLONNES_PROF;
+}
 
 /** Largeur CSS égale : colonne horaire = chaque colonne professeur. */
 export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
@@ -26,8 +34,8 @@ export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
 }
 
 /**
- * Largeur d’une colonne (horaire ou prof) calée sur 10 profs + 2 horaires.
- * S’il y a moins de 10 profs, les colonnes ne s’élargissent pas.
+ * Largeur d’une colonne (horaire ou prof) calée sur 10 / 20 / 40 profs + 2 horaires.
+ * S’il y a moins de profs que la référence, les colonnes ne s’élargissent pas.
  */
 export function largeurColonneGrilleGeneralCss(nProfsVisibles, {
   nProfsRef = A3_NB_COLONNES_PROF,
@@ -41,7 +49,7 @@ export function largeurColonneGrilleGeneralCss(nProfsVisibles, {
   return `calc((100% - ${nSpacers * spacerPx}px) / ${nEqual})`;
 }
 
-/** Largeur du tableau si moins de 10 profs (évite d’étirer les colonnes). */
+/** Largeur du tableau si moins de profs que la grille de référence (évite d’étirer les colonnes). */
 export function largeurTableauGrilleGeneralCss(nProfsVisibles, {
   nProfsRef = A3_NB_COLONNES_PROF,
   nHoraires = 2,
