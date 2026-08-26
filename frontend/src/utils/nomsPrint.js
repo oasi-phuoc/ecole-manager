@@ -33,20 +33,15 @@ export function estimerLargeurTextePrintPx(texte, fontPt) {
   return Math.ceil(s.length * taille * 0.78) + 12;
 }
 
-/**
- * Largeurs auto du tableau Titulariat : colonne noms selon le plus long prénom+nom,
- * colonne classes selon le plus long libellé (bornée pour rester étroite).
- */
-export function largeursColonnesTitulariatPrint(lignes, fontPt) {
-  const noms = (lignes || []).map((r) =>
-    [r.prenom, r.nom].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
-  );
-  const classesNoms = (lignes || []).map((r) => String(r.classe || '').trim());
-  const plusLongNom = noms.reduce((acc, n) => (n.length > acc.length ? n : acc), 'W'.repeat(14));
-  const plusLongClasse = classesNoms.reduce((acc, n) => (n.length > acc.length ? n : acc), '8P');
-  const nomW = Math.min(280, Math.max(128, estimerLargeurTextePrintPx(plusLongNom, fontPt)));
-  const classeW = Math.min(42, Math.max(26, estimerLargeurTextePrintPx(plusLongClasse, fontPt)));
-  return { nomW, classeW, totalW: nomW + classeW };
+/** Largeur d’une carte titulariat (classe + prénom nom), selon le plus long texte. */
+export function largeurCarteTitulariatPrint(lignes, fontPt) {
+  const textes = [];
+  (lignes || []).forEach((r) => {
+    textes.push(String(r.classe || '').trim());
+    textes.push([r.prenom, r.nom].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+  });
+  const plusLong = textes.reduce((acc, n) => (n.length > acc.length ? n : acc), 'W'.repeat(14));
+  return Math.min(200, Math.max(112, estimerLargeurTextePrintPx(plusLong, fontPt)));
 }
 
 /** Toujours prénom puis nom de famille, pour les en-têtes PDF général. */

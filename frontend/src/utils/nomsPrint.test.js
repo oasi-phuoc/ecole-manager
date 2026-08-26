@@ -3,7 +3,7 @@ import {
   lignesNomDepuisComplet,
   lignesPrenomPuisNom,
   libelleCourtPrint,
-  largeursColonnesTitulariatPrint,
+  largeurCarteTitulariatPrint,
 } from './nomsPrint';
 
 describe('lignesNomDepuisComplet', () => {
@@ -25,17 +25,14 @@ describe('lignesNomDepuisComplet', () => {
   });
 });
 
-describe('largeursColonnesTitulariatPrint', () => {
-  it('élargit la colonne noms et resserre la colonne classes selon le texte', () => {
-    const { nomW, classeW, totalW } = largeursColonnesTitulariatPrint([
+describe('largeurCarteTitulariatPrint', () => {
+  it('s’adapte au plus long nom de classe ou de professeur', () => {
+    const w = largeurCarteTitulariatPrint([
       { prenom: 'Charlotte', nom: 'Scherperel', classe: '7P' },
       { prenom: 'Isabelle', nom: 'Valloton', classe: '8H' },
     ], 10);
-    expect(classeW).toBeLessThanOrEqual(42);
-    expect(classeW).toBeGreaterThanOrEqual(26);
-    expect(nomW).toBeGreaterThan(classeW);
-    expect(nomW).toBeGreaterThanOrEqual(128);
-    expect(totalW).toBe(nomW + classeW);
+    expect(w).toBeGreaterThanOrEqual(112);
+    expect(w).toBeLessThanOrEqual(200);
   });
 });
 

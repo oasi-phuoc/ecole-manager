@@ -17,7 +17,7 @@ import {
   POLICE_PDF_GENERAL_MAX,
   POLICE_PDF_GENERAL_MIN,
 } from '../utils/pdfPlanningGeneral';
-import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeursColonnesTitulariatPrint } from '../utils/nomsPrint';
+import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeurCarteTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
@@ -3160,8 +3160,9 @@ export default function EmploiDuTemps() {
           .section-a3 { page-break-inside: avoid; page-break-after: auto; break-inside: avoid; margin: 0; }
           .a3-wrap { width:100%; border-collapse:collapse; table-layout:fixed; margin:0; }
           .a3-wrap > tbody > tr > td { border:none !important; background:transparent !important; padding:0 !important; vertical-align:top; }
-          .a3-titulariat { width:auto; }
-          .a3-titulariat table { width:100% !important; margin:0 !important; table-layout:fixed; }
+          .a3-titulariat { width:auto; vertical-align:top !important; }
+          .a3-titulariat .titu-cartes { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; width:100%; box-sizing:border-box; }
+          .a3-titulariat .titu-carte { border-radius:10px; padding:7px 8px; text-align:center; box-sizing:border-box; overflow:hidden; }
           .a3-main { width:auto; }
           .a3-main table { width:100% !important; margin:0 !important; }
           .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '0 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;` : ''} }
@@ -3488,7 +3489,7 @@ export default function EmploiDuTemps() {
       });
     });
     lignesTitulariat.sort((a, b) => String(a.classe).localeCompare(String(b.classe), 'fr', { sensitivity: 'base' }));
-    const { nomW: TITU_NOM_W, classeW: TITU_CLASSE_W, totalW: TITU_W } = largeursColonnesTitulariatPrint(lignesTitulariat, fontPt);
+    const TITU_W = largeurCarteTitulariatPrint(lignesTitulariat, fontPt);
     const couleurClasseTitulariat = (row) => {
       let classeId = row.classeId;
       if (classeId == null || classeId === '') {
@@ -3497,37 +3498,21 @@ export default function EmploiDuTemps() {
       }
       return getCouleurClasse(classeId);
     };
-    const tableTitulariat = `
-        <table style="border-collapse:collapse;width:${TITU_W}px;table-layout:fixed;margin:0;">
-          <colgroup>
-            <col style="width:${TITU_NOM_W}px;" />
-            <col style="width:${TITU_CLASSE_W}px;" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th colspan="2" style="height:${PROF_HEADER_H}px;border:none !important;background:transparent !important;padding:0 !important;font-size:0;line-height:0;box-sizing:border-box;">&nbsp;</th>
-            </tr>
-            <tr>
-              <th colspan="2" style="padding:0;border:none !important;background:transparent !important;height:${ROW_H}px;box-sizing:border-box;">
-                <div class="day-banner">Titulariat</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            ${lignesTitulariat.length
-              ? lignesTitulariat.map((row) => {
-                const bg = couleurClasseTitulariat(row) || '#ffffff';
-                const fg = getCouleurTexteSurFond(bg);
-                const cellBase = `text-align:center;vertical-align:middle;border:1px solid #e2e8f0;font-size:${FONT};height:${ROW_H}px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${bg};color:${fg};`;
-                return `
-                <tr>
-                  <td style="${cellBase}padding:0 4px;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</td>
-                  <td style="${cellBase}padding:0 1px;font-weight:700;width:${TITU_CLASSE_W}px;">${escapeHtml(row.classe)}</td>
-                </tr>`;
-              }).join('')
-              : `<tr><td colspan="2" style="padding:0 4px;border:1px solid #e2e8f0;color:#94a3b8;font-size:${FONT};height:${ROW_H}px;line-height:${ROW_H}px;">Aucun titulaire</td></tr>`}
-          </tbody>
-        </table>
+    const cartesTitulariat = `
+        <div class="titu-cartes" style="width:${TITU_W}px;">
+          <div style="height:${PROF_HEADER_H}px;box-sizing:border-box;"></div>
+          <div class="day-banner" style="height:${ROW_H}px;margin-bottom:6px;">Titulariat</div>
+          ${lignesTitulariat.length
+            ? lignesTitulariat.map((row) => {
+              const bg = couleurClasseTitulariat(row) || '#ffffff';
+              const fg = getCouleurTexteSurFond(bg);
+              return `<div class="titu-carte" style="background:${bg};color:${fg};font-size:${FONT};">
+                <div style="font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(row.classe)}</div>
+                <div style="font-weight:400;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${htmlPrenomNomUneLigne(row.prenom, row.nom)}</div>
+              </div>`;
+            }).join('')
+            : `<div style="color:#94a3b8;font-size:${FONT};padding:8px 4px;text-align:center;">Aucun titulaire</div>`}
+        </div>
     `;
 
     const colgroup = `<colgroup>
@@ -3613,7 +3598,7 @@ export default function EmploiDuTemps() {
           </colgroup>
           <tbody>
             <tr>
-              <td class="a3-titulariat" style="width:${TITU_W}px;">${tableTitulariat}</td>
+              <td class="a3-titulariat" style="width:${TITU_W}px;vertical-align:top;">${cartesTitulariat}</td>
               <td style="width:8px;border:none !important;background:transparent !important;padding:0 !important;"></td>
               <td class="a3-main">
                 <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0;">
@@ -3652,26 +3637,30 @@ export default function EmploiDuTemps() {
     }
     setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
   };
-  const pdfOptsGeneralA3 = () => optionsPdfA3General(orientationPdfGeneral);
+  const pdfOptsGeneralA3 = (orientation = orientationPdfGeneral) => optionsPdfA3General(orientation);
   const htmlOptsGeneralA3 = (extra = {}) => {
+    const orientation = extra.orientation || orientationPdfGeneral;
+    const rest = { ...extra };
+    delete rest.orientation;
     const opts = {
-      paysage: orientationPdfGeneral !== 'portrait',
+      paysage: orientation !== 'portrait',
       format: 'A3',
       fontPt: policePdfGeneral,
-      margin: marginPdfA3(orientationPdfGeneral),
-      ...extra,
+      margin: marginPdfA3(orientation),
+      ...rest,
     };
     if (opts.fitPage == null) opts.fitPage = !!opts.a3Semaine;
     return opts;
   };
   const htmlOptsGeneralDepuisCreneaux = (creneaux, extra = {}) => {
+    const orientation = extra.orientation || orientationPdfGeneral;
     const jourRef = (creneaux || []).find((c) => c.jour === 'Lundi') ? 'Lundi' : ((creneaux || [])[0]?.jour);
     const creneauxLayout = extra.a3Semaine
       ? creneaux
       : (creneaux || []).filter((c) => c.jour === jourRef);
     const layout = layoutPlanningGeneralA3({
       creneaux: creneauxLayout,
-      orientation: orientationPdfGeneral,
+      orientation,
       taillePolice: policePdfGeneral,
       mode: extra.a3Semaine ? 'semaine' : 'jour',
     });
@@ -3679,6 +3668,7 @@ export default function EmploiDuTemps() {
       hauteurLigne: layout.rowH,
       largeurColonne: layout.creneauW,
       ...extra,
+      orientation,
     });
   };
   const htmlOptsPdfOnglet = (onglet, extra = {}) => {
@@ -4127,12 +4117,12 @@ export default function EmploiDuTemps() {
             poolIds,
             site: poolsGroupe[0]?.site || '',
             taillePolice: policePdfGeneral,
-            orientation: orientationPdfGeneral,
+            orientation: 'landscape',
           });
           documents.push({
             relativePath: `Super_General/${prefixFile}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreSuper, contenuJours, htmlOptsGeneralDepuisCreneaux(merged.creneaux || [])),
-            pdfOptions: pdfOptsGeneralA3(),
+            html: buildHtmlPrintDoc(titreSuper, contenuJours, htmlOptsGeneralDepuisCreneaux(merged.creneaux || [], { orientation: 'landscape' })),
+            pdfOptions: pdfOptsGeneralA3('landscape'),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: merged.creneaux || [],
@@ -4143,7 +4133,7 @@ export default function EmploiDuTemps() {
             poolIds,
             afficherNomsBranches: afficherNomsBranchesGeneral,
             taillePolice: policePdfGeneral,
-            orientation: orientationPdfGeneral,
+            orientation: 'landscape',
             site: poolsGroupe[0]?.site || '',
           });
           documents.push({
@@ -4151,12 +4141,69 @@ export default function EmploiDuTemps() {
             html: buildHtmlPrintDoc(
               `${titreSuper} — semaine`,
               contenuA3,
-              htmlOptsGeneralDepuisCreneaux(merged.creneaux || [], { a3Semaine: true })
+              htmlOptsGeneralDepuisCreneaux(merged.creneaux || [], { a3Semaine: true, orientation: 'landscape' })
             ),
-            pdfOptions: pdfOptsGeneralA3(),
+            pdfOptions: pdfOptsGeneralA3('landscape'),
           });
         } catch (errSuper) {
           console.error('Export super-général', label, errSuper);
+        }
+      }
+
+      // —— Méga-général : tous les sites, tous les professeurs, A3 paysage fixe ——
+      if (poolsExport.length >= 2) {
+        setExportPdfProgress('Planning méga-général…');
+        const datasMega = poolsExport
+          .map((p) => generalParPoolId.get(String(p.id)))
+          .filter(Boolean);
+        const mergedMega = fusionnerPlanningsGeneraux(datasMega);
+        if ((mergedMega.profs || []).length) {
+          const poolIdsMega = poolsExport.map((p) => p.id);
+          try {
+            const titreMega = 'Planning méga-général — tous les sites';
+            const contenuJoursMega = buildPlanningGeneralPrintHtml({
+              creneaux: mergedMega.creneaux || [],
+              profs: mergedMega.profs || [],
+              affectations: mergedMega.affectations || [],
+              dispos: mergedMega.dispos || [],
+              poolIds: poolIdsMega,
+              site: '',
+              taillePolice: policePdfGeneral,
+              orientation: 'landscape',
+            });
+            documents.push({
+              relativePath: 'Mega_General/Planning-jours.pdf',
+              html: buildHtmlPrintDoc(
+                titreMega,
+                contenuJoursMega,
+                htmlOptsGeneralDepuisCreneaux(mergedMega.creneaux || [], { orientation: 'landscape' })
+              ),
+              pdfOptions: pdfOptsGeneralA3('landscape'),
+            });
+            const contenuA3Mega = buildPlanningGeneralA3SemainePrintHtml({
+              creneaux: mergedMega.creneaux || [],
+              profs: mergedMega.profs || [],
+              affectations: mergedMega.affectations || [],
+              dispos: mergedMega.dispos || [],
+              titulaires: mergedMega.titulaires || [],
+              poolIds: poolIdsMega,
+              afficherNomsBranches: afficherNomsBranchesGeneral,
+              taillePolice: policePdfGeneral,
+              orientation: 'landscape',
+              site: '',
+            });
+            documents.push({
+              relativePath: 'Mega_General/Planning-général.pdf',
+              html: buildHtmlPrintDoc(
+                `${titreMega} — semaine`,
+                contenuA3Mega,
+                htmlOptsGeneralDepuisCreneaux(mergedMega.creneaux || [], { a3Semaine: true, orientation: 'landscape' })
+              ),
+              pdfOptions: pdfOptsGeneralA3('landscape'),
+            });
+          } catch (errMega) {
+            console.error('Export méga-général', errMega);
+          }
         }
       }
 
@@ -4853,7 +4900,7 @@ export default function EmploiDuTemps() {
               <div
                 role="group"
                 aria-label="Orientation PDF général"
-                title="Orientation A3 du planning général et super-général (impression et export)"
+                title="Orientation A3 du planning général (impression et export). Super-général et méga-général : paysage."
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -6962,12 +7009,16 @@ export default function EmploiDuTemps() {
                 {(Array.isArray(planningGeneral.titulaires) ? planningGeneral.titulaires : [])
                   .filter(t => t && t.classe_nom)
                   .sort((a,b) => String(a.classe_nom||'').localeCompare(String(b.classe_nom||''), 'fr', {numeric:true, sensitivity:'base'}))
-                  .map((t,i) => (
-                  <div key={String(t.classe_id || i)} style={{flex:'1 1 120px',minWidth:120,background:'#ffffff',borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
-                    <div style={{fontWeight:700,fontSize:14,color:'#0f172a'}}>{t.classe_nom}</div>
-                    <div style={{fontSize:12,color:'#475569',marginTop:4}}>{t.prof_nom ? formaterNomComplet(t.prof_nom) : <span style={{color:'#94a3b8'}}>Pas de titulaire</span>}</div>
+                  .map((t,i) => {
+                    const bg = t.classe_id ? getCouleurClasse(t.classe_id) : '#ffffff';
+                    const fg = getCouleurTexteSurFond(bg);
+                    return (
+                  <div key={String(t.classe_id || i)} style={{flex:'1 1 120px',minWidth:120,background:bg,color:fg,borderRadius:10,padding:'10px 16px',border:'1px solid #e2e8f0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{t.classe_nom}</div>
+                    <div style={{fontWeight:400,fontSize:12,marginTop:4,opacity:0.95}}>{t.prof_nom ? formaterNomComplet(t.prof_nom) : <span style={{opacity:0.7}}>Pas de titulaire</span>}</div>
                   </div>
-                ))}
+                    );
+                  })}
                 {(Array.isArray(planningGeneral.titulaires) ? planningGeneral.titulaires : []).filter(t => t && t.classe_nom).length === 0 && (
                   <div style={{fontSize:12,color:'#64748b',fontWeight:600}}>Aucune classe dans ce pool.</div>
                 )}
