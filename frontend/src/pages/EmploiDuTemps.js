@@ -1965,7 +1965,7 @@ export default function EmploiDuTemps() {
     const layout = layoutPdfOnglet(onglet);
     const lim = PDF_LAYOUT_LIMITES[onglet] || PDF_LAYOUT_LIMITES.general;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, width: 322 }}>
+      <>
         {renderSliderPdf({
           label: 'Hauteur lignes',
           title: 'Hauteur des lignes du PDF (impression et export tous les PDF)',
@@ -1984,7 +1984,7 @@ export default function EmploiDuTemps() {
           onChange: (v) => setLayoutPdfOnglet(onglet, { largeurColonne: v }),
           suffix: ' px',
         })}
-      </div>
+      </>
     );
   };
   const renderTogglePlanning = ({ checked, onToggle, label, title }) => (
