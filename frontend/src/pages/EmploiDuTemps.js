@@ -61,11 +61,11 @@ const estLignePhraseSoutien = (texte) => {
 };
 const lireOrientationPdfGeneral = () => {
   try {
-    return window.localStorage.getItem('oasis.orientationPdfGeneral') === 'landscape'
-      ? 'landscape'
-      : 'portrait';
+    const raw = window.localStorage.getItem('oasis.orientationPdfGeneral.v2');
+    if (raw === 'portrait' || raw === 'landscape') return raw;
+    return 'landscape';
   } catch {
-    return 'portrait';
+    return 'landscape';
   }
 };
 const BASE_PERIODES_TAUX = 40;
@@ -359,7 +359,7 @@ export default function EmploiDuTemps() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('oasis.orientationPdfGeneral', orientationPdfGeneral);
+      window.localStorage.setItem('oasis.orientationPdfGeneral.v2', orientationPdfGeneral);
     } catch { /* ignore */ }
   }, [orientationPdfGeneral]);
 
@@ -3501,7 +3501,9 @@ export default function EmploiDuTemps() {
     const cartesTitulariat = `
         <div class="titu-cartes" style="width:${TITU_W}px;">
           <div style="height:${PROF_HEADER_H}px;box-sizing:border-box;"></div>
-          <div class="day-banner" style="height:${ROW_H}px;margin-bottom:6px;">Titulariat</div>
+          <div class="titu-carte" style="background:#000;color:#ffffff;font-size:${FONT};margin-bottom:0;">
+            <div style="font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Titulariat</div>
+          </div>
           ${lignesTitulariat.length
             ? lignesTitulariat.map((row) => {
               const bg = couleurClasseTitulariat(row) || '#ffffff';
@@ -3699,7 +3701,7 @@ export default function EmploiDuTemps() {
         poolId: planningPoolId,
         afficherNomsBranches: afficherNomsBranchesGeneral,
         taillePolice: policePdfGeneral,
-        orientation: orientationPdfGeneral,
+        orientation: 'landscape',
         site: pool?.site || '',
       });
       const siteBrut = String(pool?.site || pool?.nom || '').trim();
@@ -3710,10 +3712,10 @@ export default function EmploiDuTemps() {
         || 'Site'
       ).trim();
       const titre = `Planning général — semaine — ${siteComplet}`;
-      const html = buildHtmlPrintDoc(titre, contenu, htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true }));
+      const html = buildHtmlPrintDoc(titre, contenu, htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true, orientation: 'landscape' }));
       await ouvrirPdfDepuisHtml(
         html,
-        pdfOptsGeneralA3(),
+        pdfOptsGeneralA3('landscape'),
         `${sanitizeFilename(siteComplet, 'Site')}_Planning-général.pdf`
       );
     } catch (err) {
@@ -4043,12 +4045,12 @@ export default function EmploiDuTemps() {
             poolId,
             site: pool.site || '',
             taillePolice: policePdfGeneral,
-            orientation: orientationPdfGeneral,
+            orientation: 'landscape',
           });
           documents.push({
             relativePath: `General/${baseNomGeneral}_Planning-jours.pdf`,
-            html: buildHtmlPrintDoc(titreGeneral, contenuJours, htmlOptsGeneralDepuisCreneaux(data.creneaux || [])),
-            pdfOptions: pdfOptsGeneralA3(),
+            html: buildHtmlPrintDoc(titreGeneral, contenuJours, htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { orientation: 'landscape' })),
+            pdfOptions: pdfOptsGeneralA3('landscape'),
           });
           const contenuA3 = buildPlanningGeneralA3SemainePrintHtml({
             creneaux: data.creneaux || [],
@@ -4059,7 +4061,7 @@ export default function EmploiDuTemps() {
             poolId,
             afficherNomsBranches: afficherNomsBranchesGeneral,
             taillePolice: policePdfGeneral,
-            orientation: orientationPdfGeneral,
+            orientation: 'landscape',
             site: pool.site || '',
           });
           documents.push({
@@ -4069,9 +4071,9 @@ export default function EmploiDuTemps() {
                 ? `Planning général — semaine — ${siteComplet} — ${poolNom}`
                 : `Planning général — semaine — ${siteComplet}`,
               contenuA3,
-              htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true })
+              htmlOptsGeneralDepuisCreneaux(data.creneaux || [], { a3Semaine: true, orientation: 'landscape' })
             ),
-            pdfOptions: pdfOptsGeneralA3(),
+            pdfOptions: pdfOptsGeneralA3('landscape'),
           });
         } catch (errPool) {
           console.error('Export général pool', poolId, errPool);
@@ -4900,7 +4902,7 @@ export default function EmploiDuTemps() {
               <div
                 role="group"
                 aria-label="Orientation PDF général"
-                title="Orientation A3 du planning général (impression et export). Super-général et méga-général : paysage."
+                title="Orientation A3 par défaut : paysage. Super-général et méga-général : toujours paysage."
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
