@@ -4,9 +4,8 @@ export const JOURS_PDF = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 export const MARGIN_PDF_A3_PAYSAGE = '6mm 8mm';
 export const MARGIN_PDF_A3_PORTRAIT = '8mm 6mm';
 
-export const POLICE_PDF_GENERAL_MIN = 8;
-export const POLICE_PDF_GENERAL_MAX = 24;
-export const POLICE_PDF_GENERAL_DEFAUT = 12;
+/** Police fixe des PDF général (plus de curseur : il gonflait les lignes). */
+export const POLICE_PDF_GENERAL = 9;
 
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;
@@ -14,25 +13,6 @@ export const PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF = 128;
 
 export function marginPdfA3(orientation) {
   return orientation === 'portrait' ? MARGIN_PDF_A3_PORTRAIT : MARGIN_PDF_A3_PAYSAGE;
-}
-
-export function clampPolicePdfGeneral(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return POLICE_PDF_GENERAL_DEFAUT;
-  return Math.min(POLICE_PDF_GENERAL_MAX, Math.max(POLICE_PDF_GENERAL_MIN, Math.round(n * 2) / 2));
-}
-
-export function lirePolicePdfGeneral() {
-  try {
-    const raw = window.localStorage.getItem('oasis.policePdfGeneral');
-    if (raw == null || raw === '') return POLICE_PDF_GENERAL_DEFAUT;
-    const n = Number(raw);
-    // Ancien défaut 10 / mini 6 → 12 pt.
-    if (!Number.isFinite(n) || n <= 10) return POLICE_PDF_GENERAL_DEFAUT;
-    return clampPolicePdfGeneral(n);
-  } catch {
-    return POLICE_PDF_GENERAL_DEFAUT;
-  }
 }
 
 function creneauxDuJour(creneaux, jour) {
@@ -76,14 +56,20 @@ export function hauteurLignePourPage(nLignes, pageHeightPx) {
   return Math.max(16, Math.floor(h / n));
 }
 
+/** Hauteur d’une ligne juste suffisante pour une ou deux lignes de texte. */
+export function hauteurLigneContenuPrint(fontPt = POLICE_PDF_GENERAL) {
+  const pt = Number(fontPt);
+  const taille = Number.isFinite(pt) && pt > 0 ? pt : POLICE_PDF_GENERAL;
+  return Math.max(18, Math.round(taille * 1.55 + 6));
+}
+
 /**
- * Layout auto du planning général : toutes les lignes à la même hauteur,
- * plus hautes en portrait qu’en paysage (feuille plus haute).
+ * Layout auto du planning général : lignes compactes (jamais plus hautes
+ * que le texte), réduites seulement si la semaine ne tient pas dans la feuille.
  */
 export function layoutPlanningGeneralA3({
   creneaux,
-  orientation = 'portrait',
-  taillePolice = POLICE_PDF_GENERAL_DEFAUT,
+  orientation = 'landscape',
   mode = 'semaine',
 } = {}) {
   const portrait = orientation === 'portrait';
@@ -92,11 +78,16 @@ export function layoutPlanningGeneralA3({
   const nLignes = mode === 'jour'
     ? compterLignesPlanningGeneralJour(creneaux)
     : compterLignesPlanningGeneralA3(creneaux);
-  const fontPt = clampPolicePdfGeneral(taillePolice);
-  const rowH = hauteurLignePourPage(nLignes, usable.h);
-  const creneauW = Math.max(54, Math.min(96, Math.round(fontPt * 6.2 + 18)));
+  const fontPt = POLICE_PDF_GENERAL;
+  const rowHContent = hauteurLigneContenuPrint(fontPt);
+  const rowHFill = hauteurLignePourPage(nLignes, usable.h);
+  const rowH = Math.min(rowHFill, rowHContent);
+  const headerH = Math.max(rowH, Math.round(fontPt * 2.35 + 6));
+  const creneauW = Math.max(54, Math.min(88, Math.round(fontPt * 6.2 + 16)));
   return {
     rowH,
+    headerH,
+    rowHContent,
     creneauW,
     fontPt,
     margin,

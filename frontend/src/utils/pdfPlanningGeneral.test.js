@@ -1,11 +1,9 @@
 import {
-  clampPolicePdfGeneral,
   compterLignesPlanningGeneralA3,
+  hauteurLigneContenuPrint,
   hauteurLignePourPage,
   layoutPlanningGeneralA3,
-  POLICE_PDF_GENERAL_DEFAUT,
-  POLICE_PDF_GENERAL_MAX,
-  POLICE_PDF_GENERAL_MIN,
+  POLICE_PDF_GENERAL,
 } from './pdfPlanningGeneral';
 
 const creneauxSemaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].flatMap((jour) => (
@@ -15,43 +13,38 @@ const creneauxSemaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'].flat
   ]))
 ));
 
-describe('clampPolicePdfGeneral', () => {
-  it('défaut 12 pt, plafonné à 24, minimum 8', () => {
-    expect(POLICE_PDF_GENERAL_DEFAUT).toBe(12);
-    expect(POLICE_PDF_GENERAL_MIN).toBe(8);
-    expect(POLICE_PDF_GENERAL_MAX).toBe(24);
-    expect(clampPolicePdfGeneral(undefined)).toBe(12);
-    expect(clampPolicePdfGeneral(6)).toBe(8);
-    expect(clampPolicePdfGeneral(30)).toBe(24);
-    expect(clampPolicePdfGeneral(12)).toBe(12);
-  });
-});
-
 describe('layoutPlanningGeneralA3', () => {
   it('compte en-tête + 5 jours × (bannière + 2 périodes + 8 créneaux)', () => {
-    // 1 + 5 * (1 + 1+4 + 1+4) = 1 + 5*11 = 56
     expect(compterLignesPlanningGeneralA3(creneauxSemaine)).toBe(56);
   });
 
-  it('lignes plus hautes en portrait qu’en paysage, toutes égales', () => {
-    const portrait = layoutPlanningGeneralA3({
-      creneaux: creneauxSemaine,
-      orientation: 'portrait',
-      taillePolice: 12,
+  it('ne gonfle pas les lignes au-delà du texte, même avec peu de créneaux', () => {
+    const peu = layoutPlanningGeneralA3({
+      creneaux: [{ jour: 'Lundi', periode: 'Matin', ordre: 1 }],
+      orientation: 'landscape',
     });
+    expect(peu.rowH).toBeLessThanOrEqual(peu.rowHContent);
+    expect(peu.rowH).toBe(hauteurLigneContenuPrint(POLICE_PDF_GENERAL));
+  });
+
+  it('réduit les lignes seulement si la semaine dépasse la feuille', () => {
     const paysage = layoutPlanningGeneralA3({
       creneaux: creneauxSemaine,
       orientation: 'landscape',
-      taillePolice: 12,
     });
-    expect(portrait.rowH).toBeGreaterThan(paysage.rowH);
-    expect(portrait.rowH * portrait.nLignes).toBeLessThanOrEqual(portrait.usable.h);
+    const fill = hauteurLignePourPage(paysage.nLignes, paysage.usable.h);
+    expect(paysage.rowH).toBe(Math.min(fill, paysage.rowHContent));
     expect(paysage.rowH * paysage.nLignes).toBeLessThanOrEqual(paysage.usable.h);
   });
-});
 
-describe('hauteurLignePourPage', () => {
-  it('répartit la hauteur également', () => {
-    expect(hauteurLignePourPage(10, 500)).toBe(50);
+  it('reste compact en semaine A3 (police 9 pt, pas de remplissage page)', () => {
+    const paysage = layoutPlanningGeneralA3({
+      creneaux: creneauxSemaine,
+      orientation: 'landscape',
+    });
+    expect(paysage.fontPt).toBe(9);
+    expect(paysage.rowH).toBeLessThanOrEqual(22);
+    expect(paysage.rowHContent).toBeLessThanOrEqual(22);
+    expect(paysage.headerH).toBeLessThanOrEqual(32);
   });
 });

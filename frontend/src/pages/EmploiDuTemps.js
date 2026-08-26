@@ -7,15 +7,11 @@ import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import {
-  clampPolicePdfGeneral,
   layoutPlanningGeneralA3,
-  lirePolicePdfGeneral,
   marginPdfA3,
   PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
   PDF_LIGNE_CLASSE_SALLE_PROF,
-  POLICE_PDF_GENERAL_DEFAUT,
-  POLICE_PDF_GENERAL_MAX,
-  POLICE_PDF_GENERAL_MIN,
+  POLICE_PDF_GENERAL,
 } from '../utils/pdfPlanningGeneral';
 import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeurCarteTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
@@ -285,7 +281,6 @@ export default function EmploiDuTemps() {
   const [jourPlanningFiltre, setJourPlanningFiltre] = useState('tous');
   const [showJoursFiltres, setShowJoursFiltres] = useState(false);
   const [afficherNomsBranchesGeneral, setAfficherNomsBranchesGeneral] = useState(false);
-  const [policePdfGeneral, setPolicePdfGeneral] = useState(lirePolicePdfGeneral);
   const [orientationPdfGeneral, setOrientationPdfGeneral] = useState(lireOrientationPdfGeneral);
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
@@ -350,12 +345,6 @@ export default function EmploiDuTemps() {
   };
 
   useEffect(() => { chargerTout(); chargerDonnees(); }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('oasis.policePdfGeneral', String(policePdfGeneral));
-    } catch { /* ignore */ }
-  }, [policePdfGeneral]);
 
   useEffect(() => {
     try {
@@ -1848,7 +1837,7 @@ export default function EmploiDuTemps() {
     const lignes = lignesPrenomPuisNom(formaterPrenomEntete(prenom || ''), nomSansSuffixe(nom || ''));
     if (!lignes.length) return '&nbsp;';
     return lignes.map((l) =>
-      `<div style="font-weight:700;font-size:${fontSize};line-height:1.12;overflow:hidden;">${escapeHtml(l)}</div>`
+      `<div style="font-weight:700;font-size:${fontSize};line-height:1.12;overflow:hidden;white-space:nowrap;">${escapeHtml(l)}</div>`
     ).join('');
   };
   const htmlPrenomNomUneLigne = (prenom, nom) => {
@@ -3077,11 +3066,7 @@ export default function EmploiDuTemps() {
         : (options?.paysage ? 'A4 landscape' : 'A4 portrait'));
     const compactClasses = !!options?.compactClasses;
     const a3Semaine = !!options?.a3Semaine;
-    const fitPage = a3Semaine || !!options?.fitPage;
-    const fontPtOpt = Number(options?.fontPt);
-    const fontPt = Number.isFinite(fontPtOpt) && fontPtOpt > 0
-      ? clampPolicePdfGeneral(fontPtOpt)
-      : POLICE_PDF_GENERAL_DEFAUT;
+    const fontPt = POLICE_PDF_GENERAL;
     const fontCss = `${fontPt}pt`;
     const largeurColonnePdf = Number(options?.largeurColonne);
     const hauteurLignePdf = Number(options?.hauteurLigne);
@@ -3100,7 +3085,7 @@ export default function EmploiDuTemps() {
         <title>${escapeHtml(titre)}</title>
         <style>
           @page { size: ${pageSize}; margin: ${marginCss}; }
-          html, body { height: ${fitPage ? '100%' : 'auto'}; width: 100%; }
+          html, body { height: auto; width: 100%; }
           body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -3133,6 +3118,11 @@ export default function EmploiDuTemps() {
               min-height: calc(100vh - 4mm);
               page-break-inside: avoid;
             }
+            .section-a3 {
+              min-height: 0 !important;
+              height: auto !important;
+              justify-content: flex-start !important;
+            }
           }
           h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; width: 100%; }
           h2 { margin: 14px 0 8px; font-size: 15px; text-align: center; }
@@ -3140,18 +3130,18 @@ export default function EmploiDuTemps() {
           .section, .section-a3 {
             text-align: center;
             width: 100%;
-            height: ${fitPage ? '100%' : 'auto'};
+            height: auto;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            justify-content: ${fitPage ? 'stretch' : 'center'};
+            justify-content: flex-start;
           }
           .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
-          .section-a3 .a3-wrap { height: 100%; }
-          .section-a3 .a3-wrap > tbody > tr { height: 100%; }
-          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '2px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '1px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: keep-all; overflow-wrap: normal; box-sizing: border-box; }
           th { background: #f8fafc; font-weight: 700; }
+          .a3-main th, .a3-main td { overflow-wrap: normal; word-break: keep-all; }
+          .section-a3, .section-a3 .a3-wrap, .section-a3 .a3-wrap > tbody > tr { height: auto !important; min-height: 0 !important; }
           col.creneau-col { width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px; }
           col.day-col { width: calc((100% - ${largeurColonne}px) / ${JOURS.length}); }
           col.spacer-col { width: 10px; min-width: 8px; max-width: 14px; }
@@ -3321,8 +3311,8 @@ export default function EmploiDuTemps() {
       },
     });
   };
-  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT, orientation = 'portrait' }) => {
-    const fontPt = clampPolicePdfGeneral(taillePolice);
+  const buildPlanningGeneralPrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, poolId = null, poolIds = null, site = '', orientation = 'landscape' }) => {
+    const fontPt = POLICE_PDF_GENERAL;
     const FONT = `${fontPt}pt`;
     const nProfs = Math.max(1, (profs || []).length);
     const siteResolu = site || sitePourPoolId(poolId) || sitePourPoolId((poolIds || [])[0]);
@@ -3335,7 +3325,6 @@ export default function EmploiDuTemps() {
       const layoutJour = layoutPlanningGeneralA3({
         creneaux: crs,
         orientation,
-        taillePolice: fontPt,
         mode: 'jour',
       });
       const ROW_H = layoutJour.rowH;
@@ -3343,7 +3332,7 @@ export default function EmploiDuTemps() {
       const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
       const nCols = (profs || []).length + 1;
       const profHeaders = (profs || []).map(p => {
-        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;width:${PROF_COL_W};height:${ROW_H}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;overflow-wrap:normal;word-break:keep-all;width:${PROF_COL_W};height:${layoutJour.headerH}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
       }).join('');
       const rows = [];
       ['Matin', 'Après-midi'].forEach(per => {
@@ -3389,7 +3378,7 @@ export default function EmploiDuTemps() {
       const colgroup = `<colgroup><col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;max-width:${CRENEAU_W}px;"/>${(profs || []).map(() => `<col style="width:${PROF_COL_W};" />`).join('')}</colgroup>`;
       parts.push(`
         <div class="section">
-          <table style="border-collapse:collapse;width:100%;height:100%;max-width:100%;table-layout:fixed;margin:0;">
+          <table style="border-collapse:collapse;width:100%;height:auto;max-width:100%;table-layout:fixed;margin:0;">
             ${colgroup}
             <tbody>
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;">
@@ -3406,7 +3395,7 @@ export default function EmploiDuTemps() {
   };
   /** Planning général A3 paysage : semaine entière, largeur colonnes comme 10 profs (fictifs si besoin). */
   const A3_NB_COLONNES_PROF = 10;
-  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', taillePolice = POLICE_PDF_GENERAL_DEFAUT, orientation = 'portrait' }) => {
+  const buildPlanningGeneralA3SemainePrintHtml = ({ creneaux: allCrs, profs, affectations, dispos, titulaires, poolId = null, poolIds = null, afficherNomsBranches = false, site = '', orientation = 'landscape' }) => {
     const listeProfsReels = Array.isArray(profs) ? profs : [];
     const listeProfs = [...listeProfsReels];
     while (listeProfs.length < A3_NB_COLONNES_PROF) {
@@ -3449,14 +3438,13 @@ export default function EmploiDuTemps() {
     const layoutA3 = layoutPlanningGeneralA3({
       creneaux: listeCrs,
       orientation,
-      taillePolice,
       mode: 'semaine',
     });
     const CRENEAU_W = layoutA3.creneauW;
     const fontPt = layoutA3.fontPt;
     const FONT = `${fontPt}pt`;
     const ROW_H = layoutA3.rowH;
-    const PROF_HEADER_H = ROW_H;
+    const PROF_HEADER_H = layoutA3.headerH;
     const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
     const spacerTd = '<td class="spacer-cell"></td>';
 
@@ -3470,7 +3458,7 @@ export default function EmploiDuTemps() {
     };
 
     const profHeaders = withSpacers(listeProfs.map((p) => {
-      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;`;
+      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;overflow-wrap:normal;word-break:keep-all;`;
       if (p._fake) {
         return `<th style="${thBase}">&nbsp;</th>`;
       }
@@ -3647,11 +3635,10 @@ export default function EmploiDuTemps() {
     const opts = {
       paysage: orientation !== 'portrait',
       format: 'A3',
-      fontPt: policePdfGeneral,
+      fontPt: POLICE_PDF_GENERAL,
       margin: marginPdfA3(orientation),
       ...rest,
     };
-    if (opts.fitPage == null) opts.fitPage = !!opts.a3Semaine;
     return opts;
   };
   const htmlOptsGeneralDepuisCreneaux = (creneaux, extra = {}) => {
@@ -3663,7 +3650,6 @@ export default function EmploiDuTemps() {
     const layout = layoutPlanningGeneralA3({
       creneaux: creneauxLayout,
       orientation,
-      taillePolice: policePdfGeneral,
       mode: extra.a3Semaine ? 'semaine' : 'jour',
     });
     return htmlOptsGeneralA3({
@@ -3700,7 +3686,6 @@ export default function EmploiDuTemps() {
         titulaires: data.titulaires || [],
         poolId: planningPoolId,
         afficherNomsBranches: afficherNomsBranchesGeneral,
-        taillePolice: policePdfGeneral,
         orientation: 'landscape',
         site: pool?.site || '',
       });
@@ -4044,7 +4029,6 @@ export default function EmploiDuTemps() {
             dispos: data.dispos || [],
             poolId,
             site: pool.site || '',
-            taillePolice: policePdfGeneral,
             orientation: 'landscape',
           });
           documents.push({
@@ -4060,7 +4044,6 @@ export default function EmploiDuTemps() {
             titulaires: data.titulaires || [],
             poolId,
             afficherNomsBranches: afficherNomsBranchesGeneral,
-            taillePolice: policePdfGeneral,
             orientation: 'landscape',
             site: pool.site || '',
           });
@@ -4118,7 +4101,6 @@ export default function EmploiDuTemps() {
             dispos: merged.dispos || [],
             poolIds,
             site: poolsGroupe[0]?.site || '',
-            taillePolice: policePdfGeneral,
             orientation: 'landscape',
           });
           documents.push({
@@ -4134,7 +4116,6 @@ export default function EmploiDuTemps() {
             titulaires: merged.titulaires || [],
             poolIds,
             afficherNomsBranches: afficherNomsBranchesGeneral,
-            taillePolice: policePdfGeneral,
             orientation: 'landscape',
             site: poolsGroupe[0]?.site || '',
           });
@@ -4170,7 +4151,6 @@ export default function EmploiDuTemps() {
               dispos: mergedMega.dispos || [],
               poolIds: poolIdsMega,
               site: '',
-              taillePolice: policePdfGeneral,
               orientation: 'landscape',
             });
             documents.push({
@@ -4190,7 +4170,6 @@ export default function EmploiDuTemps() {
               titulaires: mergedMega.titulaires || [],
               poolIds: poolIdsMega,
               afficherNomsBranches: afficherNomsBranchesGeneral,
-              taillePolice: policePdfGeneral,
               orientation: 'landscape',
               site: '',
             });
@@ -4867,38 +4846,6 @@ export default function EmploiDuTemps() {
                   />
                 </span>
               </button>
-              <label
-                title="Taille de police des PDF général (impression et export)"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  height: 36,
-                  padding: '0 12px',
-                  borderRadius: 8,
-                  border: '1px solid #c7d2fe',
-                  background: '#ffffff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#334155',
-                  fontFamily: 'inherit',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                }}
-              >
-                Police PDF
-                <input
-                  type="range"
-                  min={POLICE_PDF_GENERAL_MIN}
-                  max={POLICE_PDF_GENERAL_MAX}
-                  step={0.5}
-                  value={policePdfGeneral}
-                  onChange={(e) => setPolicePdfGeneral(clampPolicePdfGeneral(e.target.value))}
-                  aria-label="Taille de police des PDF général"
-                  style={{ width: 110, accentColor: '#6366f1', cursor: 'pointer' }}
-                />
-                <span style={{ minWidth: 42, fontVariantNumeric: 'tabular-nums' }}>{policePdfGeneral} pt</span>
-              </label>
               <div
                 role="group"
                 aria-label="Orientation PDF général"
