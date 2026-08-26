@@ -2,8 +2,13 @@ import {
   canoniserCleSiteTitulariat,
   colonnesTitulariatParSites,
   compterLignesPlanningGeneralA3,
+  encadrerColonnesProfsHtml,
+  htmlColgroupGrilleGeneral,
   largeurColonneEgaleCss,
+  largeurColonneGrilleGeneralCss,
+  largeurTableauGrilleGeneralCss,
   layoutPlanningGeneralA3,
+  nbColonnesGrilleGeneral,
   trierClesSitesTitulariat,
 } from './pdfPlanningGeneral';
 
@@ -39,6 +44,39 @@ describe('layoutPlanningGeneralA3', () => {
   it('donne à l’horaire la même largeur que chaque colonne professeur', () => {
     expect(largeurColonneEgaleCss(10, 10)).toBe('calc((100% - 90px) / 11)');
     expect(largeurColonneEgaleCss(3, 0)).toBe('calc(100% / 4)');
+  });
+});
+
+describe('grille planning général (2 horaires, sans colonnes vides)', () => {
+  it('cale la largeur de colonne sur 10 profs + 2 horaires', () => {
+    expect(largeurColonneGrilleGeneralCss(6)).toBe(largeurColonneGrilleGeneralCss(10));
+    expect(largeurColonneGrilleGeneralCss(10)).toBe('calc((100% - 110px) / 12)');
+    expect(largeurTableauGrilleGeneralCss(10)).toBe('100%');
+    expect(largeurTableauGrilleGeneralCss(6)).toBe('calc(8 / 12 * (100% - 110px) + 70px)');
+  });
+
+  it('compte 2 horaires + n profs + n+1 écarts', () => {
+    expect(nbColonnesGrilleGeneral(10)).toBe(23);
+    expect(nbColonnesGrilleGeneral(6)).toBe(15);
+    expect(nbColonnesGrilleGeneral(1)).toBe(5);
+    expect(nbColonnesGrilleGeneral(0)).toBe(3);
+  });
+
+  it('encadre les profs par un écart puis une colonne horaire de chaque côté', () => {
+    const html = encadrerColonnesProfsHtml(
+      ['<td>A</td>', '<td>B</td>'],
+      '<td>H</td>',
+      '<td>H</td>'
+    );
+    expect(html).toBe(
+      '<td>H</td><td class="spacer-cell"></td><td>A</td><td class="spacer-cell"></td><td>B</td><td class="spacer-cell"></td><td>H</td>'
+    );
+    const colgroup = htmlColgroupGrilleGeneral(6, '10%');
+    expect((colgroup.match(/<col /g) || []).length).toBe(15);
+    expect((colgroup.match(/creneau-col/g) || []).length).toBe(2);
+    expect((htmlColgroupGrilleGeneral(10, '10%').match(/<col /g) || []).length).toBe(23);
+    expect(largeurColonneGrilleGeneralCss(12)).toBe('calc((100% - 130px) / 14)');
+    expect(largeurTableauGrilleGeneralCss(12)).toBe('100%');
   });
 });
 

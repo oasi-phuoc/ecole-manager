@@ -11,6 +11,10 @@ export const POLICE_PDF_GENERAL = 10;
 export const PDF_LIGNE_GENERAL = 38;
 export const PDF_COLONNE_HORAIRE_GENERAL = 112;
 
+/** Grille de largeur : 10 colonnes profs identiques (sans colonnes vides affichées). */
+export const A3_NB_COLONNES_PROF = 10;
+export const PDF_SPACER_COLONNE_PX = 10;
+
 /** Largeur CSS égale : colonne horaire = chaque colonne professeur. */
 export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
   const n = Math.max(1, Number(nProfs) || 1);
@@ -20,6 +24,81 @@ export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
   if (spacers > 0) return `calc((100% - ${spacers}px) / ${parts})`;
   return `calc(100% / ${parts})`;
 }
+
+/**
+ * Largeur d’une colonne (horaire ou prof) calée sur 10 profs + 2 horaires.
+ * S’il y a moins de 10 profs, les colonnes ne s’élargissent pas.
+ */
+export function largeurColonneGrilleGeneralCss(nProfsVisibles, {
+  nProfsRef = A3_NB_COLONNES_PROF,
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+} = {}) {
+  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
+  const nRef = Math.max(nVis, nProfsRef);
+  const nEqual = nRef + nHoraires;
+  const nSpacers = nRef + 1;
+  return `calc((100% - ${nSpacers * spacerPx}px) / ${nEqual})`;
+}
+
+/** Largeur du tableau si moins de 10 profs (évite d’étirer les colonnes). */
+export function largeurTableauGrilleGeneralCss(nProfsVisibles, {
+  nProfsRef = A3_NB_COLONNES_PROF,
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+} = {}) {
+  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
+  const nRef = Math.max(nVis, nProfsRef);
+  if (nVis >= nProfsRef) return '100%';
+  const nEqualRef = nRef + nHoraires;
+  const nEqualVis = nVis + nHoraires;
+  const nSpacersRef = nRef + 1;
+  const nSpacersVis = nVis + 1;
+  return `calc(${nEqualVis} / ${nEqualRef} * (100% - ${nSpacersRef * spacerPx}px) + ${nSpacersVis * spacerPx}px)`;
+}
+
+/** Horaire gauche + écarts + profs + horaire droite. */
+export function nbColonnesGrilleGeneral(nProfsVisibles, nHoraires = 2) {
+  const n = Math.max(0, Number(nProfsVisibles) || 0);
+  return nHoraires + n + (n + 1);
+}
+
+const SPACER_CELL_HTML = '<td class="spacer-cell"></td>';
+const SPACER_TH_HTML = '<th class="spacer-cell"></th>';
+
+function intercalerSpacersHtml(cellsHtmlArr, spacerHtml) {
+  const cells = Array.isArray(cellsHtmlArr) ? cellsHtmlArr : [];
+  const out = [];
+  cells.forEach((cell, i) => {
+    out.push(cell);
+    if (i < cells.length - 1) out.push(spacerHtml);
+  });
+  return out.join('');
+}
+
+/**
+ * [Horaire] [écart] [profs…] [écart] [Horaire].
+ * Un seul écart si aucun prof.
+ */
+export function encadrerColonnesProfsHtml(cellsHtmlArr, horaireGaucheHtml, horaireDroiteHtml, spacerHtml = SPACER_CELL_HTML) {
+  const cells = Array.isArray(cellsHtmlArr) ? cellsHtmlArr : [];
+  if (!cells.length) return `${horaireGaucheHtml}${spacerHtml}${horaireDroiteHtml}`;
+  return `${horaireGaucheHtml}${spacerHtml}${intercalerSpacersHtml(cells, spacerHtml)}${spacerHtml}${horaireDroiteHtml}`;
+}
+
+export function htmlColgroupGrilleGeneral(nProfsVisibles, colW) {
+  const n = Math.max(0, Number(nProfsVisibles) || 0);
+  const parts = [`<col class="creneau-col" style="width:${colW};"/>`, '<col class="spacer-col" />'];
+  for (let i = 0; i < n; i += 1) {
+    parts.push(`<col style="width:${colW};" />`);
+    if (i < n - 1) parts.push('<col class="spacer-col" />');
+  }
+  if (n > 0) parts.push('<col class="spacer-col" />');
+  parts.push(`<col class="creneau-col" style="width:${colW};"/>`);
+  return `<colgroup>${parts.join('')}</colgroup>`;
+}
+
+export { SPACER_CELL_HTML, SPACER_TH_HTML };
 
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;
