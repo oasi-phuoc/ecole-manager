@@ -1,8 +1,11 @@
 import {
   echelleCanvasSecurisee,
   echelleRasterPourPage,
+  limitesCanvasPoste,
   MAX_CANVAS_PIXELS,
+  MAX_CANVAS_PIXELS_FAIBLE,
   MAX_CANVAS_SIDE_PX,
+  MAX_CANVAS_SIDE_PX_FAIBLE,
   pageDimensionsMm,
   pageUsablePx,
   rasterScaleForFormat,
@@ -26,6 +29,20 @@ describe('pageUsablePx', () => {
 describe('rasterScaleForFormat', () => {
   it('utilise une échelle plus haute en A3', () => {
     expect(rasterScaleForFormat('a3')).toBeGreaterThan(rasterScaleForFormat('a4'));
+  });
+});
+
+describe('limitesCanvasPoste', () => {
+  it('restreint Firefox et les PC avec peu de RAM', () => {
+    const fx = limitesCanvasPoste({ userAgent: 'Mozilla/5.0 Firefox/128.0' });
+    expect(fx.maxPixels).toBe(MAX_CANVAS_PIXELS_FAIBLE);
+    expect(fx.maxSide).toBe(MAX_CANVAS_SIDE_PX_FAIBLE);
+    expect(fx.recadrer).toBe(false);
+    const faible = limitesCanvasPoste({ userAgent: 'Chrome/120', deviceMemory: 4 });
+    expect(faible.maxPixels).toBe(MAX_CANVAS_PIXELS_FAIBLE);
+    const confort = limitesCanvasPoste({ userAgent: 'Chrome/120', deviceMemory: 8 });
+    expect(confort.maxPixels).toBe(MAX_CANVAS_PIXELS);
+    expect(confort.maxSide).toBe(MAX_CANVAS_SIDE_PX);
   });
 });
 

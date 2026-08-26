@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import {
   echelleRasterPourPage,
+  limitesCanvasPoste,
   parsePageMarginsMm,
   PX_PAR_MM,
   pageDimensionsMm,
@@ -17,6 +18,7 @@ export {
   rasterScaleForFormat,
   echelleCanvasSecurisee,
   echelleRasterPourPage,
+  limitesCanvasPoste,
 } from './pdfPage';
 
 /** Nom de fichier sûr pour le système de fichiers. */
@@ -66,18 +68,47 @@ async function writeBlobToDir(dirHandle, fileName, blob) {
   await writable.close();
 }
 
-function canvasVersImage(canvas) {
-  const pixels = (canvas.width || 0) * (canvas.height || 0);
-  const jpegQuality = pixels > 3_000_000 ? 0.82 : 0.88;
-  try {
-    const jpeg = canvas.toDataURL('image/jpeg', jpegQuality);
-    if (jpeg && jpeg.length > 64) return { data: jpeg, format: 'JPEG' };
-  } catch { /* canvas trop grand */ }
-  try {
-    const png = canvas.toDataURL('image/png');
-    if (png && png.length > 64) return { data: png, format: 'PNG' };
-  } catch { /* canvas trop grand pour PNG */ }
-  return { data: canvas.toDataURL('image/jpeg', 0.7), format: 'JPEG' };
+function estErreurMemoire(err) {
+  const msg = String(err?.message || err || '');
+  return /allocation size overflow|invalid array length|out of memory|maximum call stack/i.test(msg);
+}
+
+function reduireCanvas(canvas, maxSide) {
+  const w = canvas.width || 0;
+  const h = canvas.height || 0;
+  if (!w || !h) return canvas;
+  const s = Math.min(1, maxSide / Math.max(w, h));
+  if (s >= 0.98) return canvas;
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(w * s));
+  out.height = Math.max(1, Math.round(h * s));
+  const ctx = out.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, 0, 0, out.width, out.height);
+  return out;
+}
+
+async function canvasVersJpeg(canvas, quality) {
+  const q = Math.max(0.45, Math.min(0.92, Number(quality) || 0.75));
+  const viaBlob = await new Promise((resolve) => {
+    try {
+      if (typeof canvas.toBlob !== 'function') {
+        resolve(null);
+        return;
+      }
+      canvas.toBlob((blob) => resolve(blob || null), 'image/jpeg', q);
+    } catch {
+      resolve(null);
+    }
+  });
+  if (viaBlob) {
+    const buf = await viaBlob.arrayBuffer();
+    return { data: new Uint8Array(buf), format: 'JPEG' };
+  }
+  const dataUrl = canvas.toDataURL('image/jpeg', q);
+  return { data: dataUrl, format: 'JPEG' };
 }
 
 /** Recadre le canvas sur le contenu non blanc pour centrer le tableau sur la page. */
@@ -154,7 +185,7 @@ async function capturerElementHtml(el, { scale, elW, captureH, appliquerCadrePag
       });
     } catch (err) {
       lastErr = err;
-      s = Math.max(0.35, Math.round(s * 0.6 * 100) / 100);
+      s = Math.max(0.25, Math.round(s * 0.55 * 100) / 100);
     }
   }
   throw lastErr || new Error('Impossible de rasteriser la page PDF.');
@@ -170,7 +201,10 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
   const dim = pageDimensionsMm(format, orientation);
   const cssW = Math.round(dim.w * PX_PAR_MM);
   const cssH = Math.round(dim.h * PX_PAR_MM);
-  const scale = Number(options.scale) > 0 ? Number(options.scale) : rasterScaleForFormat(format);
+  const limites = limitesCanvasPoste();
+  const scale = Number(options.scale) > 0
+    ? Number(options.scale)
+    : Math.min(rasterScaleForFormat(format), limites.scaleDemandee);
   const margins = parsePageMarginsMm(options);
 
   const iframe = document.createElement('iframe');
@@ -216,7 +250,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
-    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: true });
+    const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: false });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const usableW = Math.max(1, pageW - margins.left - margins.right);
@@ -246,32 +280,69 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         pageW: pageInnerW,
         pageH: pageInnerH,
         scaleDemandee: scale,
+        maxSide: limites.maxSide,
+        maxPixels: limites.maxPixels,
       });
-      const canvas = await capturerElementHtml(el, {
+      let canvas = await capturerElementHtml(el, {
         scale: scalePage,
         elW,
         captureH,
         appliquerCadrePage,
       });
-      const cropped = options.crop === false ? canvas : cropCanvasToContent(canvas);
-      const image = canvasVersImage(cropped);
-      const ratio = cropped.height / Math.max(1, cropped.width);
+      const recadrer = options.crop !== false && limites.recadrer;
+      let pageCanvas = recadrer ? cropCanvasToContent(canvas) : canvas;
+      if (Math.max(pageCanvas.width, pageCanvas.height) > limites.maxSide) {
+        const reduced = reduireCanvas(pageCanvas, limites.maxSide);
+        if (reduced !== pageCanvas && pageCanvas !== canvas) relacherCanvas(pageCanvas);
+        pageCanvas = reduced;
+      }
+      let image = null;
+      let jpegQ = limites.jpegQuality;
+      for (let t = 0; t < 3; t += 1) {
+        try {
+          image = await canvasVersJpeg(pageCanvas, jpegQ);
+          break;
+        } catch (err) {
+          if (t === 2 || !estErreurMemoire(err)) throw err;
+          const next = reduireCanvas(pageCanvas, Math.round(Math.max(pageCanvas.width, pageCanvas.height) * 0.6));
+          if (next !== pageCanvas && pageCanvas !== canvas) relacherCanvas(pageCanvas);
+          pageCanvas = next;
+          jpegQ = Math.max(0.45, jpegQ - 0.12);
+        }
+      }
+      if (!image) throw new Error('Impossible de convertir la page PDF.');
+      const ratio = pageCanvas.height / Math.max(1, pageCanvas.width);
       let drawW = usableW;
       let drawH = drawW * ratio;
       if (drawH > usableH) {
-        const s = usableH / drawH;
-        drawW *= s;
-        drawH *= s;
+        const sFitPage = usableH / drawH;
+        drawW *= sFitPage;
+        drawH *= sFitPage;
       }
       if (i > 0) pdf.addPage(format, orientation);
       const x = margins.left + (usableW - drawW) / 2;
       const y = margins.top + (usableH - drawH) / 2;
-      pdf.addImage(image.data, image.format, x, y, drawW, drawH, undefined, 'NONE');
-      if (cropped !== canvas) relacherCanvas(cropped);
+      try {
+        pdf.addImage(image.data, image.format, x, y, drawW, drawH, undefined, 'NONE');
+      } catch (err) {
+        if (!estErreurMemoire(err)) throw err;
+        const mini = reduireCanvas(pageCanvas, 1200);
+        const imageMini = await canvasVersJpeg(mini, 0.55);
+        pdf.addImage(imageMini.data, imageMini.format, x, y, drawW, drawH, undefined, 'NONE');
+        if (mini !== pageCanvas) relacherCanvas(mini);
+      }
+      if (pageCanvas !== canvas) relacherCanvas(pageCanvas);
       relacherCanvas(canvas);
     }
 
-    return pdf.output('blob');
+    try {
+      return pdf.output('blob');
+    } catch (err) {
+      if (estErreurMemoire(err)) {
+        throw new Error('Mémoire insuffisante sur ce poste pour générer le PDF. Fermez d’autres onglets puis réessayez.');
+      }
+      throw err;
+    }
   } finally {
     if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
   }
