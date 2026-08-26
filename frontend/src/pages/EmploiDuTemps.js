@@ -13,8 +13,8 @@ import {
   groupesSuperGeneral,
   htmlColgroupGrilleGeneral,
   interpreterSelectionPlanningGeneral,
-  largeurColonneGrilleGeneralCss,
-  largeurTableauGrilleGeneralCss,
+  largeurColonneGrilleGeneralPx,
+  largeurTableauGrilleGeneralPx,
   layoutPlanningGeneralA3,
   marginPdfA3,
   nbColonnesGrilleGeneral,
@@ -3177,31 +3177,35 @@ export default function EmploiDuTemps() {
           }
           h1 { margin: 0 0 ${a3Semaine ? '6px' : '18px'}; font-size: ${a3Semaine ? '16px' : '28px'}; text-align: center; width: 100%; }
           h2 { margin: 14px 0 8px; font-size: 15px; text-align: center; }
-          table { border-collapse: collapse; margin: ${a3Semaine ? '0 auto' : '8px auto 18px'}; table-layout: fixed; width: 100%; max-width: 100%; }
+          table { border-collapse: collapse; margin: ${a3Semaine ? '0 auto' : '8px auto 18px'}; table-layout: fixed; width: ${a3Semaine ? 'max-content' : '100%'}; max-width: ${a3Semaine ? 'none' : '100%'}; }
           .section, .section-a3 {
             text-align: center;
-            width: 100%;
+            width: ${a3Semaine ? 'max-content' : '100%'};
+            max-width: none;
             height: auto;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             align-items: stretch;
             justify-content: flex-start;
+            overflow: visible;
           }
-          .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: 100%; table-layout: fixed; }
-          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '1px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: keep-all; overflow-wrap: normal; box-sizing: border-box; }
+          .section table, .section-a3 table { margin-left: auto; margin-right: auto; width: ${a3Semaine ? 'max-content' : '100%'}; max-width: none; table-layout: fixed; }
+          th, td { border: 1px solid #e2e8f0; padding: ${a3Semaine ? '1px 2px' : '4px 3px'}; font-size: ${fontCss}; text-align: center; vertical-align: middle; overflow: hidden; word-break: keep-all; overflow-wrap: normal; box-sizing: border-box; ${a3Semaine ? 'white-space: nowrap;' : ''} }
           th { background: #f8fafc; font-weight: 700; }
-          .a3-main th, .a3-main td { overflow-wrap: normal; word-break: keep-all; }
+          .a3-main th, .a3-main td { overflow-wrap: normal; word-break: keep-all; white-space: nowrap; }
           .section-a3, .section-a3 .a3-wrap, .section-a3 .a3-wrap > tbody > tr { height: auto !important; min-height: 0 !important; }
-          col.creneau-col { ${colonnesEgales
-            ? 'width: auto; min-width: 0; max-width: none;'
-            : `width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px;`} }
+          col.creneau-col { ${a3Semaine
+            ? ''
+            : (colonnesEgales
+              ? 'width: auto; min-width: 0; max-width: none;'
+              : `width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px;`)} }
           col.day-col { width: calc((100% - ${largeurColonne}px) / ${JOURS.length}); }
           col.spacer-col { width: 10px; min-width: 8px; max-width: 14px; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
           .section:last-child { page-break-after: auto; break-after: auto; }
           .section-a3 { page-break-inside: avoid; page-break-after: auto; break-inside: avoid; margin: 0; }
-          .a3-wrap { width:100%; border-collapse:collapse; table-layout:fixed; margin:0; }
+          .a3-wrap { width:max-content; max-width:none; border-collapse:collapse; table-layout:auto; margin:0; }
           .a3-wrap > tbody > tr > td { border:none !important; background:transparent !important; padding:0 !important; vertical-align:top; }
           .a3-titulariat { width:auto; vertical-align:top !important; }
           .a3-titulariat .titu-cartes { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; width:100%; box-sizing:border-box; }
@@ -3213,8 +3217,9 @@ export default function EmploiDuTemps() {
           .a3-main table.a3-grille,
           .section-a3 table.a3-grille,
           .section table.a3-grille {
-            width: var(--a3-grille-w, 100%) !important;
-            max-width: 100%;
+            width: var(--a3-grille-w, max-content) !important;
+            max-width: none !important;
+            min-width: var(--a3-grille-w, 0);
             margin: 0 !important;
           }
           .day-banner { background:#6366f1;color:#fff;text-align:center;font-weight:800;font-size:${a3Semaine ? fontCss : '11pt'};padding:${a3Semaine ? '0 8px' : '5px 14px'};text-transform:uppercase;letter-spacing:0.04em;border-radius:8px 8px 0 0;${a3Semaine && hauteurLigne ? `height:${hauteurLigne}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;` : ''} }
@@ -3409,12 +3414,17 @@ export default function EmploiDuTemps() {
         mode: 'jour',
       });
       const ROW_H = layoutJour.rowH;
-      const COL_W = largeurColonneGrilleGeneralCss(nProfs, { nProfsRef });
-      const tableWidth = largeurTableauGrilleGeneralCss(nProfs, { nProfsRef });
+      const colPx = largeurColonneGrilleGeneralPx({
+        nProfsRef,
+        usableWidthPx: layoutJour.usable?.w || 1400,
+      });
+      const tableWidthPx = largeurTableauGrilleGeneralPx(nProfs, colPx);
+      const COL_W = `${colPx}px`;
+      const tableWidth = `${tableWidthPx}px`;
       const nCols = nbColonnesGrilleGeneral(nProfs);
-      const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>`;
+      const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;width:${COL_W};min-width:${COL_W};box-sizing:border-box;white-space:nowrap;">Horaire</th>`;
       const profHeaders = listeProfs.map(p => {
-        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;overflow-wrap:normal;word-break:keep-all;width:${COL_W};height:${layoutJour.headerH}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;overflow-wrap:normal;word-break:keep-all;white-space:nowrap;width:${COL_W};min-width:${COL_W};height:${layoutJour.headerH}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
       });
       const rows = [];
       ['Matin', 'Après-midi'].forEach(per => {
@@ -3422,14 +3432,14 @@ export default function EmploiDuTemps() {
         if (!crsPer.length) return;
         rows.push(`<tr><td colspan="${nCols}" style="background:#000;color:#fff;font-weight:700;font-size:${FONT};padding:0 8px;text-align:left;border:none;height:${ROW_H}px;line-height:${ROW_H}px;box-sizing:border-box;overflow:hidden;">${escapeHtml(per)}</td></tr>`);
         crsPer.forEach(cr => {
-          const htmlTdHoraire = `<td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${COL_W};overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>`;
+          const htmlTdHoraire = `<td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${COL_W};min-width:${COL_W};overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>`;
           const cells = listeProfs.map(p => {
             const aff = (affectations || []).find(a => String(a.prof_id) === String(p.id) && String(a.creneau_id) === String(cr.id));
             const dispo = (dispos || []).find(d => String(d.prof_id) === String(p.id) && String(d.creneau_id) === String(cr.id));
             const videDispo = styleCelluleDispoVidePrint(dispo);
             let bg = '#fff', content = '';
             const ligneHtml = (texte, fg, premier = true) =>
-              `<div style="font-weight:${premier ? 700 : 600};color:${fg};font-size:${FONT};line-height:1.15;overflow:hidden;${premier ? '' : 'margin-top:1px;'}">${texte}</div>`;
+              `<div style="font-weight:${premier ? 700 : 600};color:${fg};font-size:${FONT};line-height:1.15;overflow:hidden;white-space:nowrap;${premier ? '' : 'margin-top:1px;'}">${texte}</div>`;
             if (aff && estAffectationHorsPools(aff, poolsCourants)) {
               bg = '#e2e8f0';
               const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
@@ -3451,7 +3461,7 @@ export default function EmploiDuTemps() {
               bg = videDispo.bg || '#ffffff';
               content = '';
             }
-            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;width:${COL_W};">${content}</td>`;
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;width:${COL_W};min-width:${COL_W};white-space:nowrap;">${content}</td>`;
           });
           rows.push(`<tr>${encadrerColonnesProfsHtml(cells, htmlTdHoraire, htmlTdHoraire)}</tr>`);
         });
@@ -3459,7 +3469,7 @@ export default function EmploiDuTemps() {
       const colgroup = htmlColgroupGrilleGeneral(nProfs, COL_W);
       parts.push(`
         <div class="section">
-          <table class="a3-grille" style="border-collapse:collapse;height:auto;max-width:100%;table-layout:fixed;margin:0;--a3-grille-w:${tableWidth};">
+          <table class="a3-grille" style="border-collapse:collapse;height:auto;table-layout:fixed;margin:0;--a3-grille-w:${tableWidth};">
             ${colgroup}
             <tbody>
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;">
@@ -3529,14 +3539,6 @@ export default function EmploiDuTemps() {
     const FONT = `${fontPt}pt`;
     const ROW_H = layoutA3.rowH;
     const PROF_HEADER_H = layoutA3.headerH;
-    const COL_W = largeurColonneGrilleGeneralCss(nProfs, { nProfsRef: nProfsRefGrille });
-    const tableWidth = largeurTableauGrilleGeneralCss(nProfs, { nProfsRef: nProfsRefGrille });
-    const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>`;
-
-    const profHeaders = listeProfs.map((p) => {
-      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;overflow-wrap:normal;word-break:keep-all;`;
-      return `<th style="${thBase}">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
-    });
 
     const lignesTitulariat = [];
     listeProfsReels.forEach((p) => {
@@ -3579,6 +3581,19 @@ export default function EmploiDuTemps() {
     const TITU_TOTAL_W = multiTitu
       ? (TITU_W * tituColonnes.length) + (TITU_GAP * (tituColonnes.length - 1))
       : TITU_W;
+    const usableGrille = Math.max(480, (layoutA3.usable?.w || 1400) - TITU_TOTAL_W - 8);
+    const colPx = largeurColonneGrilleGeneralPx({
+      nProfsRef: nProfsRefGrille,
+      usableWidthPx: usableGrille,
+    });
+    const tableWidthPx = largeurTableauGrilleGeneralPx(nProfs, colPx);
+    const COL_W = `${colPx}px`;
+    const tableWidth = `${tableWidthPx}px`;
+    const htmlThHoraire = `<th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;width:${COL_W};box-sizing:border-box;white-space:nowrap;">Horaire</th>`;
+    const profHeaders = listeProfs.map((p) => {
+      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${COL_W};min-width:${COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;overflow-wrap:normal;word-break:keep-all;white-space:nowrap;`;
+      return `<th style="${thBase}">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+    });
     const htmlColonnesTitulariat = multiTitu
       ? `<div class="titu-colonnes">${tituColonnes.map((col) =>
           `<div class="titu-col" style="width:${TITU_W}px;">${col.length ? col.map(htmlCarteTitulariat).join('') : '&nbsp;'}</div>`
@@ -3628,7 +3643,7 @@ export default function EmploiDuTemps() {
               bg = '#e2e8f0';
               const nomPool = escapeHtml(nomPoolAffectationExterne(aff, poolsCourants[0]));
               const periodeExt = escapeHtml(libellePeriodeAffectation(aff));
-              content = `<div style="font-weight:700;color:#475569;font-size:${FONT};line-height:1.12;overflow:hidden;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:${FONT};margin-top:1px;line-height:1.1;overflow:hidden;">${periodeExt}</div>` : ''}`;
+              content = `<div style="font-weight:700;color:#475569;font-size:${FONT};line-height:1.12;overflow:hidden;white-space:nowrap;">${nomPool}</div>${periodeExt ? `<div style="font-weight:600;color:#64748b;font-size:${FONT};margin-top:1px;line-height:1.1;overflow:hidden;white-space:nowrap;">${periodeExt}</div>` : ''}`;
             } else if (aff) {
               const estSoutien = String(aff.type_special || '').toLowerCase() === 'soutien';
               const estSpecial = !!aff.type_special && !estSoutien;
@@ -3640,19 +3655,19 @@ export default function EmploiDuTemps() {
                 : nomClasse;
               const branche = afficherNomsBranches ? libelleBrancheComplet(aff) : '';
               const ligneSoutien = (!estSpecial && estSoutien)
-                ? `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;overflow:hidden;">Soutien</div>`
+                ? `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;overflow:hidden;white-space:nowrap;">Soutien</div>`
                 : '';
               const ligne2 = estSpecial || !branche
                 ? ''
-                : `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;overflow:hidden;">${escapeHtml(branche)}</div>`;
-              content = `<div style="font-weight:700;color:${fg};font-size:${FONT};line-height:1.12;overflow:hidden;">${ligne1}</div>${ligneSoutien}${ligne2}`;
+                : `<div style="font-size:${FONT};font-weight:600;margin-top:1px;line-height:1.1;opacity:0.95;overflow:hidden;white-space:nowrap;">${escapeHtml(branche)}</div>`;
+              content = `<div style="font-weight:700;color:${fg};font-size:${FONT};line-height:1.12;overflow:hidden;white-space:nowrap;">${ligne1}</div>${ligneSoutien}${ligne2}`;
             } else {
               bg = videDispo.bg || '#ffffff';
               content = '';
             }
-            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;">${content}</td>`;
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;width:${COL_W};min-width:${COL_W};white-space:nowrap;">${content}</td>`;
           });
-          const htmlTdHoraire = `<td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;width:${COL_W};border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>`;
+          const htmlTdHoraire = `<td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;width:${COL_W};min-width:${COL_W};border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>`;
           rows.push(
             `<tr>${encadrerColonnesProfsHtml(cells, htmlTdHoraire, htmlTdHoraire)}</tr>`
           );

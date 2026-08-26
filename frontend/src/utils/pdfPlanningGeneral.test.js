@@ -8,11 +8,14 @@ import {
   interpreterSelectionPlanningGeneral,
   largeurColonneEgaleCss,
   largeurColonneGrilleGeneralCss,
+  largeurColonneGrilleGeneralPx,
   largeurTableauGrilleGeneralCss,
+  largeurTableauGrilleGeneralPx,
   layoutPlanningGeneralA3,
   nbColonnesGrilleGeneral,
   nProfsRefPlanningGeneral,
   optionsPlanningGeneral,
+  PDF_COLONNE_MIN_PX,
   trierClesSitesTitulariat,
   VALEUR_PLANNING_MEGA,
 } from './pdfPlanningGeneral';
@@ -80,8 +83,8 @@ describe('grille planning général (2 horaires, sans colonnes vides)', () => {
     expect((colgroup.match(/<col /g) || []).length).toBe(15);
     expect((colgroup.match(/creneau-col/g) || []).length).toBe(2);
     expect((htmlColgroupGrilleGeneral(10, '10%').match(/<col /g) || []).length).toBe(23);
-    expect(largeurColonneGrilleGeneralCss(12)).toBe('calc((100% - 130px) / 14)');
-    expect(largeurTableauGrilleGeneralCss(12)).toBe('100%');
+    expect(largeurColonneGrilleGeneralCss(12)).toBe(largeurColonneGrilleGeneralCss(10));
+    expect(largeurTableauGrilleGeneralCss(12)).toBe('calc(14 / 12 * (100% - 110px) + 130px)');
   });
 
   it('cale super sur 20 profs fictifs et méga sur 40', () => {
@@ -98,6 +101,18 @@ describe('grille planning général (2 horaires, sans colonnes vides)', () => {
     expect(largeurColonneGrilleGeneralCss(40, { nProfsRef: 40 })).toBe('calc((100% - 410px) / 42)');
     expect(largeurTableauGrilleGeneralCss(25, { nProfsRef: 40 })).toBe('calc(27 / 42 * (100% - 410px) + 260px)');
     expect(largeurTableauGrilleGeneralCss(40, { nProfsRef: 40 })).toBe('100%');
+  });
+
+  it('ne rétrécit jamais une colonne sous le minimum lisible (texte horizontal)', () => {
+    expect(PDF_COLONNE_MIN_PX).toBeGreaterThanOrEqual(112);
+    expect(largeurColonneGrilleGeneralPx({ nProfsRef: 40, usableWidthPx: 1500 })).toBe(PDF_COLONNE_MIN_PX);
+    expect(largeurColonneGrilleGeneralPx({ nProfsRef: 20, usableWidthPx: 1500 })).toBe(PDF_COLONNE_MIN_PX);
+    expect(largeurColonneGrilleGeneralPx({ nProfsRef: 10, usableWidthPx: 1500 })).toBe(115);
+    expect(largeurTableauGrilleGeneralPx(10, 100)).toBe(1310);
+    expect(largeurTableauGrilleGeneralPx(40, PDF_COLONNE_MIN_PX))
+      .toBeGreaterThan(1500);
+    const colgroup = htmlColgroupGrilleGeneral(3, '112px');
+    expect(colgroup).toContain('min-width:112px');
   });
 });
 

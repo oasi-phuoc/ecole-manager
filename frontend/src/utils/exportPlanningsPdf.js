@@ -137,15 +137,17 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const padRight = Math.round(margins.right * PX_PAR_MM);
     const padBottom = Math.round(margins.bottom * PX_PAR_MM);
     const padLeft = Math.round(margins.left * PX_PAR_MM);
-    const appliquerCadrePage = (root, body, figerHauteur) => {
+    const appliquerCadrePage = (root, body, figerHauteur, widthPx = cssW) => {
+      const w = Math.max(cssW, Number(widthPx) || cssW);
       if (root) {
-        root.style.width = `${cssW}px`;
+        root.style.width = `${w}px`;
+        root.style.maxWidth = 'none';
         root.style.height = figerHauteur ? `${cssH}px` : 'auto';
         root.style.overflow = figerHauteur ? 'hidden' : 'visible';
       }
       if (body) {
-        body.style.width = `${cssW}px`;
-        body.style.maxWidth = `${cssW}px`;
+        body.style.width = `${w}px`;
+        body.style.maxWidth = 'none';
         body.style.margin = '0';
         body.style.padding = `${padTop}px ${padRight}px ${padBottom}px ${padLeft}px`;
         body.style.boxSizing = 'border-box';
@@ -164,9 +166,22 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const usableW = Math.max(1, pageW - margins.left - margins.right);
     const usableH = Math.max(1, pageH - margins.top - margins.bottom);
 
+    let captureW = cssW;
+    targets.forEach((el) => {
+      captureW = Math.max(captureW, el.scrollWidth || 0, el.offsetWidth || 0);
+    });
+    if (captureW > cssW) {
+      iframe.style.width = `${captureW}px`;
+      appliquerCadrePage(idoc.documentElement, idoc.body, false, captureW);
+    }
+
     for (let i = 0; i < targets.length; i += 1) {
       const el = targets[i];
+      const elW = Math.max(cssW, el.scrollWidth || 0, el.offsetWidth || 0);
       const captureH = Math.max(cssH, el.scrollHeight || cssH);
+      el.style.width = `${elW}px`;
+      el.style.maxWidth = 'none';
+      el.style.overflow = 'visible';
       const canvas = await html2canvas(el, {
         scale,
         useCORS: true,
@@ -174,10 +189,10 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         logging: false,
         backgroundColor: '#ffffff',
         letterRendering: true,
-        windowWidth: cssW,
+        windowWidth: elW,
         windowHeight: captureH,
         onclone: (clonedDoc) => {
-          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, false);
+          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, false, elW);
         },
       });
       const cropped = options.crop === false ? canvas : cropCanvasToContent(canvas);
