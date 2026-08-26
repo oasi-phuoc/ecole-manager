@@ -2,6 +2,7 @@ import {
   canoniserCleSiteTitulariat,
   colonnesTitulariatParSites,
   compterLignesPlanningGeneralA3,
+  largeurColonneEgaleCss,
   layoutPlanningGeneralA3,
   trierClesSitesTitulariat,
 } from './pdfPlanningGeneral';
@@ -33,6 +34,11 @@ describe('layoutPlanningGeneralA3', () => {
     expect(semaine.creneauW).toBe(112);
     expect(semaine.fontPt).toBe(10);
     expect(semaine.headerH).toBeGreaterThanOrEqual(38);
+  });
+
+  it('donne à l’horaire la même largeur que chaque colonne professeur', () => {
+    expect(largeurColonneEgaleCss(10, 10)).toBe('calc((100% - 90px) / 11)');
+    expect(largeurColonneEgaleCss(3, 0)).toBe('calc(100% / 4)');
   });
 });
 

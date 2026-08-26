@@ -8,6 +8,7 @@ import { injectForcedPrintCss } from '../utils/print';
 import { demanderDossierExport, exporterDocumentsPdf, htmlDocumentToPdfBlob, sanitizeFilename } from '../utils/exportPlanningsPdf';
 import {
   colonnesTitulariatParSites,
+  largeurColonneEgaleCss,
   layoutPlanningGeneralA3,
   marginPdfA3,
   PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
@@ -3071,6 +3072,7 @@ export default function EmploiDuTemps() {
     const a3Semaine = !!options?.a3Semaine;
     const fontPt = POLICE_PDF_GENERAL;
     const fontCss = `${fontPt}pt`;
+    const colonnesEgales = !!options?.colonnesEgales;
     const largeurColonnePdf = Number(options?.largeurColonne);
     const hauteurLignePdf = Number(options?.hauteurLigne);
     const largeurColonne = Number.isFinite(largeurColonnePdf) && largeurColonnePdf > 0
@@ -3145,7 +3147,9 @@ export default function EmploiDuTemps() {
           th { background: #f8fafc; font-weight: 700; }
           .a3-main th, .a3-main td { overflow-wrap: normal; word-break: keep-all; }
           .section-a3, .section-a3 .a3-wrap, .section-a3 .a3-wrap > tbody > tr { height: auto !important; min-height: 0 !important; }
-          col.creneau-col { width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px; }
+          col.creneau-col { ${colonnesEgales
+            ? 'width: auto; min-width: 0; max-width: none;'
+            : `width: ${largeurColonne}px; min-width: ${largeurColonne}px; max-width: ${largeurColonne}px;`} }
           col.day-col { width: calc((100% - ${largeurColonne}px) / ${JOURS.length}); }
           col.spacer-col { width: 10px; min-width: 8px; max-width: 14px; }
           .section { page-break-inside: avoid; page-break-after: always; margin-bottom: 12px; break-inside: avoid; break-after: page; }
@@ -3333,11 +3337,10 @@ export default function EmploiDuTemps() {
         mode: 'jour',
       });
       const ROW_H = layoutJour.rowH;
-      const CRENEAU_W = layoutJour.creneauW;
-      const PROF_COL_W = `calc((100% - ${CRENEAU_W}px) / ${nProfs})`;
+      const COL_W = largeurColonneEgaleCss(nProfs, 0);
       const nCols = (profs || []).length + 1;
       const profHeaders = (profs || []).map(p => {
-        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;overflow-wrap:normal;word-break:keep-all;width:${PROF_COL_W};height:${layoutJour.headerH}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
+        return `<th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;overflow-wrap:normal;word-break:keep-all;width:${COL_W};height:${layoutJour.headerH}px;box-sizing:border-box;">${htmlPrenomNomDeuxLignes(p.prenom, p.nom, FONT)}</th>`;
       }).join('');
       const rows = [];
       ['Matin', 'Après-midi'].forEach(per => {
@@ -3375,12 +3378,12 @@ export default function EmploiDuTemps() {
                 ? ligneHtml(escapeHtml(libelleCourtPrint(videDispo.text)), videDispo.color)
                 : '';
             }
-            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;width:${PROF_COL_W};">${content}</td>`;
+            return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:3px 3px;overflow:hidden;width:${COL_W};">${content}</td>`;
           }).join('');
-          rows.push(`<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${CRENEAU_W}px;overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${cells}</tr>`);
+          rows.push(`<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;width:${COL_W};overflow:hidden;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${cells}</tr>`);
         });
       });
-      const colgroup = `<colgroup><col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;max-width:${CRENEAU_W}px;"/>${(profs || []).map(() => `<col style="width:${PROF_COL_W};" />`).join('')}</colgroup>`;
+      const colgroup = `<colgroup><col class="creneau-col" style="width:${COL_W};"/>${(profs || []).map(() => `<col style="width:${COL_W};" />`).join('')}</colgroup>`;
       parts.push(`
         <div class="section">
           <table style="border-collapse:collapse;width:100%;height:auto;max-width:100%;table-layout:fixed;margin:0;">
@@ -3389,7 +3392,7 @@ export default function EmploiDuTemps() {
               <tr><td colspan="${nCols}" style="padding:0;border:none;background:transparent;height:${ROW_H}px;">
                 <div class="day-banner" style="height:${ROW_H}px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:${FONT};">${escapeHtml(jour)}</div>
               </td></tr>
-              <tr><th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;box-sizing:border-box;">Horaire</th>${profHeaders}</tr>
+              <tr><th style="text-align:center;font-size:${FONT};padding:2px 3px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${ROW_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>${profHeaders}</tr>
               ${rows.join('')}
             </tbody>
           </table>
@@ -3447,12 +3450,11 @@ export default function EmploiDuTemps() {
       orientation,
       mode: 'semaine',
     });
-    const CRENEAU_W = layoutA3.creneauW;
     const fontPt = layoutA3.fontPt;
     const FONT = `${fontPt}pt`;
     const ROW_H = layoutA3.rowH;
     const PROF_HEADER_H = layoutA3.headerH;
-    const PROF_COL_W = `calc((100% - ${CRENEAU_W}px - ${(nProfs - 1) * 10}px) / ${nProfs})`;
+    const COL_W = largeurColonneEgaleCss(nProfs, 10);
     const spacerTd = '<td class="spacer-cell"></td>';
 
     const withSpacers = (cellsHtmlArr) => {
@@ -3465,7 +3467,7 @@ export default function EmploiDuTemps() {
     };
 
     const profHeaders = withSpacers(listeProfs.map((p) => {
-      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${PROF_COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;overflow-wrap:normal;word-break:keep-all;`;
+      const thBase = `text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;line-height:1.12;width:${COL_W};height:${PROF_HEADER_H}px;box-sizing:border-box;overflow:hidden;overflow-wrap:normal;word-break:keep-all;`;
       if (p._fake) {
         return `<th style="${thBase}">&nbsp;</th>`;
       }
@@ -3531,9 +3533,9 @@ export default function EmploiDuTemps() {
     `;
 
     const colgroup = `<colgroup>
-      <col class="creneau-col" style="width:${CRENEAU_W}px;min-width:${CRENEAU_W}px;"/>
+      <col class="creneau-col" style="width:${COL_W};"/>
       ${listeProfs.map((_, i) =>
-        `<col style="width:${PROF_COL_W};" />${i < nProfs - 1 ? '<col class="spacer-col" />' : ''}`
+        `<col style="width:${COL_W};" />${i < nProfs - 1 ? '<col class="spacer-col" />' : ''}`
       ).join('')}
     </colgroup>`;
 
@@ -3597,7 +3599,7 @@ export default function EmploiDuTemps() {
             return `<td style="background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;border:1px solid #e2e8f0;padding:1px 2px;overflow:hidden;box-sizing:border-box;">${content}</td>`;
           });
           rows.push(
-            `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
+            `<tr><td style="background:#f8fafc;font-weight:700;font-size:${FONT};text-align:center;white-space:nowrap;height:${ROW_H}px;width:${COL_W};border:1px solid #e2e8f0;overflow:hidden;box-sizing:border-box;">${escapeHtml(libelleHoraireCreneau(cr, poolHoraires))}</td>${withSpacers(cells)}</tr>`
           );
         });
       });
@@ -3620,7 +3622,7 @@ export default function EmploiDuTemps() {
                   ${colgroup}
                   <thead>
                     <tr>
-                      <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;box-sizing:border-box;">Horaire</th>
+                      <th style="text-align:center;font-size:${FONT};padding:3px 2px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;overflow:hidden;height:${PROF_HEADER_H}px;width:${COL_W};box-sizing:border-box;">Horaire</th>
                       ${profHeaders}
                     </tr>
                   </thead>
@@ -3679,7 +3681,7 @@ export default function EmploiDuTemps() {
     });
     return htmlOptsGeneralA3({
       hauteurLigne: layout.rowH,
-      largeurColonne: layout.creneauW,
+      colonnesEgales: true,
       ...extra,
       orientation,
     });

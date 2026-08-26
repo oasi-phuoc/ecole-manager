@@ -11,6 +11,16 @@ export const POLICE_PDF_GENERAL = 10;
 export const PDF_LIGNE_GENERAL = 38;
 export const PDF_COLONNE_HORAIRE_GENERAL = 112;
 
+/** Largeur CSS égale : colonne horaire = chaque colonne professeur. */
+export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
+  const n = Math.max(1, Number(nProfs) || 1);
+  const gap = Math.max(0, Number(spacerPx) || 0);
+  const spacers = Math.max(0, n - 1) * gap;
+  const parts = n + 1;
+  if (spacers > 0) return `calc((100% - ${spacers}px) / ${parts})`;
+  return `calc(100% / ${parts})`;
+}
+
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;
 export const PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF = 128;
