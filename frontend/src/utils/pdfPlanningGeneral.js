@@ -11,6 +11,10 @@ export const POLICE_PDF_GENERAL = 10;
 export const PDF_LIGNE_GENERAL = 38;
 export const PDF_COLONNE_HORAIRE_GENERAL = 112;
 
+/** Grille de largeur : 10 colonnes profs identiques (sans colonnes vides affichées). */
+export const A3_NB_COLONNES_PROF = 10;
+export const PDF_SPACER_COLONNE_PX = 10;
+
 /** Largeur CSS égale : colonne horaire = chaque colonne professeur. */
 export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
   const n = Math.max(1, Number(nProfs) || 1);
@@ -20,6 +24,81 @@ export function largeurColonneEgaleCss(nProfs, spacerPx = 0) {
   if (spacers > 0) return `calc((100% - ${spacers}px) / ${parts})`;
   return `calc(100% / ${parts})`;
 }
+
+/**
+ * Largeur d’une colonne (horaire ou prof) calée sur 10 profs + 2 horaires.
+ * S’il y a moins de 10 profs, les colonnes ne s’élargissent pas.
+ */
+export function largeurColonneGrilleGeneralCss(nProfsVisibles, {
+  nProfsRef = A3_NB_COLONNES_PROF,
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+} = {}) {
+  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
+  const nRef = Math.max(nVis, nProfsRef);
+  const nEqual = nRef + nHoraires;
+  const nSpacers = nRef + 1;
+  return `calc((100% - ${nSpacers * spacerPx}px) / ${nEqual})`;
+}
+
+/** Largeur du tableau si moins de 10 profs (évite d’étirer les colonnes). */
+export function largeurTableauGrilleGeneralCss(nProfsVisibles, {
+  nProfsRef = A3_NB_COLONNES_PROF,
+  nHoraires = 2,
+  spacerPx = PDF_SPACER_COLONNE_PX,
+} = {}) {
+  const nVis = Math.max(0, Number(nProfsVisibles) || 0);
+  const nRef = Math.max(nVis, nProfsRef);
+  if (nVis >= nProfsRef) return '100%';
+  const nEqualRef = nRef + nHoraires;
+  const nEqualVis = nVis + nHoraires;
+  const nSpacersRef = nRef + 1;
+  const nSpacersVis = nVis + 1;
+  return `calc(${nEqualVis} / ${nEqualRef} * (100% - ${nSpacersRef * spacerPx}px) + ${nSpacersVis * spacerPx}px)`;
+}
+
+/** Horaire gauche + écarts + profs + horaire droite. */
+export function nbColonnesGrilleGeneral(nProfsVisibles, nHoraires = 2) {
+  const n = Math.max(0, Number(nProfsVisibles) || 0);
+  return nHoraires + n + (n + 1);
+}
+
+const SPACER_CELL_HTML = '<td class="spacer-cell"></td>';
+const SPACER_TH_HTML = '<th class="spacer-cell"></th>';
+
+function intercalerSpacersHtml(cellsHtmlArr, spacerHtml) {
+  const cells = Array.isArray(cellsHtmlArr) ? cellsHtmlArr : [];
+  const out = [];
+  cells.forEach((cell, i) => {
+    out.push(cell);
+    if (i < cells.length - 1) out.push(spacerHtml);
+  });
+  return out.join('');
+}
+
+/**
+ * [Horaire] [écart] [profs…] [écart] [Horaire].
+ * Un seul écart si aucun prof.
+ */
+export function encadrerColonnesProfsHtml(cellsHtmlArr, horaireGaucheHtml, horaireDroiteHtml, spacerHtml = SPACER_CELL_HTML) {
+  const cells = Array.isArray(cellsHtmlArr) ? cellsHtmlArr : [];
+  if (!cells.length) return `${horaireGaucheHtml}${spacerHtml}${horaireDroiteHtml}`;
+  return `${horaireGaucheHtml}${spacerHtml}${intercalerSpacersHtml(cells, spacerHtml)}${spacerHtml}${horaireDroiteHtml}`;
+}
+
+export function htmlColgroupGrilleGeneral(nProfsVisibles, colW) {
+  const n = Math.max(0, Number(nProfsVisibles) || 0);
+  const parts = [`<col class="creneau-col" style="width:${colW};"/>`, '<col class="spacer-col" />'];
+  for (let i = 0; i < n; i += 1) {
+    parts.push(`<col style="width:${colW};" />`);
+    if (i < n - 1) parts.push('<col class="spacer-col" />');
+  }
+  if (n > 0) parts.push('<col class="spacer-col" />');
+  parts.push(`<col class="creneau-col" style="width:${colW};"/>`);
+  return `<colgroup>${parts.join('')}</colgroup>`;
+}
+
+export { SPACER_CELL_HTML, SPACER_TH_HTML };
 
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;
@@ -174,5 +253,170 @@ export function colonnesTitulariatParSites(lignes, siteDeLigne, clesSites) {
   const cols = [...ordre, ...extraKeys].map((k) => map.get(k) || []);
   if (horsSite.length) cols.push(horsSite);
   return cols;
+}
+
+/** Valeur du menu Général pour le méga-planning (tous les sites). */
+export const VALEUR_PLANNING_MEGA = '__mega__';
+export const PREFIXE_PLANNING_SUPER = '__super__:';
+
+export function valeurPlanningSuper(cle) {
+  const key = String(cle || '').trim().toUpperCase();
+  return key ? `${PREFIXE_PLANNING_SUPER}${key}` : '';
+}
+
+export function estSelectionMega(valeur) {
+  return String(valeur || '') === VALEUR_PLANNING_MEGA;
+}
+
+export function estSelectionSuper(valeur) {
+  return String(valeur || '').startsWith(PREFIXE_PLANNING_SUPER);
+}
+
+export function cleSelectionSuper(valeur) {
+  if (!estSelectionSuper(valeur)) return '';
+  return String(valeur).slice(PREFIXE_PLANNING_SUPER.length).trim().toUpperCase();
+}
+
+export function labelComposePool(pool, resoudreNomSite) {
+  const site = String(pool?.site || '').trim();
+  const nom = String(pool?.nom || '').trim();
+  if (/[-–—]/.test(site)) return site;
+  if (/[-–—]/.test(nom)) return nom;
+  if (typeof resoudreNomSite === 'function') {
+    const resolu = String(resoudreNomSite(pool) || '').trim();
+    if (resolu) return resolu;
+  }
+  return site || nom;
+}
+
+export function prefixeSitePool(pool, resoudreNomSite) {
+  const label = labelComposePool(pool, resoudreNomSite);
+  const premier = String(label).split(/[-–—_\s]+/).filter(Boolean)[0] || label;
+  return String(premier).trim() || 'Site';
+}
+
+export function nomAfficheSiteGeneral(label) {
+  const brut = String(label || '').trim();
+  if (!brut) return 'Site';
+  if (brut === brut.toUpperCase() && /[A-Z]/.test(brut)) {
+    return brut.charAt(0) + brut.slice(1).toLowerCase();
+  }
+  return brut.charAt(0).toUpperCase() + brut.slice(1);
+}
+
+/** Sites qui ont un super-général (plusieurs libellés distincts, même préfixe). */
+export function groupesSuperGeneral(pools, resoudreNomSite) {
+  const groupesPrefixe = new Map();
+  (pools || []).forEach((pool) => {
+    const labelComplet = labelComposePool(pool, resoudreNomSite);
+    const prefixe = prefixeSitePool(pool, resoudreNomSite);
+    const key = prefixe.toUpperCase();
+    if (!groupesPrefixe.has(key)) {
+      groupesPrefixe.set(key, { key, label: prefixe, pools: [], labelsComplets: new Set() });
+    }
+    const g = groupesPrefixe.get(key);
+    g.pools.push(pool);
+    g.labelsComplets.add(String(labelComplet).trim().toUpperCase());
+  });
+  return Array.from(groupesPrefixe.values()).filter((g) => g.labelsComplets.size >= 2);
+}
+
+export function optionsPlanningGeneral(pools, resoudreNomSite) {
+  const liste = Array.isArray(pools) ? pools : [];
+  const options = liste.map((p) => ({
+    value: String(p.id),
+    label: String(p.nom || `Pool ${p.id}`),
+  }));
+  groupesSuperGeneral(liste, resoudreNomSite).forEach((g) => {
+    options.push({
+      value: valeurPlanningSuper(g.key),
+      label: `Tout ${nomAfficheSiteGeneral(g.label)}`,
+    });
+  });
+  if (liste.length >= 2) {
+    options.push({ value: VALEUR_PLANNING_MEGA, label: 'Complet' });
+  }
+  return options;
+}
+
+export function interpreterSelectionPlanningGeneral(valeur, pools, resoudreNomSite) {
+  const v = valeur == null ? '' : String(valeur);
+  const liste = Array.isArray(pools) ? pools : [];
+  if (!v) return { mode: '', poolIds: [], label: '', groupe: null };
+  if (estSelectionMega(v)) {
+    return {
+      mode: 'mega',
+      poolIds: liste.map((p) => p.id),
+      label: 'Complet',
+      groupe: null,
+    };
+  }
+  if (estSelectionSuper(v)) {
+    const cle = cleSelectionSuper(v);
+    const groupe = groupesSuperGeneral(liste, resoudreNomSite).find((g) => g.key === cle) || null;
+    return {
+      mode: 'super',
+      poolIds: (groupe?.pools || []).map((p) => p.id),
+      label: groupe ? `Tout ${nomAfficheSiteGeneral(groupe.label)}` : `Tout ${nomAfficheSiteGeneral(cle)}`,
+      groupe,
+    };
+  }
+  const pool = liste.find((p) => String(p.id) === v) || null;
+  return {
+    mode: 'pool',
+    poolIds: pool ? [pool.id] : (v ? [v] : []),
+    label: pool?.nom || '',
+    groupe: null,
+  };
+}
+
+export function fusionnerPlanningsGeneraux(datas, sitesParIndex = []) {
+  const profMap = new Map();
+  const affKeys = new Set();
+  const affectations = [];
+  const dispoKeys = new Set();
+  const dispos = [];
+  const titMap = new Map();
+  let creneaux = [];
+  (datas || []).forEach((data, idx) => {
+    if (!data) return;
+    const siteData = sitesParIndex[idx] || '';
+    (data.profs || []).forEach((p) => {
+      if (p?.id == null) return;
+      if (!profMap.has(String(p.id))) profMap.set(String(p.id), p);
+    });
+    if (!creneaux.length && Array.isArray(data.creneaux) && data.creneaux.length) {
+      creneaux = data.creneaux;
+    }
+    (data.affectations || []).forEach((a) => {
+      const k = `${a.prof_id}|${a.creneau_id}|${a.classe_id || ''}|${a.type_special || ''}|${a.matiere_id || ''}`;
+      if (affKeys.has(k)) return;
+      affKeys.add(k);
+      const { dans_pool_courant, ...rest } = a;
+      affectations.push(rest);
+    });
+    (data.dispos || []).forEach((d) => {
+      const k = `${d.prof_id}|${d.creneau_id}`;
+      if (dispoKeys.has(k)) return;
+      dispoKeys.add(k);
+      dispos.push(d);
+    });
+    (data.titulaires || []).forEach((t) => {
+      const k = String(t.classe_id != null ? t.classe_id : t.classe_nom || '');
+      if (!k || titMap.has(k)) return;
+      titMap.set(k, { ...t, site: t.site || siteData });
+    });
+  });
+  const profsMerged = Array.from(profMap.values()).sort((a, b) =>
+    String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')
+    || String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr')
+  );
+  return {
+    profs: profsMerged,
+    creneaux,
+    affectations,
+    dispos,
+    titulaires: Array.from(titMap.values()),
+  };
 }
 
