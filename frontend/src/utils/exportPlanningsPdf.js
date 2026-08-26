@@ -158,8 +158,6 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
     const sections = Array.from(idoc.querySelectorAll('.section, .section-a3'))
       .filter((el) => (el.scrollHeight || 0) > 24 && (el.scrollWidth || 0) > 24);
     const targets = sections.length ? sections : [idoc.body];
-    const pageUnique = targets.length <= 1;
-    if (pageUnique) appliquerCadrePage(idoc.documentElement, idoc.body, true);
     const pdf = new jsPDF({ orientation, unit: 'mm', format, compress: false });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
@@ -168,6 +166,7 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
 
     for (let i = 0; i < targets.length; i += 1) {
       const el = targets[i];
+      const captureH = Math.max(cssH, el.scrollHeight || cssH);
       const canvas = await html2canvas(el, {
         scale,
         useCORS: true,
@@ -176,9 +175,9 @@ export async function htmlDocumentToPdfBlob(htmlDocument, options = {}) {
         backgroundColor: '#ffffff',
         letterRendering: true,
         windowWidth: cssW,
-        windowHeight: pageUnique ? cssH : Math.max(cssH, el.scrollHeight || cssH),
+        windowHeight: captureH,
         onclone: (clonedDoc) => {
-          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, pageUnique);
+          appliquerCadrePage(clonedDoc.documentElement, clonedDoc.body, false);
         },
       });
       const cropped = options.crop === false ? canvas : cropCanvasToContent(canvas);

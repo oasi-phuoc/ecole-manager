@@ -4,8 +4,12 @@ export const JOURS_PDF = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 export const MARGIN_PDF_A3_PAYSAGE = '6mm 8mm';
 export const MARGIN_PDF_A3_PORTRAIT = '8mm 6mm';
 
-/** Police fixe des PDF général (plus de curseur : il gonflait les lignes). */
-export const POLICE_PDF_GENERAL = 9;
+/** Police fixe des PDF général (défaut de l’époque sliders, sans curseur). */
+export const POLICE_PDF_GENERAL = 10;
+
+/** Hauteur / largeur du planning général A3 (commit 522f268 : 38 × 72). */
+export const PDF_LIGNE_GENERAL = 38;
+export const PDF_COLONNE_HORAIRE_GENERAL = 72;
 
 /** Hauteur / largeur horaires des PDF classe, salle, professeur (plus de curseurs). */
 export const PDF_LIGNE_CLASSE_SALLE_PROF = 68;
@@ -64,10 +68,38 @@ export function hauteurLigneContenuPrint(fontPt = POLICE_PDF_GENERAL) {
 }
 
 /**
- * Layout auto du planning général : lignes compactes (jamais plus hautes
- * que le texte), réduites seulement si la semaine ne tient pas dans la feuille.
+ * Layout du planning général A3 : mêmes largeur/hauteur de colonnes qu’avant
+ * les curseurs auto (38 × 72). Le PDF réduit ensuite le tableau pour tenir
+ * sur une page (tous les profs, tous les jours).
  */
-/** Ordre des colonnes titulariat du méga-planning (sans afficher les noms). */
+export function layoutPlanningGeneralA3({
+  creneaux,
+  orientation = 'landscape',
+  mode = 'semaine',
+} = {}) {
+  const portrait = orientation === 'portrait';
+  const margin = marginPdfA3(orientation);
+  const usable = pageUsablePx('a3', portrait ? 'portrait' : 'landscape', margin);
+  const nLignes = mode === 'jour'
+    ? compterLignesPlanningGeneralJour(creneaux)
+    : compterLignesPlanningGeneralA3(creneaux);
+  const fontPt = POLICE_PDF_GENERAL;
+  const rowH = PDF_LIGNE_GENERAL;
+  const creneauW = PDF_COLONNE_HORAIRE_GENERAL;
+  const headerH = Math.max(rowH, Math.round(fontPt * 2.6) + 12);
+  return {
+    rowH,
+    headerH,
+    rowHContent: rowH,
+    creneauW,
+    fontPt,
+    margin,
+    usable,
+    nLignes,
+    paysage: !portrait,
+  };
+}
+
 export const ORDRE_SITES_TITULARIAT_MEGA = ['botza', 'synecom', 'creuset'];
 
 export function normaliserCleSiteTitulariat(v) {
@@ -134,32 +166,3 @@ export function colonnesTitulariatParSites(lignes, siteDeLigne, clesSites) {
   return cols;
 }
 
-export function layoutPlanningGeneralA3({
-  creneaux,
-  orientation = 'landscape',
-  mode = 'semaine',
-} = {}) {
-  const portrait = orientation === 'portrait';
-  const margin = marginPdfA3(orientation);
-  const usable = pageUsablePx('a3', portrait ? 'portrait' : 'landscape', margin);
-  const nLignes = mode === 'jour'
-    ? compterLignesPlanningGeneralJour(creneaux)
-    : compterLignesPlanningGeneralA3(creneaux);
-  const fontPt = POLICE_PDF_GENERAL;
-  const rowHContent = hauteurLigneContenuPrint(fontPt);
-  const rowHFill = hauteurLignePourPage(nLignes, usable.h);
-  const rowH = Math.min(rowHFill, rowHContent);
-  const headerH = Math.max(rowH, Math.round(fontPt * 2.35 + 6));
-  const creneauW = Math.max(54, Math.min(88, Math.round(fontPt * 6.2 + 16)));
-  return {
-    rowH,
-    headerH,
-    rowHContent,
-    creneauW,
-    fontPt,
-    margin,
-    usable,
-    nLignes,
-    paysage: !portrait,
-  };
-}

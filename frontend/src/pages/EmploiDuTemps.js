@@ -11,7 +11,9 @@ import {
   layoutPlanningGeneralA3,
   marginPdfA3,
   PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF,
+  PDF_COLONNE_HORAIRE_GENERAL,
   PDF_LIGNE_CLASSE_SALLE_PROF,
+  PDF_LIGNE_GENERAL,
   POLICE_PDF_GENERAL,
 } from '../utils/pdfPlanningGeneral';
 import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeurCarteTitulariatPrint } from '../utils/nomsPrint';
@@ -49,7 +51,6 @@ const optionsPdfA3General = (orientation) => {
     format: 'a3',
     orientation: paysage ? 'landscape' : 'portrait',
     margin: marginPdfA3(orientation),
-    crop: false,
   };
 };
 const estLignePhraseSoutien = (texte) => {
@@ -3073,10 +3074,10 @@ export default function EmploiDuTemps() {
     const hauteurLignePdf = Number(options?.hauteurLigne);
     const largeurColonne = Number.isFinite(largeurColonnePdf) && largeurColonnePdf > 0
       ? Math.round(largeurColonnePdf)
-      : (a3Semaine ? 72 : PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF);
+      : (a3Semaine ? PDF_COLONNE_HORAIRE_GENERAL : PDF_COLONNE_HORAIRE_CLASSE_SALLE_PROF);
     const hauteurLigne = Number.isFinite(hauteurLignePdf) && hauteurLignePdf > 0
       ? Math.round(hauteurLignePdf)
-      : (a3Semaine ? 0 : PDF_LIGNE_CLASSE_SALLE_PROF);
+      : (a3Semaine ? PDF_LIGNE_GENERAL : PDF_LIGNE_CLASSE_SALLE_PROF);
     const marginCss = options?.margin || (format === 'A3' ? marginPdfA3(options?.paysage === false ? 'portrait' : 'landscape') : '12mm 20mm');
     const titreDansBanniere = /class=["'][^"']*(?:section|section-a3)/.test(String(contenu || ''));
     return `
