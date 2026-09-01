@@ -20,6 +20,7 @@ import {
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
 import { handleAuthChangerMdp, handleAuthLogout, handleAuthMoi } from "./auth-fast-session.ts";
+import { handleBranchesRoute } from "./routes-fast/branches.ts";
 import { handleClassesRoute } from "./routes-fast/classes.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
@@ -169,6 +170,10 @@ Deno.serve(async (req: Request) => {
 
     if (path.startsWith("/classes")) {
       return await handleClassesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/branches")) {
+      return await handleBranchesRoute(req, path, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);
