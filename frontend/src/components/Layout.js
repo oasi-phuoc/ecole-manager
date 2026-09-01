@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import KeepAliveOutlet from './KeepAliveOutlet';
 import apiClient from '../lib/apiClient';
+import { HEAVY_PREFETCH_URLS, prefetchUrls, REFERENCE_PREFETCH_URLS } from '../lib/apiCache';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 import { ICONS_BY_PATH } from './DashboardIcons';
 import { useIsMobile, MOBILE_BREAKPOINT } from '../hooks/useIsMobile';
@@ -169,8 +171,12 @@ export default function Layout() {
       const cached = getSessionUser();
       if (cached) setUser(cached);
       try {
-        const u = await fetchSessionUser();
+        const u = cached || await fetchSessionUser();
         setUser(u || null);
+        if (u) {
+          prefetchUrls(apiClient, REFERENCE_PREFETCH_URLS);
+          prefetchUrls(apiClient, HEAVY_PREFETCH_URLS);
+        }
       } catch {}
       try {
         const res = await apiClient.get('/parametres/acces-profs');
@@ -614,7 +620,7 @@ export default function Layout() {
           }}
         >
           <MobilePageEnhancer enabled={isMobile} />
-          <Outlet />
+          <KeepAliveOutlet />
         </div>
       </div>
     </div>

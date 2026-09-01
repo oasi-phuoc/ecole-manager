@@ -10,6 +10,13 @@ export default function MfaGate({ children }) {
 
   useEffect(() => {
     let active = true;
+    const cached = getSessionUser();
+    if (cached?.mfa_enabled !== undefined || cached?.mfa_exempt !== undefined) {
+      const exempt = cached.mfa_exempt === true;
+      const enabled = cached.mfa_enabled === true;
+      if (active) setState(exempt || enabled ? 'ok' : 'need');
+      return () => { active = false; };
+    }
     (async () => {
       try {
         const res = await apiClient.get('/auth/mfa/status');

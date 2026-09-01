@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { supabase, getFunctionsBase, supabaseConfigured } from './supabase';
+import { clearApiCache, setupApiCache } from './apiCache';
 
 /** Dev local sans Supabase : REACT_APP_API_URL=http://localhost:5000/api */
 const LOCAL_API = process.env.REACT_APP_API_URL || '';
@@ -35,6 +36,8 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
+setupApiCache(apiClient);
+
 export function setLegacyToken(token) {
   if (token) sessionStorage.setItem(LEGACY_TOKEN_KEY, token);
   else sessionStorage.removeItem(LEGACY_TOKEN_KEY);
@@ -42,6 +45,7 @@ export function setLegacyToken(token) {
 
 export function clearLegacyToken() {
   sessionStorage.removeItem(LEGACY_TOKEN_KEY);
+  clearApiCache();
 }
 
 export default apiClient;
