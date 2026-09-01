@@ -1,5 +1,13 @@
 import { Pool } from "npm:pg@8";
-import { createDecipheriv, createHash, createHmac } from "node:crypto";
+import jwt from "npm:jsonwebtoken@9";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+} from "node:crypto";
 
 const ENC_PREFIX = "enc:v1";
 const TOTP_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -109,4 +117,116 @@ export function hashBackupCode(code: string): string {
 
 export function parseBackupHashes(raw: unknown): string[] {
   return Array.isArray(raw) ? raw.map((v) => String(v || "")).filter(Boolean) : [];
+}
+
+export function signJwt(payload: Record<string, unknown>, expiresIn = "8h"): string {
+  const secret = Deno.env.get("JWT_SECRET");
+  if (!secret) throw new Error("JWT_SECRET manquant");
+  return jwt.sign(payload, secret, { expiresIn });
+}
+
+export function verifyJwtFromRequest(req: Request): { id: number } | null {
+  const auth = req.headers.get("authorization") || "";
+  const raw = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  if (!raw || raw === "null" || raw === "undefined") return null;
+  try {
+    const secret = Deno.env.get("JWT_SECRET");
+    if (!secret) return null;
+    const decoded = jwt.verify(raw, secret) as { id?: number };
+    if (!decoded?.id) return null;
+    return { id: Number(decoded.id) };
+  } catch {
+    return null;
+  }
+}
+
+export function encryptText(plainText: string): string {
+  const key = getEncryptionKey();
+  if (!key) return String(plainText || "");
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(String(plainText || ""), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${ENC_PREFIX}:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+}
+
+const OTP_ALPHABET = TOTP_ALPHABET;
+
+function base32Encode(buffer: Uint8Array): string {
+  let bits = 0;
+  let value = 0;
+  let output = "";
+  for (const byte of buffer) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      output += OTP_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) output += OTP_ALPHABET[(value << (5 - bits)) & 31];
+  return output;
+}
+
+export function generateSecret(bytes = 20): string {
+  return base32Encode(randomBytes(bytes)).replace(/=+$/g, "");
+}
+
+export function generateOtpAuthUrl({
+  secret,
+  accountName,
+  issuer,
+}: {
+  secret: string;
+  accountName: string;
+  issuer: string;
+}): string {
+  const iss = String(issuer || "Oasis").trim() || "Oasis";
+  const acc = String(accountName || "user").trim() || "user";
+  const sec = String(secret || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
+  const encodePart = (s: string) => encodeURIComponent(s).replace(/%40/g, "@");
+  const label = `${encodePart(iss)}:${encodePart(acc)}`;
+  const q = [
+    `secret=${sec}`,
+    `issuer=${encodeURIComponent(iss)}`,
+    "algorithm=SHA1",
+    "digits=6",
+    "period=30",
+  ].join("&");
+  return `otpauth://totp/${label}?${q}`;
+}
+
+const BACKUP_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+export function generateBackupCodes(count = 10): { plain: string[]; hashes: string[] } {
+  const plain: string[] = [];
+  for (let i = 0; i < count; i++) {
+    let code = "";
+    for (let j = 0; j < 8; j++) code += BACKUP_CHARS[randomInt(0, BACKUP_CHARS.length)];
+    plain.push(code);
+  }
+  const hashes = plain.map((c) => hashBackupCode(c));
+  return { plain, hashes };
+}
+
+export function publicUser(user: {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  role: string;
+  doit_changer_mdp?: boolean;
+  mfa_enabled?: boolean;
+  mfa_exempt?: boolean;
+}) {
+  return {
+    id: user.id,
+    nom: user.nom,
+    prenom: user.prenom,
+    email: user.email,
+    role: user.role,
+    doit_changer_mdp: user.doit_changer_mdp || false,
+    mfa_enabled: user.mfa_enabled === true,
+    mfa_exempt: user.mfa_exempt === true,
+  };
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { redirectAfterAuth } from '../utils/mfa';
-import apiClient from '../lib/apiClient';
+import apiClient, { setLegacyToken } from '../lib/apiClient';
 
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
@@ -38,7 +38,8 @@ export default function Login() {
   const [showNewMdp, setShowNewMdp] = useState(false);
   const [showConfirmMdp, setShowConfirmMdp] = useState(false);
 
-  const afterLoginSuccess = (utilisateur) => {
+  const afterLoginSuccess = (utilisateur, token) => {
+    if (token) setLegacyToken(token);
     setSessionUser(utilisateur);
     if (utilisateur?.doit_changer_mdp) {
       setShowChangeMdp(true);
@@ -60,11 +61,11 @@ export default function Login() {
           setMfaCode('');
           return;
         }
-        afterLoginSuccess(res.data.utilisateur || null);
+        afterLoginSuccess(res.data.utilisateur || null, res.data.token);
         return;
       }
       const res = await apiClient.post('/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
-      afterLoginSuccess(res.data.utilisateur || null);
+      afterLoginSuccess(res.data.utilisateur || null, res.data.token);
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur de connexion');
     } finally {
@@ -93,7 +94,7 @@ export default function Login() {
         challenge_token,
         credential,
       });
-      afterLoginSuccess(res.data.utilisateur || null);
+      afterLoginSuccess(res.data.utilisateur || null, res.data.token);
     } catch (err) {
       if (err?.name === 'NotAllowedError') {
         setErreur('Connexion passkey annulée.');

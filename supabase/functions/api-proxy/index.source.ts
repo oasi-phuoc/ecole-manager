@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { createRequire } from "node:module";
 import { handleAuthLogin } from "./auth-fast-login.ts";
 import { handleAuthLoginMfa } from "./auth-fast-mfa.ts";
+import { handleMfaEnable, handleMfaSetup, handleMfaStatus } from "./auth-fast-mfa-setup.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -86,6 +87,18 @@ Deno.serve(async (req: Request) => {
 
     if (path === "/auth/login/mfa" && req.method === "POST") {
       return await handleAuthLoginMfa(req, cors);
+    }
+
+    if (path === "/auth/mfa/status" && req.method === "GET") {
+      return await handleMfaStatus(req, cors);
+    }
+
+    if (path === "/auth/mfa/setup" && req.method === "POST") {
+      return await handleMfaSetup(req, cors);
+    }
+
+    if (path === "/auth/mfa/enable" && req.method === "POST") {
+      return await handleMfaEnable(req, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);

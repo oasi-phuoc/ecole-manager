@@ -5,6 +5,8 @@ import {
   hashBackupCode,
   json,
   parseBackupHashes,
+  publicUser,
+  signJwt,
   verifyTotp,
 } from "./auth-fast-shared.ts";
 
@@ -15,24 +17,11 @@ type MfaUser = {
   email: string;
   role: string;
   mfa_enabled: boolean;
+  mfa_exempt?: boolean;
   mfa_secret: string | null;
   mfa_backup_codes: unknown;
   doit_changer_mdp: boolean;
 };
-
-function userResponse(user: MfaUser) {
-  return {
-    message: "Connexion reussie",
-    utilisateur: {
-      id: user.id,
-      nom: user.nom,
-      prenom: user.prenom,
-      email: user.email,
-      role: user.role,
-      doit_changer_mdp: user.doit_changer_mdp || false,
-    },
-  };
-}
 
 function resolveUserId(mfaToken: string): number | null {
   if (String(mfaToken).startsWith("legacy:")) {
@@ -67,7 +56,7 @@ export async function handleAuthLoginMfa(req: Request, cors: Record<string, stri
   const pool = createPool();
   try {
     const result = await pool.query<MfaUser>(
-      "SELECT id, nom, prenom, email, role, mfa_enabled, mfa_secret, mfa_backup_codes, doit_changer_mdp FROM utilisateurs WHERE id=$1 AND actif = true",
+      "SELECT id, nom, prenom, email, role, mfa_enabled, mfa_exempt, mfa_secret, mfa_backup_codes, doit_changer_mdp FROM utilisateurs WHERE id=$1 AND actif = true",
       [userId],
     );
     const user = result.rows[0];
@@ -95,7 +84,19 @@ export async function handleAuthLoginMfa(req: Request, cors: Record<string, stri
       ]);
     }
 
-    return json(cors, userResponse(user));
+    const token = signJwt({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      nom: user.nom,
+      prenom: user.prenom,
+    });
+
+    return json(cors, {
+      message: "Connexion reussie",
+      token,
+      utilisateur: publicUser({ ...user, mfa_enabled: true }),
+    });
   } catch (err) {
     console.error("auth-fast-mfa error:", err);
     return json(cors, { message: "Token MFA invalide ou expire" }, 401);
