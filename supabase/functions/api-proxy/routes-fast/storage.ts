@@ -5,6 +5,7 @@ export const BUCKETS = {
   elevesPhotos: "eleves-photos",
   documentsEleves: "documents-eleves",
   documentsProfs: "documents-profs",
+  documentsAdmin: "documents-admin",
 };
 
 function getSupabaseAdmin() {

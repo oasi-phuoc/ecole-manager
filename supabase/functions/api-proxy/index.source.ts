@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Buffer } from "node:buffer";
-import { createRequire } from "node:module";
 import { handleAuthLogin } from "./auth-fast-login.ts";
 import { handleAuthLoginMfa } from "./auth-fast-mfa.ts";
 import {
@@ -20,48 +19,36 @@ import {
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
 import { handleChangerMdp, handleLogout, handleMoi } from "./auth-fast-session.ts";
+import { json } from "./auth-fast-shared.ts";
 import { handleBranchesRoute } from "./routes-fast/branches.ts";
+import { handleCalendrierRoute } from "./routes-fast/calendrier.ts";
+import { handleChatbotRoute } from "./routes-fast/chatbot.ts";
 import { handleClassesRoute } from "./routes-fast/classes.ts";
+import { handleComptabiliteRoute } from "./routes-fast/comptabilite.ts";
+import { handleDevoirsRoute } from "./routes-fast/devoirs.ts";
 import { handleDonneesRoute } from "./routes-fast/donnees.ts";
+import { handleDocumentsAdministratifsRoute } from "./routes-fast/documents-administratifs.ts";
 import { handleElevesRoute } from "./routes-fast/eleves.ts";
+import { handleEmploiDuTempsRoute } from "./routes-fast/emploi-du-temps.ts";
+import { handleEmployesAdministratifsRoute } from "./routes-fast/employes-administratifs.ts";
+import { handleEnclassementsRoute } from "./routes-fast/enclassements.ts";
+import { handleImportRoute } from "./routes-fast/import.ts";
+import { handleInventaireBranchesRoute } from "./routes-fast/inventaire-branches.ts";
+import { handleNotesRoute } from "./routes-fast/notes.ts";
+import { handleNotesPersonnellesRoute } from "./routes-fast/notes-personnelles.ts";
+import { handleObservationsRoute } from "./routes-fast/observations.ts";
+import { handleParametresRoute } from "./routes-fast/parametres.ts";
+import { handlePlanClasseRoute } from "./routes-fast/plan-classe.ts";
+import { handlePlanningRoute } from "./routes-fast/planning.ts";
+import { handlePresencesRoute } from "./routes-fast/presences.ts";
 import { handleProfsRoute } from "./routes-fast/profs.ts";
+import { handleSondagesRoute } from "./routes-fast/sondages.ts";
+import { handleSortiesRoute } from "./routes-fast/sorties.ts";
 import { handleStatistiquesRoute } from "./routes-fast/statistiques.ts";
+import { handleTcfStateRoute } from "./routes-fast/tcf-state.ts";
+import { handleVisitesClassesRoute } from "./routes-fast/visites-classes.ts";
 
-(globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
-(globalThis as { global?: typeof globalThis }).global = globalThis;
-
-const nodeRequire = createRequire(import.meta.url);
-(globalThis as { __esbuildRequire?: (name: string) => unknown }).__esbuildRequire = (name) =>
-  nodeRequire(name);
-
-let appHandler: ((req: Request) => Promise<Response>) | null = null;
-
-function bridgeEnv() {
-  if (typeof Deno === "undefined") return;
-  const proc = (globalThis as { process?: { env?: Record<string, string> } }).process;
-  if (!proc?.env) return;
-  const keys = ["DATABASE_URL", "JWT_SECRET", "MFA_BACKUP_PEPPER", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NODE_ENV", "DATA_ENCRYPTION_KEY"];
-  for (const key of keys) {
-    try {
-      const v = Deno.env.get(key);
-      if (v) proc.env[key] = v;
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-async function getHandler() {
-  if (!appHandler) {
-    bridgeEnv();
-    const [{ createApp }, { expressToFetch }] = await Promise.all([
-      import("./createApp.cjs"),
-      import("./expressToFetch"),
-    ]);
-    appHandler = expressToFetch(createApp());
-  }
-  return appHandler;
-}
+(globalThis as { Buffer?: typeof Buffer }).Buffer = Buffer;
 
 function normalizePath(pathname: string): string {
   const markers = ["/functions/v1/api-proxy", "/api-proxy"];
@@ -80,7 +67,7 @@ function corsHeadersFor(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     ...(origin ? { Vary: "Origin" } : {}),
   };
 }
@@ -188,31 +175,101 @@ Deno.serve(async (req: Request) => {
       return await handleElevesRoute(req, path, cors, url);
     }
 
-    if (path.startsWith("/donnees")) {
-      return await handleDonneesRoute(req, path, cors);
+    if (path.startsWith("/employes-administratifs")) {
+      return await handleEmployesAdministratifsRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/emploi-du-temps")) {
+      return await handleEmploiDuTempsRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/presences")) {
+      return await handlePresencesRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/notes-personnelles")) {
+      return await handleNotesPersonnellesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/notes")) {
+      return await handleNotesRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/calendrier")) {
+      return await handleCalendrierRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/parametres")) {
+      return await handleParametresRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/comptabilite")) {
+      return await handleComptabiliteRoute(req, path, cors, url);
     }
 
     if (path.startsWith("/statistiques")) {
       return await handleStatistiquesRoute(req, path, cors);
     }
 
-    const rewritten = new Request(new URL(path + url.search, url.origin), req);
-    const handler = await getHandler();
-    const res = await handler(rewritten);
-    const headers = new Headers(res.headers);
-    const origin = req.headers.get("Origin");
-    if (origin) {
-      headers.set("Access-Control-Allow-Origin", origin);
-      headers.set("Vary", "Origin");
-    } else {
-      headers.set("Access-Control-Allow-Origin", "*");
+    if (path.startsWith("/import")) {
+      return await handleImportRoute(req, path, cors);
     }
-    return new Response(res.body, { status: res.status, headers });
+
+    if (path.startsWith("/plan-classe")) {
+      return await handlePlanClasseRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/observations")) {
+      return await handleObservationsRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/planning")) {
+      return await handlePlanningRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/documents-administratifs")) {
+      return await handleDocumentsAdministratifsRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/inventaire-branches")) {
+      return await handleInventaireBranchesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/tcf-state")) {
+      return await handleTcfStateRoute(req, path, cors);
+    }
+
+    if (path === "/chatbot" && req.method === "POST") {
+      return await handleChatbotRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/donnees")) {
+      return await handleDonneesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/enclassements")) {
+      return await handleEnclassementsRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/devoirs")) {
+      return await handleDevoirsRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/sorties")) {
+      return await handleSortiesRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/visites-classes")) {
+      return await handleVisitesClassesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/sondages")) {
+      return await handleSondagesRoute(req, path, cors);
+    }
+
+    return json(cors, { message: "Route non trouvée" }, 404);
   } catch (err) {
     console.error("api-proxy error:", err);
-    return new Response(JSON.stringify({ message: "Erreur serveur" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return json(cors, { message: "Erreur serveur" }, 500);
   }
 });

@@ -55,10 +55,15 @@ Le routage se fait dans `index.source.ts` **avant** le fallback `getHandler()` E
 | `/eleves/*` | `routes-fast/eleves.ts` |
 | `/donnees/*` | `routes-fast/donnees.ts` |
 | `GET /statistiques` | `routes-fast/statistiques.ts` |
+| Tous autres modules (`planning`, `notes`, `parametres`, …) | `routes-fast/*.ts` |
 
-### Encore sur Express (~170 routes)
+### Migration terminée (sept. 2026)
 
-Voir `createApp.cjs` et le tableau des modules ci-dessous.
+- **Express retiré** de `index.source.ts` (plus de `getHandler()` / `createApp.cjs` au runtime).
+- Bundle `index.ts` : **~185 KB** (vs ~3 MB avec Express + vendor).
+- Fichiers legacy (`createApp.cjs`, `vendor/`, `expressToFetch.ts`) conservés dans le repo pour référence ; non inclus dans le bundle.
+
+### Archives (legacy, non utilisés au runtime)
 
 ---
 
