@@ -1,11 +1,10 @@
 /* eslint-disable */
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const getHeaders = () => { const u = JSON.parse(localStorage.getItem('user') || '{}'); return { Authorization: `Bearer ${u.token}` }; };
 
 const ONGLETS = [
@@ -58,10 +57,10 @@ export default function SortieScolaire() {
   const charger = async () => {
     try {
       const [sortiesRes, classesRes, profsRes, ecoleRes] = await Promise.all([
-        axios.get(API + '/sorties', { headers: getHeaders() }),
-        axios.get(API + '/classes', { headers: getHeaders() }),
-        axios.get(API + '/profs', { headers: getHeaders() }),
-        axios.get(API + '/parametres/ecole', { headers: getHeaders() }).catch(() => ({ data: {} })),
+        apiClient.get('/sorties', { headers: getHeaders() }),
+        apiClient.get('/classes', { headers: getHeaders() }),
+        apiClient.get('/profs', { headers: getHeaders() }),
+        apiClient.get('/parametres/ecole', { headers: getHeaders() }).catch(() => ({ data: {} })),
       ]);
       setSorties(sortiesRes.data || []);
       setClasses(classesRes.data || []);
@@ -164,9 +163,9 @@ export default function SortieScolaire() {
     };
     try {
       if (editId) {
-        await axios.put(API + '/sorties/' + editId, payload, { headers: getHeaders() });
+        await apiClient.put('/sorties/' + editId, payload, { headers: getHeaders() });
       } else {
-        await axios.post(API + '/sorties', payload, { headers: getHeaders() });
+        await apiClient.post('/sorties', payload, { headers: getHeaders() });
       }
       setShowForm(false);
       charger();
@@ -175,14 +174,14 @@ export default function SortieScolaire() {
 
   const supprimer = async (id) => {
     if (!window.confirm('Supprimer cette sortie ?')) return;
-    await axios.delete(API + '/sorties/' + id, { headers: getHeaders() });
+    await apiClient.delete('/sorties/' + id, { headers: getHeaders() });
     charger();
   };
 
   const toggleApprouve = async (s) => {
     try {
       const ids = s.classes_ids || '';
-      await axios.put(API + '/sorties/' + s.id, { ...s, classes_ids: ids, approuve: !s.approuve }, { headers: getHeaders() });
+      await apiClient.put('/sorties/' + s.id, { ...s, classes_ids: ids, approuve: !s.approuve }, { headers: getHeaders() });
       charger();
     } catch (err) { console.error(err); }
   };

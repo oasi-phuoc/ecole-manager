@@ -1,10 +1,9 @@
 /* eslint-disable */
 import React, { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const getHeaders = () => {
   const u = JSON.parse(localStorage.getItem('user') || '{}');
   return { Authorization: `Bearer ${u.token}` };
@@ -41,7 +40,7 @@ export default function Sondage() {
 
   const chargerListe = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/sondages`, { headers: getHeaders() });
+      const res = await apiClient.get(`${API}/sondages`, { headers: getHeaders() });
       setListe(res.data || []);
     } catch (e) {
       setMsg('❌ ' + (e.response?.data?.message || e.message));
@@ -54,7 +53,7 @@ export default function Sondage() {
 
   useEffect(() => {
     if (onglet === 'reponses' && detail?.id) {
-      axios.get(`${API}/sondages/${detail.id}/reponses`, { headers: getHeaders() })
+      apiClient.get(`${API}/sondages/${detail.id}/reponses`, { headers: getHeaders() })
         .then(r => setReponses(r.data || []))
         .catch(() => {});
     }
@@ -76,8 +75,8 @@ export default function Sondage() {
     setMsg('');
     try {
       const [d, r] = await Promise.all([
-        axios.get(`${API}/sondages/${id}`, { headers: getHeaders() }),
-        axios.get(`${API}/sondages/${id}/reponses`, { headers: getHeaders() }),
+        apiClient.get(`${API}/sondages/${id}`, { headers: getHeaders() }),
+        apiClient.get(`${API}/sondages/${id}/reponses`, { headers: getHeaders() }),
       ]);
       const q = (d.data.questions || []).map((x) => ({
         ...x,
@@ -96,7 +95,7 @@ export default function Sondage() {
   const nouveau = async () => {
     setMsg('');
     try {
-      const res = await axios.post(
+      const res = await apiClient.post(
         `${API}/sondages`,
         { titre: 'Nouveau formulaire', description: '', questions: [] },
         { headers: getHeaders() }
@@ -119,7 +118,7 @@ export default function Sondage() {
       ordre,
     }));
     try {
-      const res = await axios.put(
+      const res = await apiClient.put(
         `${API}/sondages/${detail.id}`,
         {
           titre: detail.titre,
@@ -139,7 +138,7 @@ export default function Sondage() {
       await chargerListe();
       setMsg('✓ Enregistré');
       setTimeout(() => setMsg(''), 2500);
-      const r = await axios.get(`${API}/sondages/${detail.id}/reponses`, { headers: getHeaders() });
+      const r = await apiClient.get(`${API}/sondages/${detail.id}/reponses`, { headers: getHeaders() });
       setReponses(r.data || []);
     } catch (e) {
       setMsg('❌ ' + (e.response?.data?.message || e.message));
@@ -150,7 +149,7 @@ export default function Sondage() {
     if (!detail || !window.confirm('Supprimer ce formulaire et toutes les réponses ?')) return;
     setMsg('');
     try {
-      await axios.delete(`${API}/sondages/${detail.id}`, { headers: getHeaders() });
+      await apiClient.delete(`${API}/sondages/${detail.id}`, { headers: getHeaders() });
       setDetail(null);
       setSelectedId(null);
       setReponses([]);

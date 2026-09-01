@@ -1,9 +1,8 @@
 /* eslint-disable */
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function SondageRepondre() {
   const { token } = useParams();
@@ -20,7 +19,7 @@ export default function SondageRepondre() {
       setLoading(true);
       setErr('');
       try {
-        const res = await axios.get(`${API}/sondages/public/${encodeURIComponent(token)}`);
+        const res = await apiClient.get(`${API}/sondages/public/${encodeURIComponent(token)}`);
         if (!cancel) {
           setForm(res.data);
           setValues({});
@@ -54,7 +53,7 @@ export default function SondageRepondre() {
     setSending(true);
     setErr('');
     try {
-      await axios.post(`${API}/sondages/public/${encodeURIComponent(token)}/repondre`, { reponses: values });
+      await apiClient.post(`${API}/sondages/public/${encodeURIComponent(token)}/repondre`, { reponses: values });
       setDone(true);
     } catch (ex) {
       setErr(ex.response?.data?.message || ex.message || 'Envoi impossible');

@@ -1,12 +1,11 @@
 /* eslint-disable */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const getHeaders = () => {
   const u = JSON.parse(localStorage.getItem('user') || '{}');
   return { Authorization: `Bearer ${u.token}` };
@@ -159,11 +158,11 @@ export default function VisiteClasses() {
     setLoading(true);
     try {
       const [vRes, pRes, cRes, bRes, nRes] = await Promise.all([
-        axios.get(API + '/visites-classes', { headers: getHeaders() }),
-        axios.get(API + '/profs',           { headers: getHeaders() }),
-        axios.get(API + '/classes',         { headers: getHeaders() }),
-        axios.get(API + '/branches',        { headers: getHeaders() }),
-        axios.get(API + '/donnees/niveaux', { headers: getHeaders() }),
+        apiClient.get('/visites-classes', { headers: getHeaders() }),
+        apiClient.get('/profs',           { headers: getHeaders() }),
+        apiClient.get('/classes',         { headers: getHeaders() }),
+        apiClient.get('/branches',        { headers: getHeaders() }),
+        apiClient.get('/donnees/niveaux', { headers: getHeaders() }),
       ]);
       setVisites(vRes.data || []);
       setProfs(pRes.data || []);
@@ -261,9 +260,9 @@ export default function VisiteClasses() {
         valide,
       };
       if (editId) {
-        await axios.put(API + '/visites-classes/' + editId, payload, { headers: getHeaders() });
+        await apiClient.put('/visites-classes/' + editId, payload, { headers: getHeaders() });
       } else {
-        await axios.post(API + '/visites-classes', payload, { headers: getHeaders() });
+        await apiClient.post('/visites-classes', payload, { headers: getHeaders() });
       }
       setShowForm(false);
       charger();
@@ -572,14 +571,14 @@ export default function VisiteClasses() {
   const handleDelete = async (v) => {
     if (!window.confirm('Supprimer cette visite ?')) return;
     try {
-      await axios.delete(API + '/visites-classes/' + v.id, { headers: getHeaders() });
+      await apiClient.delete('/visites-classes/' + v.id, { headers: getHeaders() });
       charger();
     } catch (err) { setMsg('❌ ' + (err.response?.data?.message || err.message)); }
   };
 
   const handleValider = async (v) => {
     try {
-      await axios.put(API + '/visites-classes/' + v.id, { ...v, valide: !v.valide }, { headers: getHeaders() });
+      await apiClient.put('/visites-classes/' + v.id, { ...v, valide: !v.valide }, { headers: getHeaders() });
       charger();
     } catch (err) { setMsg('❌ ' + (err.response?.data?.message || err.message)); }
   };
@@ -594,7 +593,7 @@ export default function VisiteClasses() {
 
   const sauverFeedback = async () => {
     try {
-      await axios.put(API + '/visites-classes/' + feedbackVisite.id,
+      await apiClient.put('/visites-classes/' + feedbackVisite.id,
         { ...feedbackVisite, feedback: JSON.stringify(feedbackData) },
         { headers: getHeaders() });
       setShowFeedbackForm(false);

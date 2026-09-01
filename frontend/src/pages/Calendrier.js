@@ -1,10 +1,9 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
@@ -46,8 +45,8 @@ export default function Calendrier() {
   const chargerTout = async () => {
     try {
       const [ev, pr] = await Promise.all([
-        axios.get(API+'/calendrier', { headers }),
-        axios.get(API+'/profs', { headers }),
+        apiClient.get('/calendrier', { headers }),
+        apiClient.get('/profs', { headers }),
       ]);
       setEvenements(ev.data);
       setProfs(pr.data);
@@ -56,14 +55,14 @@ export default function Calendrier() {
 
   const chargerCalendrierProf = async () => {
     try {
-      const res = await axios.get(API + '/calendrier/prof', { headers });
+      const res = await apiClient.get('/calendrier/prof', { headers });
       setCalendrierProf(res.data || []);
     } catch {}
   };
 
   const supprimerProfEvent = async (id) => {
     if (!window.confirm('Supprimer cet élément ?')) return;
-    await axios.delete(API + '/calendrier/prof/' + id, { headers });
+    await apiClient.delete('/calendrier/prof/' + id, { headers });
     chargerCalendrierProf();
   };
 
@@ -88,9 +87,9 @@ export default function Calendrier() {
     e.preventDefault();
     if (!profEventForm.date || !profEventForm.titre) return;
     if (profEventEditId) {
-      await axios.put(API + '/calendrier/prof/' + profEventEditId, profEventForm, { headers });
+      await apiClient.put('/calendrier/prof/' + profEventEditId, profEventForm, { headers });
     } else {
-      await axios.post(API + '/calendrier/prof', profEventForm, { headers });
+      await apiClient.post('/calendrier/prof', profEventForm, { headers });
     }
     resetProfEventForm();
     chargerCalendrierProf();
@@ -106,7 +105,7 @@ export default function Calendrier() {
     e.preventDefault();
     try {
       const data = { titre: formVacance.nom_vacance, nom_vacance: formVacance.nom_vacance, date_debut: formVacance.date_debut, date_fin: formVacance.date_fin||formVacance.date_debut, categorie: 'vacance', couleur: '#f59e0b', type: 'Conge' };
-      if (vacanceEdit) await axios.put(API+'/calendrier/'+vacanceEdit.id, data, {headers});
+      if (vacanceEdit) await apiClient.put('/calendrier/'+vacanceEdit.id, data, {headers});
       setShowFormVacance(false); setVacanceEdit(null);
       setFormVacance({nom_vacance:'',date_debut:'',date_fin:''});
       chargerTout();
@@ -117,8 +116,8 @@ export default function Calendrier() {
     e.preventDefault();
     try {
       const data = { titre: formSeance.titre, date_debut: formSeance.date_debut, date_fin: formSeance.date_debut, heure_debut: formSeance.heure_debut, heure_fin: formSeance.heure_fin||null, categorie: 'seance', couleur: '#0369a1', type: 'Reunion' };
-      if (seanceEdit) await axios.put(API+'/calendrier/'+seanceEdit.id, data, {headers});
-      else await axios.post(API+'/calendrier', data, {headers});
+      if (seanceEdit) await apiClient.put('/calendrier/'+seanceEdit.id, data, {headers});
+      else await apiClient.post('/calendrier', data, {headers});
       setShowFormSeance(false); setSeanceEdit(null);
       setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''});
       chargerTout();
@@ -132,8 +131,8 @@ export default function Calendrier() {
       const prof2 = profs.find(p => String(p.id)===String(formRetenue.prof2_id));
       const profsNoms = [prof1,prof2].filter(Boolean).map(p=>p.prenom+' '+p.nom).join(' & ');
       const data = { titre: formRetenue.titre, description: profsNoms||null, date_debut: formRetenue.date_debut, date_fin: formRetenue.date_debut, heure_debut: formRetenue.heure_debut, heure_fin: formRetenue.heure_fin||null, categorie: 'retenue', couleur: '#dc2626', type: 'Autre' };
-      if (retenueEdit) await axios.put(API+'/calendrier/'+retenueEdit.id, data, {headers});
-      else await axios.post(API+'/calendrier', data, {headers});
+      if (retenueEdit) await apiClient.put('/calendrier/'+retenueEdit.id, data, {headers});
+      else await apiClient.post('/calendrier', data, {headers});
       setShowFormRetenue(false); setRetenueEdit(null);
       setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'});
       chargerTout();
@@ -144,7 +143,7 @@ export default function Calendrier() {
     e.preventDefault();
     try {
       const data = { titre: formEval.nom_vacance, nom_vacance: formEval.nom_vacance, date_debut: formEval.date_debut, date_fin: formEval.date_fin||formEval.date_debut, categorie: 'evaluation', couleur: '#7c3aed', type: 'Examen' };
-      if (evalEdit) await axios.put(API+'/calendrier/'+evalEdit.id, data, {headers});
+      if (evalEdit) await apiClient.put('/calendrier/'+evalEdit.id, data, {headers});
       setShowFormEval(false); setEvalEdit(null);
       setFormEval({nom_vacance:'',date_debut:'',date_fin:''});
       chargerTout();
@@ -155,8 +154,8 @@ export default function Calendrier() {
     e.preventDefault();
     try {
       const data = { titre: formParticulier.titre, date_debut: formParticulier.date_debut, date_fin: formParticulier.date_fin||formParticulier.date_debut, categorie: 'particulier', couleur: '#9333ea', type: 'Evenement' };
-      if (particulierEdit) await axios.put(API+'/calendrier/'+particulierEdit.id, data, {headers});
-      else await axios.post(API+'/calendrier', data, {headers});
+      if (particulierEdit) await apiClient.put('/calendrier/'+particulierEdit.id, data, {headers});
+      else await apiClient.post('/calendrier', data, {headers});
       setShowFormParticulier(false); setParticulierEdit(null);
       setFormParticulier({titre:'',date_debut:'',date_fin:''});
       chargerTout();
@@ -165,7 +164,7 @@ export default function Calendrier() {
 
   const supprimerEvenement = async (id) => {
     if (window.confirm('Supprimer ?')) {
-      await axios.delete(API+'/calendrier/'+id, {headers});
+      await apiClient.delete('/calendrier/'+id, {headers});
       chargerTout();
     }
   };

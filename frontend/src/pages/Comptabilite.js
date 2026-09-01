@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
 import CustomSelect from '../components/CustomSelect';
@@ -8,7 +8,6 @@ import { isAdmin } from '../utils/permissions';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
 const STATUTS = [
   { val: 'en_attente', label: 'En attente', color: '#fbbc04', bg: '#fff8e1' },
@@ -168,7 +167,7 @@ export default function Comptabilite() {
     if (!elevesListe || elevesListe.length === 0) return;
     const ids = elevesListe.map(e => e.id).join(',');
     try {
-      const res = await axios.get(API + `/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${annee}`, { headers });
+      const res = await apiClient.get(`/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${annee}`, { headers });
       const map = {};
       res.data.forEach(r => { map[r.eleve_id] = r.valide; });
       setToutesValidations(map);
@@ -182,31 +181,31 @@ export default function Comptabilite() {
 
   const chargerPaiements = async () => {
     try {
-      const res = await axios.get(API + '/comptabilite', { headers });
+      const res = await apiClient.get('/comptabilite', { headers });
       setPaiements(res.data);
     } catch (err) { console.error(err); }
   };
   const chargerStats = async () => {
     try {
-      const res = await axios.get(API + '/comptabilite/statistiques', { headers });
+      const res = await apiClient.get('/comptabilite/statistiques', { headers });
       setStats(res.data);
     } catch (err) { console.error(err); }
   };
   const chargerEleves = async () => {
     try {
-      const res = await axios.get(API + '/eleves', { headers });
+      const res = await apiClient.get('/eleves', { headers });
       setEleves(res.data);
     } catch (err) { console.error(err); }
   };
   const chargerClasses = async () => {
     try {
-      const res = await axios.get(API + '/classes', { headers });
+      const res = await apiClient.get('/classes', { headers });
       setClasses(res.data);
     } catch (err) { console.error(err); }
   };
   const chargerMateriels = async () => {
     try {
-      const res = await axios.get(API + '/comptabilite/materiels', { headers });
+      const res = await apiClient.get('/comptabilite/materiels', { headers });
       setMateriels(res.data || []);
     } catch (err) { console.error(err); }
   };
@@ -285,7 +284,7 @@ export default function Comptabilite() {
       commentaire: factureCommentaire || lignes.join(' | '),
     };
     try {
-      await axios.post(API + '/comptabilite', payload, { headers });
+      await apiClient.post('/comptabilite', payload, { headers });
       setShowFacturePopup(false);
       chargerPaiements(); chargerStats();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
@@ -297,7 +296,7 @@ export default function Comptabilite() {
       try {
         const now = new Date();
         const annee = now.getMonth() >= 8 ? `${now.getFullYear()}-${now.getFullYear()+1}` : `${now.getFullYear()-1}-${now.getFullYear()}`;
-        const r = await axios.get(API + `/comptabilite/factures/reference?eleve_id=${p.eleve_id}&annee_scolaire=${annee}`, { headers });
+        const r = await apiClient.get(`/comptabilite/factures/reference?eleve_id=${p.eleve_id}&annee_scolaire=${annee}`, { headers });
         reference = r.data.reference || '';
       } catch {}
     }
@@ -316,14 +315,14 @@ export default function Comptabilite() {
   const sauvegarderEdit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(API + '/comptabilite/' + editForm.id, editForm, { headers });
+      await apiClient.put('/comptabilite/' + editForm.id, editForm, { headers });
       setShowEditPopup(false); setEditForm(null);
       chargerPaiements(); chargerStats();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
   const supprimerPaiement = async (id) => {
     if (!window.confirm('Supprimer ce paiement ?')) return;
-    await axios.delete(API + '/comptabilite/' + id, { headers });
+    await apiClient.delete('/comptabilite/' + id, { headers });
     chargerPaiements(); chargerStats();
   };
 
@@ -331,7 +330,7 @@ export default function Comptabilite() {
     const nouveauStatut = p.statut === 'paye' ? 'en_attente' : 'paye';
     const dateP = nouveauStatut === 'paye' ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
     try {
-      await axios.put(API + '/comptabilite/' + p.id, { ...p, statut: nouveauStatut, date_paiement: dateP }, { headers });
+      await apiClient.put('/comptabilite/' + p.id, { ...p, statut: nouveauStatut, date_paiement: dateP }, { headers });
       chargerPaiements(); chargerStats();
     } catch (err) { console.error(err); }
   };
@@ -341,7 +340,7 @@ export default function Comptabilite() {
     if (p.statut === newStatut) return;
     const dateP = newStatut === 'paye' ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
     try {
-      await axios.put(API + '/comptabilite/' + p.id, { ...p, statut: newStatut, date_paiement: dateP }, { headers });
+      await apiClient.put('/comptabilite/' + p.id, { ...p, statut: newStatut, date_paiement: dateP }, { headers });
       chargerPaiements(); chargerStats();
     } catch (err) { console.error(err); }
   };
@@ -351,7 +350,7 @@ export default function Comptabilite() {
     const newStatut = newValide ? 'paye' : p.statut;
     const newDate = newValide ? new Date().toISOString().split('T')[0] : (p.date_paiement ? p.date_paiement.split('T')[0] : null);
     try {
-      await axios.put(API + '/comptabilite/' + p.id, { ...p, valide: newValide, statut: newStatut, date_paiement: newDate }, { headers });
+      await apiClient.put('/comptabilite/' + p.id, { ...p, valide: newValide, statut: newStatut, date_paiement: newDate }, { headers });
       chargerPaiements(); chargerStats();
     } catch (err) { console.error(err); }
   };
@@ -392,7 +391,7 @@ export default function Comptabilite() {
   useEffect(() => {
     if (!classeFacturationId || elevesClasseFacturation.length === 0) return;
     const ids = elevesClasseFacturation.map(e => e.id).join(',');
-    axios.get(API + `/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${anneeScolaireCourante}`, { headers })
+    apiClient.get(`/comptabilite/factures/validation?eleve_ids=${ids}&annee_scolaire=${anneeScolaireCourante}`, { headers })
       .then(res => {
         const map = {};
         res.data.forEach(r => { map[r.eleve_id] = r.valide; });
@@ -405,7 +404,7 @@ export default function Comptabilite() {
     setFacturesValidees(prev => ({ ...prev, [eleveId]: nouvelEtat }));
     setToutesValidations(prev => ({ ...prev, [eleveId]: nouvelEtat }));
     try {
-      await axios.post(API + '/comptabilite/factures/validation', { eleve_id: eleveId, annee_scolaire: anneeScolaireCourante, valide: nouvelEtat }, { headers });
+      await apiClient.post('/comptabilite/factures/validation', { eleve_id: eleveId, annee_scolaire: anneeScolaireCourante, valide: nouvelEtat }, { headers });
       // Lors de la validation d'un élève EUCMS, créer automatiquement un paiement en_attente
       if (nouvelEtat) {
         const eleve = eleves.find(e => Number(e.id) === Number(eleveId));
@@ -413,7 +412,7 @@ export default function Comptabilite() {
           const dejaExistant = paiements.some(p => Number(p.eleve_id) === Number(eleveId) && p.statut === 'en_attente' && p.type === 'Ecolage');
           if (!dejaExistant) {
             const montant = totalFactureEleve(eleveId);
-            await axios.post(API + '/comptabilite', {
+            await apiClient.post('/comptabilite', {
               eleve_id: Number(eleveId),
               montant,
               type: 'Ecolage',
@@ -442,14 +441,14 @@ export default function Comptabilite() {
     e.preventDefault();
     try {
       const payload = { ...materielForm, prix: materielForm.prix === '' ? 0 : parseFloat(materielForm.prix), rabais: materielForm.rabais === '' ? 0 : parseFloat(materielForm.rabais) };
-      if (materielEdit) await axios.put(API + '/comptabilite/materiels/' + materielEdit.id, payload, { headers });
-      else await axios.post(API + '/comptabilite/materiels', payload, { headers });
+      if (materielEdit) await apiClient.put('/comptabilite/materiels/' + materielEdit.id, payload, { headers });
+      else await apiClient.post('/comptabilite/materiels', payload, { headers });
       setShowMaterielForm(false); setMaterielEdit(null); await chargerMateriels();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
   };
   const handleDeleteMateriel = async (id) => {
     if (!window.confirm('Supprimer ce matériel ?')) return;
-    await axios.delete(API + '/comptabilite/materiels/' + id, { headers });
+    await apiClient.delete('/comptabilite/materiels/' + id, { headers });
     await chargerMateriels();
   };
 
@@ -508,10 +507,10 @@ export default function Comptabilite() {
     let reference = refGeneree;
     try {
       if (persistReference) {
-        const resp = await axios.post(API + '/comptabilite/factures/reference', { eleve_id: eleve.id, annee_scolaire, reference: refGeneree }, { headers });
+        const resp = await apiClient.post('/comptabilite/factures/reference', { eleve_id: eleve.id, annee_scolaire, reference: refGeneree }, { headers });
         reference = resp.data.reference;
       } else {
-        const resp = await axios.get(API + `/comptabilite/factures/reference?eleve_id=${eleve.id}&annee_scolaire=${annee_scolaire}`, { headers });
+        const resp = await apiClient.get(`/comptabilite/factures/reference?eleve_id=${eleve.id}&annee_scolaire=${annee_scolaire}`, { headers });
         reference = resp.data?.reference || refGeneree;
       }
     } catch (e) { /* utilise la référence générée localement si erreur */ }
@@ -692,12 +691,12 @@ export default function Comptabilite() {
 
   const chargerCommandes = async () => {
     try {
-      const res = await axios.get(API + '/comptabilite/commandes', { headers });
+      const res = await apiClient.get('/comptabilite/commandes', { headers });
       const cmds = res.data || [];
       setCommandes(cmds);
       const results = await Promise.all(
         cmds.map(cmd =>
-          axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers })
+          apiClient.get('/comptabilite/commandes/' + cmd.id + '/lignes', { headers })
             .then(r => ({ id: cmd.id, lignes: r.data || [] }))
             .catch(() => ({ id: cmd.id, lignes: [] }))
         )
@@ -712,7 +711,7 @@ export default function Comptabilite() {
 
   const ajouterCommandeInline = async () => {
     try {
-      await axios.post(API + '/comptabilite/commandes', { date_commande: new Date().toISOString().slice(0, 10) }, { headers });
+      await apiClient.post('/comptabilite/commandes', { date_commande: new Date().toISOString().slice(0, 10) }, { headers });
       chargerCommandes();
     } catch (e) { alert('Erreur lors de la création'); }
   };
@@ -726,7 +725,7 @@ export default function Comptabilite() {
     setRemarquesOuvertes({});
     setShowCommandePopup(true);
     try {
-      const res = await axios.get(API + '/comptabilite/commandes/' + cmd.id + '/lignes', { headers });
+      const res = await apiClient.get('/comptabilite/commandes/' + cmd.id + '/lignes', { headers });
       setCommandeLignes(res.data || []);
     } catch {}
   };
@@ -753,7 +752,7 @@ export default function Comptabilite() {
       prix_unitaire: match?.prix || null,
     };
     try {
-      const res = await axios.post(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes', payload, { headers });
+      const res = await apiClient.post('/comptabilite/commandes/' + commandeEdit.id + '/lignes', payload, { headers });
       setCommandeLignes(prev => [...prev, res.data]);
       setLigneArticleVal('');
       setLigneForm({ article: '', quantite: 1, ref: '' });
@@ -762,7 +761,7 @@ export default function Comptabilite() {
 
   const supprimerLigne = async (ligneId) => {
     try {
-      await axios.delete(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligneId, { headers });
+      await apiClient.delete('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligneId, { headers });
       setCommandeLignes(prev => prev.filter(l => l.id !== ligneId));
     } catch { alert('Erreur lors de la suppression'); }
   };
@@ -773,7 +772,7 @@ export default function Comptabilite() {
 
   const changerRemarqueLigne = async (ligne, remarques) => {
     try {
-      const res = await axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, remarques }, { headers });
+      const res = await apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, remarques }, { headers });
       setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? res.data : l));
     } catch {}
   };
@@ -781,14 +780,14 @@ export default function Comptabilite() {
   const supprimerCommande = async (id) => {
     if (!window.confirm('Supprimer cette commande ?')) return;
     try {
-      await axios.delete(API + '/comptabilite/commandes/' + id, { headers });
+      await apiClient.delete('/comptabilite/commandes/' + id, { headers });
       chargerCommandes();
     } catch { alert('Erreur lors de la suppression'); }
   };
 
   const toggleCommandeValide = async (cmd) => {
     try {
-      await axios.put(API + '/comptabilite/commandes/' + cmd.id, { ...cmd, valide: !cmd.valide }, { headers });
+      await apiClient.put('/comptabilite/commandes/' + cmd.id, { ...cmd, valide: !cmd.valide }, { headers });
       chargerCommandes();
     } catch { alert('Erreur lors de la mise à jour'); }
   };
@@ -1243,7 +1242,7 @@ export default function Comptabilite() {
                                 <td style={{ ...styles.td, textAlign: 'center' }}>
                                   <input type="number" min="1" defaultValue={ligne.quantite} disabled={readOnly}
                                     style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 60, textAlign: 'center', boxSizing: 'border-box' }}
-                                    onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
+                                    onBlur={e => { const q = parseInt(e.target.value) || 1; if (q !== ligne.quantite) { apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, quantite: q }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); } }}
                                   />
                                 </td>
                                 <td style={{ ...styles.td, color: '#64748b' }}>{ligne.ref || '—'}</td>
@@ -1251,7 +1250,7 @@ export default function Comptabilite() {
                                   <input type="number" step="0.01" min="0" defaultValue={ligne.prix_unitaire ? Number(ligne.prix_unitaire).toFixed(2) : ''}
                                     placeholder="0.00"
                                     style={{ ...styles.input, padding: '4px 6px', fontSize: 12, width: 80, textAlign: 'right', boxSizing: 'border-box' }}
-                                    onBlur={e => { const p = parseFloat(e.target.value) || null; axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, prix_unitaire: p }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); }}
+                                    onBlur={e => { const p = parseFloat(e.target.value) || null; apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + ligne.id, { ...ligne, prix_unitaire: p }, { headers }).then(r => setCommandeLignes(prev => prev.map(l => l.id === ligne.id ? r.data : l))).catch(() => {}); }}
                                   />
                                 </td>
                                 <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
@@ -1326,7 +1325,7 @@ export default function Comptabilite() {
                       const saves = Object.entries(statutsLocaux).map(([id, statut]) => {
                         const ligne = commandeLignes.find(l => String(l.id) === String(id));
                         if (!ligne) return Promise.resolve();
-                        return axios.put(API + '/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + id, { ...ligne, statut }, { headers }).catch(() => {});
+                        return apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + id, { ...ligne, statut }, { headers }).catch(() => {});
                       });
                       await Promise.all(saves);
                       chargerCommandes();

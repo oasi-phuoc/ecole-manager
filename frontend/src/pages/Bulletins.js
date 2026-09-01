@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const fmtNote = (n) => {
   if (n === null || n === undefined) return '—';
@@ -68,14 +67,14 @@ export default function Bulletins() {
 
   const chargerClasses = async () => {
     try {
-      const res = await axios.get(API + '/classes', { headers });
+      const res = await apiClient.get('/classes', { headers });
       setClasses(res.data || []);
     } catch {}
   };
 
   const chargerParametresEcole = async () => {
     try {
-      const res = await axios.get(API + '/parametres/ecole', { headers });
+      const res = await apiClient.get('/parametres/ecole', { headers });
       setEcoleParams(res.data || {});
     } catch {}
   };
@@ -85,19 +84,19 @@ export default function Bulletins() {
     try {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
       const [bulletinRes, statsRes, criteresRes, bS1, bS2, cr1, cr2] = await Promise.all([
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId + (() => {
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
+        apiClient.get('/presences/statistiques?classe_id=' + classeId + (() => {
           const today = new Date();
           const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1;
           return semVal === '1'
             ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31`
             : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`;
         })(), { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
       ]);
       const bulletinData = bulletinRes.data || [];
       setBulletins(bulletinData);
@@ -173,7 +172,7 @@ export default function Bulletins() {
     if (!criteresModifies) { showToast('Aucun changement à sauvegarder.', 'info'); return; }
     for (const b of bulletins) {
       const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
-      await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, {
+      await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, {
         classe_id: classeSelectionnee, semestre: bulletinSemestre,
         c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
         c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,

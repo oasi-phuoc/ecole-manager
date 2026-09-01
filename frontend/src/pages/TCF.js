@@ -1,14 +1,13 @@
 /* eslint-disable */
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { listerNomsResponsablesEcole } from '../utils/responsablesEcole';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const MOMENTS = [
@@ -343,21 +342,21 @@ export default function TCF() {
   };
 
   const sauvegarderEtatTCFServeur = async (cle, donnees) => {
-    await axios.put(API + '/tcf-state/' + cle, { donnees }, { headers });
+    await apiClient.put('/tcf-state/' + cle, { donnees }, { headers });
   };
 
   useEffect(() => {
     const charger = async () => {
       setChargement(true);
       const [rp, rPools, rCreneaux, rGeneral, rClasses, rEleves, rParametres, rNiveaux] = await Promise.all([
-        axios.get(API + '/profs', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/planning/pools', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/planning/creneaux', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/planning/general', { headers }).catch(() => ({ data: {} })),
-        axios.get(API + '/classes', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/eleves', { headers }).catch(() => ({ data: [] })),
-        axios.get(API + '/parametres/ecole', { headers }).catch(() => ({ data: {} })),
-        axios.get(API + '/donnees/niveaux').catch(() => ({ data: [] })),
+        apiClient.get('/profs', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/planning/pools', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/planning/creneaux', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/planning/general', { headers }).catch(() => ({ data: {} })),
+        apiClient.get('/classes', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/eleves', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/parametres/ecole', { headers }).catch(() => ({ data: {} })),
+        apiClient.get('/donnees/niveaux').catch(() => ({ data: [] })),
       ]);
       setProfs(rp.data || []);
       setPools(rPools.data || []);
@@ -388,9 +387,9 @@ export default function TCF() {
 
       try {
         const [poolSrv, affSrv, rsSrv] = await Promise.all([
-          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.pool, { headers }).catch(() => null),
-          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.affectation, { headers }).catch(() => null),
-          axios.get(API + '/tcf-state/' + TCF_STATE_KEYS.resultats, { headers }).catch(() => null),
+          apiClient.get('/tcf-state/' + TCF_STATE_KEYS.pool, { headers }).catch(() => null),
+          apiClient.get('/tcf-state/' + TCF_STATE_KEYS.affectation, { headers }).catch(() => null),
+          apiClient.get('/tcf-state/' + TCF_STATE_KEYS.resultats, { headers }).catch(() => null),
         ]);
 
         if (poolSrv?.data?.updated_at) {

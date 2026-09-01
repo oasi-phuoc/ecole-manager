@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function ClasseInventaire() {
   const navigate = useNavigate();
@@ -39,7 +38,7 @@ export default function ClasseInventaire() {
     setLoadingBranches(true);
     setMsg('');
     try {
-      const r = await axios.get(API + '/inventaire-branches/' + classeId + '/branches', { headers });
+      const r = await apiClient.get('/inventaire-branches/' + classeId + '/branches', { headers });
       setClasse(r.data?.classe || null);
       setBranches(r.data?.branches || []);
       if (r.data?.branches?.length) setBrancheActive(r.data.branches[0]);
@@ -55,7 +54,7 @@ export default function ClasseInventaire() {
     setLoadingInventaire(true);
     setMsg('');
     try {
-      const r = await axios.get(API + '/inventaire-branches/' + classeId + '/branches/' + brancheId, { headers });
+      const r = await apiClient.get('/inventaire-branches/' + classeId + '/branches/' + brancheId, { headers });
       setInventaire(r.data || []);
     } catch (err) {
       setInventaire([]);
@@ -72,8 +71,8 @@ export default function ClasseInventaire() {
       return;
     }
     try {
-      await axios.post(
-        API + '/inventaire-branches/' + classeId + '/branches/' + brancheActive.id,
+      await apiClient.post(
+        '/inventaire-branches/' + classeId + '/branches/' + brancheActive.id,
         form,
         { headers }
       );
@@ -93,7 +92,7 @@ export default function ClasseInventaire() {
     if (!brancheActive?.id) return;
     if (!window.confirm("Supprimer cette ligne d'inventaire ?")) return;
     try {
-      await axios.delete(API + '/inventaire-branches/' + classeId + '/branches/' + brancheActive.id + '/' + id, { headers });
+      await apiClient.delete('/inventaire-branches/' + classeId + '/branches/' + brancheActive.id + '/' + id, { headers });
       await chargerInventaire(brancheActive.id);
     } catch (err) {
       setMsg('❌ Erreur suppression: ' + (err.response?.data?.message || err.message));

@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function DocumentsAdministratifs() {
   const headers = {};
@@ -49,14 +48,14 @@ export default function DocumentsAdministratifs() {
 
   useEffect(() => {
     chargerDocuments();
-    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
   const chargerDocuments = async () => {
     setLoading(true);
     try {
-      const r = await axios.get(API + '/documents-administratifs', { headers });
+      const r = await apiClient.get('/documents-administratifs', { headers });
       setDocuments(r.data || []);
       setMsg('');
     } catch (err) {
@@ -167,9 +166,9 @@ export default function DocumentsAdministratifs() {
             taille: selectedFile.size,
           };
         }
-        await axios.put(API + '/documents-administratifs/' + editing.id, payload, { headers });
+        await apiClient.put('/documents-administratifs/' + editing.id, payload, { headers });
       } else {
-        await axios.post(API + '/documents-administratifs', {
+        await apiClient.post('/documents-administratifs', {
           designation: designation.trim(),
           categorie,
           sous_categorie: sousCategorie || null,
@@ -191,7 +190,7 @@ export default function DocumentsAdministratifs() {
   const handleDelete = async (doc) => {
     if (!window.confirm('Supprimer ce document ?')) return;
     try {
-      await axios.delete(API + '/documents-administratifs/' + doc.id, { headers });
+      await apiClient.delete('/documents-administratifs/' + doc.id, { headers });
       await chargerDocuments();
     } catch (err) {
       setMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
@@ -200,7 +199,7 @@ export default function DocumentsAdministratifs() {
 
   const telecharger = async (doc) => {
     try {
-      const r = await axios.get(API + '/documents-administratifs/' + doc.id + '/telecharger', { headers });
+      const r = await apiClient.get('/documents-administratifs/' + doc.id + '/telecharger', { headers });
       const a = document.createElement('a');
       a.href = r.data.contenu;
       a.download = r.data.nom_fichier;
@@ -212,7 +211,7 @@ export default function DocumentsAdministratifs() {
 
   const visualiser = async (doc) => {
     try {
-      const r = await axios.get(API + '/documents-administratifs/' + doc.id + '/telecharger', { headers });
+      const r = await apiClient.get('/documents-administratifs/' + doc.id + '/telecharger', { headers });
       setDocPreview({ url: r.data.contenu, nom: r.data.nom_fichier || doc.designation });
     } catch (err) {
       setMsg('❌ Erreur prévisualisation');

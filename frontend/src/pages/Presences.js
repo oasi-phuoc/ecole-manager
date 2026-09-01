@@ -1,11 +1,10 @@
 import { isAdmin, getUser } from '../utils/permissions';
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const OPTS = ['', 'P', 'A', 'R', 'E', 'C'];
 const OPTS_LABEL = { '': '—', 'P': 'P', 'A': 'A', 'R': 'R', 'E': 'E', 'C': 'C' };
@@ -153,8 +152,8 @@ export default function Presences() {
       const controle_au = String(nbJours).padStart(2,'0') + '.' + String(moisNum).padStart(2,'0') + '.' + annee;
 
       const [elevesRes, presRes] = await Promise.all([
-        axios.get(API + '/eleves/oasi?classe_id=' + classeSelectionnee, { headers }),
-        axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
+        apiClient.get('/eleves/oasi?classe_id=' + classeSelectionnee, { headers }),
+        apiClient.get('/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
       ]);
 
       const eleves = elevesRes.data;
@@ -265,8 +264,8 @@ export default function Presences() {
     try {
       const mois = date.substring(0, 7);
       const [elevesRes, presRes] = await Promise.all([
-        axios.get(API + '/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
-        axios.get(API + '/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
+        apiClient.get('/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
+        apiClient.get('/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
       ]);
       setApercuMois({ eleves: elevesRes.data, presences: presRes.data, mois });
     } catch (err) {
@@ -278,21 +277,21 @@ export default function Presences() {
 
   const chargerCalendrier = async () => {
     try {
-      const res = await axios.get(API + '/calendrier', { headers });
+      const res = await apiClient.get('/calendrier', { headers });
       setEvenementsCalendrier(res.data.filter(e => e.categorie === 'vacance'));
     } catch (err) { console.error(err); }
   };
 
   const chargerClasseHoraires = async (classe_id) => {
     try {
-      const res = await axios.get(API + '/planning/classe-horaires', { headers });
+      const res = await apiClient.get('/planning/classe-horaires', { headers });
       setClasseHoraires(res.data.filter(h => String(h.classe_id) === String(classe_id)));
     } catch (err) { console.error(err); }
   };
 
   const chargerClasses = async () => {
     try {
-      const res = await axios.get(API + '/presences/classes', { headers });
+      const res = await apiClient.get('/presences/classes', { headers });
       const loadedClasses = res.data;
       setClasses(loadedClasses);
       setClasseSelectionnee('');
@@ -302,7 +301,7 @@ export default function Presences() {
         const user = getUser();
         if (user?.id) {
           try {
-            const edtRes = await axios.get(API + '/emploi-du-temps?prof_id=' + user.id, { headers });
+            const edtRes = await apiClient.get('/emploi-du-temps?prof_id=' + user.id, { headers });
             const jourNom = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][new Date().getDay()];
             const now = new Date();
             const nowStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -320,8 +319,8 @@ export default function Presences() {
   const chargerEleves = async () => {
     try {
       const [elevesRes, presRes] = await Promise.all([
-        axios.get(API + '/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
-        axios.get(API + '/presences?classe_id=' + classeSelectionnee + '&date=' + date, { headers })
+        apiClient.get('/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
+        apiClient.get('/presences?classe_id=' + classeSelectionnee + '&date=' + date, { headers })
       ]);
       setEleves(elevesRes.data);
       const p = initPresences(elevesRes.data);
@@ -346,7 +345,7 @@ export default function Presences() {
       const params = new URLSearchParams({ classe_id: String(classeSelectionnee) });
       if (statsDateDebut) params.append('date_debut', statsDateDebut);
       if (statsDateFin) params.append('date_fin', statsDateFin);
-      const res = await axios.get(API + '/presences/statistiques?' + params.toString(), { headers });
+      const res = await apiClient.get('/presences/statistiques?' + params.toString(), { headers });
       setStatistiques(res.data);
     } catch (err) { console.error(err); }
   };
@@ -378,7 +377,7 @@ export default function Presences() {
         ...presences[e.id],
         valide: true
       }));
-      await axios.post(API + '/presences', { presences: data, date, classe_id: classeSelectionnee }, { headers });
+      await apiClient.post('/presences', { presences: data, date, classe_id: classeSelectionnee }, { headers });
       setSauvegarde(true);
       setTimeout(() => setSauvegarde(false), 3000);
       chargerStats();

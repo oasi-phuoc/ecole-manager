@@ -1,12 +1,11 @@
 /* eslint-disable */
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const SESSION_LABEL = { "Test d'août": 'Test de placement' };
 const SESSIONS = ["Test d'août", '1e semestre', '2e semestre'];
 
@@ -144,8 +143,8 @@ export default function Enclassement() {
     setLoading(true);
     try {
       const [elevRes, tcfRes] = await Promise.all([
-        axios.get(API + '/eleves', { headers }),
-        axios.get(API + '/tcf-state/resultats', { headers }).catch(() => ({ data: { donnees: {} } }))
+        apiClient.get('/eleves', { headers }),
+        apiClient.get('/tcf-state/resultats', { headers }).catch(() => ({ data: { donnees: {} } }))
       ]);
       setEleves(elevRes.data || []);
       setTcfScores(tcfRes.data?.donnees?.scores || {});
@@ -155,7 +154,7 @@ export default function Enclassement() {
 
   const loadHistorique = async () => {
     try {
-      const r = await axios.get(API + '/enclassements', { headers });
+      const r = await apiClient.get('/enclassements', { headers });
       setHistorique(r.data || []);
     } catch (err) { console.error(err); }
   };
@@ -235,7 +234,7 @@ export default function Enclassement() {
         ...classesCSC.map((c, i) => ({ structure: 'CSC', nom: c.nom, capacite_max: 12, eleves: c.eleves.map((e, pi) => ({ eleve_id: e.id, score_francais: e.score_francais, score_math: e.score_math, score_pondere: e.pondere, flagge_plancher: e.flagge || false, motif_flag: e.motif || null, position_serpentin: pi, modifie_manuellement: e.modifie_manuellement || false })) })),
         ...classesCFR.map((c, i) => ({ structure: 'CFR', nom: c.nom, capacite_max: 15, eleves: c.eleves.map((e, pi) => ({ eleve_id: e.id, score_francais: e.score_francais, score_math: e.score_math, score_pondere: e.pondere, flagge_plancher: e.flagge || false, motif_flag: e.motif || null, position_serpentin: pi, modifie_manuellement: e.modifie_manuellement || false })) }))
       ];
-      await axios.post(API + '/enclassements', {
+      await apiClient.post('/enclassements', {
         nom: nomEnclassement,
         session_tcf: session,
         parametres: { seuilPlancher, seuilPondere, nbClassesCSC: nbCSCeffectif, nbClassesCFR: nbCFReffectif },
@@ -250,7 +249,7 @@ export default function Enclassement() {
   const ouvrirDetail = async (enc) => {
     setLoadingDetail(true);
     try {
-      const r = await axios.get(API + '/enclassements/' + enc.id, { headers });
+      const r = await apiClient.get('/enclassements/' + enc.id, { headers });
       setDetailEnc(r.data);
       setView('detail');
     } catch (err) { alert('Erreur chargement'); }
@@ -260,7 +259,7 @@ export default function Enclassement() {
   const archiverEnclassement = async (enc) => {
     if (!window.confirm('Archiver cet enclassement ?')) return;
     try {
-      await axios.patch(API + '/enclassements/' + enc.id + '/statut', { statut: 'archivé' }, { headers });
+      await apiClient.patch('/enclassements/' + enc.id + '/statut', { statut: 'archivé' }, { headers });
       await loadHistorique();
       if (detailEnc?.id === enc.id) setDetailEnc({ ...detailEnc, statut: 'archivé' });
     } catch (err) { alert('Erreur'); }
@@ -269,7 +268,7 @@ export default function Enclassement() {
   const supprimerEnclassement = async (id) => {
     if (!window.confirm('Supprimer cet enclassement ? Cette action est irréversible.')) return;
     try {
-      await axios.delete(API + '/enclassements/' + id, { headers });
+      await apiClient.delete('/enclassements/' + id, { headers });
       await loadHistorique();
       if (detailEnc?.id === id) { setDetailEnc(null); setView('historique'); }
     } catch (err) { alert('Erreur'); }

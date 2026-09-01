@@ -1,10 +1,9 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import { stickyPageChrome } from '../styles/pageShell';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
@@ -20,20 +19,20 @@ export default function Branches() {
 
   useEffect(() => {
     chargerBranches();
-    axios.get(API + '/donnees/niveaux', { headers }).then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/niveaux', { headers }).then(r => setNiveauxDB(r.data || [])).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
   const chargerBranches = async () => {
-    try { const res = await axios.get(API+'/branches',{headers}); setBranches(res.data); }
+    try { const res = await apiClient.get('/branches',{headers}); setBranches(res.data); }
     catch(err) { console.error(err); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setErreur('');
     try {
-      if (brancheEdit) await axios.put(API+'/branches/'+brancheEdit.id, form, {headers});
-      else await axios.post(API+'/branches', form, {headers});
+      if (brancheEdit) await apiClient.put('/branches/'+brancheEdit.id, form, {headers});
+      else await apiClient.post('/branches', form, {headers});
       setShowForm(false); setBrancheEdit(null);
       setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true});
       chargerBranches();
@@ -56,7 +55,7 @@ export default function Branches() {
 
   const handleDelete = async (id) => {
     if (window.confirm('Supprimer cette branche ?')) {
-      await axios.delete(API+'/branches/'+id, {headers});
+      await apiClient.delete('/branches/'+id, {headers});
       chargerBranches();
     }
   };

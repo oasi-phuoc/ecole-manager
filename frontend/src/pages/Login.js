@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { redirectAfterAuth } from '../utils/mfa';
-
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+import apiClient from '../lib/apiClient';
 
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
@@ -26,6 +24,7 @@ export default function Login() {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaToken, setMfaToken] = useState('');
   const [erreur, setErreur] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const navigate = useNavigate();
   const mfaRequired = Boolean(mfaToken);
@@ -50,10 +49,12 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loginLoading) return;
     setErreur('');
+    setLoginLoading(true);
     try {
       if (!mfaRequired) {
-        const res = await axios.post(API + '/auth/login', { email, mot_de_passe: motDePasse });
+        const res = await apiClient.post('/auth/login', { email, mot_de_passe: motDePasse });
         if (res.data?.mfa_required) {
           setMfaToken(res.data.mfa_token || '');
           setMfaCode('');
@@ -62,10 +63,12 @@ export default function Login() {
         afterLoginSuccess(res.data.utilisateur || null);
         return;
       }
-      const res = await axios.post(API + '/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
+      const res = await apiClient.post('/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
       afterLoginSuccess(res.data.utilisateur || null);
     } catch (err) {
       setErreur(err.response?.data?.message || 'Erreur de connexion');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -77,7 +80,7 @@ export default function Login() {
     }
     setPasskeyLoading(true);
     try {
-      const optRes = await axios.post(API + '/auth/login/passkey/options', {
+      const optRes = await apiClient.post('/auth/login/passkey/options', {
         email: email.trim() || undefined,
       });
       const { options, challenge_token } = optRes.data || {};
@@ -86,7 +89,7 @@ export default function Login() {
         return;
       }
       const credential = await startAuthentication({ optionsJSON: options });
-      const res = await axios.post(API + '/auth/login/passkey/verify', {
+      const res = await apiClient.post('/auth/login/passkey/verify', {
         challenge_token,
         credential,
       });
@@ -110,10 +113,10 @@ export default function Login() {
     if (newMdp !== confirmMdp) { setChangeMdpErreur('Les mots de passe ne correspondent pas.'); return; }
     setChangeMdpLoading(true);
     try {
-      await axios.post(API + '/auth/changer-mdp', { nouveau_mdp: newMdp });
+      await apiClient.post('/auth/changer-mdp', { nouveau_mdp: newMdp });
       let nextUser = { ...(getSessionUser() || {}), doit_changer_mdp: false };
       try {
-        const st = await axios.get(API + '/auth/mfa/status');
+        const st = await apiClient.get('/auth/mfa/status');
         nextUser = {
           ...nextUser,
           mfa_enabled: st.data?.mfa_enabled === true,
@@ -224,7 +227,7 @@ export default function Login() {
               type="text"
               required={!mfaRequired}
               value={email}
-              disabled={mfaRequired}
+              disabled={mfaRequired || loginLoading}
               onChange={e => setEmail(e.target.value)}
               placeholder="Email ou identifiant"
               autoComplete="username webauthn"
@@ -237,7 +240,7 @@ export default function Login() {
               type="password"
               required={!mfaRequired}
               value={motDePasse}
-              disabled={mfaRequired}
+              disabled={mfaRequired || loginLoading}
               onChange={e => setMotDePasse(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
@@ -254,16 +257,26 @@ export default function Login() {
                 maxLength={12}
                 required
                 value={mfaCode}
+                disabled={loginLoading}
                 onChange={e => setMfaCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12))}
                 placeholder="123456 ou ABCD2345"
               />
             </div>
           )}
-          <button type="submit" style={styles.btn}>{mfaRequired ? 'Valider le code' : 'Se connecter'}</button>
+          <button
+            type="submit"
+            style={{ ...styles.btn, opacity: loginLoading ? 0.7 : 1, cursor: loginLoading ? 'not-allowed' : 'pointer' }}
+            disabled={loginLoading}
+          >
+            {loginLoading
+              ? (mfaRequired ? 'Vérification...' : 'Connexion...')
+              : (mfaRequired ? 'Valider le code' : 'Se connecter')}
+          </button>
           {mfaRequired && (
             <button
               type="button"
-              style={{ ...styles.btn, background: '#9ca3af', marginTop: 0 }}
+              style={{ ...styles.btn, background: '#9ca3af', marginTop: 0, opacity: loginLoading ? 0.7 : 1 }}
+              disabled={loginLoading}
               onClick={() => { setMfaToken(''); setMfaCode(''); setErreur(''); }}
             >
               Revenir

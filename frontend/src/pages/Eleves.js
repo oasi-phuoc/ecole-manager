@@ -1,14 +1,13 @@
 /* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 import { NATIONALITY_OPTIONS } from '../constants/nationalities';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 
 // Composant champ HORS du composant principal pour eviter perte de focus
@@ -100,7 +99,7 @@ export default function Eleves() {
 
   useEffect(() => {
     chargerTout();
-    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
   }, []);
 
   const mettreAJourLORA = async (file) => {
@@ -108,7 +107,7 @@ export default function Eleves() {
     setLoraUpdateLoading(true);
     try {
       const fd = new FormData(); fd.append('fichier', file);
-      const r = await axios.post(API + '/import/update-lora', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const r = await apiClient.post('/import/update-lora', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       alert(r.data.message);
       chargerTout();
     } catch(err) { alert('Erreur mise à jour LORA: ' + (err.response?.data?.message || err.message)); }
@@ -118,8 +117,8 @@ export default function Eleves() {
   const chargerTout = async () => {
     try {
       const [el, cl] = await Promise.all([
-        axios.get(API+'/eleves', {headers}),
-        axios.get(API+'/classes', {headers}),
+        apiClient.get('/eleves', {headers}),
+        apiClient.get('/classes', {headers}),
       ]);
       setEleves(el.data);
       setClasses(cl.data);
@@ -201,9 +200,9 @@ export default function Eleves() {
         oasi_temps_reparti_id: oasiTempsRepartiId?parseInt(oasiTempsRepartiId):null,
       };
       if (eleveEdit) {
-        await axios.put(API+'/eleves/'+eleveEdit.id, data, {headers});
+        await apiClient.put('/eleves/'+eleveEdit.id, data, {headers});
       } else {
-        await axios.post(API+'/eleves', data, {headers});
+        await apiClient.post('/eleves', data, {headers});
         setNiveauOnglet('tous');
       }
       setShowForm(false); setEleveEdit(null); resetForm(); chargerTout();
@@ -215,7 +214,7 @@ export default function Eleves() {
     const nom = el ? `${el.prenom} ${el.nom}` : 'cet élève';
     if (window.confirm(`⚠️ Supprimer définitivement ${nom} ?\n\nCette action supprimera TOUTES les données liées :\nprésences, notes, paiements, observations, absences, documents et sanctions.\n\nCette action est irréversible.`)) {
       try {
-        await axios.delete(API+'/eleves/'+id, {headers});
+        await apiClient.delete('/eleves/'+id, {headers});
         chargerTout();
       } catch(err) { alert('Erreur lors de la suppression : '+(err.response?.data?.message||err.message)); }
     }
@@ -227,28 +226,28 @@ export default function Eleves() {
     try {
       // Uniquement le statut : évite d’écraser nom / email / classe / champs OASI côté serveur
       // si la ligne liste n’expose pas toutes les valeurs comme dans le formulaire complet.
-      await axios.put(API+'/eleves/'+el.id, { statut: newStatut }, { headers });
+      await apiClient.put('/eleves/'+el.id, { statut: newStatut }, { headers });
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
   const handleClasseChange = async (eleveId, cId) => {
     try {
-      await axios.put(API+'/eleves/'+eleveId+'/classe', { classe_id: cId||null }, {headers});
+      await apiClient.put('/eleves/'+eleveId+'/classe', { classe_id: cId||null }, {headers});
       setEleves(prev => prev.map(el => el.id===eleveId ? {...el, classe_id: cId||null} : el));
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
   const handleCategorieChange = async (eleveId, val) => {
     try {
-      await axios.put(API+'/eleves/'+eleveId+'/categorie', { categorie: val || null }, {headers});
+      await apiClient.put('/eleves/'+eleveId+'/categorie', { categorie: val || null }, {headers});
       setEleves(prev => prev.map(el => el.id===eleveId ? {...el, categorie: val || null} : el));
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
   const ouvrirDocumentsEleve = async (el) => {
     setDocsEleve(el); setShowDocsEleve(true); setDocsEleveLoading(true);
-    try { const r = await axios.get(API+'/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
+    try { const r = await apiClient.get('/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
     catch(err) { setEleveDocs([]); }
     setDocsEleveLoading(false);
   };
@@ -258,8 +257,8 @@ export default function Eleves() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        await axios.post(API+'/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
-        const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents', {headers});
+        await apiClient.post('/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
+        const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents', {headers});
         setEleveDocs(r.data);
       } catch(err) { alert('Erreur upload: '+err.message); }
     };
@@ -268,21 +267,21 @@ export default function Eleves() {
 
   const telechargerDocumentEleve = async (doc) => {
     try {
-      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
     } catch(err) { alert('Erreur téléchargement'); }
   };
 
   const previsualiserDocumentEleve = async (doc) => {
     try {
-      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       setDocPreview({ url: r.data.contenu, nom: r.data.nom });
     } catch(err) { alert('Erreur prévisualisation'); }
   };
 
   const supprimerDocumentEleve = async (docId) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await axios.delete(API+'/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
+    await apiClient.delete('/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
     setEleveDocs(prev => prev.filter(d => d.id !== docId));
   };
 
@@ -290,8 +289,8 @@ export default function Eleves() {
     setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null); setEditSanction(null);
     try {
       const [sanctionsRes, obsRes] = await Promise.all([
-        axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}),
-        axios.get(API+'/observations/eleve/'+el.id, {headers}),
+        apiClient.get('/eleves/'+el.id+'/sanctions', {headers}),
+        apiClient.get('/observations/eleve/'+el.id, {headers}),
       ]);
       setEleveSanctions(sanctionsRes.data || []);
       setSanctionsObservations(obsRes.data || []);
@@ -310,7 +309,7 @@ export default function Eleves() {
       return;
     }
     try {
-      await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
+      await apiClient.post('/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle,
         infraction: pendingCell.infraction,
         niveau: pendingCell.niveau,
@@ -318,13 +317,13 @@ export default function Eleves() {
         prof_nom: pendingCell.prof_nom || null,
         observation_ref: pendingCell.observation_ref || null,
       }, {headers});
-      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      const r = await apiClient.get('/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data); setPendingCell(null);
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
   const supprimerSanction = async (sanctionId) => {
-    await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
+    await apiClient.delete('/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
     setSanctionToast('Sanction retirée');
     setTimeout(() => setSanctionToast(''), 2500);
@@ -338,12 +337,12 @@ export default function Eleves() {
       return;
     }
     try {
-      await axios.put(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
+      await apiClient.put('/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
         date_sanction: editSanction.date_sanction || null,
         prof_nom: editSanction.prof_nom || null,
         observation_ref: editSanction.observation_ref || null,
       }, {headers});
-      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      const r = await apiClient.get('/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data || []);
       setEditSanction(null);
     } catch(err) {
@@ -354,7 +353,7 @@ export default function Eleves() {
   const ouvrirObservations = async (el) => {
     setObsEleve(el); setShowObs(true); setShowObsForm(false); setObsEditId(null);
     setObsForm({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
-    try { const r = await axios.get(API+'/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
+    try { const r = await apiClient.get('/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
     catch(err) { setObservations([]); }
   };
 
@@ -362,10 +361,10 @@ export default function Eleves() {
     e.preventDefault();
     if (!obsEleve) return;
     try {
-      await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
+      await apiClient.post('/observations/eleve/'+obsEleve.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
-      const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+      const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
       setObservations(r.data);
     } catch(err) { alert('Erreur: '+err.message); }
   };
@@ -433,7 +432,7 @@ export default function Eleves() {
     try {
       const formData = new FormData();
       formData.append('fichier', importFile);
-      const r = await axios.post(API+'/import/eleves', formData, {
+      const r = await apiClient.post('/import/eleves', formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       });
       setImportResult(r.data); chargerTout();
@@ -1065,9 +1064,9 @@ export default function Eleves() {
                 return obsEditId === obs.id ? (
                   <form key={obs.id} onSubmit={async (e) => {
                     e.preventDefault();
-                    await axios.put(API+'/observations/'+obs.id, obsEditForm, {headers});
+                    await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
                     setObsEditId(null);
-                    const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+                    const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
                     setObservations(r.data);
                   }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
@@ -1112,7 +1111,7 @@ export default function Eleves() {
                       </div>
                       {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'#e0e7ff',border:'none',cursor:'pointer',color:'#4338ca',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:5,borderRadius:8}} title="Modifier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'#fee2e2',border:'none',cursor:'pointer',color:'#dc2626',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:5,borderRadius:8}} title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await apiClient.delete('/observations/'+obs.id, {headers}); const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'#fee2e2',border:'none',cursor:'pointer',color:'#dc2626',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:5,borderRadius:8}} title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                       </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
@@ -1167,7 +1166,7 @@ export default function Eleves() {
                             if (file.size > 2*1024*1024) { alert('Max 2MB'); return; }
                             const reader = new FileReader();
                             reader.onload = async (re) => {
-                              try { await axios.put(API+'/eleves/'+el.id+'/photo', {photo: re.target.result}, {headers}); chargerTout(); }
+                              try { await apiClient.put('/eleves/'+el.id+'/photo', {photo: re.target.result}, {headers}); chargerTout(); }
                               catch(err) { alert('Erreur upload'); }
                             };
                             reader.readAsDataURL(file);
@@ -1176,7 +1175,7 @@ export default function Eleves() {
                         {el.photo && (
                           <div onClick={async () => {
                             if (window.confirm('Supprimer la photo ?')) {
-                              await axios.put(API+'/eleves/'+el.id+'/photo', {photo: null}, {headers});
+                              await apiClient.put('/eleves/'+el.id+'/photo', {photo: null}, {headers});
                               chargerTout();
                             }
                           }} style={{width:14,height:14,background:'#ef4444',borderRadius:'50%',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'white'}} title="Supprimer photo">✕</div>

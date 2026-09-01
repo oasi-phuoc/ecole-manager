@@ -1,14 +1,13 @@
 /* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Classes() {
   const [classes, setClasses] = useState([]);
@@ -55,15 +54,15 @@ export default function Classes() {
 
   useEffect(() => {
     chargerTout();
-    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
   }, []);
 
   const chargerTout = async () => {
     const [cl, pr, br, sn] = await Promise.allSettled([
-      axios.get(API+'/classes', {headers}),
-      axios.get(API+'/profs', {headers}),
-      axios.get(API+'/branches', {headers}),
-      axios.get(API+'/notes/suivi-classes', {headers}),
+      apiClient.get('/classes', {headers}),
+      apiClient.get('/profs', {headers}),
+      apiClient.get('/branches', {headers}),
+      apiClient.get('/notes/suivi-classes', {headers}),
     ]);
     if (cl.status === 'fulfilled') setClasses(cl.value.data);
     else console.error('Erreur classes:', cl.reason);
@@ -88,7 +87,7 @@ export default function Classes() {
     setLoraUpdateLoading(true);
     try {
       const fd = new FormData(); fd.append('fichier', file);
-      const r = await axios.post(API+'/import/update-lora', fd, { headers: {'Content-Type':'multipart/form-data'} });
+      const r = await apiClient.post('/import/update-lora', fd, { headers: {'Content-Type':'multipart/form-data'} });
       alert(r.data.message);
       chargerTout();
     } catch(err) { alert('Erreur mise à jour LORA: '+(err.response?.data?.message||err.message)); }
@@ -100,7 +99,7 @@ export default function Classes() {
     setLoraImportLoading(true);
     try {
       const fd = new FormData(); fd.append('fichier', file);
-      const r = await axios.post(API+'/import/eleves', fd, { headers: {'Content-Type':'multipart/form-data'} });
+      const r = await apiClient.post('/import/eleves', fd, { headers: {'Content-Type':'multipart/form-data'} });
       alert(r.data.message);
       chargerTout();
     } catch(err) { alert('Erreur import LORA: '+(err.response?.data?.message||err.message)); }
@@ -122,8 +121,8 @@ export default function Classes() {
           return;
         }
       }
-      if (classeEdit) await axios.put(API+'/classes/'+classeEdit.id, form, {headers});
-      else await axios.post(API+'/classes', form, {headers});
+      if (classeEdit) await apiClient.put('/classes/'+classeEdit.id, form, {headers});
+      else await apiClient.post('/classes', form, {headers});
       setShowForm(false); setClasseEdit(null);
       setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''});
       chargerTout();
@@ -138,14 +137,14 @@ export default function Classes() {
 
   const handleDelete = async (id) => {
     if (window.confirm('Supprimer cette classe ?')) {
-      await axios.delete(API+'/classes/'+id, {headers});
+      await apiClient.delete('/classes/'+id, {headers});
       chargerTout();
     }
   };
 
   const toggleActif = async (c) => {
     if (!isAdmin()) return;
-    await axios.put(API+'/classes/'+c.id, {...c, actif:!c.actif, prof_principal_id:c.prof_principal_id||null}, {headers});
+    await apiClient.put('/classes/'+c.id, {...c, actif:!c.actif, prof_principal_id:c.prof_principal_id||null}, {headers});
     chargerTout();
   };
 
@@ -179,11 +178,11 @@ export default function Classes() {
         }));
     };
     try {
-      const elevesRes = await axios.get(API+'/classes/'+c.id+'/eleves', {headers});
+      const elevesRes = await apiClient.get('/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
     } catch(err) { console.error('Erreur chargement élèves:', err); }
     try {
-      const branchesRes = await axios.get(API+'/inventaire-branches/'+c.id+'/branches', {headers});
+      const branchesRes = await apiClient.get('/inventaire-branches/'+c.id+'/branches', {headers});
       let brs = branchesRes.data?.branches || [];
       if (brs.length === 0) {
         brs = branchesFallbackNiveau();
@@ -198,7 +197,7 @@ export default function Classes() {
       if (brs.length > 0) setBrancheInventaireActive(brs[0]);
     }
     try {
-      const r = await axios.get(API+'/classes/'+c.id+'/activites-recentes', {headers});
+      const r = await apiClient.get('/classes/'+c.id+'/activites-recentes', {headers});
       setDerniereActuClasse(r.data || null);
     } catch(err) { setDerniereActuClasse(null); }
   };
@@ -206,7 +205,7 @@ export default function Classes() {
   const ouvrirEleveDetail = async (eleve) => {
     setEleveDetail(eleve);
     try {
-      const r = await axios.get(API+'/observations/eleve/'+eleve.id, {headers});
+      const r = await apiClient.get('/observations/eleve/'+eleve.id, {headers});
       setObservations(r.data);
     } catch(err) { console.error(err); }
   };
@@ -214,10 +213,10 @@ export default function Classes() {
   const sauverObservation = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(API+'/observations/eleve/'+eleveDetail.id, obsForm, {headers});
+      await apiClient.post('/observations/eleve/'+eleveDetail.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
-      const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
+      const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
       setObservations(r.data);
     } catch(err) { alert('Erreur: '+err.message); }
   };
@@ -354,14 +353,14 @@ export default function Classes() {
 
   const chargerPlanClasse = async () => {
     try {
-      const r = await axios.get(API+'/plan-classe/'+detailClasse.id, {headers});
+      const r = await apiClient.get('/plan-classe/'+detailClasse.id, {headers});
       setPlanPositions(r.data.positions || {});
     } catch(err) { setPlanPositions({}); }
   };
 
   const sauverPlanClasse = async () => {
     try {
-      await axios.post(API+'/plan-classe/'+detailClasse.id, {positions: planPositions}, {headers});
+      await apiClient.post('/plan-classe/'+detailClasse.id, {positions: planPositions}, {headers});
       setPlanToast(true);
       setTimeout(() => setPlanToast(false), 3000);
     } catch(err) { alert('Erreur sauvegarde'); }
@@ -583,7 +582,7 @@ export default function Classes() {
 
   const ouvrirDocumentsEleve = async (el) => {
     setDocsEleve(el); setShowDocsEleve(true); setDocsEleveLoading(true);
-    try { const r = await axios.get(API+'/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
+    try { const r = await apiClient.get('/eleves/'+el.id+'/documents', {headers}); setEleveDocs(r.data); }
     catch(err) { setEleveDocs([]); }
     setDocsEleveLoading(false);
   };
@@ -591,7 +590,7 @@ export default function Classes() {
   const ouvrirObservationsClasse = async (el) => {
     setObsEleve(el); setShowObs(true); setShowObsForm(false); setObsEditId(null);
     setObsForm({ titre: '', contenu: '', mesure_prise: '', intervention_responsable: false, demande_entretien: false });
-    try { const r = await axios.get(API+'/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
+    try { const r = await apiClient.get('/observations/eleve/'+el.id, {headers}); setObservations(r.data); }
     catch(err) { setObservations([]); }
   };
 
@@ -599,12 +598,12 @@ export default function Classes() {
     e.preventDefault();
     if (!obsEleve) return;
     try {
-      await axios.post(API+'/observations/eleve/'+obsEleve.id, obsForm, {headers});
+      await apiClient.post('/observations/eleve/'+obsEleve.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
       setShowObsForm(false);
-      const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+      const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
       setObservations(r.data);
-      try { const r2 = await axios.get(API+'/classes/'+detailClasse.id+'/activites-recentes', {headers}); setDerniereActuClasse(r2.data || null); } catch(e) {}
+      try { const r2 = await apiClient.get('/classes/'+detailClasse.id+'/activites-recentes', {headers}); setDerniereActuClasse(r2.data || null); } catch(e) {}
     } catch(err) { alert('Erreur: '+err.message); }
   };
 
@@ -621,8 +620,8 @@ export default function Classes() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        await axios.post(API+'/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
-        const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents', {headers});
+        await apiClient.post('/eleves/'+docsEleve.id+'/documents', { nom: file.name, type, contenu: e.target.result, taille: file.size }, {headers});
+        const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents', {headers});
         setEleveDocs(r.data);
       } catch(err) { alert('Erreur upload: '+err.message); }
     };
@@ -631,21 +630,21 @@ export default function Classes() {
 
   const telechargerDocumentEleve = async (doc) => {
     try {
-      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       const a = document.createElement('a'); a.href = r.data.contenu; a.download = r.data.nom; a.click();
     } catch(err) { alert('Erreur téléchargement'); }
   };
 
   const previsualiserDocumentEleve = async (doc) => {
     try {
-      const r = await axios.get(API+'/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
+      const r = await apiClient.get('/eleves/'+docsEleve.id+'/documents/'+doc.id+'/telecharger', {headers});
       setDocPreview({ url: r.data.contenu, nom: r.data.nom });
     } catch(err) { alert('Erreur prévisualisation'); }
   };
 
   const supprimerDocumentEleve = async (docId) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await axios.delete(API+'/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
+    await apiClient.delete('/eleves/'+docsEleve.id+'/documents/'+docId, {headers});
     setEleveDocs(prev => prev.filter(d => d.id !== docId));
   };
 
@@ -653,8 +652,8 @@ export default function Classes() {
     setSanctionsEleve(el); setShowSanctions(true); setSanctionsLoading(true); setPendingCell(null); setEditSanction(null);
     try {
       const [sanctionsRes, obsRes] = await Promise.all([
-        axios.get(API+'/eleves/'+el.id+'/sanctions', {headers}),
-        axios.get(API+'/observations/eleve/'+el.id, {headers}),
+        apiClient.get('/eleves/'+el.id+'/sanctions', {headers}),
+        apiClient.get('/observations/eleve/'+el.id, {headers}),
       ]);
       setEleveSanctions(sanctionsRes.data || []);
       setSanctionsObservations(obsRes.data || []);
@@ -670,12 +669,12 @@ export default function Classes() {
       return;
     }
     try {
-      await axios.post(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {
+      await apiClient.post('/eleves/'+sanctionsEleve.id+'/sanctions', {
         echelle: pendingCell.echelle, infraction: pendingCell.infraction, niveau: pendingCell.niveau,
         date_sanction: pendingCell.date_sanction || null, prof_nom: pendingCell.prof_nom || null,
         observation_ref: pendingCell.observation_ref || null,
       }, {headers});
-      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      const r = await apiClient.get('/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data); setPendingCell(null);
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
@@ -688,19 +687,19 @@ export default function Classes() {
       return;
     }
     try {
-      await axios.put(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
+      await apiClient.put('/eleves/'+sanctionsEleve.id+'/sanctions/'+editSanction.id, {
         date_sanction: editSanction.date_sanction || null,
         prof_nom: editSanction.prof_nom || null,
         observation_ref: editSanction.observation_ref || null,
       }, {headers});
-      const r = await axios.get(API+'/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
+      const r = await apiClient.get('/eleves/'+sanctionsEleve.id+'/sanctions', {headers});
       setEleveSanctions(r.data || []);
       setEditSanction(null);
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
   };
 
   const supprimerSanction = async (sanctionId) => {
-    await axios.delete(API+'/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
+    await apiClient.delete('/eleves/'+sanctionsEleve.id+'/sanctions/'+sanctionId, {headers});
     setEleveSanctions(prev => prev.filter(s => s.id !== sanctionId));
     setSanctionToast('Sanction retirée');
     setTimeout(() => setSanctionToast(''), 2500);
@@ -724,7 +723,7 @@ export default function Classes() {
     setInventaireLoading(true);
     setInventaireMsg('');
     try {
-      const r = await axios.get(API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheId, { headers });
+      const r = await apiClient.get('/inventaire-branches/' + detailClasse.id + '/branches/' + brancheId, { headers });
       setInventaireRows(r.data || []);
     } catch (err) {
       setInventaireRows([]);
@@ -741,8 +740,8 @@ export default function Classes() {
       return;
     }
     try {
-      await axios.post(
-        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id,
+      await apiClient.post(
+        '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id,
         inventaireForm,
         { headers }
       );
@@ -762,8 +761,8 @@ export default function Classes() {
     if (!detailClasse?.id || !brancheInventaireActive?.id) return;
     if (!window.confirm('Supprimer cette ligne ?')) return;
     try {
-      await axios.delete(
-        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
+      await apiClient.delete(
+        '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
         { headers }
       );
       await chargerInventaireBranche(brancheInventaireActive.id);
@@ -779,8 +778,8 @@ export default function Classes() {
       return;
     }
     try {
-      await axios.put(
-        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
+      await apiClient.put(
+        '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/' + id,
         inventaireEditForm,
         { headers }
       );
@@ -801,8 +800,8 @@ export default function Classes() {
     rows.splice(tgtIndex, 0, moved);
     setInventaireRows(rows);
     try {
-      await axios.post(
-        API + '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/reorder',
+      await apiClient.post(
+        '/inventaire-branches/' + detailClasse.id + '/branches/' + brancheInventaireActive.id + '/reorder',
         { ids: rows.map(r => r.id) },
         { headers }
       );
@@ -844,7 +843,7 @@ export default function Classes() {
   const chargerDevoirs = async (classeId) => {
     setDevoirsLoading(true);
     try {
-      const r = await axios.get(API + '/devoirs?classe_id=' + classeId, { headers });
+      const r = await apiClient.get('/devoirs?classe_id=' + classeId, { headers });
       setDevoirs(r.data || []);
       if (r.data?.length > 0 && !devoirActif) setDevoirActif(r.data[0]);
     } catch (err) { console.error('Erreur devoirs:', err); }
@@ -853,7 +852,7 @@ export default function Classes() {
 
   const chargerSuiviDevoir = async (devoirId) => {
     try {
-      const r = await axios.get(API + '/devoirs/' + devoirId + '/suivi', { headers });
+      const r = await apiClient.get('/devoirs/' + devoirId + '/suivi', { headers });
       setSuiviDevoirs(r.data || []);
     } catch (err) { console.error('Erreur suivi devoirs:', err); }
   };
@@ -869,7 +868,7 @@ export default function Classes() {
       const map = {};
       await Promise.all(devoirs.map(async d => {
         try {
-          const r = await axios.get(API + '/devoirs/' + d.id + '/suivi', { headers });
+          const r = await apiClient.get('/devoirs/' + d.id + '/suivi', { headers });
           map[d.id] = r.data || [];
         } catch { map[d.id] = []; }
       }));
@@ -882,7 +881,7 @@ export default function Classes() {
     e.preventDefault();
     if (!detailClasse?.id || !devoirForm.titre.trim()) return;
     try {
-      await axios.post(API + '/devoirs', { ...devoirForm, classe_id: detailClasse.id }, { headers });
+      await apiClient.post('/devoirs', { ...devoirForm, classe_id: detailClasse.id }, { headers });
       setShowDevoirForm(false);
       setDevoirForm({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
       await chargerDevoirs(detailClasse.id);
@@ -893,7 +892,7 @@ export default function Classes() {
     e.preventDefault();
     if (!devoirEditId || !devoirEditForm.titre.trim()) return;
     try {
-      await axios.put(API + '/devoirs/' + devoirEditId, devoirEditForm, { headers });
+      await apiClient.put('/devoirs/' + devoirEditId, devoirEditForm, { headers });
       setDevoirEditId(null);
       if (devoirActif?.id === devoirEditId) setDevoirActif(prev => ({ ...prev, ...devoirEditForm }));
       await chargerDevoirs(detailClasse.id);
@@ -903,7 +902,7 @@ export default function Classes() {
   const supprimerDevoir = async (id) => {
     if (!window.confirm('Supprimer ce devoir ?')) return;
     try {
-      await axios.delete(API + '/devoirs/' + id, { headers });
+      await apiClient.delete('/devoirs/' + id, { headers });
       if (devoirActif?.id === id) setDevoirActif(null);
       await chargerDevoirs(detailClasse.id);
     } catch (err) { alert('Erreur suppression'); }
@@ -912,7 +911,7 @@ export default function Classes() {
   const majStatutEleve = async (eleveId, statut) => {
     if (!devoirActif?.id) return;
     try {
-      await axios.put(API + '/devoirs/' + devoirActif.id + '/suivi/' + eleveId, { statut }, { headers });
+      await apiClient.put('/devoirs/' + devoirActif.id + '/suivi/' + eleveId, { statut }, { headers });
       setSuiviDevoirs(prev => {
         const existing = prev.find(s => s.eleve_id === eleveId);
         if (existing) return prev.map(s => s.eleve_id === eleveId ? { ...s, statut } : s);
@@ -1057,9 +1056,9 @@ export default function Classes() {
             return obsEditId === obs.id ? (
               <form key={obs.id} onSubmit={async (e) => {
                 e.preventDefault();
-                await axios.put(API+'/observations/'+obs.id, obsEditForm, {headers});
+                await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
                 setObsEditId(null);
-                const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
+                const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
                 setObservations(r.data);
               }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                 <div style={s.field}>
@@ -1108,8 +1107,8 @@ export default function Classes() {
                     </button>
                     <button onClick={async () => {
                       if (window.confirm('Supprimer cette observation ?')) {
-                        await axios.delete(API+'/observations/'+obs.id, {headers});
-                        const r = await axios.get(API+'/observations/eleve/'+eleveDetail.id, {headers});
+                        await apiClient.delete('/observations/'+obs.id, {headers});
+                        const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
                         setObservations(r.data);
                       }
                     }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer">
@@ -1438,9 +1437,9 @@ export default function Classes() {
                 return obsEditId === obs.id ? (
                   <form key={obs.id} onSubmit={async (e) => {
                     e.preventDefault();
-                    await axios.put(API+'/observations/'+obs.id, obsEditForm, {headers});
+                    await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
                     setObsEditId(null);
-                    const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers});
+                    const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
                     setObservations(r.data);
                   }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                     <div style={s.field}><label style={s.lbl}>Titre</label><input style={s.inp} value={obsEditForm.titre} onChange={e => setObsEditForm({...obsEditForm,titre:e.target.value})} required /></div>
@@ -1467,7 +1466,7 @@ export default function Classes() {
                       </div>
                       {peutModifier && <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <button onClick={() => { setObsEditId(obs.id); setObsEditForm({titre:obs.titre,contenu:obs.contenu,mesure_prise:obs.mesure_prise||'',intervention_responsable:obs.intervention_responsable||false,demande_entretien:obs.demande_entretien||false,intervention_titulaire:obs.intervention_titulaire||false}); }} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#6366f1',display:'inline-flex',alignItems:'center',padding:2}} title="Modifier"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await axios.delete(API+'/observations/'+obs.id, {headers}); const r = await axios.get(API+'/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                        <button onClick={async () => { if (window.confirm('Supprimer cette observation ?')) { await apiClient.delete('/observations/'+obs.id, {headers}); const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers}); setObservations(r.data); }}} style={{background:'none',border:'none',cursor:'pointer',opacity:0.85,color:'#ef4444',display:'inline-flex',alignItems:'center',padding:2}} title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                       </div>}
                     </div>
                     <div style={{fontSize:13,color:'#475569',lineHeight:1.6}}>{obs.contenu}</div>
@@ -1634,8 +1633,8 @@ export default function Classes() {
                             if (file.size > 2*1024*1024) { alert('Image trop grande (max 2MB)'); return; }
                             try {
                               const photoData = await convertirImagePourUpload(file);
-                              await axios.put(API+'/eleves/'+el.id+'/photo', {photo: photoData}, {headers});
-                              const r = await axios.get(API+'/classes/'+detailClasse.id+'/eleves', {headers});
+                              await apiClient.put('/eleves/'+el.id+'/photo', {photo: photoData}, {headers});
+                              const r = await apiClient.get('/classes/'+detailClasse.id+'/eleves', {headers});
                               setElevesClasse(r.data);
                             } catch(err) {
                               alert('Erreur upload photo: ' + (err.response?.data?.message || err.message || 'fichier non supporte'));

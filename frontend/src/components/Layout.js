@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 import { ICONS_BY_PATH } from './DashboardIcons';
 import { useIsMobile, MOBILE_BREAKPOINT } from '../hooks/useIsMobile';
 import MobilePageEnhancer from './MobilePageEnhancer';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const W = 200;
 const TOP_BAR_H = 52;
 
@@ -174,7 +173,7 @@ export default function Layout() {
         setUser(u || null);
       } catch {}
       try {
-        const res = await axios.get(API + '/parametres/acces-profs');
+        const res = await apiClient.get('/parametres/acces-profs');
         setAccesProfs(res.data || {});
       } catch {}
     };
@@ -209,7 +208,7 @@ export default function Layout() {
   }, [drawerOpen, isMobile]);
 
   const deconnexion = async () => {
-    try { await axios.post(API + '/auth/logout'); } catch {}
+    try { await apiClient.post('/auth/logout'); } catch {}
     clearSessionUser();
     navigate('/login', { replace: true });
   };

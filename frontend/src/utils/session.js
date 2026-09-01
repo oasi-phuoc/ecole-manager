@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+import { supabase, supabaseConfigured } from '../lib/supabase';
+import apiClient, { clearLegacyToken } from '../lib/apiClient';
 
 let sessionUser = null;
 
@@ -12,10 +11,29 @@ export const setSessionUser = (user) => {
 
 export const clearSessionUser = () => {
   sessionUser = null;
+  clearLegacyToken();
+  if (supabaseConfigured && supabase) {
+    supabase.auth.signOut();
+  }
 };
 
 export const fetchSessionUser = async () => {
-  const res = await axios.get(API + '/auth/moi');
+  if (supabaseConfigured && supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      sessionUser = null;
+      return null;
+    }
+    const { data, error } = await supabase.rpc('get_me');
+    if (error || !data) {
+      const res = await apiClient.get('/auth/moi');
+      sessionUser = res.data || null;
+      return sessionUser;
+    }
+    sessionUser = data;
+    return sessionUser;
+  }
+  const res = await apiClient.get('/auth/moi');
   sessionUser = res.data || null;
   return sessionUser;
 };

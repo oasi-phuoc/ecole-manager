@@ -1,2 +1,4 @@
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+import apiClient, { API } from '../lib/apiClient';
+
 export default API;
+export { apiClient };

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Statistiques() {
   const [stats, setStats] = useState(null);
@@ -16,7 +15,7 @@ export default function Statistiques() {
 
   const chargerStats = async () => {
     try {
-      const res = await axios.get(API + '/statistiques', { headers });
+      const res = await apiClient.get('/statistiques', { headers });
       setStats(res.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }

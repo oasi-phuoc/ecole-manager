@@ -1,14 +1,13 @@
 /* eslint-disable */
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { getResponsableNiveauEcole } from '../utils/responsablesEcole';
 import CustomSelect from '../components/CustomSelect';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
 const COL_OEIL_DETAIL = 52;
@@ -174,7 +173,7 @@ export default function Notes() {
   const todayFormatted = new Date().toLocaleDateString('fr-CH');
 
   useEffect(() => {
-    axios.get(API + '/tcf-state/resultats', { headers })
+    apiClient.get('/tcf-state/resultats', { headers })
       .then(r => setTcfScores(r.data?.donnees || {}))
       .catch(() => {});
   }, []);
@@ -234,8 +233,8 @@ export default function Notes() {
   useEffect(() => {
     chargerClasses(); chargerMatieres(); chargerParametresEcole();
     // Données pour le tableau des classes
-    axios.get(API + '/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
-    axios.get(API + '/notes/suivi-classes', { headers }).then(r => {
+    apiClient.get('/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
+    apiClient.get('/notes/suivi-classes', { headers }).then(r => {
       const map = {};
       (r.data || []).forEach(x => {
         const pid = x.prof_id != null && x.prof_id !== '' ? String(x.prof_id) : 'null';
@@ -243,8 +242,8 @@ export default function Notes() {
       });
       setSuiviNotesClasse(map);
     }).catch(() => {});
-    axios.get(API + '/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
-    axios.get(API + '/notes/semestre-config', { headers }).then(r => {
+    apiClient.get('/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
+    apiClient.get('/notes/semestre-config', { headers }).then(r => {
       const bloque = r.data?.sem1_bloque === true;
       setSem1Bloque(bloque);
       if (bloque && !isAdmin()) { setEvalSemestre('2'); setBulletinSemestre('2'); }
@@ -253,32 +252,32 @@ export default function Notes() {
 
   const chargerClasses = async () => {
     try {
-      const res = await axios.get(API + '/classes', { headers });
+      const res = await apiClient.get('/classes', { headers });
       setClasses(res.data);
     } catch (err) { console.error(err); }
   };
 
   const chargerMatieres = async () => {
     try {
-      const res = await axios.get(API + '/emploi-du-temps/matieres', { headers });
+      const res = await apiClient.get('/emploi-du-temps/matieres', { headers });
       setMatieres(res.data);
     } catch (err) { console.error(err); }
   };
 
   const chargerParametresEcole = async () => {
     try {
-      const res = await axios.get(API + '/parametres/ecole', { headers });
+      const res = await apiClient.get('/parametres/ecole', { headers });
       setEcoleParams(res.data || {});
     } catch (err) { setEcoleParams({}); }
   };
 
   const chargerEvaluationsId = async (classeId, matiereId, sem) => {
     try {
-      let url = API + '/notes?classe_id=' + classeId;
+      let url = '/notes?classe_id=' + classeId;
       if (matiereId) url += '&matiere_id=' + matiereId;
       const s = sem !== undefined ? sem : evalSemestre;
       if (s) url += '&semestre=' + s;
-      const res = await axios.get(url, { headers });
+      const res = await apiClient.get(url, { headers });
       setEvaluations(res.data);
       return res.data;
     } catch (err) { console.error(err); return []; }
@@ -290,7 +289,7 @@ export default function Notes() {
     setRapportChargement(true);
     const semVal = sem !== undefined ? sem : generaleSemestre;
     try {
-      const res = await axios.get(API + '/notes/rapport?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers });
+      const res = await apiClient.get('/notes/rapport?classe_id=' + classeId + (semVal ? '&semestre=' + semVal : ''), { headers });
       setRapport(res.data);
     } catch (err) {
       console.error(err);
@@ -321,15 +320,15 @@ export default function Notes() {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
       const today = new Date(); const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1;
       const [bulletinRes, statsRes, criteresRes, bS1Res, bS2Res, cr1Res, cr2Res, stats1Res, stats2Res] = await Promise.all([
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId + (semVal === '1' ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31` : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`), { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
-        axios.get(API + '/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
-        axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee}-08-01&date_fin=${annee}-12-31`, { headers }),
-        axios.get(API + '/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`, { headers }),
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
+        apiClient.get('/presences/statistiques?classe_id=' + classeId + (semVal === '1' ? `&date_debut=${annee}-08-01&date_fin=${annee}-12-31` : `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`), { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=' + semVal, { headers }),
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=1', { headers }),
+        apiClient.get('/notes/bulletin?classe_id=' + classeId + '&semestre=2', { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=1', { headers }),
+        apiClient.get('/notes/bulletin-criteres?classe_id=' + classeId + '&semestre=2', { headers }),
+        apiClient.get('/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee}-08-01&date_fin=${annee}-12-31`, { headers }),
+        apiClient.get('/presences/statistiques?classe_id=' + classeId + `&date_debut=${annee+1}-01-01&date_fin=${annee+1}-06-30`, { headers }),
       ]);
       const bulletinData = bulletinRes.data || [];
       setBulletins(bulletinData);
@@ -369,7 +368,7 @@ export default function Notes() {
 
   const ouvrirEvaluation = async (evaluation) => {
     try {
-      const res = await axios.get(API + '/notes/' + evaluation.id + '/notes', { headers });
+      const res = await apiClient.get('/notes/' + evaluation.id + '/notes', { headers });
       setEvaluationOuverte(res.data.evaluation);
       setElevesNotes(res.data.eleves.map(e => ({
         ...e,
@@ -422,9 +421,9 @@ export default function Notes() {
         semestre: parseInt(evalSemestre) || 1
       };
       if (form.editId) {
-        await axios.put(API + '/notes/' + form.editId, payload, { headers });
+        await apiClient.put('/notes/' + form.editId, payload, { headers });
       } else {
-        await axios.post(API + '/notes', payload, { headers });
+        await apiClient.post('/notes', payload, { headers });
       }
       setShowForm(false);
       setForm(formVide);
@@ -446,7 +445,7 @@ export default function Notes() {
         commentaire: e.commentaire,
         points_detail: e.points_detail || {}
       }));
-      await axios.post(API + '/notes/' + evaluationOuverte.id + '/notes', { notes }, { headers });
+      await apiClient.post('/notes/' + evaluationOuverte.id + '/notes', { notes }, { headers });
       showToast('Notes enregistrées.');
       await chargerBulletinId(classeSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
@@ -454,7 +453,7 @@ export default function Notes() {
 
   const handleSupprimerEvaluation = async (id) => {
     if (window.confirm('Supprimer cette évaluation ?')) {
-      await axios.delete(API + '/notes/' + id, { headers });
+      await apiClient.delete('/notes/' + id, { headers });
       await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee);
     }
   };
@@ -1703,7 +1702,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
         remarques: cr.remarques||null, valide: true,
       };
-      await axios.put(API + '/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
+      await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
     }
     setBulletinCriteres([...criteresLocaux]);
     if (bulletinSemestre === '1') setCriteresSem1([...criteresLocaux]);
@@ -1746,8 +1745,8 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         valide: patch.valide !== undefined ? patch.valide : cr.valide,
         semestre: bulletinSemestre,
       };
-      await axios.put(API + '/notes/bulletin-criteres/' + eleveId, payload, { headers });
-      const res = await axios.get(API + '/notes/bulletin-criteres?classe_id=' + classeSelectionnee + '&semestre=' + bulletinSemestre, { headers });
+      await apiClient.put('/notes/bulletin-criteres/' + eleveId, payload, { headers });
+      const res = await apiClient.get('/notes/bulletin-criteres?classe_id=' + classeSelectionnee + '&semestre=' + bulletinSemestre, { headers });
       setBulletinCriteres(res.data || []);
     };
 
@@ -2675,7 +2674,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           {isAdmin() && (
             <button type="button" onClick={async () => {
               const next = !sem1Bloque;
-              await axios.put(API + '/notes/semestre-config', { sem1_bloque: next }, { headers });
+              await apiClient.put('/notes/semestre-config', { sem1_bloque: next }, { headers });
               setSem1Bloque(next);
             }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 99, border: '2px solid ' + (sem1Bloque ? '#6366f1' : '#e2e8f0'), background: sem1Bloque ? '#eef2ff' : 'white', color: sem1Bloque ? '#4338ca' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
               <div style={{ width: 36, height: 20, borderRadius: 10, background: sem1Bloque ? '#6366f1' : '#e2e8f0', position: 'relative', transition: 'all 0.2s' }}>
