@@ -4,6 +4,14 @@ import { createRequire } from "node:module";
 import { handleAuthLogin } from "./auth-fast-login.ts";
 import { handleAuthLoginMfa } from "./auth-fast-mfa.ts";
 import { handleMfaEnable, handleMfaSetup, handleMfaStatus } from "./auth-fast-mfa-setup.ts";
+import {
+  handleDeletePasskey,
+  handleListPasskeys,
+  handlePasskeyLoginOptions,
+  handlePasskeyLoginVerify,
+  handlePasskeyRegisterOptions,
+  handlePasskeyRegisterVerify,
+} from "./auth-fast-passkey.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -99,6 +107,31 @@ Deno.serve(async (req: Request) => {
 
     if (path === "/auth/mfa/enable" && req.method === "POST") {
       return await handleMfaEnable(req, cors);
+    }
+
+    if (path === "/auth/login/passkey/options" && req.method === "POST") {
+      return await handlePasskeyLoginOptions(req, cors);
+    }
+
+    if (path === "/auth/login/passkey/verify" && req.method === "POST") {
+      return await handlePasskeyLoginVerify(req, cors);
+    }
+
+    if (path === "/auth/passkeys" && req.method === "GET") {
+      return await handleListPasskeys(req, cors);
+    }
+
+    if (path === "/auth/passkeys/register/options" && req.method === "POST") {
+      return await handlePasskeyRegisterOptions(req, cors);
+    }
+
+    if (path === "/auth/passkeys/register/verify" && req.method === "POST") {
+      return await handlePasskeyRegisterVerify(req, cors);
+    }
+
+    const passkeyDelete = path.match(/^\/auth\/passkeys\/(\d+)$/);
+    if (passkeyDelete && req.method === "DELETE") {
+      return await handleDeletePasskey(req, cors, passkeyDelete[1]);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);
