@@ -2,6 +2,11 @@ import bcrypt from "npm:bcryptjs@2";
 import type { Pool } from "npm:pg@8";
 import { createPool, decryptText, encryptText, json } from "../auth-fast-shared.ts";
 import { sendEmail } from "./mailer.ts";
+import {
+  fetchAnneeMeta,
+  verrouillerArchiveDb,
+  verifierArchivePourResetDb,
+} from "./archive-service.ts";
 import { loadUser, parseJsonBody, requireAdmin, requireAuth } from "./middleware.ts";
 
 const DEFAULT_HOST = "smtp.office365.com";
@@ -433,53 +438,122 @@ export async function handleParametresRoute(
     if (path === "/parametres/reset-rentree" && req.method === "DELETE") {
       const denied = requireAdmin(user!, cors);
       if (denied) return denied;
+      const body = await parseJsonBody<Record<string, unknown>>(req);
+      const archiveId = Number(req.headers.get("x-archive-id") || body?.archive_id || 0);
+      const meta = await fetchAnneeMeta(pool);
+      if (!(await verifierArchivePourResetDb(archiveId, meta.annee, pool))) {
+        return json(cors, {
+          message:
+            "Vous devez d’abord transférer l’année en cours vers le menu Archive avant de confirmer la réinitialisation.",
+          archive_required: true,
+        }, 400);
+      }
+
       const tables = [
         "presences_v2",
         "presences",
         "absences",
         "notes",
         "evaluations",
+        "bulletin_criteres",
+        "suivi_devoirs",
+        "devoirs",
+        "affectations_eleves_enc",
+        "classes_enclassement",
+        "enclassements",
         "affectations",
         "planning_branches",
         "pool_profs",
         "pool_classes",
         "pool_branches",
         "classe_horaires",
+        "classe_periodes",
         "emploi_du_temps",
         "plan_classe",
+        "inventaire_branches",
         "paiements",
-        "comptabilite",
+        "factures_validations",
+        "factures_references",
+        "commandes_lignes",
+        "commandes",
         "documents_eleves",
         "sanctions_eleves",
         "observations",
+        "sorties_scolaires",
         "eleves",
       ];
+
       const resultats: string[] = [];
-      for (const table of tables) {
+      const client = await pool.connect();
+      const fail = async (message: string) => {
         try {
-          const r = await pool.query("DELETE FROM " + table);
-          resultats.push("OK:" + table + "(" + r.rowCount + ")");
-        } catch (err) {
-          resultats.push("ERR:" + table + ":" + (err instanceof Error ? err.message : String(err)));
+          await client.query("ROLLBACK");
+        } catch {
+          /* ignore */
         }
-      }
+        return json(cors, {
+          message,
+          details: resultats,
+          erreurs: resultats.filter((r) => r.startsWith("ERR:")),
+        }, 500);
+      };
+
       try {
-        const r = await pool.query("DELETE FROM utilisateurs WHERE role IN ('eleve','parent')");
-        resultats.push("OK:utilisateurs-eleves-parents(" + r.rowCount + ")");
+        await client.query("BEGIN");
+        for (const table of tables) {
+          const exists = await client.query(
+            `SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = $1`,
+            [table],
+          );
+          if (!exists.rows.length) {
+            resultats.push("SKIP:" + table + "(absente)");
+            continue;
+          }
+          try {
+            const r = await client.query("DELETE FROM " + table);
+            resultats.push("OK:" + table + "(" + r.rowCount + ")");
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            resultats.push("ERR:" + table + ":" + msg);
+            return await fail("Reset rentree echoue — aucune donnée n'a été supprimée (rollback)");
+          }
+        }
+
+        try {
+          const r = await client.query(
+            "DELETE FROM utilisateurs WHERE role IN ('eleve','parent')",
+          );
+          resultats.push("OK:utilisateurs-eleves-parents(" + r.rowCount + ")");
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          resultats.push("ERR:utilisateurs-eleves-parents:" + msg);
+          return await fail("Reset rentree echoue — aucune donnée n'a été supprimée (rollback)");
+        }
+
+        await client.query("COMMIT");
+        try {
+          await verrouillerArchiveDb(archiveId, pool);
+        } catch {
+          /* ignore */
+        }
+        return json(cors, {
+          message: "Reset rentree effectue",
+          details: resultats,
+          erreurs: [],
+          archive_id: archiveId,
+        });
       } catch (err) {
-        resultats.push(
-          "ERR:utilisateurs-eleves-parents:" + (err instanceof Error ? err.message : String(err)),
-        );
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          /* ignore */
+        }
+        const msg = err instanceof Error ? err.message : "Erreur serveur";
+        return json(cors, { message: "Erreur serveur lors du reset rentree", erreur: msg }, 500);
+      } finally {
+        client.release();
       }
-      const erreurs = resultats.filter((r) => r.startsWith("ERR"));
-      return json(cors, {
-        message:
-          erreurs.length === 0
-            ? "Reset rentree effectue"
-            : "Reset rentree partiel - " + erreurs.length + " erreur(s)",
-        details: resultats,
-        erreurs,
-      });
     }
 
     return json(cors, { message: "Route non trouvée" }, 404);

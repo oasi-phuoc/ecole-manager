@@ -20,6 +20,7 @@ import {
 } from "./auth-fast-passkey.ts";
 import { handleChangerMdp, handleLogout, handleMoi } from "./auth-fast-session.ts";
 import { json } from "./auth-fast-shared.ts";
+import { handleArchivesRoute } from "./routes-fast/archives.ts";
 import { handleBranchesRoute } from "./routes-fast/branches.ts";
 import { handleCalendrierRoute } from "./routes-fast/calendrier.ts";
 import { handleChatbotRoute } from "./routes-fast/chatbot.ts";
@@ -197,6 +198,10 @@ Deno.serve(async (req: Request) => {
 
     if (path.startsWith("/calendrier")) {
       return await handleCalendrierRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/archives")) {
+      return await handleArchivesRoute(req, path, cors, url);
     }
 
     if (path.startsWith("/parametres")) {

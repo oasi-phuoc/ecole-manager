@@ -56,10 +56,6 @@ let code = await import("node:fs").then((fs) =>
   fs.readFileSync(path.join(fnDir, "index.ts"), "utf8"),
 );
 code = code.replace(/export default ([\w$]+)\(\);?/g, "$1();");
-code = code.replace(
-  /throw Error\('Dynamic require of "'\+i\+'" is not supported'\)/g,
-  "return globalThis.__esbuildRequire(i)",
-);
 await import("node:fs").then((fs) =>
   fs.writeFileSync(path.join(fnDir, "index.ts"), code),
 );

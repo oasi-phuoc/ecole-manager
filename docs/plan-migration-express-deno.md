@@ -59,11 +59,9 @@ Le routage se fait dans `index.source.ts` **avant** le fallback `getHandler()` E
 
 ### Migration terminée (sept. 2026)
 
-- **Express retiré** de `index.source.ts` (plus de `getHandler()` / `createApp.cjs` au runtime).
-- Bundle `index.ts` : **~185 KB** (vs ~3 MB avec Express + vendor).
-- Fichiers legacy (`createApp.cjs`, `vendor/`, `expressToFetch.ts`) conservés dans le repo pour référence ; non inclus dans le bundle.
-
-### Archives (legacy, non utilisés au runtime)
+- **Express retiré** : plus de `getHandler()`, `createApp.cjs`, `vendor/` ni `expressToFetch.ts`.
+- Bundle `index.ts` : **~200 KB** (Deno natif uniquement).
+- Module **archives** migré (`routes-fast/archives.ts` + `archive-service.ts`).
 
 ---
 
