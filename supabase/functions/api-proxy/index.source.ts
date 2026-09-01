@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Buffer } from "node:buffer";
 import { createRequire } from "node:module";
 import { handleAuthLogin } from "./auth-fast-login.ts";
+import { handleAuthLoginMfa } from "./auth-fast-mfa.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -16,7 +17,7 @@ function bridgeEnv() {
   if (typeof Deno === "undefined") return;
   const proc = (globalThis as { process?: { env?: Record<string, string> } }).process;
   if (!proc?.env) return;
-  const keys = ["DATABASE_URL", "JWT_SECRET", "MFA_BACKUP_PEPPER", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NODE_ENV"];
+  const keys = ["DATABASE_URL", "JWT_SECRET", "MFA_BACKUP_PEPPER", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NODE_ENV", "DATA_ENCRYPTION_KEY"];
   for (const key of keys) {
     try {
       const v = Deno.env.get(key);
@@ -81,6 +82,10 @@ Deno.serve(async (req: Request) => {
 
     if (path === "/auth/login" && req.method === "POST") {
       return await handleAuthLogin(req, cors);
+    }
+
+    if (path === "/auth/login/mfa" && req.method === "POST") {
+      return await handleAuthLoginMfa(req, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);

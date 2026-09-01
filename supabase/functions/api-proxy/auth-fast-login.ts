@@ -1,12 +1,5 @@
-import { Pool } from "npm:pg@8";
 import bcrypt from "npm:bcryptjs@2";
-
-function json(cors: Record<string, string>, data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
+import { createPool, json } from "./auth-fast-shared.ts";
 
 export async function handleAuthLogin(req: Request, cors: Record<string, string>): Promise<Response> {
   const { email, mot_de_passe } = await req.json();
@@ -15,11 +8,7 @@ export async function handleAuthLogin(req: Request, cors: Record<string, string>
     return json(cors, { message: "Email ou mot de passe incorrect" }, 401);
   }
 
-  const pool = new Pool({
-    connectionString: Deno.env.get("DATABASE_URL") || Deno.env.get("SUPABASE_DB_URL"),
-    ssl: { rejectUnauthorized: false },
-  });
-
+  const pool = createPool();
   try {
     const r = await pool.query(
       "SELECT id, nom, prenom, email, role, mot_de_passe, mfa_enabled, doit_changer_mdp FROM utilisateurs WHERE (LOWER(email) = $1 OR LOWER(identifiant) = $1) AND actif = true",
