@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { Navigate } from 'react-router-dom';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { MFA_SETUP_PATH } from '../utils/mfa';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function MfaGate({ children }) {
   const [state, setState] = useState('checking');
@@ -13,7 +12,7 @@ export default function MfaGate({ children }) {
     let active = true;
     (async () => {
       try {
-        const res = await axios.get(API + '/auth/mfa/status');
+        const res = await apiClient.get('/auth/mfa/status');
         const enabled = res.data?.mfa_enabled === true;
         const exempt = res.data?.mfa_exempt === true;
         const current = getSessionUser() || {};

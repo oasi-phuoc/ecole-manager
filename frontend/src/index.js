@@ -1,12 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import apiClient from './lib/apiClient';
+import { supabaseConfigured } from './lib/supabase';
 import './index.css';
 import './styles/mobile.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-apiClient.defaults.withCredentials = true;
+// Cookies session Render uniquement — Supabase utilise Bearer + apikey (pas de cookies cross-origin)
+if (!supabaseConfigured) {
+  apiClient.defaults.withCredentials = true;
+}
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {

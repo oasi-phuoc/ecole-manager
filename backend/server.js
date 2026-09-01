@@ -17,8 +17,6 @@ const defaultOrigins = [
   'http://localhost:3001',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'https://ecole-manager-frontend.onrender.com',
-  'https://ecole-manager.onrender.com',
 ];
 const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
@@ -30,7 +28,6 @@ app.use(cors({
     try {
       const host = new URL(origin).hostname;
       if (host === 'localhost' || host === '127.0.0.1') return cb(null, true);
-      if (host.endsWith('.onrender.com')) return cb(null, true);
       if (host.endsWith('.vercel.app')) return cb(null, true);
     } catch {}
     return cb(new Error('Not allowed by CORS'));

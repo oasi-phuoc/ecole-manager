@@ -1,6 +1,6 @@
 import { isAdmin, getUser } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
@@ -11,7 +11,6 @@ import {
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const CONTRATS = ['CDI','CDD','Remplaçant','Stagiaire','Civiliste','Autre'];
 const TYPES_EXTERN = ['Stagiaire','Civiliste','Remplaçant','Bénévole','Autre'];
 const PERMIS = ['Citoyen CH/UE','Permis C','Permis B','Permis L','Permis G','Frontalier','Autre'];
@@ -57,14 +56,14 @@ export default function Professeurs({
   const [profDocs, setProfDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [uploadForm, setUploadForm] = useState({ type: 'CV' });
-  const apiUrl = API + apiBase;
+  const apiUrl = apiBase;
 
   const ouvrirDocuments = async (prof) => {
     setDocsProf(prof);
     setShowDocs(true);
     setDocsLoading(true);
     try {
-      const r = await axios.get(apiUrl + '/' + prof.id + '/documents', {headers});
+      const r = await apiClient.get(apiUrl + '/' + prof.id + '/documents', {headers});
       setProfDocs(r.data);
     } catch(err) { setProfDocs([]); }
     setDocsLoading(false);
@@ -75,10 +74,10 @@ export default function Professeurs({
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        await axios.post(apiUrl + '/' + docsProf.id + '/documents', {
+        await apiClient.post(apiUrl + '/' + docsProf.id + '/documents', {
           nom: file.name, type, contenu: e.target.result, taille: file.size
         }, {headers});
-        const r = await axios.get(apiUrl + '/' + docsProf.id + '/documents', {headers});
+        const r = await apiClient.get(apiUrl + '/' + docsProf.id + '/documents', {headers});
         setProfDocs(r.data);
       } catch(err) { alert('Erreur upload: '+err.message); }
     };
@@ -87,7 +86,7 @@ export default function Professeurs({
 
   const telechargerDocument = async (doc) => {
     try {
-      const r = await axios.get(apiUrl + '/' + docsProf.id + '/documents/' + doc.id + '/telecharger', {headers});
+      const r = await apiClient.get(apiUrl + '/' + docsProf.id + '/documents/' + doc.id + '/telecharger', {headers});
       const a = document.createElement('a');
       a.href = r.data.contenu;
       a.download = r.data.nom;
@@ -97,14 +96,14 @@ export default function Professeurs({
 
   const supprimerDocument = async (docId) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await axios.delete(apiUrl + '/' + docsProf.id + '/documents/' + docId, {headers});
+    await apiClient.delete(apiUrl + '/' + docsProf.id + '/documents/' + docId, {headers});
     setProfDocs(prev => prev.filter(d => d.id !== docId));
   };
 
   const envoyerAccesEmail = async (profId) => {
     setEmailEnvoi(prev => ({...prev, [profId]: 'loading'}));
     try {
-      await axios.post(apiUrl + '/' + profId + '/envoyer-acces', {}, {headers});
+      await apiClient.post(apiUrl + '/' + profId + '/envoyer-acces', {}, {headers});
       setEmailEnvoi(prev => ({...prev, [profId]: 'ok'}));
       setTimeout(() => setEmailEnvoi(prev => ({...prev, [profId]: null})), 4000);
     } catch(err) {
@@ -115,7 +114,7 @@ export default function Professeurs({
 
   const chargerBranchesNiveaux = async (niveaux = []) => {
     try {
-      const r = await axios.get(API+'/branches', { headers });
+      const r = await apiClient.get('/branches', { headers });
       const branchesFiltrees = (r.data || [])
         .filter(b => !niveaux.length || niveaux.includes(b.niveau))
         .filter((b, i, arr) => arr.findIndex(x => String(x.id) === String(b.id)) === i);
@@ -129,8 +128,8 @@ export default function Professeurs({
 
   useEffect(() => {
     chargerProfs();
-    axios.get(API + '/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
-    axios.get(API + '/donnees/lieux-travail').then(r => setLieuxTravailDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/niveaux').then(r => setNiveauxDB(r.data || [])).catch(() => {});
+    apiClient.get('/donnees/lieux-travail').then(r => setLieuxTravailDB(r.data || [])).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
   useEffect(() => {
@@ -150,7 +149,7 @@ export default function Professeurs({
   }, [form.prenom, form.nom, showForm, profEdit]);
 
   const chargerProfs = async () => {
-    try { const res = await axios.get(apiUrl,{headers}); setProfs(res.data); }
+    try { const res = await apiClient.get(apiUrl,{headers}); setProfs(res.data); }
     catch(err) { console.error(err); }
   };
 
@@ -193,8 +192,8 @@ export default function Professeurs({
         payload.lieu_travail_prefere = null;
         payload.remarque_lieu_travail = null;
       }
-      if (profEdit) await axios.put(apiUrl + '/' + profEdit.id, payload, {headers});
-      else await axios.post(apiUrl, payload, {headers});
+      if (profEdit) await apiClient.put(apiUrl + '/' + profEdit.id, payload, {headers});
+      else await apiClient.post(apiUrl, payload, {headers});
       setShowForm(false); setProfEdit(null); resetForm(); chargerProfs();
     } catch(err) { showFormToast('Erreur : ' + (err.response?.data?.message || err.message), 'error'); }
   };
@@ -231,12 +230,12 @@ export default function Professeurs({
 
   const handleDelete = async (id) => {
     const target = profs.find(p => p.id === id); if (target?.role === 'admin') { alert('Le compte administrateur ne peut pas être supprimé.'); return; }
-    if (window.confirm('Supprimer ce ' + nomEntite + ' ?')) { await axios.delete(apiUrl + '/' + id,{headers}); chargerProfs(); }
+    if (window.confirm('Supprimer ce ' + nomEntite + ' ?')) { await apiClient.delete(apiUrl + '/' + id,{headers}); chargerProfs(); }
   };
 
   const toggleStatut = async (p) => {
     if (!isAdmin()) return;
-    await axios.put(apiUrl + '/' + p.id, {...p, actif:!p.actif}, {headers});
+    await apiClient.put(apiUrl + '/' + p.id, {...p, actif:!p.actif}, {headers});
     chargerProfs();
   };
 

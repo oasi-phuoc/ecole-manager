@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 const fmt = (v) => {
   if (v == null || v === '') return '—';
@@ -36,7 +35,7 @@ export default function Archives() {
   const chargerListe = async () => {
     setErreur('');
     try {
-      const res = await axios.get(API + '/archives');
+      const res = await apiClient.get('/archives');
       const list = Array.isArray(res.data) ? res.data : [];
       setArchives(list);
       setArchiveId((prev) => prev || list[0]?.id || null);
@@ -54,7 +53,7 @@ export default function Archives() {
     let active = true;
     (async () => {
       try {
-        const res = await axios.get(API + '/archives/' + archiveId);
+        const res = await apiClient.get('/archives/' + archiveId);
         if (!active) return;
         setDetail(res.data);
         const first = res.data?.groupes?.[0];
@@ -75,7 +74,7 @@ export default function Archives() {
     setLoadingTable(true);
     (async () => {
       try {
-        const res = await axios.get(API + `/archives/${archiveId}/tables/${encodeURIComponent(tableName)}`, {
+        const res = await apiClient.get(`/archives/${archiveId}/tables/${encodeURIComponent(tableName)}`, {
           params: { limit: PAGE, offset },
         });
         if (active) setTableData(res.data);
@@ -107,7 +106,7 @@ export default function Archives() {
     setExporting(true);
     setErreur('');
     try {
-      const res = await axios.get(API + `/archives/${archiveId}/export`, {
+      const res = await apiClient.get(`/archives/${archiveId}/export`, {
         responseType: 'blob',
         timeout: 300000,
       });
@@ -139,7 +138,7 @@ export default function Archives() {
 
   const telechargerFichier = async (f) => {
     try {
-      const res = await axios.get(API + `/archives/${archiveId}/fichiers/${f.id}`, { responseType: 'blob' });
+      const res = await apiClient.get(`/archives/${archiveId}/fichiers/${f.id}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;

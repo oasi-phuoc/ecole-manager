@@ -1,5 +1,5 @@
 /**
- * Remplace axios + API onrender par apiClient (migration Supabase).
+ * Remplace axios + URL API legacy par apiClient (Supabase Edge).
  * Usage: node scripts/migrate-frontend-api.js
  */
 const fs = require('fs');
@@ -19,7 +19,7 @@ function walk(dir) {
 walk(root);
 
 const API_LINE =
-  "const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';";
+  "const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';";
 
 for (const file of files) {
   let c = fs.readFileSync(file, 'utf8');
@@ -32,6 +32,7 @@ for (const file of files) {
   const importLine = `import apiClient from '${relToLib.startsWith('.') ? relToLib : './' + relToLib}';`;
 
   c = c.replace(/\r?\nconst API = process\.env\.REACT_APP_API_URL \|\| 'https:\/\/ecole-manager-backend\.onrender\.com\/api';\r?\n/g, '\n');
+  c = c.replace(/\r?\nconst API = process\.env\.REACT_APP_API_URL \|\| 'http:\/\/localhost:5000\/api';\r?\n/g, '\n');
   c = c.replace(/import axios from 'axios';\r?\n/g, `${importLine}\n`);
   c = c.replace(/axios\./g, 'apiClient.');
   c = c.replace(/API \+ /g, '');

@@ -70,7 +70,7 @@ Vercel (CRA) → Supabase Auth + Edge Functions (api-proxy) → Postgres RLS
 - Client : `frontend/src/lib/supabase.js`
 - HTTP : `frontend/src/lib/apiClient.js` (axios → `functions/v1/api-proxy`)
 - Login : `frontend/src/pages/Login.js` (Supabase Auth puis legacy bridge)
-- Fallback Render uniquement si `REACT_APP_SUPABASE_URL` absent (dev local sans Supabase)
+- Dev local : `REACT_APP_API_URL=http://localhost:5000/api` si Supabase non configuré
 
 ## Synchroniser le backend Express copié dans les Edge Functions
 
@@ -85,7 +85,7 @@ Puis redéployer : `npx supabase functions deploy api-proxy`
 
 ## Critères de succès
 
-- Aucun appel hardcodé à `onrender.com` (sauf fallback legacy dans apiClient)
+- Aucun appel hardcodé à `onrender.com` dans le frontend (apiClient → Supabase Edge uniquement en prod)
 - CRUD &lt; 500 ms (pas de cold start Render 15 s)
 - Données prod migrées
 - Backend Render éteint

@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
@@ -25,7 +25,6 @@ import {
 } from '../utils/disponibilites';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
 const passkeySupported = () =>
@@ -291,7 +290,7 @@ export default function Parametres() {
     const [moved] = list.splice(from, 1);
     list.splice(to, 0, moved);
     setNiveauxDB(list);
-    await Promise.all(list.map((n, i) => axios.put(API + '/donnees/niveaux/' + n.id, {
+    await Promise.all(list.map((n, i) => apiClient.put('/donnees/niveaux/' + n.id, {
       nom: n.nom,
       ordre: i + 1,
       periodes_normales: n.periodes_normales,
@@ -304,7 +303,7 @@ export default function Parametres() {
     const [moved] = list.splice(from, 1);
     list.splice(to, 0, moved);
     setLieuxTravailDB(list);
-    await Promise.all(list.map((l, i) => axios.put(API + '/donnees/lieux-travail/' + l.id, { nom: l.nom, ordre: i + 1 }, { headers })));
+    await Promise.all(list.map((l, i) => apiClient.put('/donnees/lieux-travail/' + l.id, { nom: l.nom, ordre: i + 1 }, { headers })));
   };
 
   useEffect(() => { chargerProfil(); }, []);
@@ -318,7 +317,7 @@ export default function Parametres() {
   useEffect(() => { if (onglet === 'ecole' && isAdmin) chargerEcole(); }, [onglet]);
   useEffect(() => {
     if (!isAdmin || onglet !== 'ecole' || sousOngletEcole !== 'responsables') return;
-    axios.get(API + '/employes-administratifs', { headers }).then(r => {
+    apiClient.get('/employes-administratifs', { headers }).then(r => {
       const list = (r.data || []).filter(u => String(u.role_acces) === 'responsable' && u.actif !== false);
       setEmployesResponsablesListe(list.sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')));
     }).catch(() => setEmployesResponsablesListe([]));
@@ -329,7 +328,7 @@ export default function Parametres() {
 
   const chargerProfil = async () => {
     try {
-      const res = await axios.get(API + '/parametres/profil', { headers });
+      const res = await apiClient.get('/parametres/profil', { headers });
       setProfil(res.data);
     } catch (err) { console.error(err); }
   };
@@ -337,9 +336,9 @@ export default function Parametres() {
   const chargerDonnees = async () => {
     try {
       const [niv, lieux, salles] = await Promise.all([
-        axios.get(API + '/donnees/niveaux', { headers }),
-        axios.get(API + '/donnees/lieux-travail', { headers }),
-        axios.get(API + '/donnees/salles', { headers }),
+        apiClient.get('/donnees/niveaux', { headers }),
+        apiClient.get('/donnees/lieux-travail', { headers }),
+        apiClient.get('/donnees/salles', { headers }),
       ]);
       setNiveauxDB(niv.data || []);
       setLieuxTravailDB(lieux.data || []);
@@ -349,7 +348,7 @@ export default function Parametres() {
 
   const chargerBranchesProfil = async (niveaux = []) => {
     try {
-      const r = await axios.get(API + '/branches', { headers });
+      const r = await apiClient.get('/branches', { headers });
       const filtrees = (r.data || []).filter((b) => !niveaux.length || niveaux.includes(b.niveau));
       setBranchesDisponiblesProfil(regrouperBranchesParCode(filtrees, { labelComplet: true }));
     } catch { setBranchesDisponiblesProfil([]); }
@@ -365,9 +364,9 @@ export default function Parametres() {
     }
     try {
       const [cr, d, rem] = await Promise.all([
-        axios.get(API + '/planning/creneaux', { headers }),
-        axios.get(API + '/planning/disponibilites/' + profId, { headers }),
-        axios.get(API + '/planning/disponibilites/' + profId + '/remarque', { headers }).catch(() => ({ data: { remarque: '' } })),
+        apiClient.get('/planning/creneaux', { headers }),
+        apiClient.get('/planning/disponibilites/' + profId, { headers }),
+        apiClient.get('/planning/disponibilites/' + profId + '/remarque', { headers }).catch(() => ({ data: { remarque: '' } })),
       ]);
       setCreneauxDispoProfil(cr.data || []);
       const map = {};
@@ -429,7 +428,7 @@ export default function Parametres() {
 
   const chargerEcole = async () => {
     try {
-      const res = await axios.get(API + '/parametres/ecole', { headers });
+      const res = await apiClient.get('/parametres/ecole', { headers });
       if (res.data) {
         const responsables = migrerResponsablesDepuisLegacy(res.data);
         setEcole(prev => ({
@@ -451,7 +450,7 @@ export default function Parametres() {
 
   const chargerProfs = async () => {
     try {
-      const res = await axios.get(API + '/parametres/profs', { headers });
+      const res = await apiClient.get('/parametres/profs', { headers });
       setProfs(res.data);
     } catch (err) { console.error(err); }
   };
@@ -468,7 +467,7 @@ export default function Parametres() {
 
   const chargerAccesProfs = async () => {
     try {
-      const res = await axios.get(API + '/parametres/acces-profs', { headers });
+      const res = await apiClient.get('/parametres/acces-profs', { headers });
       const data = res.data || {};
       const hasNested = data.professeurs !== undefined;
       const profRaw = hasNested ? (data.professeurs || {}) : data;
@@ -500,7 +499,7 @@ export default function Parametres() {
 
   const chargerMail = async () => {
     try {
-      const res = await axios.get(API + '/parametres/mail', { headers });
+      const res = await apiClient.get('/parametres/mail', { headers });
       const data = res.data || {};
       setMail(prev => ({
         ...prev,
@@ -519,12 +518,12 @@ export default function Parametres() {
         ...profil,
         branches_specialites: normaliserBranchesSpecialites(profil.branches_specialites),
       };
-      await axios.put(API + '/parametres/profil', payload, { headers });
+      await apiClient.put('/parametres/profil', payload, { headers });
       if (profil?.id) {
         const liste = Object.entries(disposProfil).map(([creneau_id, statut]) => payloadDepuisStatut(creneau_id, statut));
         const [rDispo] = await Promise.all([
-          axios.post(API + '/planning/disponibilites/' + profil.id, { disponibilites: liste }, { headers }),
-          axios.post(API + '/planning/disponibilites/' + profil.id + '/remarque', { remarque: remarquesDispoProfil || '' }, { headers }),
+          apiClient.post('/planning/disponibilites/' + profil.id, { disponibilites: liste }, { headers }),
+          apiClient.post('/planning/disponibilites/' + profil.id + '/remarque', { remarque: remarquesDispoProfil || '' }, { headers }),
         ]);
         setDisposProfilDirty(false);
         const nRetirees = Number(rDispo?.data?.affectations_supprimees) || 0;
@@ -540,7 +539,7 @@ export default function Parametres() {
     e.preventDefault();
     if (mdp.nouveau !== mdp.confirmation) { setMsgMdp('mismatch'); return; }
     try {
-      await axios.put(API + '/parametres/mot-de-passe', { ancien: mdp.ancien, nouveau: mdp.nouveau }, { headers });
+      await apiClient.put('/parametres/mot-de-passe', { ancien: mdp.ancien, nouveau: mdp.nouveau }, { headers });
       setMsgMdp('success');
       setMdp({ ancien: '', nouveau: '', confirmation: '' });
       setTimeout(() => setMsgMdp(''), 3000);
@@ -549,7 +548,7 @@ export default function Parametres() {
 
   const chargerMfaStatus = async () => {
     try {
-      const res = await axios.get(API + '/auth/mfa/status', { headers });
+      const res = await apiClient.get('/auth/mfa/status', { headers });
       setMfaEnabled(res.data?.mfa_enabled === true);
       setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || 0));
     } catch {}
@@ -557,7 +556,7 @@ export default function Parametres() {
 
   const chargerPasskeys = async () => {
     try {
-      const res = await axios.get(API + '/auth/passkeys', { headers });
+      const res = await apiClient.get('/auth/passkeys', { headers });
       setPasskeys(Array.isArray(res.data?.passkeys) ? res.data.passkeys : []);
     } catch {
       setPasskeys([]);
@@ -572,7 +571,7 @@ export default function Parametres() {
     }
     setPasskeyLoading(true);
     try {
-      const optRes = await axios.post(API + '/auth/passkeys/register/options', {}, { headers });
+      const optRes = await apiClient.post('/auth/passkeys/register/options', {}, { headers });
       const { options, challenge_token } = optRes.data || {};
       if (!options || !challenge_token) {
         setMsgPasskey('Impossible de démarrer l’enregistrement passkey.');
@@ -580,7 +579,7 @@ export default function Parametres() {
         return;
       }
       const credential = await startRegistration({ optionsJSON: options });
-      await axios.post(API + '/auth/passkeys/register/verify', {
+      await apiClient.post('/auth/passkeys/register/verify', {
         challenge_token,
         credential,
         friendly_name: passkeyName.trim() || undefined,
@@ -603,7 +602,7 @@ export default function Parametres() {
     setMsgPasskey('');
     setPasskeyLoading(true);
     try {
-      await axios.delete(API + '/auth/passkeys/' + id, { headers });
+      await apiClient.delete('/auth/passkeys/' + id, { headers });
       setMsgPasskey('Passkey supprimée.');
       await chargerPasskeys();
     } catch (err) {
@@ -616,7 +615,7 @@ export default function Parametres() {
     setMsgMfa('');
     setMfaLoading(true);
     try {
-      const res = await axios.post(API + '/auth/mfa/setup', {}, { headers });
+      const res = await apiClient.post('/auth/mfa/setup', {}, { headers });
       const secret = res.data?.secret || '';
       const otpUrl = buildOtpAuthUrl({
         secret,
@@ -644,7 +643,7 @@ export default function Parametres() {
     if (!mfaSetupToken || !mfaCode) return setMsgMfa('Token setup ou code manquant.');
     setMfaLoading(true);
     try {
-      const res = await axios.post(API + '/auth/mfa/enable', { setup_token: mfaSetupToken, code: mfaCode }, { headers });
+      const res = await apiClient.post('/auth/mfa/enable', { setup_token: mfaSetupToken, code: mfaCode }, { headers });
       setMfaEnabled(true);
       setMfaBackupCodes(res.data?.backup_codes || []);
       setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || (res.data?.backup_codes || []).length));
@@ -664,7 +663,7 @@ export default function Parametres() {
     if (!mfaCode) return setMsgMfa('Veuillez saisir un code 2FA.');
     setMfaLoading(true);
     try {
-      await axios.post(API + '/auth/mfa/disable', { code: mfaCode }, { headers });
+      await apiClient.post('/auth/mfa/disable', { code: mfaCode }, { headers });
       setMfaEnabled(false);
       setMfaBackupCodes([]);
       setMfaBackupRemaining(0);
@@ -684,7 +683,7 @@ export default function Parametres() {
     if (!mfaCode) return setMsgMfa('Veuillez saisir un code 2FA pour régénérer les codes de secours.');
     setMfaLoading(true);
     try {
-      const res = await axios.post(API + '/auth/mfa/backup/regenerate', { code: mfaCode }, { headers });
+      const res = await apiClient.post('/auth/mfa/backup/regenerate', { code: mfaCode }, { headers });
       setMfaBackupCodes(res.data?.backup_codes || []);
       setMfaBackupRemaining(Number(res.data?.backup_codes_remaining || (res.data?.backup_codes || []).length));
       setMfaCode('');
@@ -701,7 +700,7 @@ export default function Parametres() {
       const horairesData = Object.keys(horairesEcole).length > 0 ? horairesEcole : (ecole.horaires || {});
       const responsables_niveaux = normaliserListeResponsablesNiveaux(ecole.responsables_niveaux)
         .filter((r) => r.nom || r.niveaux.length);
-      await axios.put(API + '/parametres/ecole', { ...ecole, responsables_niveaux, horaires: horairesData }, { headers });
+      await apiClient.put('/parametres/ecole', { ...ecole, responsables_niveaux, horaires: horairesData }, { headers });
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
@@ -749,7 +748,7 @@ export default function Parametres() {
 
   const handleSauverPermissions = async () => {
     try {
-      await axios.put(API + '/parametres/permissions/' + profSelectionne.id, { permissions }, { headers });
+      await apiClient.put('/parametres/permissions/' + profSelectionne.id, { permissions }, { headers });
       setMsgPerms('success');
       chargerProfs();
       setTimeout(() => setMsgPerms(''), 3000);
@@ -760,7 +759,7 @@ export default function Parametres() {
     e.preventDefault();
     setMsgMail('');
     try {
-      await axios.put(API + '/parametres/mail', {
+      await apiClient.put('/parametres/mail', {
         smtp_active: mail.smtp_active === true,
         smtp_host: mail.smtp_host,
         smtp_port: Number(mail.smtp_port || 587),
@@ -784,7 +783,7 @@ export default function Parametres() {
     setMsgMailTest('');
     setTestMailLoading(true);
     try {
-      await axios.post(API + '/parametres/mail/test', { email: mailTestTo }, { headers, timeout: 35000 });
+      await apiClient.post('/parametres/mail/test', { email: mailTestTo }, { headers, timeout: 35000 });
       setMsgMailTest('Email de test envoyé');
     } catch (err) {
       const timeout = err?.code === 'ECONNABORTED';
@@ -815,7 +814,7 @@ export default function Parametres() {
   const handleReset = async () => {
     setResetEtape(3);
     try {
-      await axios.delete(API + '/parametres/reset-tout', { headers });
+      await apiClient.delete('/parametres/reset-tout', { headers });
       setResetEtape(4);
       setResetMsg('Toutes les données ont été supprimées.');
     } catch (err) {
@@ -828,7 +827,7 @@ export default function Parametres() {
     setArchiveLoading(true);
     setResetRentreeMsg('');
     try {
-      const res = await axios.post(API + '/archives', {}, { headers, timeout: 300000 });
+      const res = await apiClient.post('/archives', {}, { headers, timeout: 300000 });
       const id = res.data?.archive_id;
       if (!id) throw new Error('Transfert effectué mais identifiant d’archive manquant.');
       setArchiveId(id);
@@ -851,7 +850,7 @@ export default function Parametres() {
     }
     setResetRentreeEtape(3);
     try {
-      const res = await axios.delete(API + '/parametres/reset-rentree', {
+      const res = await apiClient.delete('/parametres/reset-rentree', {
         headers: { ...headers, 'X-Archive-Id': String(archiveId) },
         data: { archive_id: archiveId },
       });
@@ -1730,9 +1729,9 @@ export default function Parametres() {
                           periodes_soutien: parseInt(donneesNiveauForm.periodes_soutien, 10) || 0,
                         };
                         if (donneesNiveauEdit) {
-                          await axios.put(API + '/donnees/niveaux/' + donneesNiveauEdit.id, { ...payload, ordre: donneesNiveauEdit.ordre }, { headers });
+                          await apiClient.put('/donnees/niveaux/' + donneesNiveauEdit.id, { ...payload, ordre: donneesNiveauEdit.ordre }, { headers });
                         } else {
-                          await axios.post(API + '/donnees/niveaux', { ...payload, ordre: niveauxDB.length + 1 }, { headers });
+                          await apiClient.post('/donnees/niveaux', { ...payload, ordre: niveauxDB.length + 1 }, { headers });
                         }
                         setDonneesNiveauForm({ nom: '', periodes_normales: '20', periodes_soutien: '0' });
                         setDonneesNiveauEdit(null);
@@ -1781,7 +1780,7 @@ export default function Parametres() {
                           {(Number(n.periodes_soutien) || 0) > 0 ? ` + ${Number(n.periodes_soutien)} sout.` : ''}
                         </span>
                         <button onClick={() => { setDonneesNiveauEdit(n); setDonneesNiveauForm({ nom: n.nom, periodes_normales: String(n.periodes_normales ?? 20), periodes_soutien: String(n.periodes_soutien ?? 0) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
-                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await apiClient.delete('/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
                     {niveauxDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun niveau</div>}
@@ -1794,9 +1793,9 @@ export default function Parametres() {
                       e.preventDefault();
                       try {
                         if (donneesLieuEdit) {
-                          await axios.put(API + '/donnees/lieux-travail/' + donneesLieuEdit.id, donneesLieuForm, { headers });
+                          await apiClient.put('/donnees/lieux-travail/' + donneesLieuEdit.id, donneesLieuForm, { headers });
                         } else {
-                          await axios.post(API + '/donnees/lieux-travail', donneesLieuForm, { headers });
+                          await apiClient.post('/donnees/lieux-travail', donneesLieuForm, { headers });
                         }
                         setDonneesLieuForm({ nom: '' });
                         setDonneesLieuEdit(null);
@@ -1819,7 +1818,7 @@ export default function Parametres() {
                         <span style={{ color: '#cbd5e1', fontSize: 14, marginRight: 2 }}>⠿</span>
                         <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{l.nom}</span>
                         <button onClick={() => { setDonneesLieuEdit(l); setDonneesLieuForm({ nom: l.nom }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
-                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
+                        <button onClick={async () => { if (window.confirm('Supprimer ?')) { await apiClient.delete('/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
                     {lieuxTravailDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun lieu</div>}
@@ -1832,9 +1831,9 @@ export default function Parametres() {
                       e.preventDefault();
                       try {
                         if (donneesSalleEdit) {
-                          await axios.put(API + '/donnees/salles/' + donneesSalleEdit.id, donneesSalleForm, { headers });
+                          await apiClient.put('/donnees/salles/' + donneesSalleEdit.id, donneesSalleForm, { headers });
                         } else {
-                          await axios.post(API + '/donnees/salles', donneesSalleForm, { headers });
+                          await apiClient.post('/donnees/salles', donneesSalleForm, { headers });
                         }
                         setDonneesSalleForm({ nom: '', lieu_travail_id: '' });
                         setDonneesSalleEdit(null);
@@ -1859,7 +1858,7 @@ export default function Parametres() {
                             <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#f8fafc', borderRadius: 7, border: '1px solid #e2e8f0', marginBottom: 4 }}>
                               <span style={{ flex: 1, fontSize: 13, color: '#334155' }}>{s.nom}</span>
                               <button onClick={() => { setDonneesSalleEdit(s); setDonneesSalleForm({ nom: s.nom, lieu_travail_id: String(s.lieu_travail_id) }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}>✏️</button>
-                              <button onClick={async () => { if (window.confirm('Supprimer ?')) { await axios.delete(API + '/donnees/salles/' + s.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
+                              <button onClick={async () => { if (window.confirm('Supprimer ?')) { await apiClient.delete('/donnees/salles/' + s.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                             </div>
                           ))}
                         </div>
@@ -2106,7 +2105,7 @@ export default function Parametres() {
               })}
               <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={async () => {
                 try {
-                  await axios.put(API + '/parametres/acces-profs', { acces_profs: accesParRole }, { headers });
+                  await apiClient.put('/parametres/acces-profs', { acces_profs: accesParRole }, { headers });
                   setMsgAccesProfs('success');
                   setTimeout(() => setMsgAccesProfs(''), 3000);
                 } catch { setMsgAccesProfs('error'); }

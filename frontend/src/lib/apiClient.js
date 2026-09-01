@@ -1,14 +1,23 @@
 import axios from 'axios';
 import { supabase, getFunctionsBase, supabaseConfigured } from './supabase';
 
-const LEGACY_API =
-  process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
+/** Dev local sans Supabase : REACT_APP_API_URL=http://localhost:5000/api */
+const LOCAL_API = process.env.REACT_APP_API_URL || '';
 
 const LEGACY_TOKEN_KEY = 'ecole_manager_legacy_token';
 
-/** Client HTTP : Supabase Edge api-proxy si configuré, sinon Render legacy */
+function resolveBaseURL() {
+  if (supabaseConfigured) return `${getFunctionsBase()}/api-proxy`;
+  if (LOCAL_API) return LOCAL_API.replace(/\/$/, '');
+  console.warn(
+    '[apiClient] Configure REACT_APP_SUPABASE_URL + REACT_APP_SUPABASE_ANON_KEY (prod) ou REACT_APP_API_URL (dev local).',
+  );
+  return '/api';
+}
+
+/** Client HTTP : Supabase Edge api-proxy (prod) ou backend Express local (dev) */
 export const apiClient = axios.create({
-  baseURL: supabaseConfigured ? `${getFunctionsBase()}/api-proxy` : LEGACY_API,
+  baseURL: resolveBaseURL(),
   withCredentials: !supabaseConfigured,
 });
 
@@ -34,8 +43,5 @@ export function setLegacyToken(token) {
 export function clearLegacyToken() {
   sessionStorage.removeItem(LEGACY_TOKEN_KEY);
 }
-
-/** Raccourci compatible ancien code `API + '/path'` */
-export const API = supabaseConfigured ? '' : LEGACY_API;
 
 export default apiClient;

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { getSessionUser, fetchSessionUser } from '../utils/session';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -25,14 +24,14 @@ export default function Dashboard() {
 
   const chargerMemo = async () => {
     try {
-      const res = await axios.get(API + '/notes-personnelles', { headers });
+      const res = await apiClient.get('/notes-personnelles', { headers });
       setMemo(res.data.contenu || '');
     } catch {}
   };
 
   const sauvegarderMemo = async () => {
     try {
-      await axios.put(API + '/notes-personnelles', { contenu: memo }, { headers });
+      await apiClient.put('/notes-personnelles', { contenu: memo }, { headers });
       showToast('Notes sauvegardées.');
     } catch {
       showToast('Erreur lors de la sauvegarde.', 'error');
@@ -57,8 +56,8 @@ export default function Dashboard() {
   const chargerStats = async () => {
     try {
       const [st, ap] = await Promise.all([
-        axios.get(API + '/statistiques', { headers }).catch(() => ({ data: null })),
-        axios.get(API + '/calendrier/prof', { headers }).catch(() => ({ data: [] })),
+        apiClient.get('/statistiques', { headers }).catch(() => ({ data: null })),
+        apiClient.get('/calendrier/prof', { headers }).catch(() => ({ data: [] })),
       ]);
       setAgendaPerso(ap.data || []);
       if (st.data) {

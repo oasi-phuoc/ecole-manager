@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
@@ -54,7 +54,6 @@ import {
   titreStatutDispo,
 } from '../utils/disponibilites';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
 const OPTIONS_PDF_A3 = { paysage: true, format: 'a3', orientation: 'landscape', margin: marginPdfA3('landscape') };
 const optionsPdfA3General = (orientation) => {
@@ -369,8 +368,8 @@ export default function EmploiDuTemps() {
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
-      axios.get(API + '/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
-      axios.get(API + '/planning/disponibilites', { headers }).then(r => setAllDispos(r.data)).catch(() => {});
+      apiClient.get('/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
+      apiClient.get('/planning/disponibilites', { headers }).then(r => setAllDispos(r.data)).catch(() => {});
     }
     if (onglet === 'plannings') setSousOngletPlanning('classes');
     if (onglet === 'affectations') setSousOngletAff('classes');
@@ -379,16 +378,16 @@ export default function EmploiDuTemps() {
   const chargerDonnees = async () => {
     try {
       const [niv, lieux, salles] = await Promise.all([
-        axios.get(API + '/donnees/niveaux', { headers }),
-        axios.get(API + '/donnees/lieux-travail', { headers }),
-        axios.get(API + '/donnees/salles', { headers }),
+        apiClient.get('/donnees/niveaux', { headers }),
+        apiClient.get('/donnees/lieux-travail', { headers }),
+        apiClient.get('/donnees/salles', { headers }),
       ]);
       setNiveauxDB(niv.data || []);
       setLieuxTravailDB(lieux.data || []);
       setSallesDB(salles.data || []);
     } catch(err) { console.error(err); }
     try {
-      const par = await axios.get(API + '/parametres/ecole', { headers });
+      const par = await apiClient.get('/parametres/ecole', { headers });
       const h = par.data?.horaires || {};
       setParametresHoraires(typeof h === 'string' ? JSON.parse(h) : h);
     } catch(err) { console.error('parametres horaires:', err); }
@@ -400,7 +399,7 @@ export default function EmploiDuTemps() {
     const [moved] = list.splice(from, 1);
     list.splice(to, 0, moved);
     setPools(list);
-    await Promise.all(list.map((p, i) => axios.put(API + '/planning/pools/' + p.id, { nom: p.nom, site: p.site, couleur: p.couleur, niveau: p.niveau, prof_ids: (p.profs||[]).map(x=>x.id), classe_ids: (p.classes||[]).map(x=>x.id), branche_ids: (p.branches||[]).map(x=>x.id), horaires: p.horaires, ordre: i + 1 }, { headers })));
+    await Promise.all(list.map((p, i) => apiClient.put('/planning/pools/' + p.id, { nom: p.nom, site: p.site, couleur: p.couleur, niveau: p.niveau, prof_ids: (p.profs||[]).map(x=>x.id), classe_ids: (p.classes||[]).map(x=>x.id), branche_ids: (p.branches||[]).map(x=>x.id), horaires: p.horaires, ordre: i + 1 }, { headers })));
   };
 
   const horaireParamToPool = (horaireParam) => {
@@ -487,17 +486,17 @@ export default function EmploiDuTemps() {
   const chargerTout = async () => {
     try {
       const [p, cl, m, cr, po, af, ch, edt, cc, pc, bc] = await Promise.all([
-        axios.get(API + '/profs', { headers }),
-        axios.get(API + '/classes', { headers }),
-        axios.get(API + '/branches', { headers }),
-        axios.get(API + '/planning/creneaux', { headers }),
-        axios.get(API + '/planning/pools', { headers }),
-        axios.get(API + '/planning/affectations', { headers }),
-        axios.get(API + '/planning/classe-horaires', { headers }),
-        axios.get(API + '/emploi-du-temps', { headers }),
-        axios.get(API + '/planning/classe-couleurs', { headers }),
-        axios.get(API + '/planning/prof-couleurs', { headers }),
-        axios.get(API + '/planning/branche-couleurs', { headers }),
+        apiClient.get('/profs', { headers }),
+        apiClient.get('/classes', { headers }),
+        apiClient.get('/branches', { headers }),
+        apiClient.get('/planning/creneaux', { headers }),
+        apiClient.get('/planning/pools', { headers }),
+        apiClient.get('/planning/affectations', { headers }),
+        apiClient.get('/planning/classe-horaires', { headers }),
+        apiClient.get('/emploi-du-temps', { headers }),
+        apiClient.get('/planning/classe-couleurs', { headers }),
+        apiClient.get('/planning/prof-couleurs', { headers }),
+        apiClient.get('/planning/branche-couleurs', { headers }),
       ]);
       setProfs(p.data.filter(x => x.actif !== false));
       setClasses(trierClassesParNom(cl.data));
@@ -536,8 +535,8 @@ export default function EmploiDuTemps() {
 
   const chargerDisposAffectations = async (pool_id = poolAffId) => {
     try {
-      const url = API + '/planning/general' + (pool_id ? '?pool_id=' + pool_id : '');
-      const r = await axios.get(url, { headers });
+      const url = '/planning/general' + (pool_id ? '?pool_id=' + pool_id : '');
+      const r = await apiClient.get(url, { headers });
       const map = {};
       (r.data?.dispos || []).forEach(d => { map[`${d.prof_id}-${d.creneau_id}`] = statutDepuisDispoRow(d); });
       setDisposAffectations(map);
@@ -562,8 +561,8 @@ export default function EmploiDuTemps() {
 
   const chargerDispos = async (prof_id) => {
     const [rDispos, rRemarque] = await Promise.all([
-      axios.get(API + '/planning/disponibilites/' + prof_id, { headers }),
-      axios.get(API + '/planning/disponibilites/' + prof_id + '/remarque', { headers }),
+      apiClient.get('/planning/disponibilites/' + prof_id, { headers }),
+      apiClient.get('/planning/disponibilites/' + prof_id + '/remarque', { headers }),
     ]);
     const map = {};
     creneaux.forEach(c => { map[c.id] = true; });
@@ -588,11 +587,11 @@ export default function EmploiDuTemps() {
     const liste = Object.entries(dispos).map(([creneau_id, statut]) => payloadDepuisStatut(creneau_id, statut));
     try {
       const [rDispo] = await Promise.all([
-        axios.post(API + '/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
-        axios.post(API + '/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
+        apiClient.post('/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
+        apiClient.post('/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
       ]);
       try {
-        const rAll = await axios.get(API + '/planning/disponibilites', { headers });
+        const rAll = await apiClient.get('/planning/disponibilites', { headers });
         setAllDispos(rAll.data || []);
       } catch {}
       await chargerTout();
@@ -658,9 +657,9 @@ export default function EmploiDuTemps() {
       const { poolHoraires, pauses } = getHoraireForLieu(poolForm.site);
       const payload = { ...poolForm, niveau: niveauxSelectionnes.join(','), horaires: poolHoraires };
       if (poolEdit) {
-        await axios.put(API + '/planning/pools/' + poolEdit.id, payload, { headers });
+        await apiClient.put('/planning/pools/' + poolEdit.id, payload, { headers });
       } else {
-        await axios.post(API + '/planning/pools', payload, { headers });
+        await apiClient.post('/planning/pools', payload, { headers });
       }
       setPausesParPeriode(clonePausesParPeriode(pauses));
       setShowPoolForm(false);
@@ -720,16 +719,16 @@ export default function EmploiDuTemps() {
     if (!isAdmin()) return;
     if (!prof_id) {
       const aff = getAffectation(classe_id, creneau_id);
-      if (aff) await axios.delete(API + '/planning/affectations/' + aff.id, { headers });
+      if (aff) await apiClient.delete('/planning/affectations/' + aff.id, { headers });
     } else {
-      await axios.post(API + '/planning/affectations', { prof_id, classe_id, creneau_id, pool_id: idPoolNumerique() }, { headers });
+      await apiClient.post('/planning/affectations', { prof_id, classe_id, creneau_id, pool_id: idPoolNumerique() }, { headers });
     }
     chargerTout();
   };
 
   // Planning branches
   const chargerPlanningBranches = async (pool_id) => {
-    const r = await axios.get(API + '/planning/planning-branches?pool_id=' + pool_id, { headers });
+    const r = await apiClient.get('/planning/planning-branches?pool_id=' + pool_id, { headers });
     setPlanningBranches(r.data);
   };
 
@@ -739,7 +738,7 @@ export default function EmploiDuTemps() {
   const handleBrancheChange = async (classe_id, matiere_id, pool_id, prof_id) => {
     if (!isAdmin()) return;
     if (!prof_id) {
-      await axios.delete(API + '/planning/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
+      await apiClient.delete('/planning/planning-branches', { data: {classe_id, matiere_id, pool_id}, headers });
     } else {
       // Vérifier nombre de périodes
       const matiere = matieres.find(m => m.id==matiere_id);
@@ -752,7 +751,7 @@ export default function EmploiDuTemps() {
           return;
         }
       }
-      await axios.post(API + '/planning/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
+      await apiClient.post('/planning/planning-branches', { prof_id, classe_id, matiere_id, pool_id }, { headers });
     }
     chargerPlanningBranches(pool_id);
   };
@@ -768,7 +767,7 @@ export default function EmploiDuTemps() {
   const chargerDonneesGeneraux = async (poolIds) => {
     const ids = (poolIds || []).map((id) => String(id)).filter(Boolean);
     const reps = await Promise.all(
-      ids.map((id) => axios.get(API + '/planning/general?pool_id=' + encodeURIComponent(id), { headers }))
+      ids.map((id) => apiClient.get('/planning/general?pool_id=' + encodeURIComponent(id), { headers }))
     );
     return reps.map((r) => {
       const d = r?.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {};
@@ -822,7 +821,7 @@ export default function EmploiDuTemps() {
   };
 
   const chargerPlanningProf = async (id) => {
-    const r = await axios.get(API + '/planning/prof/' + id, { headers });
+    const r = await apiClient.get('/planning/prof/' + id, { headers });
     setPlanningProf(r.data);
   };
 
@@ -834,8 +833,8 @@ export default function EmploiDuTemps() {
     }
     setPlanningClasseLoading(true);
     try {
-      const url = API + '/planning/classe/' + id + (pool_id ? '?pool_id=' + pool_id : '');
-      const r = await axios.get(url, { headers });
+      const url = '/planning/classe/' + id + (pool_id ? '?pool_id=' + pool_id : '');
+      const r = await apiClient.get(url, { headers });
       setPlanningClasse(r.data || null);
       if (pool_id) chargerPlanningBranches(pool_id);
     } catch (err) {
@@ -1436,7 +1435,7 @@ export default function EmploiDuTemps() {
     return formaterNomComplet(aff?.prof_nom || '');
   };
   const updateCoursSalle = async (cours, nouvelleSalle) => {
-    await axios.put(API + '/emploi-du-temps/' + cours.id, {
+    await apiClient.put('/emploi-du-temps/' + cours.id, {
       classe_id: cours.classe_id,
       matiere_id: cours.matiere_id,
       prof_id: cours.prof_id,
@@ -1531,7 +1530,7 @@ export default function EmploiDuTemps() {
         if (classeIdStr) {
           const coursClasse = coursDuCreneau.find(c => String(c.classe_id) === String(classeIdStr));
           if (!coursClasse) {
-            await axios.post(API + '/emploi-du-temps', {
+            await apiClient.post('/emploi-du-temps', {
               classe_id: Number(classeIdStr),
               matiere_id: null,
               prof_id: null,
@@ -1684,7 +1683,7 @@ export default function EmploiDuTemps() {
       // Recharger pour partir d'un état propre
       let coursActuels = [];
       try {
-        const r = await axios.get(API + '/emploi-du-temps', { headers });
+        const r = await apiClient.get('/emploi-du-temps', { headers });
         coursActuels = Array.isArray(r.data) ? r.data : (r.data?.cours || []);
       } catch (_) {
         coursActuels = coursEmploiDuTemps || [];
@@ -1713,7 +1712,7 @@ export default function EmploiDuTemps() {
             await updateCoursSalle(existant, salle);
             existant.salle = salle;
           } else {
-            const cree = await axios.post(API + '/emploi-du-temps', {
+            const cree = await apiClient.post('/emploi-du-temps', {
               classe_id: Number(classeId),
               matiere_id: null,
               prof_id: null,
@@ -1765,11 +1764,11 @@ export default function EmploiDuTemps() {
         .find(id => id !== idCible && String(getCouleurClasse(id)).toLowerCase() === couleurCibleNorm);
 
       const requetes = [
-        axios.post(API + '/planning/classe-couleurs', { classe_id: classeId, couleur }, { headers })
+        apiClient.post('/planning/classe-couleurs', { classe_id: classeId, couleur }, { headers })
       ];
       if (autreId) {
         requetes.push(
-          axios.post(API + '/planning/classe-couleurs', { classe_id: autreId, couleur: couleurActuelleCible }, { headers })
+          apiClient.post('/planning/classe-couleurs', { classe_id: autreId, couleur: couleurActuelleCible }, { headers })
         );
       }
       await Promise.all(requetes);
@@ -1806,11 +1805,11 @@ export default function EmploiDuTemps() {
         .find(id => id !== idCible && String(getCouleurProf(id)).toLowerCase() === couleurCibleNorm);
 
       const requetes = [
-        axios.post(API + '/planning/prof-couleurs', { prof_id: profId, couleur }, { headers })
+        apiClient.post('/planning/prof-couleurs', { prof_id: profId, couleur }, { headers })
       ];
       if (autreId) {
         requetes.push(
-          axios.post(API + '/planning/prof-couleurs', { prof_id: autreId, couleur: couleurActuelleCible }, { headers })
+          apiClient.post('/planning/prof-couleurs', { prof_id: autreId, couleur: couleurActuelleCible }, { headers })
         );
       }
       await Promise.all(requetes);
@@ -1963,11 +1962,11 @@ export default function EmploiDuTemps() {
         .find(id => id !== idCible && String(getCouleurBranche(id)).toLowerCase() === couleurCibleNorm);
 
       const requetes = [
-        axios.post(API + '/planning/branche-couleurs', { matiere_id: matiereId, couleur }, { headers })
+        apiClient.post('/planning/branche-couleurs', { matiere_id: matiereId, couleur }, { headers })
       ];
       if (autreId) {
         requetes.push(
-          axios.post(API + '/planning/branche-couleurs', { matiere_id: autreId, couleur: couleurActuelleCible }, { headers })
+          apiClient.post('/planning/branche-couleurs', { matiere_id: autreId, couleur: couleurActuelleCible }, { headers })
         );
       }
       await Promise.all(requetes);
@@ -2689,10 +2688,10 @@ export default function EmploiDuTemps() {
       }
 
       for (const id of deletes) {
-        await axios.delete(API + '/planning/affectations/' + id, { headers });
+        await apiClient.delete('/planning/affectations/' + id, { headers });
       }
       for (const a of upserts) {
-        await axios.post(API + '/planning/affectations', {
+        await apiClient.post('/planning/affectations', {
           prof_id: a.prof_id,
           classe_id: a.classe_id || null,
           matiere_id: a.matiere_id || null,
@@ -2702,7 +2701,7 @@ export default function EmploiDuTemps() {
         }, { headers });
       }
       for (const t of updatesTitulaires) {
-        await axios.post(API + '/planning/titulaires', t, { headers });
+        await apiClient.post('/planning/titulaires', t, { headers });
       }
       await chargerTout();
       showToast('Changements sauvegardés.');
@@ -2727,7 +2726,7 @@ export default function EmploiDuTemps() {
         const nouvelleMatiere = branchesMatiereDraftMap[key] || null;
         const actuelle = aff.matiere_id || null;
         if (String(actuelle || '') === String(nouvelleMatiere || '')) continue;
-        await axios.post(API + '/planning/affectations', {
+        await apiClient.post('/planning/affectations', {
           prof_id: aff.prof_id,
           classe_id: classePlanningId,
           matiere_id: nouvelleMatiere,
@@ -2769,7 +2768,7 @@ export default function EmploiDuTemps() {
         const draft = (draftMap.get(classeId) || []).map(x => `${x.jour}|${x.periode}`).sort().join(',');
         if (saved === draft) continue;
         classesModifiees.push(String(classeId));
-        await axios.post(API + '/planning/classe-horaires/' + classeId, {
+        await apiClient.post('/planning/classe-horaires/' + classeId, {
           horaires: draftMap.get(classeId) || []
         }, { headers });
       }
@@ -2786,7 +2785,7 @@ export default function EmploiDuTemps() {
           const autorises = new Set((draftMap.get(classeId) || []).map(h => `${h.jour}|${h.periode}`));
           const estAutorise = autorises.has(`${cr.jour}|${cr.periode}`);
           if (!estAutorise) {
-            await axios.delete(API + '/planning/affectations/' + aff.id, { headers });
+            await apiClient.delete('/planning/affectations/' + aff.id, { headers });
           }
         }
       }
@@ -3898,7 +3897,7 @@ export default function EmploiDuTemps() {
         .filter((cl) => cl && cl.actif !== false && poolsParClasse.has(String(cl.id)));
       if (classesExport.length) {
         const reps = await Promise.all(
-          classesExport.map((cl) => axios.get(API + '/planning/classe/' + cl.id, { headers }).catch(() => null))
+          classesExport.map((cl) => apiClient.get('/planning/classe/' + cl.id, { headers }).catch(() => null))
         );
         reps.forEach((rep, idx) => {
           if (!rep?.data) return;
@@ -3942,7 +3941,7 @@ export default function EmploiDuTemps() {
       );
       if (profsExport.length) {
         const reps = await Promise.all(
-          profsExport.map((p) => axios.get(API + '/planning/prof/' + p.id, { headers }).catch(() => null))
+          profsExport.map((p) => apiClient.get('/planning/prof/' + p.id, { headers }).catch(() => null))
         );
         reps.forEach((rep, idx) => {
           if (!rep?.data) return;
@@ -4065,8 +4064,8 @@ export default function EmploiDuTemps() {
           ? `${siteFile}_${nomPoolSafe(pool)}`
           : siteFile;
         try {
-          const url = API + '/planning/general?pool_id=' + encodeURIComponent(poolId);
-          const rep = await axios.get(url, { headers });
+          const url = '/planning/general?pool_id=' + encodeURIComponent(poolId);
+          const rep = await apiClient.get(url, { headers });
           const data = rep.data || {};
           generalParPoolId.set(poolId, data);
           const titreGeneral = plusieursPoolsMemeSite
@@ -4412,7 +4411,7 @@ export default function EmploiDuTemps() {
       if (sousOngletPlanning === 'classes') {
         if (!classesToutesTriees.length) return alert('Aucune classe à imprimer.');
         const reps = await Promise.all(
-          classesToutesTriees.map(cl => axios.get(API + '/planning/classe/' + cl.id, { headers }))
+          classesToutesTriees.map(cl => apiClient.get('/planning/classe/' + cl.id, { headers }))
         );
         const sections = reps.map((rep) => {
           const data = rep.data;
@@ -4442,7 +4441,7 @@ export default function EmploiDuTemps() {
       if (sousOngletPlanning === 'professeurs') {
         if (!profs.length) return alert('Aucun professeur à imprimer.');
         const reps = await Promise.all(
-          profs.map(p => axios.get(API + '/planning/prof/' + p.id, { headers }))
+          profs.map(p => apiClient.get('/planning/prof/' + p.id, { headers }))
         );
         const sections = reps.map((rep) => {
           const data = rep.data;
@@ -5417,7 +5416,7 @@ export default function EmploiDuTemps() {
                     }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button style={styles.btnIconDel} title="Supprimer" onClick={async () => { if(window.confirm('Supprimer ?')) { await axios.delete(API+'/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>
+                    <button style={styles.btnIconDel} title="Supprimer" onClick={async () => { if(window.confirm('Supprimer ?')) { await apiClient.delete('/planning/pools/'+pool.id,{headers}); chargerTout(); } }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </div>}

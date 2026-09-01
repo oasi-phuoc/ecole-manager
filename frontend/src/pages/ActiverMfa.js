@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 import { clearSessionUser, getSessionUser, setSessionUser } from '../utils/session';
 
-const API = process.env.REACT_APP_API_URL || 'https://ecole-manager-backend.onrender.com/api';
 
 export default function ActiverMfa() {
   const navigate = useNavigate();
@@ -23,7 +22,7 @@ export default function ActiverMfa() {
     let active = true;
     (async () => {
       try {
-        const res = await axios.get(API + '/auth/mfa/status');
+        const res = await apiClient.get('/auth/mfa/status');
         if (!active) return;
         if (res.data?.mfa_enabled === true || res.data?.mfa_exempt === true) {
           const current = getSessionUser() || {};
@@ -45,7 +44,7 @@ export default function ActiverMfa() {
     setMsg('');
     setLoading(true);
     try {
-      const res = await axios.post(API + '/auth/mfa/setup', {});
+      const res = await apiClient.post('/auth/mfa/setup', {});
       const secret = res.data?.secret || '';
       const otpUrl = buildOtpAuthUrl({
         secret,
@@ -76,7 +75,7 @@ export default function ActiverMfa() {
     }
     setLoading(true);
     try {
-      const res = await axios.post(API + '/auth/mfa/enable', { setup_token: setupToken, code });
+      const res = await apiClient.post('/auth/mfa/enable', { setup_token: setupToken, code });
       const codes = res.data?.backup_codes || [];
       setEnabled(true);
       setBackupCodes(codes);
@@ -99,7 +98,7 @@ export default function ActiverMfa() {
   };
 
   const deconnexion = async () => {
-    try { await axios.post(API + '/auth/logout'); } catch {}
+    try { await apiClient.post('/auth/logout'); } catch {}
     clearSessionUser();
     navigate('/login', { replace: true });
   };
