@@ -1,6 +1,7 @@
 import jwt from "npm:jsonwebtoken@9";
 import {
   createPool,
+  decryptText,
   encryptText,
   generateBackupCodes,
   generateOtpAuthUrl,
@@ -127,4 +128,64 @@ export async function handleMfaEnable(req: Request, cors: Record<string, string>
   } finally {
     await pool.end();
   }
+}
+
+export async function handleMfaBackupRegenerate(
+  req: Request,
+  cors: Record<string, string>,
+): Promise<Response> {
+  const auth = verifyJwtFromRequest(req);
+  if (!auth) return json(cors, { message: "Token manquant" }, 401);
+
+  const body = await req.json().catch(() => ({}));
+  const code = body?.code;
+  if (!code) return json(cors, { message: "Code MFA manquant" }, 400);
+
+  const pool = createPool();
+  try {
+    const r = await pool.query(
+      "SELECT mfa_enabled, mfa_secret FROM utilisateurs WHERE id = $1",
+      [auth.id],
+    );
+    const row = r.rows[0];
+    if (!row || row.mfa_enabled !== true) {
+      return json(cors, { message: "MFA non activee" }, 400);
+    }
+
+    const secret = decryptText(row.mfa_secret || "");
+    if (!secret || !verifyTotp(secret, String(code), 2)) {
+      return json(cors, { message: "Code MFA invalide" }, 401);
+    }
+
+    const backup = generateBackupCodes();
+    await pool.query(
+      "UPDATE utilisateurs SET mfa_backup_codes = $1::jsonb WHERE id = $2",
+      [JSON.stringify(backup.hashes), auth.id],
+    );
+
+    return json(cors, {
+      message: "Nouveaux codes de secours generes",
+      backup_codes: backup.plain,
+      backup_codes_remaining: backup.plain.length,
+    });
+  } catch (err) {
+    console.error("auth-fast-mfa-backup error:", err);
+    return json(cors, { message: "Erreur serveur" }, 500);
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function handleMfaDisable(
+  _req: Request,
+  cors: Record<string, string>,
+): Promise<Response> {
+  return json(
+    cors,
+    {
+      message:
+        "La double authentification est obligatoire. Elle ne peut pas être désactivée pour le moment.",
+    },
+    403,
+  );
 }

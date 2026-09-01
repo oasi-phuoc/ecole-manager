@@ -3,7 +3,14 @@ import { Buffer } from "node:buffer";
 import { createRequire } from "node:module";
 import { handleAuthLogin } from "./auth-fast-login.ts";
 import { handleAuthLoginMfa } from "./auth-fast-mfa.ts";
-import { handleMfaEnable, handleMfaSetup, handleMfaStatus } from "./auth-fast-mfa-setup.ts";
+import {
+  handleMfaBackupRegenerate,
+  handleMfaDisable,
+  handleMfaEnable,
+  handleMfaSetup,
+  handleMfaStatus,
+} from "./auth-fast-mfa-setup.ts";
+import { handleAuthRegister } from "./auth-fast-register.ts";
 import {
   handleDeletePasskey,
   handleListPasskeys,
@@ -12,7 +19,7 @@ import {
   handlePasskeyRegisterOptions,
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
-import { handleAuthMoi } from "./auth-fast-session.ts";
+import { handleAuthChangerMdp, handleAuthLogout, handleAuthMoi } from "./auth-fast-session.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -98,6 +105,18 @@ Deno.serve(async (req: Request) => {
       return await handleAuthLoginMfa(req, cors);
     }
 
+    if (path === "/auth/register" && req.method === "POST") {
+      return await handleAuthRegister(req, cors);
+    }
+
+    if (path === "/auth/logout" && req.method === "POST") {
+      return await handleAuthLogout(req, cors);
+    }
+
+    if (path === "/auth/changer-mdp" && req.method === "POST") {
+      return await handleAuthChangerMdp(req, cors);
+    }
+
     if (path === "/auth/moi" && req.method === "GET") {
       return await handleAuthMoi(req, cors);
     }
@@ -112,6 +131,14 @@ Deno.serve(async (req: Request) => {
 
     if (path === "/auth/mfa/enable" && req.method === "POST") {
       return await handleMfaEnable(req, cors);
+    }
+
+    if (path === "/auth/mfa/backup/regenerate" && req.method === "POST") {
+      return await handleMfaBackupRegenerate(req, cors);
+    }
+
+    if (path === "/auth/mfa/disable" && req.method === "POST") {
+      return await handleMfaDisable(req, cors);
     }
 
     if (path === "/auth/login/passkey/options" && req.method === "POST") {
