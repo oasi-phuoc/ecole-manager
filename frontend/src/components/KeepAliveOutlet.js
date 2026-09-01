@@ -1,7 +1,17 @@
 import React, { useRef } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
 
-const MAX_CACHED_VIEWS = 8;
+const DEFAULT_KEEP_ALIVE_VIEWS = 12;
+
+function parseKeepAliveViews() {
+  const raw = process.env.REACT_APP_KEEP_ALIVE_VIEWS;
+  if (raw == null || raw === '') return DEFAULT_KEEP_ALIVE_VIEWS;
+  const n = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_KEEP_ALIVE_VIEWS;
+  return n;
+}
+
+const MAX_CACHED_VIEWS = parseKeepAliveViews();
 
 /**
  * Garde les dernières pages montées (display:none) pour éviter
