@@ -20,18 +20,25 @@ export const clearSessionUser = () => {
 export const fetchSessionUser = async () => {
   if (supabaseConfigured && supabase) {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      sessionUser = null;
-      return null;
+    if (session) {
+      const { data, error } = await supabase.rpc('get_me');
+      if (error || !data) {
+        const res = await apiClient.get('/auth/moi');
+        sessionUser = res.data || null;
+        return sessionUser;
+      }
+      sessionUser = data;
+      return sessionUser;
     }
-    const { data, error } = await supabase.rpc('get_me');
-    if (error || !data) {
+    // Connexion JWT legacy (sans session Supabase Auth)
+    try {
       const res = await apiClient.get('/auth/moi');
       sessionUser = res.data || null;
       return sessionUser;
+    } catch {
+      sessionUser = null;
+      return null;
     }
-    sessionUser = data;
-    return sessionUser;
   }
   const res = await apiClient.get('/auth/moi');
   sessionUser = res.data || null;

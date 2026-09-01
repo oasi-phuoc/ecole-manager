@@ -12,6 +12,7 @@ import {
   handlePasskeyRegisterOptions,
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
+import { handleAuthMoi } from "./auth-fast-session.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -95,6 +96,10 @@ Deno.serve(async (req: Request) => {
 
     if (path === "/auth/login/mfa" && req.method === "POST") {
       return await handleAuthLoginMfa(req, cors);
+    }
+
+    if (path === "/auth/moi" && req.method === "GET") {
+      return await handleAuthMoi(req, cors);
     }
 
     if (path === "/auth/mfa/status" && req.method === "GET") {
