@@ -23,8 +23,8 @@ Deploy : `npx supabase functions deploy api-proxy --use-api`
 | auth (logout, changer-mdp, register, mfa backup/disable) | ✅ | auth-fast-session.ts, auth-fast-register.ts |
 | classes | ✅ | routes-fast/classes.ts |
 | branches | ✅ | routes-fast/branches.ts |
+| profs | ✅ | routes-fast/profs.ts |
 | eleves | ⏳ | — |
-| profs | ⏳ | — |
 | emploi-du-temps | ⏳ | — |
 | presences | ⏳ | — |
 | notes | ⏳ | — |

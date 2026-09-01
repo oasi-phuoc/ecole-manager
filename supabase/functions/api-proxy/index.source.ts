@@ -22,6 +22,7 @@ import {
 import { handleAuthChangerMdp, handleAuthLogout, handleAuthMoi } from "./auth-fast-session.ts";
 import { handleBranchesRoute } from "./routes-fast/branches.ts";
 import { handleClassesRoute } from "./routes-fast/classes.ts";
+import { handleProfsRoute } from "./routes-fast/profs.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -174,6 +175,10 @@ Deno.serve(async (req: Request) => {
 
     if (path.startsWith("/branches")) {
       return await handleBranchesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/profs")) {
+      return await handleProfsRoute(req, path, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);
