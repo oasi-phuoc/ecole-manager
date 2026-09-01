@@ -1,13 +1,35 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
 
-const backendRoot = path.join(__dirname, '..', '_shared', 'ecole-backend', 'src');
-
-function loadRoute(routePath) {
-  return require(path.join(backendRoot, 'routes', routePath));
-}
+const auth = require('./vendor/ecole-backend/src/routes/auth');
+const eleves = require('./vendor/ecole-backend/src/routes/eleves');
+const profs = require('./vendor/ecole-backend/src/routes/profs');
+const employesAdministratifs = require('./vendor/ecole-backend/src/routes/employesAdministratifs');
+const classes = require('./vendor/ecole-backend/src/routes/classes');
+const branches = require('./vendor/ecole-backend/src/routes/branches');
+const emploiDuTemps = require('./vendor/ecole-backend/src/routes/emploiDuTemps');
+const presences = require('./vendor/ecole-backend/src/routes/presences');
+const notes = require('./vendor/ecole-backend/src/routes/notes');
+const calendrier = require('./vendor/ecole-backend/src/routes/calendrier');
+const parametres = require('./vendor/ecole-backend/src/routes/parametres');
+const comptabilite = require('./vendor/ecole-backend/src/routes/comptabilite');
+const statistiques = require('./vendor/ecole-backend/src/routes/statistiques');
+const importRoutes = require('./vendor/ecole-backend/src/routes/import');
+const planClasse = require('./vendor/ecole-backend/src/routes/planClasse');
+const observations = require('./vendor/ecole-backend/src/routes/observations');
+const planning = require('./vendor/ecole-backend/src/routes/planning');
+const documentsAdministratifs = require('./vendor/ecole-backend/src/routes/documentsAdministratifs');
+const inventaireBranches = require('./vendor/ecole-backend/src/routes/inventaireBranches');
+const tcfState = require('./vendor/ecole-backend/src/routes/tcfState');
+const notesPersonnelles = require('./vendor/ecole-backend/src/routes/notesPersonnelles');
+const chatbot = require('./vendor/ecole-backend/src/routes/chatbot');
+const donnees = require('./vendor/ecole-backend/src/routes/donnees');
+const enclassements = require('./vendor/ecole-backend/src/routes/enclassements');
+const devoirs = require('./vendor/ecole-backend/src/routes/devoirs');
+const sorties = require('./vendor/ecole-backend/src/routes/sorties');
+const visiteClasses = require('./vendor/ecole-backend/src/routes/visiteClasses');
+const sondages = require('./vendor/ecole-backend/src/routes/sondages');
 
 function createApp() {
   const app = express();
@@ -28,34 +50,34 @@ function createApp() {
     res.status(200).json({ ok: true, service: 'ecole-manager-api-proxy' });
   });
 
-  app.use('/auth', loadRoute('auth'));
-  app.use('/eleves', loadRoute('eleves'));
-  app.use('/profs', loadRoute('profs'));
-  app.use('/employes-administratifs', loadRoute('employesAdministratifs'));
-  app.use('/classes', loadRoute('classes'));
-  app.use('/branches', loadRoute('branches'));
-  app.use('/emploi-du-temps', loadRoute('emploiDuTemps'));
-  app.use('/presences', loadRoute('presences'));
-  app.use('/notes', loadRoute('notes'));
-  app.use('/calendrier', loadRoute('calendrier'));
-  app.use('/parametres', loadRoute('parametres'));
-  app.use('/comptabilite', loadRoute('comptabilite'));
-  app.use('/statistiques', loadRoute('statistiques'));
-  app.use('/import', loadRoute('import'));
-  app.use('/plan-classe', loadRoute('planClasse'));
-  app.use('/observations', loadRoute('observations'));
-  app.use('/planning', loadRoute('planning'));
-  app.use('/documents-administratifs', loadRoute('documentsAdministratifs'));
-  app.use('/inventaire-branches', loadRoute('inventaireBranches'));
-  app.use('/tcf-state', loadRoute('tcfState'));
-  app.use('/notes-personnelles', loadRoute('notesPersonnelles'));
-  app.use('/chatbot', loadRoute('chatbot'));
-  app.use('/donnees', loadRoute('donnees'));
-  app.use('/enclassements', loadRoute('enclassements'));
-  app.use('/devoirs', loadRoute('devoirs'));
-  app.use('/sorties', loadRoute('sorties'));
-  app.use('/visites-classes', loadRoute('visiteClasses'));
-  app.use('/sondages', loadRoute('sondages'));
+  app.use('/auth', auth);
+  app.use('/eleves', eleves);
+  app.use('/profs', profs);
+  app.use('/employes-administratifs', employesAdministratifs);
+  app.use('/classes', classes);
+  app.use('/branches', branches);
+  app.use('/emploi-du-temps', emploiDuTemps);
+  app.use('/presences', presences);
+  app.use('/notes', notes);
+  app.use('/calendrier', calendrier);
+  app.use('/parametres', parametres);
+  app.use('/comptabilite', comptabilite);
+  app.use('/statistiques', statistiques);
+  app.use('/import', importRoutes);
+  app.use('/plan-classe', planClasse);
+  app.use('/observations', observations);
+  app.use('/planning', planning);
+  app.use('/documents-administratifs', documentsAdministratifs);
+  app.use('/inventaire-branches', inventaireBranches);
+  app.use('/tcf-state', tcfState);
+  app.use('/notes-personnelles', notesPersonnelles);
+  app.use('/chatbot', chatbot);
+  app.use('/donnees', donnees);
+  app.use('/enclassements', enclassements);
+  app.use('/devoirs', devoirs);
+  app.use('/sorties', sorties);
+  app.use('/visites-classes', visiteClasses);
+  app.use('/sondages', sondages);
 
   app.use((err, req, res, next) => {
     console.error(err);
