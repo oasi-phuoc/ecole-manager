@@ -19,10 +19,13 @@ import {
   handlePasskeyRegisterOptions,
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
-import { handleAuthChangerMdp, handleAuthLogout, handleAuthMoi } from "./auth-fast-session.ts";
+import { handleChangerMdp, handleLogout, handleMoi } from "./auth-fast-session.ts";
 import { handleBranchesRoute } from "./routes-fast/branches.ts";
 import { handleClassesRoute } from "./routes-fast/classes.ts";
+import { handleDonneesRoute } from "./routes-fast/donnees.ts";
+import { handleElevesRoute } from "./routes-fast/eleves.ts";
 import { handleProfsRoute } from "./routes-fast/profs.ts";
+import { handleStatistiquesRoute } from "./routes-fast/statistiques.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -113,15 +116,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (path === "/auth/logout" && req.method === "POST") {
-      return await handleAuthLogout(req, cors);
+      return await handleLogout(req, cors);
     }
 
     if (path === "/auth/changer-mdp" && req.method === "POST") {
-      return await handleAuthChangerMdp(req, cors);
+      return await handleChangerMdp(req, cors);
     }
 
     if (path === "/auth/moi" && req.method === "GET") {
-      return await handleAuthMoi(req, cors);
+      return await handleMoi(req, cors);
     }
 
     if (path === "/auth/mfa/status" && req.method === "GET") {
@@ -179,6 +182,18 @@ Deno.serve(async (req: Request) => {
 
     if (path.startsWith("/profs")) {
       return await handleProfsRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/eleves")) {
+      return await handleElevesRoute(req, path, cors, url);
+    }
+
+    if (path.startsWith("/donnees")) {
+      return await handleDonneesRoute(req, path, cors);
+    }
+
+    if (path.startsWith("/statistiques")) {
+      return await handleStatistiquesRoute(req, path, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);

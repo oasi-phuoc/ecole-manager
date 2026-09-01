@@ -3,7 +3,7 @@ import { createPool, json, verifyJwtFromRequest } from "./auth-fast-shared.ts";
 
 function mdpFortValide(mdp: unknown): string | null {
   const s = String(mdp || "");
-  if (!s || s.length < 12) return "Le mot de passe doit contenir au moins 12 caractères";
+  if (s.length < 12) return "Le mot de passe doit contenir au moins 12 caractères";
   if (!/[A-Z]/.test(s)) return "Au moins une lettre majuscule requise";
   if (!/[a-z]/.test(s)) return "Au moins une lettre minuscule requise";
   if (!/[0-9]/.test(s)) return "Au moins un chiffre requis";
@@ -11,10 +11,7 @@ function mdpFortValide(mdp: unknown): string | null {
   return null;
 }
 
-export async function handleAuthMoi(
-  req: Request,
-  cors: Record<string, string>,
-): Promise<Response> {
+export async function handleMoi(req: Request, cors: Record<string, string>): Promise<Response> {
   const auth = verifyJwtFromRequest(req);
   if (!auth) return json(cors, { message: "Token manquant" }, 401);
 
@@ -36,24 +33,18 @@ export async function handleAuthMoi(
       doit_changer_mdp: row.doit_changer_mdp || false,
     });
   } catch (err) {
-    console.error("auth-fast-moi error:", err);
+    console.error("auth moi:", err);
     return json(cors, { message: "Erreur serveur" }, 500);
   } finally {
     await pool.end();
   }
 }
 
-export async function handleAuthLogout(
-  _req: Request,
-  cors: Record<string, string>,
-): Promise<Response> {
+export async function handleLogout(_req: Request, cors: Record<string, string>): Promise<Response> {
   return json(cors, { message: "Deconnexion reussie" });
 }
 
-export async function handleAuthChangerMdp(
-  req: Request,
-  cors: Record<string, string>,
-): Promise<Response> {
+export async function handleChangerMdp(req: Request, cors: Record<string, string>): Promise<Response> {
   const auth = verifyJwtFromRequest(req);
   if (!auth) return json(cors, { message: "Token manquant" }, 401);
 
@@ -70,7 +61,7 @@ export async function handleAuthChangerMdp(
     );
     return json(cors, { message: "Mot de passe changé avec succès" });
   } catch (err) {
-    console.error("auth-fast-changer-mdp error:", err);
+    console.error("auth changer-mdp:", err);
     return json(cors, { message: "Erreur serveur" }, 500);
   } finally {
     await pool.end();

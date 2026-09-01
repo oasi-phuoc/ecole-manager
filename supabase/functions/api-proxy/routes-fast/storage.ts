@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 
 export const BUCKETS = {
   elevesPhotos: "eleves-photos",
+  documentsEleves: "documents-eleves",
   documentsProfs: "documents-profs",
 };
 
