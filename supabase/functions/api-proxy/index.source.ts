@@ -20,6 +20,7 @@ import {
   handlePasskeyRegisterVerify,
 } from "./auth-fast-passkey.ts";
 import { handleAuthChangerMdp, handleAuthLogout, handleAuthMoi } from "./auth-fast-session.ts";
+import { handleClassesRoute } from "./routes-fast/classes.ts";
 
 (globalThis as { Buffer?: typeof Buffer; global?: typeof globalThis }).Buffer = Buffer;
 (globalThis as { global?: typeof globalThis }).global = globalThis;
@@ -164,6 +165,10 @@ Deno.serve(async (req: Request) => {
     const passkeyDelete = path.match(/^\/auth\/passkeys\/(\d+)$/);
     if (passkeyDelete && req.method === "DELETE") {
       return await handleDeletePasskey(req, cors, passkeyDelete[1]);
+    }
+
+    if (path.startsWith("/classes")) {
+      return await handleClassesRoute(req, path, cors);
     }
 
     const rewritten = new Request(new URL(path + url.search, url.origin), req);
