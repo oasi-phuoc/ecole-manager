@@ -7,6 +7,7 @@ import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 export default function Classes() {
@@ -34,6 +35,7 @@ export default function Classes() {
   const [filtreElevesActif, setFiltreElevesActif] = useState('actif');
   const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
   const [loraImportLoading, setLoraImportLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [planToast, setPlanToast] = useState(false);
@@ -108,25 +110,27 @@ export default function Classes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      if (!classeEdit) {
-        const nomSaisi = (form.nom || '').trim().toLowerCase();
-        const niveauSaisi = (form.niveau || '').trim().toUpperCase();
-        const existeDeja = classes.some(c =>
-          (c.nom || '').trim().toLowerCase() === nomSaisi &&
-          (c.niveau || '').trim().toUpperCase() === niveauSaisi
-        );
-        if (existeDeja) {
-          alert('Cette classe existe déjà avec le même nom et le même niveau.');
-          return;
-        }
+    if (!classeEdit) {
+      const nomSaisi = (form.nom || '').trim().toLowerCase();
+      const niveauSaisi = (form.niveau || '').trim().toUpperCase();
+      const existeDeja = classes.some(c =>
+        (c.nom || '').trim().toLowerCase() === nomSaisi &&
+        (c.niveau || '').trim().toUpperCase() === niveauSaisi
+      );
+      if (existeDeja) {
+        alert('Cette classe existe déjà avec le même nom et le même niveau.');
+        return;
       }
+    }
+    setSaving(true);
+    try {
       if (classeEdit) await apiClient.put('/classes/'+classeEdit.id, form, {headers});
       else await apiClient.post('/classes', form, {headers});
       setShowForm(false); setClasseEdit(null);
       setForm({nom:'',niveau:'',annee_scolaire:'',prof_principal_id:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+    finally { setSaving(false); }
   };
 
   const handleEdit = (c) => {
@@ -212,6 +216,7 @@ export default function Classes() {
 
   const sauverObservation = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       await apiClient.post('/observations/eleve/'+eleveDetail.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
@@ -219,6 +224,7 @@ export default function Classes() {
       const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
       setObservations(r.data);
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const [planPositions, setPlanPositions] = useState({});
@@ -359,11 +365,13 @@ export default function Classes() {
   };
 
   const sauverPlanClasse = async () => {
+    setSaving(true);
     try {
       await apiClient.post('/plan-classe/'+detailClasse.id, {positions: planPositions}, {headers});
       setPlanToast(true);
       setTimeout(() => setPlanToast(false), 3000);
     } catch(err) { alert('Erreur sauvegarde'); }
+    finally { setSaving(false); }
   };
 
   const imprimerPlanClasse = () => {
@@ -597,6 +605,7 @@ export default function Classes() {
   const sauverObsModal = async (e) => {
     e.preventDefault();
     if (!obsEleve) return;
+    setSaving(true);
     try {
       await apiClient.post('/observations/eleve/'+obsEleve.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
@@ -605,6 +614,7 @@ export default function Classes() {
       setObservations(r.data);
       try { const r2 = await apiClient.get('/classes/'+detailClasse.id+'/activites-recentes', {headers}); setDerniereActuClasse(r2.data || null); } catch(e) {}
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const imprimerObsEleve = () => {
@@ -1043,7 +1053,7 @@ export default function Classes() {
             </div>
             <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
               <button type="button" style={s.btnCancel} onClick={() => setShowObsForm(false)}>Annuler</button>
-              <button type="submit" style={s.btnSave}>Sauvegarder</button>
+              <LoadingButton type="submit" loading={saving} style={s.btnSave}>Sauvegarder</LoadingButton>
             </div>
           </form>
         )}
@@ -1056,10 +1066,13 @@ export default function Classes() {
             return obsEditId === obs.id ? (
               <form key={obs.id} onSubmit={async (e) => {
                 e.preventDefault();
-                await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
-                setObsEditId(null);
-                const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
-                setObservations(r.data);
+                setSaving(true);
+                try {
+                  await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
+                  setObsEditId(null);
+                  const r = await apiClient.get('/observations/eleve/'+eleveDetail.id, {headers});
+                  setObservations(r.data);
+                } finally { setSaving(false); }
               }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                 <div style={s.field}>
                   <label style={s.lbl}>Titre</label>
@@ -1089,7 +1102,7 @@ export default function Classes() {
                 </div>
                 <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
                   <button type="button" style={s.btnCancel} onClick={() => setObsEditId(null)}>Annuler</button>
-                  <button type="submit" style={s.btnSave}>Sauvegarder</button>
+                  <LoadingButton type="submit" loading={saving} style={s.btnSave}>Sauvegarder</LoadingButton>
                 </div>
               </form>
             ) : (
@@ -1179,7 +1192,7 @@ export default function Classes() {
             )}
             <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
               {docsEleveLoading ? (
-                <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
+                <PageLoader label="Chargement..." compact style={{padding:20}} />
               ) : eleveDocs.length===0 ? (
                 <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour cet élève</div>
               ) : eleveDocs.map(doc => (
@@ -1239,7 +1252,7 @@ export default function Classes() {
               <button style={s.btnCancel} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
-              <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
+              <PageLoader label="Chargement..." compact style={{padding:30}} />
             ) : <>
               <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:12,color:'#78350f',lineHeight:1.7}}>
                 <div>Toutes les cases (chances, retenues et avertissements) doivent être visées et datées par le FL ou les responsables.</div>
@@ -1425,7 +1438,7 @@ export default function Classes() {
                 </div>
                 <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
                   <button type="button" style={s.btnCancel} onClick={() => setShowObsForm(false)}>Annuler</button>
-                  <button type="submit" style={s.btnSave}>Sauvegarder</button>
+                  <LoadingButton type="submit" loading={saving} style={s.btnSave}>Sauvegarder</LoadingButton>
                 </div>
               </form>
             )}
@@ -1437,10 +1450,13 @@ export default function Classes() {
                 return obsEditId === obs.id ? (
                   <form key={obs.id} onSubmit={async (e) => {
                     e.preventDefault();
-                    await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
-                    setObsEditId(null);
-                    const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
-                    setObservations(r.data);
+                    setSaving(true);
+                    try {
+                      await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
+                      setObsEditId(null);
+                      const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
+                      setObservations(r.data);
+                    } finally { setSaving(false); }
                   }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                     <div style={s.field}><label style={s.lbl}>Titre</label><input style={s.inp} value={obsEditForm.titre} onChange={e => setObsEditForm({...obsEditForm,titre:e.target.value})} required /></div>
                     <div style={{...s.field,marginTop:10}}><label style={s.lbl}>Remarque</label><textarea style={{...s.inp,minHeight:60,resize:'vertical'}} value={obsEditForm.contenu} onChange={e => setObsEditForm({...obsEditForm,contenu:e.target.value})} required /></div>
@@ -1452,7 +1468,7 @@ export default function Classes() {
                     </div>
                     <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
                       <button type="button" style={s.btnCancel} onClick={() => setObsEditId(null)}>Annuler</button>
-                      <button type="submit" style={s.btnSave}>Sauvegarder</button>
+                      <LoadingButton type="submit" loading={saving} style={s.btnSave}>Sauvegarder</LoadingButton>
                     </div>
                   </form>
                 ) : (
@@ -1555,7 +1571,7 @@ export default function Classes() {
         {classeVueTab === 'plan' && (
           <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
             {planToast && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Plan sauvegardé !</div>}
-            <button style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</button>
+            <LoadingButton loading={saving} style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</LoadingButton>
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer</button>
             <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>
           </div>
@@ -1741,7 +1757,7 @@ export default function Classes() {
               <div style={{padding:'9px 14px',fontWeight:700,fontSize:11,color:'white',background:'#6366f1',textTransform:'uppercase',letterSpacing:'0.05em',borderRadius:'10px 10px 0 0'}}>Devoirs</div>
               <div style={{maxHeight:'calc(100vh - 250px)',overflowY:'auto'}}>
               {devoirsLoading ? (
-                <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Chargement…</div>
+                <PageLoader label="Chargement…" compact style={{padding:20,fontSize:13}} />
               ) : devoirsFiltres.length === 0 ? (
                 <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:13}}>Aucun devoir</div>
               ) : devoirsFiltres.map(d => (
@@ -2019,7 +2035,7 @@ export default function Classes() {
                   </thead>
                   <tbody>
                     {inventaireLoading ? (
-                      <tr><td colSpan="7" style={s.empty}>Chargement...</td></tr>
+                      <tr><td colSpan="7"><PageLoader label="Chargement..." compact /></td></tr>
                     ) : inventaireRows.filter(l => !rechercheInventaire || (l.nom_document||'').toLowerCase().includes(rechercheInventaire.toLowerCase())).length===0 ? (
                       <tr><td colSpan="7" style={s.empty}>Aucune ligne d'inventaire</td></tr>
                     ) : (() => {
@@ -2176,7 +2192,7 @@ export default function Classes() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={s.btnSave}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>

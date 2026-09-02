@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { listerNomsResponsablesEcole } from '../utils/responsablesEcole';
@@ -200,6 +201,7 @@ export default function TCF() {
   const [classes, setClasses] = useState([]);
   const [eleves, setEleves] = useState([]);
   const [chargement, setChargement] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [siteNames, setSiteNames] = useState({ site1: 'Site 1', site2: 'Site 2' });
   const [siteLevels, setSiteLevels] = useState({ site1: [], site2: [] });
@@ -1180,7 +1182,7 @@ export default function TCF() {
         });
         return (
           <>
-            {chargement ? <div style={styles.empty}>Chargement...</div> : profsParNiveauFiltres.map(([niveau, liste]) => (
+            {chargement ? <PageLoader label="Chargement..." style={styles.empty} /> : profsParNiveauFiltres.map(([niveau, liste]) => (
         <div key={niveau} style={styles.niveauBlock}>
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
           <div style={styles.profsList}>
@@ -4130,9 +4132,14 @@ export default function TCF() {
 
   const handleSaveCurrentTab = async () => {
     if (!tabHasUnsaved(onglet)) { afficherSaveMsg(onglet, 'Aucun changement à sauvegarder.'); return; }
-    if (onglet === 'pool') await handleSavePool();
-    else if (onglet === 'affectation' || onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
-    else if (onglet === 'resultat') await handleSaveResultat();
+    try {
+      setSaving(true);
+      if (onglet === 'pool') await handleSavePool();
+      else if (onglet === 'affectation' || onglet === 'classes' || onglet === 'roles') await handleSaveAffectation();
+      else if (onglet === 'resultat') await handleSaveResultat();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -4144,14 +4151,14 @@ export default function TCF() {
           {(onglet === 'pool' || onglet === 'affectation' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
             <>
               {saveToast && (
-                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4f46e5' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>
                   {saveToast}
                 </span>
               )}
               {onglet === 'pool' && (
                 <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
               )}
-              <button onClick={handleSaveCurrentTab} style={styles.btnSauver}>Sauvegarder</button>
+              <LoadingButton onClick={handleSaveCurrentTab} style={styles.btnSauver} loading={saving}>Sauvegarder</LoadingButton>
             </>
           )}
           {onglet === 'plannings' && planningsType === 'classes' && (

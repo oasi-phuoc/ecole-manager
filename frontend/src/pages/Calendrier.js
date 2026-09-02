@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import CustomSelect from '../components/CustomSelect';
+import { LoadingButton } from '../components/LoadingUI';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -34,6 +35,7 @@ export default function Calendrier() {
   const [profEventForm, setProfEventForm] = useState({ date: '', titre: '', type: 'Devoir', description: '' });
   const [showProfForm, setShowProfForm] = useState(false);
   const [profEventEditId, setProfEventEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const headers = {};
 
   useEffect(() => {
@@ -86,13 +88,17 @@ export default function Calendrier() {
   const sauverProfEvent = async (e) => {
     e.preventDefault();
     if (!profEventForm.date || !profEventForm.titre) return;
-    if (profEventEditId) {
-      await apiClient.put('/calendrier/prof/' + profEventEditId, profEventForm, { headers });
-    } else {
-      await apiClient.post('/calendrier/prof', profEventForm, { headers });
-    }
-    resetProfEventForm();
-    chargerCalendrierProf();
+    setSaving(true);
+    try {
+      if (profEventEditId) {
+        await apiClient.put('/calendrier/prof/' + profEventEditId, profEventForm, { headers });
+      } else {
+        await apiClient.post('/calendrier/prof', profEventForm, { headers });
+      }
+      resetProfEventForm();
+      chargerCalendrierProf();
+    } catch (err) { alert('Erreur: ' + err.message); }
+    finally { setSaving(false); }
   };
 
   const vacances = evenements.filter(e => e.categorie === 'vacance');
@@ -103,6 +109,7 @@ export default function Calendrier() {
 
   const sauverVacance = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = { titre: formVacance.nom_vacance, nom_vacance: formVacance.nom_vacance, date_debut: formVacance.date_debut, date_fin: formVacance.date_fin||formVacance.date_debut, categorie: 'vacance', couleur: '#f59e0b', type: 'Conge' };
       if (vacanceEdit) await apiClient.put('/calendrier/'+vacanceEdit.id, data, {headers});
@@ -110,10 +117,12 @@ export default function Calendrier() {
       setFormVacance({nom_vacance:'',date_debut:'',date_fin:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const sauverSeance = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = { titre: formSeance.titre, date_debut: formSeance.date_debut, date_fin: formSeance.date_debut, heure_debut: formSeance.heure_debut, heure_fin: formSeance.heure_fin||null, categorie: 'seance', couleur: '#0369a1', type: 'Reunion' };
       if (seanceEdit) await apiClient.put('/calendrier/'+seanceEdit.id, data, {headers});
@@ -122,10 +131,12 @@ export default function Calendrier() {
       setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const sauverRetenue = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const prof1 = profs.find(p => String(p.id)===String(formRetenue.prof1_id));
       const prof2 = profs.find(p => String(p.id)===String(formRetenue.prof2_id));
@@ -137,10 +148,12 @@ export default function Calendrier() {
       setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const sauverEval = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = { titre: formEval.nom_vacance, nom_vacance: formEval.nom_vacance, date_debut: formEval.date_debut, date_fin: formEval.date_fin||formEval.date_debut, categorie: 'evaluation', couleur: '#7c3aed', type: 'Examen' };
       if (evalEdit) await apiClient.put('/calendrier/'+evalEdit.id, data, {headers});
@@ -148,10 +161,12 @@ export default function Calendrier() {
       setFormEval({nom_vacance:'',date_debut:'',date_fin:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const sauverParticulier = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = { titre: formParticulier.titre, date_debut: formParticulier.date_debut, date_fin: formParticulier.date_fin||formParticulier.date_debut, categorie: 'particulier', couleur: '#9333ea', type: 'Evenement' };
       if (particulierEdit) await apiClient.put('/calendrier/'+particulierEdit.id, data, {headers});
@@ -160,6 +175,7 @@ export default function Calendrier() {
       setFormParticulier({titre:'',date_debut:'',date_fin:''});
       chargerTout();
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const supprimerEvenement = async (id) => {
@@ -273,7 +289,7 @@ export default function Calendrier() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormVacance(false)}>Annuler</button>
-                <button type="submit" style={{...s.btnSave,background:'#f59e0b'}}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={{...s.btnSave,background:'#f59e0b'}}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -295,7 +311,7 @@ export default function Calendrier() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormEval(false)}>Annuler</button>
-                <button type="submit" style={{...s.btnSave,background:'#7c3aed'}}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={{...s.btnSave,background:'#7c3aed'}}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -321,7 +337,7 @@ export default function Calendrier() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormSeance(false)}>Annuler</button>
-                <button type="submit" style={{...s.btnSave,background:'#0369a1'}}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={{...s.btnSave,background:'#0369a1'}}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -366,7 +382,7 @@ export default function Calendrier() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormRetenue(false)}>Annuler</button>
-                <button type="submit" style={{...s.btnSave,background:'#dc2626'}}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={{...s.btnSave,background:'#dc2626'}}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -389,7 +405,7 @@ export default function Calendrier() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowFormParticulier(false)}>Annuler</button>
-                <button type="submit" style={{...s.btnSave,background:'#9333ea'}}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} style={{...s.btnSave,background:'#9333ea'}}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -603,8 +619,8 @@ export default function Calendrier() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={resetProfEventForm}
                 style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
-              <button type="submit"
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{profEventEditId ? 'Enregistrer' : 'Ajouter'}</button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="En cours de sauvegarde…"
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{profEventEditId ? 'Enregistrer' : 'Ajouter'}</LoadingButton>
             </div>
           </form>
         )}

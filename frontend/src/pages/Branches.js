@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { stickyPageChrome } from '../styles/pageShell';
 import apiClient from '../lib/apiClient';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [brancheEdit, setBrancheEdit] = useState(null);
   const [form, setForm] = useState({ nom:'', niveau:'', periodes_semaine:'', coefficient:'1', type_branche:'principale', designation_courte:'', suivi_notes:true });
@@ -23,20 +26,24 @@ export default function Branches() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
-  const chargerBranches = async () => {
+  const chargerBranches = async ({ withLoader = true } = {}) => {
+    if (withLoader) setLoading(true);
     try { const res = await apiClient.get('/branches',{headers}); setBranches(res.data); }
     catch(err) { console.error(err); }
+    finally { if (withLoader) setLoading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setErreur('');
+    setSaving(true);
     try {
       if (brancheEdit) await apiClient.put('/branches/'+brancheEdit.id, form, {headers});
       else await apiClient.post('/branches', form, {headers});
       setShowForm(false); setBrancheEdit(null);
       setForm({nom:'',niveau:'',periodes_semaine:'',coefficient:'1',type_branche:'principale',designation_courte:'',suivi_notes:true});
-      chargerBranches();
+      await chargerBranches({ withLoader: false });
     } catch(err) { setErreur(err.response?.data?.message||'Erreur serveur'); }
+    finally { setSaving(false); }
   };
 
   const handleEdit = (b) => {
@@ -165,7 +172,7 @@ export default function Branches() {
               </div>
               <div style={s.formActions}>
                 <button type="button" style={s.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={s.btnSave}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={saving} loadingLabel="En cours de sauvegarde…" style={s.btnSave}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -173,6 +180,9 @@ export default function Branches() {
       )}
 
       <div style={{marginTop:4}}>
+        {loading ? (
+          <PageLoader />
+        ) : (
         <div style={s.tableWrap}>
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
@@ -215,6 +225,7 @@ export default function Branches() {
         </table>
         </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { LoadingButton } from '../components/LoadingUI';
 
 const getHeaders = () => { const u = JSON.parse(localStorage.getItem('user') || '{}'); return { Authorization: `Bearer ${u.token}` }; };
 
@@ -53,6 +54,7 @@ export default function SortieScolaire() {
   const [rechercheSorties, setRechercheSorties] = useState('');
   const [showTriTypes, setShowTriTypes] = useState(false);
   const [triType, setTriType] = useState('Tous');
+  const [saving, setSaving] = useState(false);
 
   const charger = async () => {
     try {
@@ -161,6 +163,7 @@ export default function SortieScolaire() {
       lieu_depart: lieuDepart,
       lieu_retour: lieuRetour,
     };
+    setSaving(true);
     try {
       if (editId) {
         await apiClient.put('/sorties/' + editId, payload, { headers: getHeaders() });
@@ -170,6 +173,7 @@ export default function SortieScolaire() {
       setShowForm(false);
       charger();
     } catch (err) { console.error(err); }
+    finally { setSaving(false); }
   };
 
   const supprimer = async (id) => {
@@ -532,7 +536,7 @@ export default function SortieScolaire() {
 
               <div style={st.formActions}>
                 <button type="button" style={st.btnCancel} onClick={() => setShowForm(false)}>Annuler</button>
-                <button type="submit" style={st.btnSave}>Enregistrer</button>
+                <LoadingButton type="submit" loading={saving} style={st.btnSave}>Enregistrer</LoadingButton>
               </div>
             </form>
           </div>

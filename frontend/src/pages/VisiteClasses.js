@@ -5,6 +5,7 @@ import apiClient from '../lib/apiClient';
 import CustomSelect from '../components/CustomSelect';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const getHeaders = () => {
   const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -126,6 +127,8 @@ export default function VisiteClasses() {
   const [branches, setBranches] = useState([]);
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savingFeedback, setSavingFeedback] = useState(false);
 
   const [search, setSearch]           = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('');
@@ -246,6 +249,7 @@ export default function VisiteClasses() {
     }
     setMissingKeys(null);
     setMsg('');
+    setSaving(true);
     try {
       const payload = {
         formateur_id: formateurId || null,
@@ -268,7 +272,7 @@ export default function VisiteClasses() {
       charger();
     } catch (err) {
       setMsg('Erreur : ' + (err.response?.data?.message || err.message));
-    }
+    } finally { setSaving(false); }
   };
 
   const anneeScolaire = () => {
@@ -592,6 +596,7 @@ export default function VisiteClasses() {
   };
 
   const sauverFeedback = async () => {
+    setSavingFeedback(true);
     try {
       await apiClient.put('/visites-classes/' + feedbackVisite.id,
         { ...feedbackVisite, feedback: JSON.stringify(feedbackData) },
@@ -599,6 +604,7 @@ export default function VisiteClasses() {
       setShowFeedbackForm(false);
       charger();
     } catch (err) { alert('Erreur : ' + (err.response?.data?.message || err.message)); }
+    finally { setSavingFeedback(false); }
   };
 
   const detailVisite = visites.find((v) => v.id === detailId);
@@ -710,7 +716,7 @@ export default function VisiteClasses() {
 
       {/* Liste des visites ; détail visite et détail feedback en modales */}
       {loading ? (
-        <div style={s.empty}>Chargement...</div>
+        <PageLoader label="Chargement…" />
       ) : (
         <div style={s.splitRow}>
           <div style={s.splitMain}>
@@ -1219,7 +1225,7 @@ export default function VisiteClasses() {
             <div style={{ ...s.formActions, justifyContent: 'flex-end' }}>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={() => setShowFeedbackForm(false)} style={s.btnCancel}>Annuler</button>
-                <button type="button" onClick={sauverFeedback} style={s.btnSave}>Sauvegarder</button>
+                <LoadingButton type="button" onClick={sauverFeedback} loading={savingFeedback} style={s.btnSave}>Sauvegarder</LoadingButton>
               </div>
             </div>
           </div>
@@ -1360,7 +1366,7 @@ export default function VisiteClasses() {
               <div style={{ ...s.formActions, justifyContent: 'flex-end', marginTop: msg ? 4 : 0, paddingTop: msg ? 20 : 16 }}>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button type="button" onClick={() => setShowForm(false)} style={s.btnCancel}>Annuler</button>
-                  <button type="submit" style={s.btnSave}>{editId ? 'Modifier' : 'Sauvegarder'}</button>
+                  <LoadingButton type="submit" loading={saving} style={s.btnSave}>{editId ? 'Modifier' : 'Sauvegarder'}</LoadingButton>
                 </div>
               </div>
             </form>

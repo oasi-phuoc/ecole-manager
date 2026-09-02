@@ -3,6 +3,7 @@ import apiClient from '../lib/apiClient';
 import { useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 export default function DocumentsAdministratifs() {
@@ -148,14 +149,13 @@ export default function DocumentsAdministratifs() {
       setMsg('❌ Veuillez sélectionner un fichier.');
       return;
     }
+    if (selectedFile && selectedFile.size > 12 * 1024 * 1024) {
+      setMsg('❌ Fichier trop volumineux (max 12MB).');
+      return;
+    }
 
     setSaving(true);
     try {
-      if (selectedFile && selectedFile.size > 12 * 1024 * 1024) {
-        setMsg('❌ Fichier trop volumineux (max 12MB).');
-        setSaving(false);
-        return;
-      }
       if (editing) {
         let payload = { designation: designation.trim(), categorie, sous_categorie: sousCategorie || null };
         if (selectedFile) {
@@ -183,8 +183,9 @@ export default function DocumentsAdministratifs() {
       setMsg('');
     } catch (err) {
       setMsg('❌ Erreur : ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (doc) => {
@@ -324,7 +325,7 @@ export default function DocumentsAdministratifs() {
         )}
 
         {loading ? (
-          <div style={{ color: '#94a3b8', padding: 12 }}>Chargement...</div>
+          <PageLoader label="Chargement..." compact style={{ padding: 12 }} />
         ) : (
           <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0', marginTop: 4 }}>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 290px)', WebkitOverflowScrolling: 'touch' }}>
@@ -514,9 +515,9 @@ export default function DocumentsAdministratifs() {
                   <button type="button" onClick={() => { setShowForm(false); resetForm(); setMsg(''); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
                     Annuler
                   </button>
-                  <button type="submit" disabled={saving} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: saving ? 'wait' : 'pointer', fontSize: 13 }}>
-                    {saving ? 'Enregistrement...' : (editing ? 'Modifier' : 'Ajouter')}
-                  </button>
+                  <LoadingButton type="submit" loading={saving} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                    {editing ? 'Modifier' : 'Ajouter'}
+                  </LoadingButton>
                 </div>
               </form>
             </div>

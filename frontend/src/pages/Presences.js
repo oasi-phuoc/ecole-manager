@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const OPTS = ['', 'P', 'A', 'R', 'E', 'C'];
@@ -68,6 +69,7 @@ export default function Presences() {
   const [statistiques, setStatistiques] = useState([]);
   const [valide, setValide] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [classeHoraires, setClasseHoraires] = useState([]);
   const [evenementsCalendrier, setEvenementsCalendrier] = useState([]);
   const [apercuMois, setApercuMois] = useState({});
@@ -371,6 +373,7 @@ export default function Presences() {
 
   const handleSauvegarder = async () => {
     if (!valide) return;
+    setSaving(true);
     try {
       const data = eleves.map(e => ({
         eleve_id: e.id,
@@ -383,6 +386,8 @@ export default function Presences() {
       chargerStats();
     } catch (err) {
       alert('Erreur: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -502,9 +507,9 @@ export default function Presences() {
         <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',minHeight:36}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
             {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
-            <button onClick={handleSauvegarder} disabled={!valide} style={{padding:'0 18px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
+            <LoadingButton loading={saving} loadingLabel="En cours de sauvegarde…" onClick={handleSauvegarder} disabled={!valide} style={{padding:'0 18px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
               Sauvegarder
-            </button>
+            </LoadingButton>
           </>)}
           {isAdmin() && (
             <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'0 20px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
@@ -767,7 +772,7 @@ export default function Presences() {
       {onglet === 'apercu' && (
         <div style={{background:'white',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           {loadingApercu ? (
-            <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Chargement...</div>
+            <PageLoader />
           ) : !apercuMois.eleves ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>
               {apercuMois.erreur

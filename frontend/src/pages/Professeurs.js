@@ -4,6 +4,7 @@ import apiClient from '../lib/apiClient';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 import {
   normaliserBranchesSpecialites,
   regrouperBranchesParCode,
@@ -56,6 +57,7 @@ export default function Professeurs({
   const [profDocs, setProfDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [uploadForm, setUploadForm] = useState({ type: 'CV' });
+  const [saving, setSaving] = useState(false);
   const apiUrl = apiBase;
 
   const ouvrirDocuments = async (prof) => {
@@ -175,6 +177,7 @@ export default function Professeurs({
       showFormToast('Le NPA doit comporter exactement 4 chiffres (format suisse).', 'error');
       return;
     }
+    setSaving(true);
     try {
       const payload = {
         ...form,
@@ -196,6 +199,7 @@ export default function Professeurs({
       else await apiClient.post(apiUrl, payload, {headers});
       setShowForm(false); setProfEdit(null); resetForm(); chargerProfs();
     } catch(err) { showFormToast('Erreur : ' + (err.response?.data?.message || err.message), 'error'); }
+    finally { setSaving(false); }
   };
 
   const resetForm = () => {
@@ -689,7 +693,7 @@ export default function Professeurs({
                   <div style={{flex:1}}/>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
                     <button type="button" style={s.btnCancel} onClick={fermerFormulaire}>Annuler</button>
-                    <button type="submit" style={s.btnSave}>{profEdit?'Modifier':'Créer'}</button>
+                    <LoadingButton type="submit" loading={saving} style={s.btnSave}>{profEdit?'Modifier':'Créer'}</LoadingButton>
                   </div>
                 </div>
               </div>
@@ -727,7 +731,7 @@ export default function Professeurs({
             )}
             <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
               {docsLoading ? (
-                <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
+                <PageLoader label="Chargement..." compact style={{padding:20}} />
               ) : profDocs.length === 0 ? (
                 <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour ce {nomEntite}</div>
               ) : profDocs.map(doc => (

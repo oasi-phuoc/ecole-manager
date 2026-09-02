@@ -7,6 +7,7 @@ import CustomSelect from '../components/CustomSelect';
 import { isAdmin } from '../utils/permissions';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
+import { LoadingButton } from '../components/LoadingUI';
 
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
 const STATUTS = [
@@ -142,6 +143,10 @@ export default function Comptabilite() {
   const [showMaterielForm, setShowMaterielForm] = useState(false);
   const [materielEdit, setMaterielEdit] = useState(null);
   const [materielForm, setMaterielForm] = useState({ nom: '', section: 'scolaire', prix: '', ref: '', fournisseur: '', rabais: '', remarques: '', icone: '' });
+  const [savingFacture, setSavingFacture] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [savingMateriel, setSavingMateriel] = useState(false);
+  const [savingCommande, setSavingCommande] = useState(false);
 
   const headers = {};
 
@@ -283,11 +288,13 @@ export default function Comptabilite() {
       date_paiement: factureDate,
       commentaire: factureCommentaire || lignes.join(' | '),
     };
+    setSavingFacture(true);
     try {
       await apiClient.post('/comptabilite', payload, { headers });
       setShowFacturePopup(false);
       chargerPaiements(); chargerStats();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSavingFacture(false); }
   };
 
   const ouvrirEdit = async (p) => {
@@ -314,11 +321,13 @@ export default function Comptabilite() {
   };
   const sauvegarderEdit = async (e) => {
     e.preventDefault();
+    setSavingEdit(true);
     try {
       await apiClient.put('/comptabilite/' + editForm.id, editForm, { headers });
       setShowEditPopup(false); setEditForm(null);
       chargerPaiements(); chargerStats();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSavingEdit(false); }
   };
   const supprimerPaiement = async (id) => {
     if (!window.confirm('Supprimer ce paiement ?')) return;
@@ -439,12 +448,14 @@ export default function Comptabilite() {
   };
   const handleSaveMateriel = async (e) => {
     e.preventDefault();
+    setSavingMateriel(true);
     try {
       const payload = { ...materielForm, prix: materielForm.prix === '' ? 0 : parseFloat(materielForm.prix), rabais: materielForm.rabais === '' ? 0 : parseFloat(materielForm.rabais) };
       if (materielEdit) await apiClient.put('/comptabilite/materiels/' + materielEdit.id, payload, { headers });
       else await apiClient.post('/comptabilite/materiels', payload, { headers });
       setShowMaterielForm(false); setMaterielEdit(null); await chargerMateriels();
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSavingMateriel(false); }
   };
   const handleDeleteMateriel = async (id) => {
     if (!window.confirm('Supprimer ce matériel ?')) return;
@@ -1321,16 +1332,19 @@ export default function Comptabilite() {
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
                     <button style={{ ...styles.btnAjouter, background: 'white', color: '#475569', border: '1px solid #e2e8f0' }} onClick={fermerCommandePopup}>{readOnly ? 'Fermer' : 'Annuler'}</button>
-                    {!readOnly && <button style={{ ...styles.btnAjouter }} onClick={async () => {
-                      const saves = Object.entries(statutsLocaux).map(([id, statut]) => {
-                        const ligne = commandeLignes.find(l => String(l.id) === String(id));
-                        if (!ligne) return Promise.resolve();
-                        return apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + id, { ...ligne, statut }, { headers }).catch(() => {});
-                      });
-                      await Promise.all(saves);
-                      chargerCommandes();
-                      fermerCommandePopup();
-                    }}>Sauvegarder</button>}
+                    {!readOnly && <LoadingButton style={{ ...styles.btnAjouter }} loading={savingCommande} onClick={async () => {
+                      setSavingCommande(true);
+                      try {
+                        const saves = Object.entries(statutsLocaux).map(([id, statut]) => {
+                          const ligne = commandeLignes.find(l => String(l.id) === String(id));
+                          if (!ligne) return Promise.resolve();
+                          return apiClient.put('/comptabilite/commandes/' + commandeEdit.id + '/lignes/' + id, { ...ligne, statut }, { headers }).catch(() => {});
+                        });
+                        await Promise.all(saves);
+                        chargerCommandes();
+                        fermerCommandePopup();
+                      } finally { setSavingCommande(false); }
+                    }}>Sauvegarder</LoadingButton>}
                   </div>
                 </div>
               </div>
@@ -1747,7 +1761,7 @@ export default function Comptabilite() {
 
               <div style={styles.formActions}>
                 <button type="button" style={styles.btnAnnuler} onClick={() => setShowFacturePopup(false)}>Annuler</button>
-                <button type="submit" style={styles.btnSauver}>Sauvegarder la facture</button>
+                <LoadingButton type="submit" loading={savingFacture} style={styles.btnSauver}>Sauvegarder la facture</LoadingButton>
               </div>
             </form>
           </div>
@@ -1804,7 +1818,7 @@ export default function Comptabilite() {
               </div>
               <div style={styles.formActions}>
                 <button type="button" style={styles.btnAnnuler} onClick={() => setShowEditPopup(false)}>Annuler</button>
-                <button type="submit" style={styles.btnSauver}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={savingEdit} style={styles.btnSauver}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>
@@ -1891,7 +1905,7 @@ export default function Comptabilite() {
               </div>
               <div style={styles.formActions}>
                 <button type="button" style={styles.btnAnnuler} onClick={() => setShowMaterielForm(false)}>Annuler</button>
-                <button type="submit" style={styles.btnSauver}>Sauvegarder</button>
+                <LoadingButton type="submit" loading={savingMateriel} style={styles.btnSauver}>Sauvegarder</LoadingButton>
               </div>
             </form>
           </div>

@@ -3,7 +3,7 @@ name: admin-suivi
 description: >-
   Développe ecole-manager (élèves, classes, bulletins, TCF, planning, notes,
   impression documents). Utiliser pour frontend/src/pages, supabase/functions,
-  migrations SQL, print.js, CustomSelect.
+  migrations SQL, print.js, CustomSelect. UI (toasts, onglets, loaders) : skill ui-composants.
 ---
 
 # ecole-manager — application scolaire
@@ -45,7 +45,13 @@ Sans ces variables, le frontend retombe sur Render (`apiClient` legacy).
 
 Routes : `frontend/src/App.js`. Layout : `components/Layout.js`.
 
+## UI (toasts, onglets, loaders…)
+
+Voir le skill **ui-composants** (`.cursor/skills/ui-composants/SKILL.md`) :
+toasts toujours violet `#ede9fe` / `#4c1d95`, `CustomSelect`, `LoadingUI`, chip-tabs, bouton Trier.
+
 ## API / Backend
+
 
 - Routes Express (référence) : `backend/src/routes/*.js`
 - Copie déployée : `supabase/functions/_shared/ecole-backend/src/`

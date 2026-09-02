@@ -30,6 +30,7 @@ import {
 } from '../utils/pdfPlanningGeneral';
 import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeurCarteTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
   regrouperBranchesParCode,
@@ -317,6 +318,9 @@ export default function EmploiDuTemps() {
   const [coursEmploiDuTemps, setCoursEmploiDuTemps] = useState([]);
   const [planningBranches, setPlanningBranches] = useState([]);
   const [showPoolForm, setShowPoolForm] = useState(false);
+  const [savingDispos, setSavingDispos] = useState(false);
+  const [savingAff, setSavingAff] = useState(false);
+  const [savingPool, setSavingPool] = useState(false);
   const [poolEdit, setPoolEdit] = useState(null);
   const [poolForm, setPoolForm] = useState({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:[...HORAIRES_DEFAUT]});
   const [pausesParPeriode, setPausesParPeriode] = useState(() => clonePausesParPeriode(PAUSES_PAR_PERIODE_DEFAUT));
@@ -586,6 +590,7 @@ export default function EmploiDuTemps() {
     }
     const liste = Object.entries(dispos).map(([creneau_id, statut]) => payloadDepuisStatut(creneau_id, statut));
     try {
+      setSavingDispos(true);
       const [rDispo] = await Promise.all([
         apiClient.post('/planning/disponibilites/' + profSelectionne, { disponibilites: liste }, { headers }),
         apiClient.post('/planning/disponibilites/' + profSelectionne + '/remarque', { remarque: remarquesDispo || '' }, { headers }),
@@ -602,6 +607,8 @@ export default function EmploiDuTemps() {
         : 'Disponibilités et remarque sauvegardées.');
     } catch (err) {
       showToast(err.response?.data?.message || err.message || 'Erreur lors de la sauvegarde des disponibilités.', 'error');
+    } finally {
+      setSavingDispos(false);
     }
   };
 
@@ -644,10 +651,11 @@ export default function EmploiDuTemps() {
   const getHorairesPool = (pool_id) => getHoraireForLieu(sitePourPoolId(pool_id)).poolHoraires;
 
   const handleSavePool = async () => {
+    const niveauxSelectionnes = parseNiveaux(poolForm.niveau);
+    if (!niveauxSelectionnes.length) { alert('Veuillez sélectionner au moins un niveau.'); return; }
+    if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
     try {
-      const niveauxSelectionnes = parseNiveaux(poolForm.niveau);
-      if (!niveauxSelectionnes.length) { alert('Veuillez sélectionner au moins un niveau.'); return; }
-      if (!poolForm.site) { alert('Veuillez sélectionner un lieu de travail.'); return; }
+      setSavingPool(true);
       if (totalPeriodesRequisesFormTotal !== 0 && totalPeriodesProfsForm !== 0 && totalPeriodesRequisesFormTotal < totalPeriodesProfsForm) {
         window.alert("Attention : les périodes professeurs dépassent le total requis (cours + titulariat).");
       } else if (totalPeriodesRequisesFormTotal !== 0 && totalPeriodesProfsForm !== 0 && totalPeriodesRequisesFormTotal > totalPeriodesProfsForm) {
@@ -668,6 +676,7 @@ export default function EmploiDuTemps() {
       await chargerTout();
       showToast('Pool sauvegardé.');
     } catch(err) { showToast(err.response?.data?.message || err.message, 'error'); }
+    finally { setSavingPool(false); }
   };
 
   const toggleArr = (arr, id) => arr.includes(id) ? arr.filter(x=>x!==id) : [...arr, id];
@@ -1508,6 +1517,7 @@ export default function EmploiDuTemps() {
       return;
     }
     try {
+      setSavingAff(true);
       const salleCourante = String((salleSelectionnee || '').trim());
       for (const [key, classeIdStr] of Object.entries(sallesDraftMap)) {
         const [jour, periode, ordreStr] = key.split('|');
@@ -1553,6 +1563,8 @@ export default function EmploiDuTemps() {
       showToast('Changements sauvegardés.');
     } catch (err) {
       showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des salles.", 'error');
+    } finally {
+      setSavingAff(false);
     }
   };
   const abandonnerSallesNonSauvegardees = () => {
@@ -2630,6 +2642,7 @@ export default function EmploiDuTemps() {
       return;
     }
     try {
+      setSavingAff(true);
       const keyFor = (a) => `${String(a.prof_id)}|${String(a.creneau_id)}`;
       const origMap = new Map((affectations || []).map(a => [keyFor(a), a]));
       const draftMap = new Map((affectationsDraft || []).map(a => [keyFor(a), a]));
@@ -2707,6 +2720,8 @@ export default function EmploiDuTemps() {
       showToast('Changements sauvegardés.');
     } catch (err) {
       showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des affectations professeurs.", 'error');
+    } finally {
+      setSavingAff(false);
     }
   };
   const sauvegarderAffectationsBranches = async () => {
@@ -2719,6 +2734,7 @@ export default function EmploiDuTemps() {
       return;
     }
     try {
+      setSavingAff(true);
       const affects = planningClasse.affectations || [];
       for (const aff of affects) {
         const key = String(aff.id);
@@ -2742,6 +2758,8 @@ export default function EmploiDuTemps() {
       showToast('Changements sauvegardés.');
     } catch (err) {
       showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des branches.", 'error');
+    } finally {
+      setSavingAff(false);
     }
   };
   const sauvegarderAffectationsClasses = async () => {
@@ -2750,6 +2768,7 @@ export default function EmploiDuTemps() {
       return;
     }
     try {
+      setSavingAff(true);
       const byClass = (liste) => {
         const map = new Map();
         (liste || []).forEach((h) => {
@@ -2795,6 +2814,8 @@ export default function EmploiDuTemps() {
       showToast('Changements sauvegardés.');
     } catch (err) {
       showToast(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde des classes.", 'error');
+    } finally {
+      setSavingAff(false);
     }
   };
   const getClasseIdDepuisValeurAffectation = (valeur) => {
@@ -4526,10 +4547,6 @@ export default function EmploiDuTemps() {
     }
   };
 
-  const toastBg = toast.type === 'error' ? '#fee2e2' : (toast.type === 'info' ? '#ede9fe' : '#dcfce7');
-  const toastColor = toast.type === 'error' ? '#991b1b' : (toast.type === 'info' ? '#4c1d95' : '#166534');
-  const toastBorder = toast.type === 'error' ? '#fecaca' : (toast.type === 'info' ? '#c7d2fe' : '#86efac');
-
   return (
     <div style={styles.page}>
       {toast.message && (
@@ -4540,9 +4557,9 @@ export default function EmploiDuTemps() {
           zIndex:9999,
           padding:'12px 18px',
           borderRadius:10,
-          background:toastBg,
-          color:toastColor,
-          border:`1px solid ${toastBorder}`,
+          background:'#ede9fe',
+          color:'#4c1d95',
+          border:'1px solid #c7d2fe',
           boxShadow:'0 8px 24px rgba(15,23,42,0.15)',
           fontSize:13,
           fontWeight:600,
@@ -4634,7 +4651,7 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'disponibilites' && profSelectionne && isAdmin() && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
-            <button type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos}>Sauvegarder</button>
+            <LoadingButton type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos} loading={savingDispos}>Sauvegarder</LoadingButton>
           </div>
         )}
         {onglet === 'affectations' && (
@@ -4759,13 +4776,13 @@ export default function EmploiDuTemps() {
                 </button>
               </>
             )}
-            <button type="button" style={styles.btnSauvegarderAff} onClick={() => {
+            <LoadingButton type="button" style={styles.btnSauvegarderAff} loading={savingAff} onClick={() => {
               if (sousOngletAff === 'classes') return sauvegarderAffectationsClasses();
               if (sousOngletAff === 'profs') return sauvegarderAffectationsProfs();
               if (sousOngletAff === 'branches') return sauvegarderAffectationsBranches();
               if (sousOngletAff === 'salles') return sauvegarderAffectationsSalles();
               showToast("Aucun changement à sauvegarder pour ce sous-onglet.", 'info');
-            }}>Sauvegarder</button>
+            }}>Sauvegarder</LoadingButton>
           </div>
         )}
       </div>
@@ -5374,7 +5391,7 @@ export default function EmploiDuTemps() {
                 </div>
                 <div style={styles.formActions}>
                   <button style={styles.btnAnnuler} onClick={() => setShowPoolForm(false)}>Annuler</button>
-                  <button style={styles.btnVert} onClick={handleSavePool}>Sauvegarder</button>
+                  <LoadingButton style={styles.btnVert} onClick={handleSavePool} loading={savingPool}>Sauvegarder</LoadingButton>
                 </div>
               </div>
             </div>
@@ -6427,7 +6444,7 @@ export default function EmploiDuTemps() {
                 <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher les branches.</div>
               )}
               {classePlanningPoolId && classePlanningId && planningClasseLoading && (
-                <div style={styles.msgVide}>Chargement du planning de la classe…</div>
+                <PageLoader label="Chargement du planning de la classe…" style={styles.msgVide} />
               )}
               {classePlanningPoolId && classePlanningId && !planningClasseLoading && !planningClasse && (
                 <div style={styles.msgVide}>Impossible de charger le planning de cette classe. Réessayez ou vérifiez les affectations professeurs / horaires.</div>
@@ -6989,7 +7006,7 @@ export default function EmploiDuTemps() {
             </div>
           )}
           {planningPoolId && planningGeneralLoading && (
-            <div style={styles.msgVide}>Chargement du planning général…</div>
+            <PageLoader label="Chargement du planning général…" style={styles.msgVide} />
           )}
           {planningPoolId && !planningGeneralLoading && planningGeneralError && (
             <div style={styles.msgVide}>{planningGeneralError}</div>

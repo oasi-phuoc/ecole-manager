@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { fetchSessionUser, clearSessionUser } from './utils/session';
 import Layout from './components/Layout';
 import MfaGate from './components/MfaGate';
+import { PageLoader } from './components/LoadingUI';
 import Login from './pages/Login';
 import ActiverMfa from './pages/ActiverMfa';
 import Dashboard from './pages/Dashboard';
@@ -47,7 +48,13 @@ const PrivateRoute = ({ children }) => {
     return () => { active = false; };
   }, []);
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <PageLoader label="Chargement…" />
+      </div>
+    );
+  }
   return ok ? children : <Navigate to="/login" replace />;
 };
 

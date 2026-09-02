@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const SESSION_LABEL = { "Test d'août": 'Test de placement' };
 const SESSIONS = ["Test d'août", '1e semestre', '2e semestre'];
@@ -243,7 +244,7 @@ export default function Enclassement() {
       await loadHistorique();
       setView('historique');
     } catch (err) { alert('Erreur lors de la sauvegarde : ' + err.message); }
-    setSaving(false);
+    finally { setSaving(false); }
   };
 
   const ouvrirDetail = async (enc) => {
@@ -354,7 +355,7 @@ export default function Enclassement() {
 
   // ─── Vues ────────────────────────────────────────────────────────────────────
 
-  if (loading) return <div style={s.page}><div style={s.empty}>Chargement…</div></div>;
+  if (loading) return <div style={s.page}><PageLoader /></div>;
 
   // ── Vue détail ──
   if (view === 'detail' && detailEnc) {
@@ -425,7 +426,7 @@ export default function Enclassement() {
           <button style={s.btnBack} onClick={() => setView('init')}>← Nouvel enclassement</button>
           <h1 style={s.titre}>Historique des enclassements</h1>
         </div>
-        {loadingDetail && <div style={s.empty}>Chargement…</div>}
+        {loadingDetail && <PageLoader compact label="Chargement…" />}
         {historique.length === 0 && !loadingDetail && <div style={{ ...s.content, ...s.empty }}>Aucun enclassement sauvegardé.</div>}
         {historique.length > 0 && (
           <div style={s.tableWrap}>
@@ -527,9 +528,9 @@ export default function Enclassement() {
               style={{ fontSize: 18, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none', color: '#0f172a', width: '100%' }} />
           </div>
           <button style={{ ...s.btnAction, background: '#64748b' }} onClick={() => { calculer(); }}>🔄 Recalculer</button>
-          <button style={{ ...s.btnAction, background: '#10b981' }} onClick={valider} disabled={saving}>
-            {saving ? 'Sauvegarde…' : '✅ Valider et enregistrer'}
-          </button>
+          <LoadingButton style={{ ...s.btnAction, background: '#10b981' }} onClick={valider} loading={saving} loadingLabel="Sauvegarde…">
+            ✅ Valider et enregistrer
+          </LoadingButton>
         </div>
 
         {alertes.length > 0 && (

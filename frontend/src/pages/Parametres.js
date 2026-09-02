@@ -24,6 +24,7 @@ import {
   titreStatutDispo,
 } from '../utils/disponibilites';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
+import { LoadingButton } from '../components/LoadingUI';
 
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
@@ -151,6 +152,12 @@ export default function Parametres() {
   const [msgProfil, setMsgProfil] = useState('');
   const [msgEcole, setMsgEcole] = useState('');
   const [msgMdp, setMsgMdp] = useState('');
+  const [savingProfil, setSavingProfil] = useState(false);
+  const [savingEcole, setSavingEcole] = useState(false);
+  const [savingMail, setSavingMail] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
+  const [savingMdp, setSavingMdp] = useState(false);
+  const [savingAcces, setSavingAcces] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaSetupToken, setMfaSetupToken] = useState('');
   const [mfaSecret, setMfaSecret] = useState('');
@@ -513,6 +520,7 @@ export default function Parametres() {
 
   const handleSauverProfil = async (e) => {
     e.preventDefault();
+    setSavingProfil(true);
     try {
       const payload = {
         ...profil,
@@ -533,17 +541,20 @@ export default function Parametres() {
       }
       setTimeout(() => setMsgProfil(''), 4000);
     } catch (err) { setMsgProfil('error'); }
+    finally { setSavingProfil(false); }
   };
 
   const handleSauverMdp = async (e) => {
     e.preventDefault();
     if (mdp.nouveau !== mdp.confirmation) { setMsgMdp('mismatch'); return; }
+    setSavingMdp(true);
     try {
       await apiClient.put('/parametres/mot-de-passe', { ancien: mdp.ancien, nouveau: mdp.nouveau }, { headers });
       setMsgMdp('success');
       setMdp({ ancien: '', nouveau: '', confirmation: '' });
       setTimeout(() => setMsgMdp(''), 3000);
     } catch (err) { setMsgMdp('error'); }
+    finally { setSavingMdp(false); }
   };
 
   const chargerMfaStatus = async () => {
@@ -696,6 +707,7 @@ export default function Parametres() {
 
   const handleSauverEcole = async (e) => {
     e.preventDefault();
+    setSavingEcole(true);
     try {
       const horairesData = Object.keys(horairesEcole).length > 0 ? horairesEcole : (ecole.horaires || {});
       const responsables_niveaux = normaliserListeResponsablesNiveaux(ecole.responsables_niveaux)
@@ -704,6 +716,7 @@ export default function Parametres() {
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
+    finally { setSavingEcole(false); }
   };
 
   const mettreAJourResponsableNiveau = (index, patch) => {
@@ -747,17 +760,20 @@ export default function Parametres() {
   };
 
   const handleSauverPermissions = async () => {
+    setSavingPermissions(true);
     try {
       await apiClient.put('/parametres/permissions/' + profSelectionne.id, { permissions }, { headers });
       setMsgPerms('success');
       chargerProfs();
       setTimeout(() => setMsgPerms(''), 3000);
     } catch (err) { setMsgPerms('error'); }
+    finally { setSavingPermissions(false); }
   };
 
   const handleSauverMail = async (e) => {
     e.preventDefault();
     setMsgMail('');
+    setSavingMail(true);
     try {
       await apiClient.put('/parametres/mail', {
         smtp_active: mail.smtp_active === true,
@@ -775,7 +791,7 @@ export default function Parametres() {
       setTimeout(() => setMsgMail(''), 3500);
     } catch (err) {
       setMsgMail(err?.response?.data?.message || 'error');
-    }
+    } finally { setSavingMail(false); }
   };
 
   const handleTesterMail = async () => {
@@ -897,12 +913,12 @@ export default function Parametres() {
             {onglet === 'profil' && (<>
               {(msgProfil === 'success' || msgProfil === 'success-affectations') && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{msgProfil === 'success-affectations' ? 'Profil mis à jour. Cours retirés des créneaux indisponibles.' : 'Profil mis à jour.'}</span>}
               {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <button type="submit" form="form-profil" style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</button>
+              <LoadingButton type="submit" form="form-profil" loading={savingProfil} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
               {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Paramètres mis à jour.</span>}
               {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <button type="submit" form="form-ecole" style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</button>
+              <LoadingButton type="submit" form="form-ecole" loading={savingEcole} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>
             </>)}
           </div>
         </div>
@@ -962,7 +978,7 @@ export default function Parametres() {
                               <label style={styles.label}>Confirmer *</label>
                               <input style={styles.input} type="password" value={mdp.confirmation} onChange={e => setMdp({ ...mdp, confirmation: e.target.value })} />
                             </div>
-                            <button type="button" onClick={handleSauverMdp} style={{ ...styles.btnSauver, background: '#ea4335', alignSelf: 'flex-start' }}>Changer</button>
+                            <LoadingButton type="button" onClick={handleSauverMdp} loading={savingMdp} style={{ ...styles.btnSauver, background: '#ea4335', alignSelf: 'flex-start' }}>Changer</LoadingButton>
                           </div>
                         )}
                       </div>
@@ -1514,7 +1530,7 @@ export default function Parametres() {
                   <label style={styles.label}>Confirmer *</label>
                   <input style={styles.input} type="password" required value={mdp.confirmation} onChange={e => setMdp({ ...mdp, confirmation: e.target.value })} />
                 </div>
-                <button type="submit" style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>Changer</button>
+                <LoadingButton type="submit" loading={savingMdp} style={{ ...styles.btnSauver, background: '#ea4335', marginTop: '10px' }}>Changer</LoadingButton>
               </form>
             </div>
           )}
@@ -2025,7 +2041,7 @@ export default function Parametres() {
                   </div>
                 </div>
 
-                <button type="submit" style={{ ...styles.btnSauver, background: '#7c3aed', marginTop: '10px' }}>Sauvegarder la configuration</button>
+                <LoadingButton type="submit" loading={savingMail} style={{ ...styles.btnSauver, background: '#7c3aed', marginTop: '10px' }}>Sauvegarder la configuration</LoadingButton>
               </form>
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
@@ -2103,15 +2119,17 @@ export default function Parametres() {
                   </div>
                 );
               })}
-              <button style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} onClick={async () => {
+              <LoadingButton style={{ ...styles.btnSauver, background: '#ff9800', marginTop: '20px' }} loading={savingAcces} onClick={async () => {
+                setSavingAcces(true);
                 try {
                   await apiClient.put('/parametres/acces-profs', { acces_profs: accesParRole }, { headers });
                   setMsgAccesProfs('success');
                   setTimeout(() => setMsgAccesProfs(''), 3000);
                 } catch { setMsgAccesProfs('error'); }
+                finally { setSavingAcces(false); }
               }}>
                 Sauvegarder les accès
-              </button>
+              </LoadingButton>
             </div>
           )}
           {onglet === 'danger' && isAdmin && (

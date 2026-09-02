@@ -4,6 +4,10 @@
   padding: 0;
 }
 
+@keyframes em-spin {
+  to { transform: rotate(360deg); }
+}
+
 html,
 body,
 #root {

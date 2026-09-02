@@ -3,6 +3,7 @@ import apiClient from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 import { clearSessionUser, getSessionUser, setSessionUser } from '../utils/session';
+import { LoadingButton } from '../components/LoadingUI';
 
 
 export default function ActiverMfa() {
@@ -63,8 +64,9 @@ export default function ActiverMfa() {
       setMsg('Scannez le QR code avec Google Authenticator, puis saisissez le code à 6 chiffres.');
     } catch (err) {
       setMsg(err.response?.data?.message || 'Erreur lors de la génération du setup MFA.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const activer = async () => {
@@ -89,8 +91,9 @@ export default function ActiverMfa() {
       setMsg('Double authentification activée. Conservez les codes de secours dans un endroit sûr.');
     } catch (err) {
       setMsg(err.response?.data?.message || 'Code invalide. Réessayez.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const continuer = () => {
@@ -127,9 +130,9 @@ export default function ActiverMfa() {
         )}
 
         {!enabled && !setupToken && (
-          <button type="button" style={styles.btn} onClick={genererSetup} disabled={loading}>
-            {loading ? 'Génération…' : 'Activer la double authentification'}
-          </button>
+          <LoadingButton type="button" style={styles.btn} onClick={genererSetup} loading={loading} loadingLabel="Génération…">
+            Activer la double authentification
+          </LoadingButton>
         )}
 
         {!enabled && setupToken && (
@@ -158,9 +161,9 @@ export default function ActiverMfa() {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="123456"
             />
-            <button type="button" style={styles.btn} onClick={activer} disabled={loading}>
-              {loading ? 'Activation…' : 'Valider et activer'}
-            </button>
+            <LoadingButton type="button" style={styles.btn} onClick={activer} loading={loading} loadingLabel="Activation…">
+              Valider et activer
+            </LoadingButton>
           </div>
         )}
 

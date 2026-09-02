@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const getHeaders = () => {
   const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -27,6 +28,7 @@ const emptyQuestion = () => ({
 export default function Sondage() {
   const [liste, setListe] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [reponses, setReponses] = useState([]);
@@ -109,6 +111,7 @@ export default function Sondage() {
 
   const sauver = async () => {
     if (!detail) return;
+    setSaving(true);
     setMsg('');
     const questions = (detail.questions || []).map((q, ordre) => ({
       type: q.type,
@@ -142,6 +145,8 @@ export default function Sondage() {
       setReponses(r.data || []);
     } catch (e) {
       setMsg('❌ ' + (e.response?.data?.message || e.message));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -217,7 +222,7 @@ export default function Sondage() {
       <div style={s.layout}>
         <aside style={s.aside}>
           <div style={s.asideTitre}>Mes formulaires</div>
-          {loading ? <div style={s.muted}>Chargement…</div> : null}
+          {loading ? <PageLoader compact /> : null}
           {!loading && liste.length === 0 ? <div style={s.muted}>Aucun formulaire</div> : null}
           <ul style={s.liste}>
             {liste.map((x) => (
@@ -313,7 +318,7 @@ export default function Sondage() {
 
                   <div style={s.actions}>
                     <button type="button" style={s.btnDanger} onClick={supprimer}>Supprimer le formulaire</button>
-                    <button type="button" style={s.btnPrimary} onClick={sauver}>Enregistrer</button>
+                    <LoadingButton type="button" loading={saving} loadingLabel="En cours de sauvegarde…" style={s.btnPrimary} onClick={sauver}>Enregistrer</LoadingButton>
                   </div>
                 </div>
               )}

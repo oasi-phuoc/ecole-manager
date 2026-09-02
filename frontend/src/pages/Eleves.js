@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 import { NATIONALITY_OPTIONS } from '../constants/nationalities';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -34,6 +35,7 @@ export default function Eleves() {
   const [importResult, setImportResult] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [photoZoom, setPhotoZoom] = useState(null);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -179,6 +181,7 @@ export default function Eleves() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = {
         nom, prenom, email, classe_id: classeId||null,
@@ -207,6 +210,7 @@ export default function Eleves() {
       }
       setShowForm(false); setEleveEdit(null); resetForm(); chargerTout();
     } catch(err) { alert('Erreur: '+(err.response?.data?.message||err.message)); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
@@ -360,6 +364,7 @@ export default function Eleves() {
   const sauverObservation = async (e) => {
     e.preventDefault();
     if (!obsEleve) return;
+    setSaving(true);
     try {
       await apiClient.post('/observations/eleve/'+obsEleve.id, obsForm, {headers});
       setObsForm({titre:'',contenu:'',mesure_prise:'',intervention_responsable:false,demande_entretien:false,intervention_titulaire:false});
@@ -367,6 +372,7 @@ export default function Eleves() {
       const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
       setObservations(r.data);
     } catch(err) { alert('Erreur: '+err.message); }
+    finally { setSaving(false); }
   };
 
   const imprimerObservations = () => {
@@ -744,7 +750,7 @@ export default function Eleves() {
                     </div>
                     <div style={{display:'flex',justifyContent:'flex-end',gap:10,paddingTop:16,borderTop:'1px solid #f1f5f9'}}>
                       <button type="button" style={{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowForm(false)}>Annuler</button>
-                      <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                      <LoadingButton type="submit" loading={saving} style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</LoadingButton>
                     </div>
                   </div>
                 </div>
@@ -781,7 +787,7 @@ export default function Eleves() {
             )}
             <div style={{borderTop:'1px solid #f1f5f9',paddingTop:16}}>
               {docsEleveLoading ? (
-                <div style={{textAlign:'center',color:'#94a3b8',padding:20}}>Chargement...</div>
+                <PageLoader label="Chargement..." compact style={{padding:20}} />
               ) : eleveDocs.length===0 ? (
                 <div style={{textAlign:'center',color:'#94a3b8',padding:20,fontSize:13}}>Aucun document pour cet élève</div>
               ) : eleveDocs.map(doc => (
@@ -841,7 +847,7 @@ export default function Eleves() {
               <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
-              <div style={{textAlign:'center',color:'#94a3b8',padding:30}}>Chargement...</div>
+              <PageLoader label="Chargement..." compact style={{padding:30}} />
             ) : <>
               <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:12,color:'#78350f',lineHeight:1.7}}>
                 <div>Toutes les cases (chances, retenues et avertissements) doivent être visées et datées par le FL ou les responsables.</div>
@@ -1051,7 +1057,7 @@ export default function Eleves() {
                 </div>
                 <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:12}}>
                   <button type="button" style={{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setShowObsForm(false)}>Annuler</button>
-                  <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                  <LoadingButton type="submit" loading={saving} style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</LoadingButton>
                 </div>
               </form>
             )}
@@ -1064,10 +1070,13 @@ export default function Eleves() {
                 return obsEditId === obs.id ? (
                   <form key={obs.id} onSubmit={async (e) => {
                     e.preventDefault();
-                    await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
-                    setObsEditId(null);
-                    const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
-                    setObservations(r.data);
+                    setSaving(true);
+                    try {
+                      await apiClient.put('/observations/'+obs.id, obsEditForm, {headers});
+                      setObsEditId(null);
+                      const r = await apiClient.get('/observations/eleve/'+obsEleve.id, {headers});
+                      setObservations(r.data);
+                    } finally { setSaving(false); }
                   }} style={{background:'#f0f4ff',borderRadius:10,padding:16,border:'1px solid #c7d2fe',borderLeft:'3px solid #6366f1'}}>
                     <div style={{display:'flex',flexDirection:'column'}}>
                       <label style={{fontSize:12,fontWeight:600,marginBottom:5,color:'#475569'}}>Titre</label>
@@ -1097,7 +1106,7 @@ export default function Eleves() {
                     </div>
                     <div style={{display:'flex',gap:8,marginTop:10,justifyContent:'flex-end'}}>
                       <button type="button" style={{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b'}} onClick={() => setObsEditId(null)}>Annuler</button>
-                      <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</button>
+                      <LoadingButton type="submit" loading={saving} style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>Sauvegarder</LoadingButton>
                     </div>
                   </form>
                 ) : (

@@ -4,6 +4,7 @@ import { startAuthentication } from '@simplewebauthn/browser';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { redirectAfterAuth } from '../utils/mfa';
 import apiClient, { setLegacyToken } from '../lib/apiClient';
+import { LoadingButton } from '../components/LoadingUI';
 
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
@@ -202,9 +203,9 @@ export default function Login() {
             )}
           </div>
 
-          <button type="submit" style={{...styles.btn, opacity: changeMdpLoading ? 0.7 : 1}} disabled={changeMdpLoading}>
-            {changeMdpLoading ? 'Enregistrement...' : 'Définir mon mot de passe'}
-          </button>
+          <LoadingButton type="submit" loading={changeMdpLoading} loadingLabel="Enregistrement…" style={styles.btn}>
+            Définir mon mot de passe
+          </LoadingButton>
         </form>
       </div>
     </div>
@@ -264,15 +265,14 @@ export default function Login() {
               />
             </div>
           )}
-          <button
+          <LoadingButton
             type="submit"
-            style={{ ...styles.btn, opacity: loginLoading ? 0.7 : 1, cursor: loginLoading ? 'not-allowed' : 'pointer' }}
-            disabled={loginLoading}
+            loading={loginLoading}
+            loadingLabel={mfaRequired ? 'Vérification…' : 'Connexion…'}
+            style={styles.btn}
           >
-            {loginLoading
-              ? (mfaRequired ? 'Vérification...' : 'Connexion...')
-              : (mfaRequired ? 'Valider le code' : 'Se connecter')}
-          </button>
+            {mfaRequired ? 'Valider le code' : 'Se connecter'}
+          </LoadingButton>
           {mfaRequired && (
             <button
               type="button"
@@ -292,15 +292,16 @@ export default function Login() {
               <span style={styles.separatorText}>ou</span>
               <span style={styles.separatorLine} />
             </div>
-            <button
+            <LoadingButton
               type="button"
-              style={{ ...styles.btnPasskey, opacity: passkeyLoading ? 0.75 : 1 }}
+              loading={passkeyLoading}
+              loadingLabel="Passkey…"
+              style={styles.btnPasskey}
               onClick={handlePasskeyLogin}
-              disabled={passkeyLoading}
               title="Connexion biométrique / clé de sécurité (passkey)"
             >
-              {passkeyLoading ? 'Passkey…' : 'Se connecter avec une passkey'}
-            </button>
+              Se connecter avec une passkey
+            </LoadingButton>
             <p style={styles.passkeyHint}>
               Astuce : saisissez votre email si vous avez plusieurs comptes, sinon la passkey suffit.
             </p>

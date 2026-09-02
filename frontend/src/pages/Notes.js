@@ -7,6 +7,7 @@ import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { getResponsableNiveauEcole } from '../utils/responsablesEcole';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
@@ -155,6 +156,8 @@ export default function Notes() {
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [savingCriteres, setSavingCriteres] = useState(false);
+  const [savingEval, setSavingEval] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const showToast = (message, type = 'success') => { setToast({ message, type }); setTimeout(() => setToast({ message: '', type: 'success' }), 2200); };
   const [criteresLocaux, setCriteresLocaux] = useState([]);
@@ -412,6 +415,7 @@ export default function Notes() {
         return;
       }
     }
+    setSavingEval(true);
     try {
       const payload = {
         ...form,
@@ -429,9 +433,11 @@ export default function Notes() {
       setForm(formVide);
       await chargerEvaluationsId(classeSelectionnee, matiereSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSavingEval(false); }
   };
 
   const handleSauvegarderNotes = async () => {
+    setSauvegarde(true);
     try {
       const avecPoints = evaluationOuverte.points_max && parseFloat(evaluationOuverte.points_max) > 0;
       const notes = elevesNotes.map(e => ({
@@ -449,6 +455,7 @@ export default function Notes() {
       showToast('Notes enregistrées.');
       await chargerBulletinId(classeSelectionnee);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSauvegarde(false); }
   };
 
   const handleSupprimerEvaluation = async (id) => {
@@ -869,8 +876,8 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             <span style={{ ...s.moyenneValeur, fontSize: 14 }}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
           </div>
           {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
-            <button style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
-              disabled={!ok} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</button>
+            <LoadingButton style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
+              disabled={!ok} loading={sauvegarde} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</LoadingButton>
           ); })()}
         </div>
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
@@ -1131,7 +1138,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         </div>
 
         {/* Chargement / erreur */}
-        {rapportChargement && <div style={{ ...s.vide, color: '#6366f1' }}>Chargement des données…</div>}
+        {rapportChargement && <PageLoader label="Chargement des données…" />}
         {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>Erreur : {rapportErreur}</div>}
 
         {/* ---- VUE TOUS ---- */}
@@ -1694,21 +1701,24 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
       showToast('Aucun changement à sauvegarder.', 'info');
       return;
     }
-    for (const b of bulletins) {
-      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
-      const payload = {
-        classe_id: classeSelectionnee, semestre: bulletinSemestre,
-        c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
-        c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
-        remarques: cr.remarques||null, valide: true,
-      };
-      await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
-    }
-    setBulletinCriteres([...criteresLocaux]);
-    if (bulletinSemestre === '1') setCriteresSem1([...criteresLocaux]);
-    else setCriteresSem2([...criteresLocaux]);
-    setCriteresModifies(false);
-    showToast('Changements sauvegardés.', 'info');
+    setSavingCriteres(true);
+    try {
+      for (const b of bulletins) {
+        const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+        const payload = {
+          classe_id: classeSelectionnee, semestre: bulletinSemestre,
+          c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
+          c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
+          remarques: cr.remarques||null, valide: true,
+        };
+        await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, payload, { headers });
+      }
+      setBulletinCriteres([...criteresLocaux]);
+      if (bulletinSemestre === '1') setCriteresSem1([...criteresLocaux]);
+      else setCriteresSem2([...criteresLocaux]);
+      setCriteresModifies(false);
+      showToast('Changements sauvegardés.', 'info');
+    } finally { setSavingCriteres(false); }
   };
 
   if (vue === 'bulletin') {
@@ -1775,11 +1785,12 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
               {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
-              <button
+              <LoadingButton
                 onClick={sauvegarderTousCriteres}
+                loading={savingCriteres}
                 style={{ padding: '0 18px', height: 36, boxSizing: 'border-box', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: '#6366f1', color: 'white', transition: 'all 0.2s' }}>
                 Sauvegarder
-              </button>
+              </LoadingButton>
             </div>
           )}
           {bulletinOnglet === 'notes' && vueClasseAction !== 'attestation' && (
@@ -2469,7 +2480,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                 </div>
                 <div style={s.formActions}>
                   <button type="button" style={s.btnAnnuler} onClick={() => { setShowForm(false); setForm(formVide); }}>Annuler</button>
-                  <button type="submit" style={s.btnSauver}>{form.editId ? 'Enregistrer' : 'Créer'}</button>
+                  <LoadingButton type="submit" loading={savingEval} style={s.btnSauver}>{form.editId ? 'Enregistrer' : 'Créer'}</LoadingButton>
                 </div>
               </form>
             </div>

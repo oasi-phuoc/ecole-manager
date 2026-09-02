@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
+import { PageLoader } from '../components/LoadingUI';
 
 
 export default function Statistiques() {
@@ -21,7 +22,7 @@ export default function Statistiques() {
     finally { setLoading(false); }
   };
 
-  if (loading) return <div style={styles.loading}>⏳ Chargement des statistiques...</div>;
+  if (loading) return <PageLoader label="Chargement des statistiques…" />;
   if (!stats) return <div style={styles.loading}>❌ Erreur de chargement</div>;
 
   const presJour = stats.presences_aujourd || { presents: 0, absents: 0, retards: 0, total: 0 };

@@ -4,6 +4,7 @@ import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 const fmtNote = (n) => {
@@ -49,6 +50,7 @@ export default function Bulletins() {
   const [bulletinPopupEleve, setBulletinPopupEleve] = useState(null);
   const [niveauFiltre, setNiveauFiltre] = useState('tous');
   const [chargement, setChargement] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   const headers = {};
@@ -170,18 +172,23 @@ export default function Bulletins() {
   const sauvegarderTousCriteres = async () => {
     if (!criteresValides) { showToast('Veuillez valider les critères avant de sauvegarder.', 'info'); return; }
     if (!criteresModifies) { showToast('Aucun changement à sauvegarder.', 'info'); return; }
-    for (const b of bulletins) {
-      const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
-      await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, {
-        classe_id: classeSelectionnee, semestre: bulletinSemestre,
-        c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
-        c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
-        remarques: cr.remarques||null, valide: true,
-      }, { headers });
+    setSaving(true);
+    try {
+      for (const b of bulletins) {
+        const cr = criteresLocaux.find(c => Number(c.eleve_id) === Number(b.eleve.id)) || {};
+        await apiClient.put('/notes/bulletin-criteres/' + b.eleve.id, {
+          classe_id: classeSelectionnee, semestre: bulletinSemestre,
+          c1: cr.c1||null, c2: cr.c2||null, c3: cr.c3||null, c4: cr.c4||null, c5: cr.c5||null,
+          c6: cr.c6||null, c7: cr.c7||null, c8: cr.c8||null, c9: cr.c9||null, c10: cr.c10||null,
+          remarques: cr.remarques||null, valide: true,
+        }, { headers });
+      }
+      setBulletinCriteres([...criteresLocaux]);
+      setCriteresModifies(false);
+      showToast('Changements sauvegardés.', 'info');
+    } finally {
+      setSaving(false);
     }
-    setBulletinCriteres([...criteresLocaux]);
-    setCriteresModifies(false);
-    showToast('Changements sauvegardés.', 'info');
   };
 
   // ===== CLASS SELECTION =====
@@ -397,7 +404,7 @@ export default function Bulletins() {
         {onglet === 'comportements' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {toast.message && (
-              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, ...(toast.type === 'error' ? { background: '#fee2e2', color: '#991b1b' } : toast.type === 'info' ? { background: '#e0e7ff', color: '#3730a3' } : { background: '#d1fae5', color: '#065f46' }) }}>
+              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>
                 {toast.message}
               </span>
             )}
@@ -408,10 +415,10 @@ export default function Bulletins() {
               </div>
               {criteresValides ? 'Critères validés' : 'Valider les critères'}
             </button>
-            <button onClick={sauvegarderTousCriteres}
+            <LoadingButton loading={saving} loadingLabel="En cours de sauvegarde…" onClick={sauvegarderTousCriteres}
               style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: '#6366f1', color: 'white' }}>
               💾 Sauvegarder
-            </button>
+            </LoadingButton>
           </div>
         )}
       </div>
@@ -459,7 +466,7 @@ export default function Bulletins() {
       {onglet === 'comportements' && (
         <>
           {chargement ? (
-            <div style={{ ...s.vide, color: '#6366f1' }}>Chargement…</div>
+            <PageLoader />
           ) : (
             <div style={{ ...s.tableContainer, marginBottom: 24 }}>
               <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
@@ -623,7 +630,7 @@ export default function Bulletins() {
             </button>
           </div>
           {chargement ? (
-            <div style={{ ...s.vide, color: '#6366f1' }}>Chargement…</div>
+            <PageLoader />
           ) : allEleves.length === 0 ? (
             <div style={s.vide}>Aucun bulletin disponible pour cette classe.</div>
           ) : (

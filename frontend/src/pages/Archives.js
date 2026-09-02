@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { PageLoader } from '../components/LoadingUI';
 
 
 const fmt = (v) => {
@@ -173,7 +174,7 @@ export default function Archives() {
         {erreur && <div style={s.erreur}>{erreur}</div>}
 
         {loading ? (
-          <div style={s.vide}>Chargement…</div>
+          <PageLoader />
         ) : archives.length === 0 ? (
           <div style={s.vide}>
             Aucune année archivée pour le moment. Lors de la réinitialisation de rentrée, les données sont d’abord transférées ici.
@@ -266,7 +267,7 @@ export default function Archives() {
             {groupe !== 'documents' && (
               <div style={s.card}>
                 {loadingTable ? (
-                  <div style={s.vide}>Lecture des données…</div>
+                  <PageLoader compact label="Lecture des données…" />
                 ) : !tableData ? (
                   <div style={s.vide}>Sélectionnez une table.</div>
                 ) : (

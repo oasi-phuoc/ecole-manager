@@ -4,15 +4,18 @@ import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { getSessionUser, fetchSessionUser } from '../utils/session';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { LoadingButton, PageLoader } from '../components/LoadingUI';
 
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [dashboardInfo, setDashboardInfo] = useState({ prochains_evenements: [], dernieres_notes: [], dernieres_observations: [], controle_presence_aujourdhui: { creneau_en_cours: null, classes_en_cours: [] } });
   const isMobile = useIsMobile();
   const [agendaPerso, setAgendaPerso] = useState([]);
   const [observationDetail, setObservationDetail] = useState(null);
   const [memo, setMemo] = useState('');
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const navigate = useNavigate();
 
@@ -30,24 +33,28 @@ export default function Dashboard() {
   };
 
   const sauvegarderMemo = async () => {
+    setSaving(true);
     try {
       await apiClient.put('/notes-personnelles', { contenu: memo }, { headers });
       showToast('Notes sauvegardées.');
     } catch {
       showToast('Erreur lors de la sauvegarde.', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
   useEffect(() => {
     const chargerUtilisateurEtStats = async () => {
+      setLoading(true);
       const enMemoire = getSessionUser();
       if (enMemoire) setUser(enMemoire);
       try {
         const u = await fetchSessionUser();
         setUser(u || null);
       } catch {}
-      chargerStats();
-      chargerMemo();
+      await Promise.all([chargerStats(), chargerMemo()]);
+      setLoading(false);
     };
     chargerUtilisateurEtStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- montage : profil + stats + mémo une fois
@@ -73,6 +80,7 @@ export default function Dashboard() {
 
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
+  if (loading) return <PageLoader label="Chargement…" />;
   const fmtDate = (raw) => {
     if (!raw) return '—';
     const d = new Date(raw);
@@ -187,9 +195,9 @@ export default function Dashboard() {
             {toast.message && (
               <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{toast.message}</span>
             )}
-            <button onClick={sauvegarderMemo} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            <LoadingButton loading={saving} loadingLabel="En cours de sauvegarde…" onClick={sauvegarderMemo} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Sauvegarder
-            </button>
+            </LoadingButton>
           </div>
         </div>
       </div>

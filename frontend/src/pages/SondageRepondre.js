@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 export default function SondageRepondre() {
@@ -65,7 +66,9 @@ export default function SondageRepondre() {
   if (loading) {
     return (
       <div style={s.wrap}>
-        <div style={s.card}>Chargement du formulaire…</div>
+        <div style={s.card}>
+          <PageLoader label="Chargement du formulaire…" />
+        </div>
       </div>
     );
   }
@@ -150,9 +153,9 @@ export default function SondageRepondre() {
           </div>
         ))}
 
-        <button type="submit" disabled={sending || !(form?.questions || []).length} style={s.btn}>
-          {sending ? 'Envoi…' : 'Envoyer'}
-        </button>
+        <LoadingButton type="submit" loading={sending} loadingLabel="Envoi…" disabled={!(form?.questions || []).length} style={s.btn}>
+          Envoyer
+        </LoadingButton>
       </form>
     </div>
   );

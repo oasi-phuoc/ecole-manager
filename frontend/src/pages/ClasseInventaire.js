@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 export default function ClasseInventaire() {
@@ -18,6 +19,7 @@ export default function ClasseInventaire() {
   const [inventaire, setInventaire] = useState([]);
   const [loadingBranches, setLoadingBranches] = useState(true);
   const [loadingInventaire, setLoadingInventaire] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [form, setForm] = useState({
     date_document: new Date().toISOString().split('T')[0],
@@ -70,6 +72,7 @@ export default function ClasseInventaire() {
       setMsg('❌ Le nom du document est requis.');
       return;
     }
+    setSaving(true);
     try {
       await apiClient.post(
         '/inventaire-branches/' + classeId + '/branches/' + brancheActive.id,
@@ -85,6 +88,8 @@ export default function ClasseInventaire() {
       await chargerInventaire(brancheActive.id);
     } catch (err) {
       setMsg('❌ Erreur enregistrement: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -119,7 +124,7 @@ export default function ClasseInventaire() {
         <div style={s.card}>
           <div style={s.cardTitle}>Branches</div>
           {loadingBranches ? (
-            <div style={s.empty}>Chargement...</div>
+            <PageLoader label="Chargement..." compact />
           ) : branches.length === 0 ? (
             <div style={s.empty}>Aucune branche trouvée</div>
           ) : (
@@ -160,14 +165,14 @@ export default function ClasseInventaire() {
               <input type="text" style={s.inp} placeholder="Nom du document *" value={form.nom_document} onChange={e => setForm({ ...form, nom_document: e.target.value })} />
               <input type="text" style={s.inp} placeholder="Numéro" value={form.numero_document} onChange={e => setForm({ ...form, numero_document: e.target.value })} />
               <input type="text" style={s.inp} placeholder="Remarques" value={form.remarques} onChange={e => setForm({ ...form, remarques: e.target.value })} />
-              <button type="submit" style={s.btnAdd}>+ Ajouter</button>
+              <LoadingButton type="submit" loading={saving} style={s.btnAdd}>+ Ajouter</LoadingButton>
             </form>
           )}
 
           {!brancheActive ? (
             <div style={s.empty}>Sélectionnez une branche dans le tableau.</div>
           ) : loadingInventaire ? (
-            <div style={s.empty}>Chargement...</div>
+            <PageLoader label="Chargement..." compact />
           ) : (
             <div style={s.tableWrap}>
             <table style={s.table}>

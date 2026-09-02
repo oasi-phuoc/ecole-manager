@@ -3,6 +3,7 @@ import apiClient from '../lib/apiClient';
 import { Navigate } from 'react-router-dom';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { MFA_SETUP_PATH } from '../utils/mfa';
+import { PageLoader } from './LoadingUI';
 
 
 export default function MfaGate({ children }) {
@@ -32,7 +33,13 @@ export default function MfaGate({ children }) {
     return () => { active = false; };
   }, []);
 
-  if (state === 'checking') return null;
+  if (state === 'checking') {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <PageLoader label="Chargement…" />
+      </div>
+    );
+  }
   if (state === 'need') return <Navigate to={MFA_SETUP_PATH} replace />;
   return children;
 }
