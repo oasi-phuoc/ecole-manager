@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
-import { LoadingButton } from '../components/LoadingUI';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const getHeaders = () => { const u = JSON.parse(localStorage.getItem('user') || '{}'); return { Authorization: `Bearer ${u.token}` }; };
 
@@ -41,6 +41,7 @@ const fmtHeure = (h) => {
 export default function SortieScolaire() {
   const navigate = useNavigate();
   const [sorties, setSorties] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [profs, setProfs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -73,6 +74,7 @@ export default function SortieScolaire() {
         date_fin_annee: eco.date_fin_annee || '',
       });
     } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { charger(); }, []);
@@ -378,6 +380,7 @@ export default function SortieScolaire() {
 
       <div style={{ marginTop: 16 }}>
         <SuiviTable
+          loading={loading}
           sorties={sortiesOnglet}
           onEdit={ouvrirEdit}
           onDelete={supprimer}
@@ -582,7 +585,7 @@ function SortieCard({ sortie, onEdit, onDelete }) {
   );
 }
 
-function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
+function SuiviTable({ sorties, loading, onEdit, onDelete, onPrint, onToggleApprouve }) {
   const budgetCol = {
     width: 100,
     minWidth: 100,
@@ -598,7 +601,8 @@ function SuiviTable({ sorties, onEdit, onDelete, onPrint, onToggleApprouve }) {
     const n = parseFloat(String(s.budget).replace(',', '.'));
     return sum + (Number.isFinite(n) ? n : 0);
   }, 0);
-  if (sorties.length === 0) return (
+  if (loading) return <PageLoader />;
+  if (!loading && sorties.length === 0) return (
     <div style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
       Aucune sortie enregistrée pour cet onglet.
     </div>

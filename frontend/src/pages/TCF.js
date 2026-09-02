@@ -2,6 +2,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import TimePicker from '../components/TimePicker';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
@@ -193,14 +194,20 @@ export default function TCF() {
       return p;
     });
   };
-  const [profs, setProfs] = useState([]);
+  const [profs, setProfs] = useState(() => peekCachedGet('/profs') || []);
   const [pools, setPools] = useState([]);
-  const [creneaux, setCreneaux] = useState([]);
+  const [creneaux, setCreneaux] = useState(() => peekCachedGet('/planning/creneaux') || []);
   // Créneaux où le prof a une affectation EDT (Emploi du temps → Affectations → Professeurs)
   const [affectationsMap, setAffectationsMap] = useState({});
-  const [classes, setClasses] = useState([]);
-  const [eleves, setEleves] = useState([]);
-  const [chargement, setChargement] = useState(true);
+  const [classes, setClasses] = useState(() => {
+    const cached = peekCachedGet('/classes');
+    return cached ? cached.filter((c) => c.actif !== false) : [];
+  });
+  const [eleves, setEleves] = useState(() => {
+    const cached = peekCachedGet('/eleves');
+    return cached ? cached.filter((e) => e.statut !== 'inactif') : [];
+  });
+  const [chargement, setChargement] = useState(() => !peekCachedGet('/profs') && !peekCachedGet('/classes'));
   const [saving, setSaving] = useState(false);
 
   const [siteNames, setSiteNames] = useState({ site1: 'Site 1', site2: 'Site 2' });
@@ -222,7 +229,7 @@ export default function TCF() {
   const [resultatDirty, setResultatDirty] = useState(false);
   const [saveMsgByTab, setSaveMsgByTab] = useState({ pool: '', classes: '', roles: '', resultat: '' });
   const [saveToast, setSaveToast] = useState('');
-  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
 
   const [resultatNiveau, setResultatNiveau] = useState('');
   const [showTrierNiveaux, setShowTrierNiveaux] = useState(false);

@@ -2,6 +2,7 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -20,8 +21,9 @@ const Champ = ({ lbl, children }) => (
 );
 
 export default function Eleves() {
-  const [eleves, setEleves] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [eleves, setEleves] = useState(() => peekCachedGet('/eleves') || []);
+  const [loading, setLoading] = useState(() => !peekCachedGet('/eleves'));
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
@@ -29,7 +31,7 @@ export default function Eleves() {
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [classeFiltreNiveau, setClasseFiltreNiveau] = useState('');
   const [showInactif, setShowInactif] = useState(true);
-  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
@@ -125,6 +127,7 @@ export default function Eleves() {
       setEleves(el.data);
       setClasses(cl.data);
     } catch(err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   // Synchroniser les compteurs d'observations/sanctions sur l'élève ouvert pour refléter l'état immédiatement
@@ -1139,6 +1142,9 @@ export default function Eleves() {
 
       {/* Tableau */}
       <div style={{marginTop:4}}>
+        {loading ? (
+          <PageLoader />
+        ) : (
         <div style={{borderRadius:12,overflow:'hidden',background:'white'}}>
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
@@ -1155,7 +1161,7 @@ export default function Eleves() {
             </tr>
           </thead>
           <tbody>
-            {elevesFiltres.length===0 ? (
+            {!loading && elevesFiltres.length===0 ? (
               <tr><td colSpan="9" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
@@ -1256,6 +1262,7 @@ export default function Eleves() {
         </table>
         </div>
         </div>
+        )}
       </div>
     </div>
   );

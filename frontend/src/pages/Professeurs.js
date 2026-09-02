@@ -1,6 +1,7 @@
 import { isAdmin, getUser } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
@@ -31,7 +32,8 @@ export default function Professeurs({
   searchPlaceholder = 'Rechercher un professeur...',
   showRoleToggle = false,
 } = {}) {
-  const [profs, setProfs] = useState([]);
+  const [profs, setProfs] = useState(() => (apiBase === '/profs' ? peekCachedGet('/profs') : null) || []);
+  const [loading, setLoading] = useState(() => (apiBase === '/profs' ? !peekCachedGet('/profs') : true));
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
@@ -153,6 +155,7 @@ export default function Professeurs({
   const chargerProfs = async () => {
     try { const res = await apiClient.get(apiUrl,{headers}); setProfs(res.data); }
     catch(err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleTauxChange = (val) => {
@@ -761,6 +764,9 @@ export default function Professeurs({
       )}
 
       <div style={{ ...s.tableWrap, marginTop: 4, background: 'white' }}>
+        {loading ? (
+          <PageLoader />
+        ) : (
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
@@ -775,7 +781,7 @@ export default function Professeurs({
             </tr>
           </thead>
           <tbody>
-            {profsFiltres.length===0 ? (
+            {!loading && profsFiltres.length===0 ? (
               <tr><td colSpan={7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
@@ -832,6 +838,7 @@ export default function Professeurs({
           </tbody>
         </table>
         </div>
+        )}
       </div>
     </div>
   );

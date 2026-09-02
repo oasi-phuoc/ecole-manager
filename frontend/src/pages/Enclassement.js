@@ -106,10 +106,11 @@ export default function Enclassement() {
   // Données
   const [eleves, setEleves] = useState([]);
   const [tcfScores, setTcfScores] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [historique, setHistorique] = useState([]);
   const [detailEnc, setDetailEnc] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingHistorique, setLoadingHistorique] = useState(true);
 
   // Vue
   const [view, setView] = useState('init'); // 'init' | 'brouillon' | 'detail' | 'historique'
@@ -150,14 +151,16 @@ export default function Enclassement() {
       setEleves(elevRes.data || []);
       setTcfScores(tcfRes.data?.donnees?.scores || {});
     } catch (err) { console.error(err); }
-    setLoading(false);
+    finally { setLoading(false); }
   };
 
   const loadHistorique = async () => {
+    setLoadingHistorique(true);
     try {
       const r = await apiClient.get('/enclassements', { headers });
       setHistorique(r.data || []);
     } catch (err) { console.error(err); }
+    finally { setLoadingHistorique(false); }
   };
 
   // Scores TCF pour un élève et une session
@@ -426,9 +429,10 @@ export default function Enclassement() {
           <button style={s.btnBack} onClick={() => setView('init')}>← Nouvel enclassement</button>
           <h1 style={s.titre}>Historique des enclassements</h1>
         </div>
+        {loadingHistorique && <PageLoader compact label="Chargement…" />}
         {loadingDetail && <PageLoader compact label="Chargement…" />}
-        {historique.length === 0 && !loadingDetail && <div style={{ ...s.content, ...s.empty }}>Aucun enclassement sauvegardé.</div>}
-        {historique.length > 0 && (
+        {!loadingHistorique && historique.length === 0 && !loadingDetail && <div style={{ ...s.content, ...s.empty }}>Aucun enclassement sauvegardé.</div>}
+        {!loadingHistorique && historique.length > 0 && (
           <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
@@ -655,7 +659,9 @@ export default function Enclassement() {
               style={{ ...s.input, marginBottom: 0, marginLeft: 'auto', width: 'min(160px, 100%)', minWidth: 120 }} />
           </div>
 
-          {elevesAvecScores.length === 0 ? (
+          {loading ? (
+            <PageLoader label="Chargement…" compact style={{ padding: 32 }} />
+          ) : elevesAvecScores.length === 0 ? (
             <div style={{ padding: 32, color: '#94a3b8', textAlign: 'center', fontSize: 14 }}>
               Aucun élève avec scores TCF pour la session « {SESSION_LABEL[session] || session} ».<br />
               <span style={{ fontSize: 12 }}>Vérifiez que des résultats ont été saisis dans le module TCF.</span>

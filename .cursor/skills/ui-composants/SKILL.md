@@ -175,7 +175,21 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 - ❌ Onglets pastilles sans fond `#ede9fe` / actif hors `#6366f1`
 - ❌ Texte « Chargement… » sans `PageLoader`
 - ❌ Bouton Sauvegarder sans `loading` / disable pendant l’appel API
+- ❌ Message « Aucun… » pendant le fetch (flash empty) — toujours `loading` puis empty si `!loading && length===0`
 - ❌ Inventer une nouvelle palette hors violet thème
+
+## Empty vs chargement
+
+```js
+const [loading, setLoading] = useState(() => !peekCachedGet('/ressource'));
+// fetch: try { … } finally { setLoading(false); }
+
+{loading ? <PageLoader /> : list.length === 0 ? (
+  <div>Aucun élément…</div>
+) : (
+  /* liste */
+)}
+```
 
 ## Fichiers clés
 

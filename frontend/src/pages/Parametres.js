@@ -24,7 +24,7 @@ import {
   titreStatutDispo,
 } from '../utils/disponibilites';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
-import { LoadingButton } from '../components/LoadingUI';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
@@ -199,6 +199,7 @@ export default function Parametres() {
   const [niveauxDB, setNiveauxDB] = useState([]);
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [sallesDB, setSallesDB] = useState([]);
+  const [loadingDonnees, setLoadingDonnees] = useState(true);
   const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '', periodes_normales: '20', periodes_soutien: '0' });
   const [donneesLieuForm, setDonneesLieuForm] = useState({ nom: '' });
   const [donneesSalleForm, setDonneesSalleForm] = useState({ nom: '', lieu_travail_id: '' });
@@ -351,6 +352,7 @@ export default function Parametres() {
       setLieuxTravailDB(lieux.data || []);
       setSallesDB(salles.data || []);
     } catch(err) { console.error(err); }
+    finally { setLoadingDonnees(false); }
   };
 
   const chargerBranchesProfil = async (niveaux = []) => {
@@ -1698,7 +1700,9 @@ export default function Parametres() {
                                   </button>
                                 );
                               })}
-                              {niveauxDB.length === 0 && (
+                              {loadingDonnees ? (
+                                <PageLoader label="Chargement..." compact style={{ padding: 8 }} />
+                              ) : niveauxDB.length === 0 && (
                                 <span style={{ fontSize: 12, color: '#94a3b8' }}>Aucun niveau configuré dans Structure.</span>
                               )}
                             </div>
@@ -1799,7 +1803,9 @@ export default function Parametres() {
                         <button onClick={async () => { if (window.confirm('Supprimer ?')) { await apiClient.delete('/donnees/niveaux/' + n.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
-                    {niveauxDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun niveau</div>}
+                    {loadingDonnees ? (
+                      <PageLoader label="Chargement..." compact style={{ padding: 8 }} />
+                    ) : niveauxDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun niveau</div>}
                   </div>
 
                   {/* Lieux de travail */}
@@ -1837,7 +1843,9 @@ export default function Parametres() {
                         <button onClick={async () => { if (window.confirm('Supprimer ?')) { await apiClient.delete('/donnees/lieux-travail/' + l.id, { headers }); chargerDonnees(); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}>🗑️</button>
                       </div>
                     ))}
-                    {lieuxTravailDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun lieu</div>}
+                    {loadingDonnees ? (
+                      <PageLoader label="Chargement..." compact style={{ padding: 8 }} />
+                    ) : lieuxTravailDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun lieu</div>}
                   </div>
 
                   {/* Salles */}
@@ -1880,7 +1888,9 @@ export default function Parametres() {
                         </div>
                       );
                     })}
-                    {sallesDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune salle</div>}
+                    {loadingDonnees ? (
+                      <PageLoader label="Chargement..." compact style={{ padding: 8 }} />
+                    ) : sallesDB.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucune salle</div>}
                   </div>
 
                 </div>

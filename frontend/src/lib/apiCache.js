@@ -12,6 +12,9 @@ const CACHE_RULES = [
   { pattern: /^\/profs$/, ttl: 3 * 60 * 1000 },
   { pattern: /^\/branches$/, ttl: 5 * 60 * 1000 },
   { pattern: /^\/eleves$/, ttl: 2 * 60 * 1000 },
+  { pattern: /^\/notes\/suivi-classes$/, ttl: 2 * 60 * 1000 },
+  { pattern: /^\/notes\/classes-responsables$/, ttl: 3 * 60 * 1000 },
+  { pattern: /^\/notes\/semestre-config$/, ttl: 5 * 60 * 1000 },
   { pattern: /^\/parametres\/ecole$/, ttl: 5 * 60 * 1000 },
   { pattern: /^\/parametres\/acces-profs$/, ttl: 5 * 60 * 1000 },
   { pattern: /^\/planning\/creneaux$/, ttl: 10 * 60 * 1000 },
@@ -42,10 +45,14 @@ function invalidateForMutation(url = '') {
   const path = normalizePath(url);
   const prefixes = new Set();
 
-  if (path.startsWith('/classes')) prefixes.add('/classes');
+  if (path.startsWith('/classes')) {
+    prefixes.add('/classes');
+    prefixes.add('/notes');
+  }
   if (path.startsWith('/eleves')) {
     prefixes.add('/eleves');
     prefixes.add('/classes');
+    prefixes.add('/notes');
   }
   if (path.startsWith('/profs')) prefixes.add('/profs');
   if (path.startsWith('/branches')) prefixes.add('/branches');
@@ -54,6 +61,7 @@ function invalidateForMutation(url = '') {
   if (path.startsWith('/planning')) prefixes.add('/planning');
   if (path.startsWith('/statistiques')) prefixes.add('/statistiques');
   if (path.startsWith('/auth')) prefixes.add('/auth');
+  if (path.startsWith('/notes')) prefixes.add('/notes');
 
   if (prefixes.size === 0) return;
 
@@ -73,6 +81,20 @@ export function clearApiCache() {
   inflight.clear();
 }
 
+/**
+ * Lecture synchrone du cache GET (sans réseau).
+ * Retourne `data` si l'entrée est encore fraîche, sinon `null`.
+ */
+export function peekCachedGet(url, params) {
+  const path = normalizePath(url);
+  const rule = getRule(path);
+  if (!rule) return null;
+  const key = cacheKey({ url: path, params });
+  const entry = store.get(key);
+  if (!entry || Date.now() - entry.ts >= rule.ttl) return null;
+  return entry.data;
+}
+
 export const REFERENCE_PREFETCH_URLS = [
   '/donnees/niveaux',
   '/donnees/lieux-travail',
@@ -82,6 +104,9 @@ export const REFERENCE_PREFETCH_URLS = [
   '/branches',
   '/parametres/ecole',
   '/planning/creneaux',
+  '/notes/suivi-classes',
+  '/notes/classes-responsables',
+  '/notes/semestre-config',
 ];
 
 export const HEAVY_PREFETCH_URLS = ['/eleves'];

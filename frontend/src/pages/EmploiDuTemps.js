@@ -2,6 +2,7 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss } from '../utils/print';
@@ -245,11 +246,15 @@ export default function EmploiDuTemps() {
   const [sousOngletAff, setSousOngletAff] = useState('classes');
   const [sousOngletDisp, setSousOngletDisp] = useState('tous');
   const [showPoolsFiltresDispo, setShowPoolsFiltresDispo] = useState(false);
-  const [profs, setProfs] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [matieres, setMatieres] = useState([]);
-  const [creneaux, setCreneaux] = useState([]);
+  const [profs, setProfs] = useState(() => {
+    const cached = peekCachedGet('/profs');
+    return cached ? cached.filter((x) => x.actif !== false) : [];
+  });
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
+  const [matieres, setMatieres] = useState(() => peekCachedGet('/branches') || []);
+  const [creneaux, setCreneaux] = useState(() => peekCachedGet('/planning/creneaux') || []);
   const [pools, setPools] = useState([]);
+  const [loadingInitial, setLoadingInitial] = useState(() => !peekCachedGet('/planning/pools'));
   const [affectations, setAffectations] = useState([]);
   const [affectationsDraft, setAffectationsDraft] = useState([]);
   const [hasAffectationsUnsaved, setHasAffectationsUnsaved] = useState(false);
@@ -328,9 +333,9 @@ export default function EmploiDuTemps() {
   const [poolAffId, setPoolAffId] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'success' });
   // Données (niveaux, lieux, salles) pour les sélecteurs
-  const [niveauxDB, setNiveauxDB] = useState([]);
-  const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
-  const [sallesDB, setSallesDB] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
+  const [lieuxTravailDB, setLieuxTravailDB] = useState(() => peekCachedGet('/donnees/lieux-travail') || []);
+  const [sallesDB, setSallesDB] = useState(() => peekCachedGet('/donnees/salles') || []);
   const [parametresHoraires, setParametresHoraires] = useState({});
   const dragPoolIdx = useRef(null);
   const [dragOverPool, setDragOverPool] = useState(null);
@@ -535,6 +540,7 @@ export default function EmploiDuTemps() {
       setHasBranchesUnsaved(false);
       setHasClassesUnsaved(false);
     } catch(err) { console.error(err); }
+    finally { setLoadingInitial(false); }
   };
 
   const chargerDisposAffectations = async (pool_id = poolAffId) => {
@@ -5397,13 +5403,15 @@ export default function EmploiDuTemps() {
             </div>
           )}
 
-          {pools.length === 0 && (
+          {loadingInitial ? (
+            <PageLoader label="Chargement…" />
+          ) : pools.length === 0 ? (
             <div style={styles.msgVide}>
               Aucun pool créé. Cliquez sur <strong>+ Ajouter</strong> pour créer votre premier pool.
             </div>
-          )}
+          ) : null}
           <div style={styles.poolsGrid}>
-            {pools.map((pool, idx) => (
+            {!loadingInitial && pools.map((pool, idx) => (
               <div key={pool.id}
                 draggable
                 onDragStart={() => { dragPoolIdx.current = idx; }}

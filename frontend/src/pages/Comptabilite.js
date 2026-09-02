@@ -1,13 +1,14 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
 import CustomSelect from '../components/CustomSelect';
 import { isAdmin } from '../utils/permissions';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
-import { LoadingButton } from '../components/LoadingUI';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const TYPES = ['Ecolage', 'Fournitures', 'Cantine', 'Transport', 'Sortie', 'Assurance', 'Autre'];
 const STATUTS = [
@@ -89,10 +90,12 @@ export default function Comptabilite() {
 
   // Data
   const [paiements, setPaiements] = useState([]);
+  const [loadingPaiements, setLoadingPaiements] = useState(true);
   const [stats, setStats] = useState(null);
-  const [eleves, setEleves] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [eleves, setEleves] = useState(() => peekCachedGet('/eleves') || []);
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
   const [materiels, setMateriels] = useState([]);
+  const [loadingMateriels, setLoadingMateriels] = useState(true);
 
   // Paiements sub-tab + filter
   const [paiementsOnglet, setPaiementsOnglet] = useState('tous');
@@ -124,6 +127,7 @@ export default function Comptabilite() {
 
   // Commandes
   const [commandes, setCommandes] = useState([]);
+  const [loadingCommandes, setLoadingCommandes] = useState(true);
   const [showCommandePopup, setShowCommandePopup] = useState(false);
   const [commandeEdit, setCommandeEdit] = useState(null);
   const [commandeForm, setCommandeForm] = useState({ article: '', quantite: 1, fournisseur: '', prix_unitaire: '', statut: 'en_attente', remarques: '' });
@@ -189,6 +193,7 @@ export default function Comptabilite() {
       const res = await apiClient.get('/comptabilite', { headers });
       setPaiements(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoadingPaiements(false); }
   };
   const chargerStats = async () => {
     try {
@@ -213,6 +218,7 @@ export default function Comptabilite() {
       const res = await apiClient.get('/comptabilite/materiels', { headers });
       setMateriels(res.data || []);
     } catch (err) { console.error(err); }
+    finally { setLoadingMateriels(false); }
   };
 
   const getStatut = (val) => STATUTS.find(s => s.val === val) || STATUTS[0];
@@ -716,6 +722,7 @@ export default function Comptabilite() {
       results.forEach(({ id, lignes }) => { map[id] = lignes; });
       setAllLignesMap(map);
     } catch { setCommandes([]); }
+    finally { setLoadingCommandes(false); }
   };
 
   useEffect(() => { chargerCommandes(); }, []);
@@ -1039,7 +1046,9 @@ export default function Comptabilite() {
             </tr>
           </thead>
           <tbody>
-            {paiementsAffiches.length === 0 ? (
+            {loadingPaiements ? (
+              <tr><td colSpan="7"><PageLoader label="Chargement..." compact /></td></tr>
+            ) : paiementsAffiches.length === 0 ? (
               <tr><td colSpan="7" style={styles.vide}>Aucun paiement</td></tr>
             ) : paiementsAffiches.map(p => {
               const PILLS = [
@@ -1115,10 +1124,12 @@ export default function Comptabilite() {
                     </tr>
                   </thead>
                   <tbody>
-                    {commandesFiltrees.length === 0 && (
+                    {loadingCommandes ? (
+                      <tr><td colSpan={5}><PageLoader label="Chargement..." compact /></td></tr>
+                    ) : commandesFiltrees.length === 0 ? (
                       <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{qCmd ? 'Aucun résultat.' : 'Aucune commande enregistrée.'}</td></tr>
-                    )}
-                    {commandesFiltrees.map((cmd, i) => {
+                    ) : null}
+                    {!loadingCommandes && commandesFiltrees.map((cmd, i) => {
                       const montant = parseFloat(cmd.montant_total) || 0;
                       const dateStr = cmd.date_commande ? new Date(cmd.date_commande).toLocaleDateString('fr-CH') : '—';
                       return (
@@ -1432,7 +1443,9 @@ export default function Comptabilite() {
                 </tr>
               </thead>
               <tbody>
-                {materielsScolaires.length === 0 ? (
+                {loadingMateriels ? (
+                  <tr><td colSpan="7"><PageLoader label="Chargement..." compact /></td></tr>
+                ) : materielsScolaires.length === 0 ? (
                   <tr><td colSpan="7" style={styles.vide}>Aucun matériel scolaire</td></tr>
                 ) : materielsScolaires.map((m, i) => (
                   <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
@@ -1472,7 +1485,9 @@ export default function Comptabilite() {
                 </tr>
               </thead>
               <tbody>
-                {materielsFournitures.length === 0 ? (
+                {loadingMateriels ? (
+                  <tr><td colSpan="7"><PageLoader label="Chargement..." compact /></td></tr>
+                ) : materielsFournitures.length === 0 ? (
                   <tr><td colSpan="7" style={styles.vide}>Aucune fourniture</td></tr>
                 ) : materielsFournitures.map((m, i) => (
                   <tr key={m.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>

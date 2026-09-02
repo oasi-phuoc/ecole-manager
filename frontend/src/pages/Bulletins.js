@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { getSessionUser } from '../utils/session';
 import { isAdmin } from '../utils/permissions';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -30,10 +31,10 @@ const BULLETIN_CRITERES_LABELS = [
 ];
 
 export default function Bulletins() {
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [classeObj, setClasseObj] = useState(null);
-  const [ecoleParams, setEcoleParams] = useState({});
+  const [ecoleParams, setEcoleParams] = useState(() => peekCachedGet('/parametres/ecole') || {});
   const [onglet, setOnglet] = useState('comportements');
   const [bulletinSemestre, setBulletinSemestre] = useState('1');
   const [bulletins, setBulletins] = useState([]);

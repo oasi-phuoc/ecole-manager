@@ -2,6 +2,7 @@
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -12,6 +13,15 @@ import { PageLoader, LoadingButton } from '../components/LoadingUI';
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
 const COL_OEIL_DETAIL = 52;
+
+function mapSuiviNotesClasseNotes(rows) {
+  const map = {};
+  (rows || []).forEach((x) => {
+    const pid = x.prof_id != null && x.prof_id !== '' ? String(x.prof_id) : 'null';
+    map[`${x.classe_id}-${x.matiere_id}-${pid}`] = parseInt(x.nb_evaluations, 10) || 0;
+  });
+  return map;
+}
 
 const calculerNote = (points, pointsMax) => {
   if (points === '' || points === null || points === undefined || pointsMax <= 0) return null;
@@ -107,7 +117,8 @@ const getMention = (moyenne) => {
 
 export default function Notes() {
   const [vue, setVue] = useState('classes');
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
+  const [loading, setLoading] = useState(() => !peekCachedGet('/classes'));
   const [matieres, setMatieres] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const [evaluationOuverte, setEvaluationOuverte] = useState(null);
@@ -122,7 +133,7 @@ export default function Notes() {
   const [matiereSelectionnee, setMatiereSelectionnee] = useState('');
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [classeObj, setClasseObj] = useState(null);
-  const [ecoleParams, setEcoleParams] = useState({});
+  const [ecoleParams, setEcoleParams] = useState(() => peekCachedGet('/parametres/ecole') || {});
   const [matiereObj, setMatiereObj] = useState(null);
   const [rapport, setRapport] = useState(null);
   const [rapportChargement, setRapportChargement] = useState(false);
@@ -147,12 +158,16 @@ export default function Notes() {
   const [attestationPopupEleve, setAttestationPopupEleve] = useState(null);
   const [attestationMode, setAttestationMode] = useState('eleve');
   const [evalSemestre, setEvalSemestre] = useState('1');
-  const [sem1Bloque, setSem1Bloque] = useState(false);
+  const [sem1Bloque, setSem1Bloque] = useState(() => peekCachedGet('/notes/semestre-config')?.sem1_bloque === true);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
-  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState(() =>
+    mapSuiviNotesClasseNotes(peekCachedGet('/notes/suivi-classes')),
+  );
   const [branches, setBranches] = useState([]);
-  const [classesResponsables, setClassesResponsables] = useState([]);
+  const [classesResponsables, setClassesResponsables] = useState(
+    () => peekCachedGet('/notes/classes-responsables') || [],
+  );
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -238,12 +253,7 @@ export default function Notes() {
     // Données pour le tableau des classes
     apiClient.get('/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
     apiClient.get('/notes/suivi-classes', { headers }).then(r => {
-      const map = {};
-      (r.data || []).forEach(x => {
-        const pid = x.prof_id != null && x.prof_id !== '' ? String(x.prof_id) : 'null';
-        map[`${x.classe_id}-${x.matiere_id}-${pid}`] = parseInt(x.nb_evaluations, 10) || 0;
-      });
-      setSuiviNotesClasse(map);
+      setSuiviNotesClasse(mapSuiviNotesClasseNotes(r.data));
     }).catch(() => {});
     apiClient.get('/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
     apiClient.get('/notes/semestre-config', { headers }).then(r => {
@@ -258,6 +268,7 @@ export default function Notes() {
       const res = await apiClient.get('/classes', { headers });
       setClasses(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const chargerMatieres = async () => {
@@ -2723,6 +2734,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
 
         {/* Tableau des classes */}
         <div style={s.tblWrap}>
+          {loading ? (
+            <PageLoader />
+          ) : (
           <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
@@ -2734,7 +2748,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
               </tr>
             </thead>
             <tbody>
-              {classesFiltrees.length === 0 ? (
+              {!loading && classesFiltrees.length === 0 ? (
                 <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
               ) : classesFiltrees.map((cl, i) => {
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
@@ -2806,6 +2820,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             </tbody>
           </table>
           </div>
+          )}
         </div>
     </div>
   );

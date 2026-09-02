@@ -74,6 +74,8 @@ export default function Presences() {
   const [evenementsCalendrier, setEvenementsCalendrier] = useState([]);
   const [apercuMois, setApercuMois] = useState({});
   const [loadingApercu, setLoadingApercu] = useState(false);
+  const [loadingEleves, setLoadingEleves] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [statsDateDebut, setStatsDateDebut] = useState('');
   const [statsDateFin, setStatsDateFin] = useState('');
@@ -319,6 +321,7 @@ export default function Presences() {
   };
 
   const chargerEleves = async () => {
+    setLoadingEleves(true);
     try {
       const [elevesRes, presRes] = await Promise.all([
         apiClient.get('/presences/eleves?classe_id=' + classeSelectionnee, { headers }),
@@ -340,9 +343,12 @@ export default function Presences() {
       setPresences(p);
       setValide(isValide);
     } catch (err) { console.error(err); }
+    finally { setLoadingEleves(false); }
   };
 
   const chargerStats = async () => {
+    if (!classeSelectionnee) return;
+    setLoadingStats(true);
     try {
       const params = new URLSearchParams({ classe_id: String(classeSelectionnee) });
       if (statsDateDebut) params.append('date_debut', statsDateDebut);
@@ -350,6 +356,7 @@ export default function Presences() {
       const res = await apiClient.get('/presences/statistiques?' + params.toString(), { headers });
       setStatistiques(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoadingStats(false); }
   };
 
   const handleToggleValide = () => {
@@ -706,6 +713,15 @@ export default function Presences() {
                     if (!getHoraireJour()) {
                       return cellMsg('white', '#94a3b8', `Aucun horaire défini pour cette classe le ${getNomJour()} — configurez l'affectation des classes dans l'emploi du temps`);
                     }
+                    if (loadingEleves) {
+                      return (
+                        <tr key="loading">
+                          <td colSpan={cs} style={{ padding: '28px 20px', textAlign: 'center', background: 'white' }}>
+                            <PageLoader label="Chargement..." compact />
+                          </td>
+                        </tr>
+                      );
+                    }
                     if (eleves.length === 0) {
                       return cellMsg('#fafafa', '#94a3b8', 'Aucun élève actif dans cette classe');
                     }
@@ -913,7 +929,9 @@ export default function Presences() {
               </tr>
             </thead>
             <tbody>
-              {statistiques.length === 0 ? (
+              {loadingStats ? (
+                <tr><td colSpan="10"><PageLoader label="Chargement..." compact /></td></tr>
+              ) : statistiques.length === 0 ? (
                 <tr><td colSpan="10" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucune donnée</td></tr>
               ) : statistiques.map((st, i) => {
                 const presents = Number(st.presents) || 0;

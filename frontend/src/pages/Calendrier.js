@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import CustomSelect from '../components/CustomSelect';
-import { LoadingButton } from '../components/LoadingUI';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -11,6 +11,7 @@ const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
 export default function Calendrier() {
   const [evenements, setEvenements] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [profs, setProfs] = useState([]);
   const [moisActuel, setMoisActuel] = useState(new Date().getMonth());
   const [anneeActuelle, setAnneeActuelle] = useState(new Date().getFullYear());
@@ -32,6 +33,7 @@ export default function Calendrier() {
   const [jourPopup, setJourPopup] = useState(null);
   const [evtsPopup, setEvtsPopup] = useState([]);
   const [calendrierProf, setCalendrierProf] = useState([]);
+  const [loadingProf, setLoadingProf] = useState(true);
   const [profEventForm, setProfEventForm] = useState({ date: '', titre: '', type: 'Devoir', description: '' });
   const [showProfForm, setShowProfForm] = useState(false);
   const [profEventEditId, setProfEventEditId] = useState(null);
@@ -53,6 +55,7 @@ export default function Calendrier() {
       setEvenements(ev.data);
       setProfs(pr.data);
     } catch(err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const chargerCalendrierProf = async () => {
@@ -60,6 +63,7 @@ export default function Calendrier() {
       const res = await apiClient.get('/calendrier/prof', { headers });
       setCalendrierProf(res.data || []);
     } catch {}
+    finally { setLoadingProf(false); }
   };
 
   const supprimerProfEvent = async (id) => {
@@ -463,7 +467,8 @@ export default function Calendrier() {
             <div style={{fontSize:13,fontWeight:800,color:'#92400e'}}>🏖️ Vacances & Jours fériés</div>
           </div>
           <div style={{overflowY:'auto'}}>
-            {vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
+            {loading ? <PageLoader compact style={{padding:20}} />
+            : !loading && vacances.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune vacance</div>
             : vacances.map(v => (
               <div key={v.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
                 <div style={{width:8,height:8,borderRadius:'50%',background:v.couleur||'#f59e0b',flexShrink:0}}></div>
@@ -487,7 +492,8 @@ export default function Calendrier() {
               {isAdmin() && <button style={{...s.btnSave,background:'#0369a1',padding:'3px 8px',fontSize:10}} onClick={() => { setSeanceEdit(null); setFormSeance({titre:'',date_debut:'',heure_debut:'',heure_fin:''}); setShowFormSeance(true); }}>+</button>}
             </div>
             <div style={{maxHeight:180,overflowY:'auto'}}>
-              {seances.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune séance</div>
+              {loading ? <PageLoader compact style={{padding:16}} />
+              : !loading && seances.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune séance</div>
               : seances.map(s2 => (
                 <div key={s2.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
                   <div style={{width:6,height:6,borderRadius:'50%',background:'#0369a1',flexShrink:0}}></div>
@@ -511,7 +517,8 @@ export default function Calendrier() {
               {isAdmin() && <button style={{...s.btnSave,background:'#dc2626',padding:'3px 8px',fontSize:10}} onClick={() => { setRetenueEdit(null); setFormRetenue({titre:'',prof1_id:'',prof2_id:'',date_debut:'',heure_debut:'10:00',heure_fin:'11:30'}); setShowFormRetenue(true); }}>+</button>}
             </div>
             <div style={{maxHeight:180,overflowY:'auto'}}>
-              {retenues.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
+              {loading ? <PageLoader compact style={{padding:16}} />
+              : !loading && retenues.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucune retenue</div>
               : retenues.map(r => (
                 <div key={r.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
                   <div style={{width:6,height:6,borderRadius:'50%',background:'#dc2626',flexShrink:0}}></div>
@@ -535,7 +542,8 @@ export default function Calendrier() {
               {isAdmin() && <button style={{...s.btnSave,background:'#9333ea',padding:'3px 8px',fontSize:10}} onClick={() => { setParticulierEdit(null); setFormParticulier({titre:'',date_debut:'',date_fin:''}); setShowFormParticulier(true); }}>+</button>}
             </div>
             <div style={{maxHeight:180,overflowY:'auto'}}>
-              {particuliers.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucun événement</div>
+              {loading ? <PageLoader compact style={{padding:16}} />
+              : !loading && particuliers.length===0 ? <div style={{padding:16,textAlign:'center',color:'#94a3b8',fontSize:11}}>Aucun événement</div>
               : particuliers.map(p => (
                 <div key={p.id} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 10px',borderBottom:'1px solid #f8fafc'}}>
                   <div style={{width:6,height:6,borderRadius:'50%',background:'#9333ea',flexShrink:0}}></div>
@@ -559,7 +567,8 @@ export default function Calendrier() {
             <div style={{fontSize:13,fontWeight:800,color:'#5b21b6'}}>📝 Évaluations</div>
           </div>
           <div>
-            {evaluations.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune évaluation</div>
+            {loading ? <PageLoader compact style={{padding:20}} />
+            : !loading && evaluations.length===0 ? <div style={{padding:20,textAlign:'center',color:'#94a3b8',fontSize:12}}>Aucune évaluation</div>
             : evaluations.map(ev => (
               <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderBottom:'1px solid #f8fafc'}}>
                 <div style={{width:8,height:8,borderRadius:'50%',background:'#7c3aed',flexShrink:0}}></div>
@@ -624,7 +633,9 @@ export default function Calendrier() {
             </div>
           </form>
         )}
-        {calendrierProf.length === 0 ? (
+        {loadingProf ? (
+          <PageLoader compact style={{padding:20}} />
+        ) : !loadingProf && calendrierProf.length === 0 ? (
           <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0', fontSize: 14 }}>Aucun élément — cliquez sur "+ Ajouter" pour commencer</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>

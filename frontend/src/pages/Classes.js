@@ -2,6 +2,7 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
+import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
@@ -9,19 +10,32 @@ import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
+function mapSuiviNotesClasse(rows) {
+  const map = {};
+  (rows || []).forEach((x) => {
+    map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0;
+  });
+  return map;
+}
 
 export default function Classes() {
-  const [classes, setClasses] = useState([]);
-  const [profs, setProfs] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
+  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
+  const [loading, setLoading] = useState(() => !peekCachedGet('/classes'));
+  const [profs, setProfs] = useState(() => {
+    const cached = peekCachedGet('/profs');
+    return cached ? cached.filter((p) => p.actif !== false) : [];
+  });
+  const [branches, setBranches] = useState(() => peekCachedGet('/branches') || []);
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState(() =>
+    mapSuiviNotesClasse(peekCachedGet('/notes/suivi-classes')),
+  );
   const [showForm, setShowForm] = useState(false);
   const [classeEdit, setClasseEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [showInactif, setShowInactif] = useState(false);
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
-  const [niveauxDB, setNiveauxDB] = useState([]);
+  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
   const [elevesClasse, setElevesClasse] = useState([]);
@@ -60,27 +74,27 @@ export default function Classes() {
   }, []);
 
   const chargerTout = async () => {
-    const [cl, pr, br, sn] = await Promise.allSettled([
-      apiClient.get('/classes', {headers}),
-      apiClient.get('/profs', {headers}),
-      apiClient.get('/branches', {headers}),
-      apiClient.get('/notes/suivi-classes', {headers}),
-    ]);
-    if (cl.status === 'fulfilled') setClasses(cl.value.data);
-    else console.error('Erreur classes:', cl.reason);
-    if (pr.status === 'fulfilled') setProfs(pr.value.data.filter(p => p.actif !== false));
-    else console.error('Erreur profs:', pr.reason);
-    if (br.status === 'fulfilled') setBranches(br.value.data || []);
-    else console.error('Erreur branches:', br.reason);
-    if (sn.status === 'fulfilled') {
-      const map = {};
-      (sn.value.data || []).forEach(x => {
-        map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0;
-      });
-      setSuiviNotesClasse(map);
-    } else {
-      console.error('Erreur suivi notes classes:', sn.reason);
-      setSuiviNotesClasse({});
+    try {
+      const [cl, pr, br, sn] = await Promise.allSettled([
+        apiClient.get('/classes', {headers}),
+        apiClient.get('/profs', {headers}),
+        apiClient.get('/branches', {headers}),
+        apiClient.get('/notes/suivi-classes', {headers}),
+      ]);
+      if (cl.status === 'fulfilled') setClasses(cl.value.data);
+      else console.error('Erreur classes:', cl.reason);
+      if (pr.status === 'fulfilled') setProfs(pr.value.data.filter(p => p.actif !== false));
+      else console.error('Erreur profs:', pr.reason);
+      if (br.status === 'fulfilled') setBranches(br.value.data || []);
+      else console.error('Erreur branches:', br.reason);
+      if (sn.status === 'fulfilled') {
+        setSuiviNotesClasse(mapSuiviNotesClasse(sn.value.data));
+      } else {
+        console.error('Erreur suivi notes classes:', sn.reason);
+        setSuiviNotesClasse({});
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2200,6 +2214,9 @@ export default function Classes() {
       )}
 
       <div style={{...s.tableWrap, marginTop:4}}>
+        {loading ? (
+          <PageLoader />
+        ) : (
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
@@ -2213,7 +2230,7 @@ export default function Classes() {
             </tr>
           </thead>
           <tbody>
-            {classesFiltrees.length===0 ? (
+            {!loading && classesFiltrees.length===0 ? (
               <tr><td colSpan={6} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
@@ -2300,6 +2317,7 @@ export default function Classes() {
           </tbody>
         </table>
         </div>
+        )}
       </div>
     </div>
   );
