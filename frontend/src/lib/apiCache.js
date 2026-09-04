@@ -122,20 +122,27 @@ export function prefetchUrls(client, urls) {
  * Passe `noCache: true` dans la config axios pour forcer un refetch.
  */
 export function setupApiCache(client) {
-  const httpAdapter = client.defaults.adapter || axios.getAdapter(['http', 'xhr']);
+  // axios 1.x : defaults.adapter est un tableau ['xhr','http','fetch'], pas une fonction.
+  // Capturer l'adapter réel AVANT de le remplacer (sinon récursion / "t is not a function").
+  const adapterSpec = client.defaults.adapter;
+  const baseAdapter = typeof adapterSpec === 'function'
+    ? adapterSpec
+    : axios.getAdapter(adapterSpec || ['xhr', 'http', 'fetch']);
 
   client.defaults.adapter = async (config) => {
     const method = (config.method || 'get').toLowerCase();
+    // Forcer l'adapter réseau de base (évite de rappeler ce wrapper via config.adapter)
+    const networkConfig = { ...config, adapter: baseAdapter };
 
     if (method !== 'get' || config.noCache) {
-      const response = await httpAdapter(config);
+      const response = await baseAdapter(networkConfig);
       if (method !== 'get') invalidateForMutation(config.url);
       return response;
     }
 
     const path = normalizePath(config.url);
     const rule = getRule(path);
-    if (!rule) return httpAdapter(config);
+    if (!rule) return baseAdapter(networkConfig);
 
     const key = cacheKey(config);
     const entry = store.get(key);
@@ -152,7 +159,7 @@ export function setupApiCache(client) {
 
     if (inflight.has(key)) return inflight.get(key);
 
-    const promise = httpAdapter(config)
+    const promise = baseAdapter(networkConfig)
       .then((response) => {
         store.set(key, {
           data: response.data,
