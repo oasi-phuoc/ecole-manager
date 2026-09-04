@@ -34,6 +34,11 @@ import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
+  TYPES_SPECIAL_DEFAUT,
+  normaliserTypesSpecial,
+  libelleTypeSpecial,
+} from '../utils/typesSpecialAffectation';
+import {
   regrouperBranchesParCode,
   listerGroupesColonneOrdonnes,
   LIBELLES_COLONNES_SPECIALITES,
@@ -337,6 +342,9 @@ export default function EmploiDuTemps() {
   const [lieuxTravailDB, setLieuxTravailDB] = useState(() => peekCachedGet('/donnees/lieux-travail') || []);
   const [sallesDB, setSallesDB] = useState(() => peekCachedGet('/donnees/salles') || []);
   const [parametresHoraires, setParametresHoraires] = useState({});
+  const [typesSpecialAffectation, setTypesSpecialAffectation] = useState(() =>
+    TYPES_SPECIAL_DEFAUT.map((t) => ({ ...t }))
+  );
   const dragPoolIdx = useRef(null);
   const [dragOverPool, setDragOverPool] = useState(null);
   const navigate = useNavigate();
@@ -399,6 +407,7 @@ export default function EmploiDuTemps() {
       const par = await apiClient.get('/parametres/ecole', { headers });
       const h = par.data?.horaires || {};
       setParametresHoraires(typeof h === 'string' ? JSON.parse(h) : h);
+      setTypesSpecialAffectation(normaliserTypesSpecial(par.data?.types_special_affectation));
     } catch(err) { console.error('parametres horaires:', err); }
   };
 
@@ -860,15 +869,7 @@ export default function EmploiDuTemps() {
     }
   };
 
-  const getLibelleTypeSpecial = (typeSpecial) => {
-    const t = String(typeSpecial || '').trim().toLowerCase();
-    if (t === 'titulariat') return 'Titulariat';
-    if (t === 'atelier') return 'Atelier';
-    if (t === 'mediation') return 'Médiation';
-    if (t === 'autre') return 'Autre';
-    if (t === 'soutien') return 'Soutien';
-    return t;
-  };
+  const getLibelleTypeSpecial = (typeSpecial) => libelleTypeSpecial(typeSpecial, typesSpecialAffectation);
   const estAffectationSoutien = (aff) => {
     if (!aff) return false;
     if (String(aff.type_special || '').toLowerCase() === 'soutien') return true;
@@ -6226,10 +6227,9 @@ export default function EmploiDuTemps() {
                                         </optgroup>
                                       )}
                                       <optgroup label="Spécial">
-                                        <option value="special:titulariat">Titulariat</option>
-                                        <option value="special:atelier">Atelier</option>
-                                        <option value="special:mediation">Médiation</option>
-                                        <option value="special:autre">Autre</option>
+                                        {typesSpecialAffectation.map((t) => (
+                                          <option key={t.id} value={`special:${t.id}`}>{t.label}</option>
+                                        ))}
                                       </optgroup>
                                     </select>
                                   </td>

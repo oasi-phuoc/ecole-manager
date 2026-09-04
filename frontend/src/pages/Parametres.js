@@ -25,6 +25,11 @@ import {
 } from '../utils/disponibilites';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import {
+  TYPES_SPECIAL_DEFAUT,
+  normaliserTypesSpecial,
+  slugTypeSpecial,
+} from '../utils/typesSpecialAffectation';
 
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
@@ -137,6 +142,11 @@ export default function Parametres() {
   const [sousOngletEcole, setSousOngletEcole] = useState('adresse');
   const [employesResponsablesListe, setEmployesResponsablesListe] = useState([]);
   const [horairesEcole, setHorairesEcole] = useState({});
+  const [typesSpecialAffectation, setTypesSpecialAffectation] = useState(() =>
+    TYPES_SPECIAL_DEFAUT.map((t) => ({ ...t }))
+  );
+  const [typeSpecialFormLabel, setTypeSpecialFormLabel] = useState('');
+  const [typeSpecialEditId, setTypeSpecialEditId] = useState(null);
   const [lieuHoraireOnglet, setLieuHoraireOnglet] = useState('defaut');
   const [sousOngletProfil, setSousOngletProfil] = useState('connexion');
   const [mdpOuvert, setMdpOuvert] = useState(false);
@@ -449,6 +459,7 @@ export default function Parametres() {
           const h = typeof res.data.horaires === 'string' ? JSON.parse(res.data.horaires) : res.data.horaires;
           setHorairesEcole(h);
         }
+        setTypesSpecialAffectation(normaliserTypesSpecial(res.data.types_special_affectation));
       }
     } catch (err) { console.error(err); }
   };
@@ -710,7 +721,17 @@ export default function Parametres() {
       const horairesData = Object.keys(horairesEcole).length > 0 ? horairesEcole : (ecole.horaires || {});
       const responsables_niveaux = normaliserListeResponsablesNiveaux(ecole.responsables_niveaux)
         .filter((r) => r.nom || r.niveaux.length);
-      await apiClient.put('/parametres/ecole', { ...ecole, responsables_niveaux, horaires: horairesData }, { headers });
+      const types_special_affectation = normaliserTypesSpecial(typesSpecialAffectation).map(({ id, label }, idx) => ({
+        id,
+        label,
+        ordre: idx + 1,
+      }));
+      await apiClient.put('/parametres/ecole', {
+        ...ecole,
+        responsables_niveaux,
+        horaires: horairesData,
+        types_special_affectation,
+      }, { headers });
       setMsgEcole('success');
       setTimeout(() => setMsgEcole(''), 3000);
     } catch (err) { setMsgEcole('error'); }
@@ -1538,11 +1559,11 @@ export default function Parametres() {
               <h3 style={{ ...styles.cardTitre, marginBottom: 16, fontSize: isMobile ? 17 : 20 }}>Paramètres de l'école</h3>
 
               {barSousOnglets(
-                [['adresse', 'Adresse'], ['responsables', 'Responsables'], ['structure', 'Structure'], ['horaires', 'Horaires']],
+                [['adresse', 'Adresse'], ['responsables', 'Responsables'], ['structure', 'Structure'], ['horaires', 'Horaires'], ['special', 'Spécial']],
                 sousOngletEcole,
                 setSousOngletEcole
               )}
-              <div style={{ paddingTop: (isMobile || sousOngletEcole === 'horaires') ? 0 : 20 }}>
+              <div style={{ paddingTop: (isMobile || sousOngletEcole === 'horaires' || sousOngletEcole === 'special') ? 0 : 20 }}>
 
               <form id="form-ecole" onSubmit={handleSauverEcole}>
 
@@ -1964,6 +1985,97 @@ export default function Parametres() {
                   </div>
                 );
               })()}
+
+              {/* Section Spécial (EDT affectation) */}
+              {sousOngletEcole === 'special' && (
+                <div style={{ paddingTop: isMobile ? 8 : 20, maxWidth: 480 }}>
+                  <p style={{ color: '#64748b', fontSize: 14, marginBottom: 14, lineHeight: 1.5 }}>
+                    Liste affichée dans l’optgroup « Spécial » lors de l’affectation des professeurs (emploi du temps). « Soutien » reste à part.
+                  </p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const label = String(typeSpecialFormLabel || '').trim();
+                      if (!label) return;
+                      setTypesSpecialAffectation((prev) => {
+                        const list = normaliserTypesSpecial(prev);
+                        if (typeSpecialEditId) {
+                          return list.map((t) => (t.id === typeSpecialEditId ? { ...t, label } : t));
+                        }
+                        const id = slugTypeSpecial(label, list.map((t) => t.id));
+                        return [...list, { id, label, ordre: list.length + 1 }];
+                      });
+                      setTypeSpecialFormLabel('');
+                      setTypeSpecialEditId(null);
+                    }}
+                    style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: isMobile ? 'wrap' : 'nowrap' }}
+                  >
+                    <input
+                      style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px', minWidth: isMobile ? 0 : undefined }}
+                      placeholder="Libellé (ex: Titulariat)"
+                      value={typeSpecialFormLabel}
+                      onChange={(e) => setTypeSpecialFormLabel(e.target.value)}
+                      required
+                    />
+                    <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
+                      {typeSpecialEditId ? '✓' : '+'}
+                    </button>
+                    {typeSpecialEditId && (
+                      <button
+                        type="button"
+                        onClick={() => { setTypeSpecialEditId(null); setTypeSpecialFormLabel(''); }}
+                        style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </form>
+                  {typesSpecialAffectation.map((t) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 10px',
+                        background: '#f8fafc',
+                        borderRadius: 7,
+                        border: '1px solid #e2e8f0',
+                        marginBottom: 5,
+                      }}
+                    >
+                      <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#334155' }}>{t.label}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setTypeSpecialEditId(t.id); setTypeSpecialFormLabel(t.label); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6366f1' }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!window.confirm(`Supprimer « ${t.label} » ?`)) return;
+                          setTypesSpecialAffectation((prev) => prev.filter((x) => x.id !== t.id));
+                          if (typeSpecialEditId === t.id) {
+                            setTypeSpecialEditId(null);
+                            setTypeSpecialFormLabel('');
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#ef4444' }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                  {typesSpecialAffectation.length === 0 && (
+                    <div style={{ color: '#94a3b8', fontSize: 13 }}>Aucun type spécial — ajoutez-en au moins un, puis sauvegardez.</div>
+                  )}
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10 }}>
+                    Pensez à cliquer sur « Sauvegarder » pour enregistrer les modifications.
+                  </div>
+                </div>
+              )}
 
               </div>{/* fin paddingTop */}
             </div>

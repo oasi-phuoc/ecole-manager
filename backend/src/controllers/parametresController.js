@@ -107,8 +107,16 @@ const modifierParametresEcole = async (req, res) => {
     responsable_langues_jeunes, responsable_niveau,
     responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl,
     sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl,
-    responsables_niveaux, horaires
+    responsables_niveaux, horaires, types_special_affectation
   } = req.body;
+  const typesSpecialJson = types_special_affectation != null
+    ? JSON.stringify(types_special_affectation)
+    : JSON.stringify([
+      { id: 'titulariat', label: 'Titulariat' },
+      { id: 'atelier', label: 'Atelier' },
+      { id: 'mediation', label: 'Médiation' },
+      { id: 'autre', label: 'Autre' },
+    ]);
   try {
     const responsablesNormalises = normaliserResponsablesNiveaux(responsables_niveaux);
     const legacy = Object.keys(req.body).includes('responsables_niveaux')
@@ -125,7 +133,7 @@ const modifierParametresEcole = async (req, res) => {
     const existe = await pool.query('SELECT id FROM parametres_ecole LIMIT 1');
     if (existe.rows.length > 0) {
       await pool.query(
-        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, date_debut_annee=$6, date_fin_annee=$7, responsable_langues_jeunes=$8, responsable_niveau=$9, responsable_niveau_csc=$10, responsable_niveau_cfr=$11, responsable_niveau_epl=$12, sexe_responsable_langues_jeunes=$13, sexe_responsable_niveau_csc=$14, sexe_responsable_niveau_cfr=$15, sexe_responsable_niveau_epl=$16, responsables_niveaux=$17::jsonb, horaires=$18::jsonb WHERE id=$19',
+        'UPDATE parametres_ecole SET nom_ecole=$1, adresse=$2, telephone=$3, email=$4, annee_scolaire=$5, date_debut_annee=$6, date_fin_annee=$7, responsable_langues_jeunes=$8, responsable_niveau=$9, responsable_niveau_csc=$10, responsable_niveau_cfr=$11, responsable_niveau_epl=$12, sexe_responsable_langues_jeunes=$13, sexe_responsable_niveau_csc=$14, sexe_responsable_niveau_cfr=$15, sexe_responsable_niveau_epl=$16, responsables_niveaux=$17::jsonb, horaires=$18::jsonb, types_special_affectation=$19::jsonb WHERE id=$20',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee || null, date_fin_annee || null,
           responsable_langues_jeunes || null,
@@ -139,12 +147,13 @@ const modifierParametresEcole = async (req, res) => {
           legacy.sexe_responsable_niveau_epl,
           JSON.stringify(responsablesNormalises),
           horaires ? JSON.stringify(horaires) : '{}',
+          typesSpecialJson,
           existe.rows[0].id
         ]
       );
     } else {
       await pool.query(
-        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee, date_fin_annee, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl, responsables_niveaux, horaires) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)',
+        'INSERT INTO parametres_ecole (nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee, date_fin_annee, responsable_langues_jeunes, responsable_niveau, responsable_niveau_csc, responsable_niveau_cfr, responsable_niveau_epl, sexe_responsable_langues_jeunes, sexe_responsable_niveau_csc, sexe_responsable_niveau_cfr, sexe_responsable_niveau_epl, responsables_niveaux, horaires, types_special_affectation) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19::jsonb)',
         [
           nom_ecole, adresse, telephone, email, annee_scolaire, date_debut_annee || null, date_fin_annee || null,
           responsable_langues_jeunes || null,
@@ -157,7 +166,8 @@ const modifierParametresEcole = async (req, res) => {
           legacy.sexe_responsable_niveau_cfr,
           legacy.sexe_responsable_niveau_epl,
           JSON.stringify(responsablesNormalises),
-          horaires ? JSON.stringify(horaires) : '{}'
+          horaires ? JSON.stringify(horaires) : '{}',
+          typesSpecialJson,
         ]
       );
     }
