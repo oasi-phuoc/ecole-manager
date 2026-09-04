@@ -7,6 +7,9 @@ import { supabaseConfigured } from '../lib/supabase';
 import { LoadingButton } from '../components/LoadingUI';
 import { passkeySupported, startAuthentication } from '../lib/webauthnClient';
 
+/** Masqué temporairement sur la page login (réactiver en passant à true). */
+const SHOW_PASSKEY_LOGIN = false;
+
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
   { id: 'maj',     label: '1 lettre majuscule',            test: (p) => /[A-Z]/.test(p) },
@@ -290,7 +293,7 @@ export default function Login() {
           )}
         </form>
 
-        {!mfaRequired && passkeySupported() && (
+        {SHOW_PASSKEY_LOGIN && !mfaRequired && passkeySupported() && (
           <>
             <div style={styles.separator}>
               <span style={styles.separatorLine} />
