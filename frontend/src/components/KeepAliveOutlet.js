@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
+import { PageLoader } from './LoadingUI';
 
 const DEFAULT_KEEP_ALIVE_VIEWS = 12;
 
@@ -16,6 +17,10 @@ const MAX_CACHED_VIEWS = parseKeepAliveViews();
 /**
  * Garde les dernières pages montées (display:none) pour éviter
  * un remount complet à chaque navigation — état UI + cache API.
+ *
+ * Clé = pathname uniquement (pas la query) : Classes/Notes/etc. lisent
+ * déjà searchParams ; sinon chaque ?detail=… créait une nouvelle instance
+ * et pouvait laisser toutes les vues en display:none (page blanche).
  */
 export default function KeepAliveOutlet() {
   const location = useLocation();
@@ -23,9 +28,9 @@ export default function KeepAliveOutlet() {
   const cacheRef = useRef(new Map());
   const orderRef = useRef([]);
 
-  const key = `${location.pathname}${location.search}`;
+  const key = location.pathname;
 
-  if (outlet) {
+  if (outlet != null) {
     cacheRef.current.set(key, outlet);
     const order = orderRef.current.filter((k) => k !== key);
     order.push(key);
@@ -36,9 +41,12 @@ export default function KeepAliveOutlet() {
     }
   }
 
+  const entries = Array.from(cacheRef.current.entries());
+  const hasActive = cacheRef.current.has(key);
+
   return (
     <div className="keep-alive-outlet" style={{ minHeight: 0, flex: 1 }}>
-      {Array.from(cacheRef.current.entries()).map(([k, node]) => (
+      {entries.map(([k, node]) => (
         <div
           key={k}
           className="keep-alive-page"
@@ -51,6 +59,12 @@ export default function KeepAliveOutlet() {
           {node}
         </div>
       ))}
+      {/* Filet de sécurité : jamais tout cacher (outlet pas encore prêt). */}
+      {!hasActive && (
+        <div className="keep-alive-page" style={{ display: 'block', minHeight: '100%' }}>
+          {outlet ?? <PageLoader label="Chargement…" />}
+        </div>
+      )}
     </div>
   );
 }

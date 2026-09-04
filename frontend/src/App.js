@@ -36,8 +36,9 @@ const PrivateRoute = ({ children }) => {
     let active = true;
     (async () => {
       try {
-        await fetchSessionUser();
-        if (active) setOk(true);
+        const user = await fetchSessionUser();
+        if (active) setOk(Boolean(user));
+        if (!user) clearSessionUser();
       } catch {
         clearSessionUser();
         if (active) setOk(false);

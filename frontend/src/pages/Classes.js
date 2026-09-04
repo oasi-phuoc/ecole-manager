@@ -166,9 +166,9 @@ export default function Classes() {
     chargerTout();
   };
 
-  const ouvrirDetail = async (c, tab = 'eleves') => {
+  const ouvrirDetail = async (c, tab = 'eleves', { syncUrl = true } = {}) => {
     setDetailClasse(c);
-    setSearchParams({ detail: c.id, tab });
+    if (syncUrl) setSearchParams({ detail: c.id, tab });
     setEleveDetail(null);
     setObservations([]);
     setInventaireMsg('');
@@ -860,7 +860,7 @@ export default function Classes() {
       setDetailClasse(null);
     } else if (detailId && !detailClasse && classes.length > 0) {
       const c = classes.find(x => String(x.id) === String(detailId));
-      if (c) ouvrirDetail(c, searchParams.get('tab') || 'eleves');
+      if (c) ouvrirDetail(c, searchParams.get('tab') || 'eleves', { syncUrl: false });
     }
   }, [searchParams.get('detail'), classes.length]);
 
