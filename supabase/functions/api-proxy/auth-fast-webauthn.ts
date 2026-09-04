@@ -55,6 +55,15 @@ export function toBase64Url(value: unknown): string {
   return isoBase64URL.fromBuffer(Buffer.from(value as ArrayLike<number>));
 }
 
-export function fromBase64Url(value: string): Uint8Array {
+export function fromBase64Url(value: unknown): Uint8Array {
+  if (value == null) return new Uint8Array();
+  if (value instanceof Uint8Array) return value;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+    return Uint8Array.from(value);
+  }
+  // pg peut renvoyer BYTEA en hex `\x...`
+  if (typeof value === "string" && value.startsWith("\\x")) {
+    return Uint8Array.from(Buffer.from(value.slice(2), "hex"));
+  }
   return isoBase64URL.toBuffer(String(value || ""));
 }

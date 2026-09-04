@@ -24,14 +24,16 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(async (config) => {
   if (supabaseConfigured && supabase) {
+    const anon = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) {
       config.headers.Authorization = `Bearer ${session.access_token}`;
     } else {
       const legacy = sessionStorage.getItem(LEGACY_TOKEN_KEY);
-      if (legacy) config.headers.Authorization = `Bearer ${legacy}`;
+      // Edge Functions : toujours un Bearer (session, legacy, ou anon)
+      config.headers.Authorization = `Bearer ${legacy || anon}`;
     }
-    config.headers.apikey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+    if (anon) config.headers.apikey = anon;
   }
   return config;
 });

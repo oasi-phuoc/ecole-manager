@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { startAuthentication } from '@simplewebauthn/browser';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { redirectAfterAuth } from '../utils/mfa';
 import apiClient, { setLegacyToken } from '../lib/apiClient';
+import { supabaseConfigured } from '../lib/supabase';
 import { LoadingButton } from '../components/LoadingUI';
+import { passkeySupported, startAuthentication } from '../lib/webauthnClient';
 
 const CRITERES = [
   { id: 'len',     label: '12 caractères minimum',        test: (p) => p.length >= 12 },
@@ -13,11 +14,6 @@ const CRITERES = [
   { id: 'chiffre', label: '1 chiffre',                     test: (p) => /[0-9]/.test(p) },
   { id: 'special', label: '1 caractère spécial (!@#...)',  test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
-
-const passkeySupported = () =>
-  typeof window !== 'undefined'
-  && !!window.PublicKeyCredential
-  && typeof window.PublicKeyCredential === 'function';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -68,7 +64,16 @@ export default function Login() {
       const res = await apiClient.post('/auth/login/mfa', { mfa_token: mfaToken, code: mfaCode });
       afterLoginSuccess(res.data.utilisateur || null, res.data.token);
     } catch (err) {
-      setErreur(err.response?.data?.message || 'Erreur de connexion');
+      const apiMsg = err.response?.data?.message;
+      if (apiMsg) {
+        setErreur(apiMsg);
+      } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        setErreur('Impossible de joindre le serveur. Vérifiez votre connexion ou la configuration API.');
+      } else if (!supabaseConfigured) {
+        setErreur('API non configurée (REACT_APP_SUPABASE_URL / ANON_KEY manquants).');
+      } else {
+        setErreur(err.message || 'Erreur de connexion');
+      }
     } finally {
       setLoginLoading(false);
     }

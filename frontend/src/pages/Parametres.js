@@ -14,7 +14,7 @@ import {
   LIBELLES_COLONNES_SPECIALITES,
   ORDRE_COLONNES_SPECIALITES,
 } from '../utils/branchesSpecialites';
-import { startRegistration } from '@simplewebauthn/browser';
+import { passkeySupported, startRegistration } from '../lib/webauthnClient';
 import {
   cycleStatutDispo,
   fondCelluleStatutDispo,
@@ -28,10 +28,6 @@ import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 const JOURS_DISPO = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const BASE_PERIODES_TAUX = 40;
-const passkeySupported = () =>
-  typeof window !== 'undefined'
-  && !!window.PublicKeyCredential
-  && typeof window.PublicKeyCredential === 'function';
 
 const creerLigneResponsableNiveau = (overrides = {}) => ({
   nom: '',
