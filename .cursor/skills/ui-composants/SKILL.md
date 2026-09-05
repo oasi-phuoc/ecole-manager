@@ -133,21 +133,50 @@ Même logique pour un **détail** (ex. classe CSC 2 → liste élèves) : garder
 - Session : `sessionStorage` via `session.js` pour éviter un flash plein écran au refresh.
 - Ne pas remonter `PageLoader` plein écran dans une page métier.
 
-### Bouton sauvegarde
+### Boutons longue action — LoadingButton (OBLIGATOIRE)
+
+**Même comportement que « Se connecter »** sur la page login : spinner dans le bouton + libellé d’attente + bouton **désactivé** (pas de double-clic).
+
+S’applique à **toute** action async :
+- Sauvegarder / Enregistrer / Créer / Modifier
+- Importer / Mise à jour LORA / Upload
+- Exporter (Excel, PDF, LORA, ZIP…)
+- Envoyer, Calculer, Transférer, etc.
 
 ```js
-<LoadingButton
-  type="submit"
-  loading={saving}
-  loadingLabel="En cours de sauvegarde…"
-  style={styles.btnSauver}
->
+import { LoadingButton } from '../components/LoadingUI';
+
+// Sauvegarde
+<LoadingButton type="submit" loading={saving} loadingLabel="En cours de sauvegarde…" style={styles.btnSauver}>
   Sauvegarder
+</LoadingButton>
+
+// Import
+<LoadingButton type="submit" loading={importLoading} loadingLabel="Import en cours…" style={styles.btnPrimary}>
+  Importer
+</LoadingButton>
+
+// Export
+<LoadingButton type="button" loading={exportLoading} loadingLabel="Export en cours…" onClick={exporter} style={styles.btnPrimary}>
+  Exporter
 </LoadingButton>
 ```
 
-- `setSaving(true)` **après** validations ; `finally { setSaving(false) }`
-- Animation CSS : `@keyframes em-spin` dans `frontend/src/index.css`
+Règles :
+- Toujours `LoadingButton` — **pas** de `<button>` nu avec seulement `disabled` / texte « … » / emoji ⏳
+- `setXxx(true)` **après** validations ; `finally { setXxx(false) }`
+- Libellés d’attente typiques : `En cours de sauvegarde…`, `Import en cours…`, `Export en cours…`, `Connexion…`
+- Défaut de `loadingLabel` dans le composant : `En cours de sauvegarde…` (surcharger pour import/export)
+- Animation : `@keyframes em-spin` dans `frontend/src/index.css`
+
+```jsx
+{/* ❌ INTERDIT */}
+<button disabled={loading}>{loading ? '…' : 'Sauvegarder'}</button>
+<button disabled={exportLoading}>{exportLoading ? 'Export...' : 'Exporter'}</button>
+<label>{loading ? 'Mise à jour...' : 'Mise à jour LORA'}<input type="file" /></label> // sans spinner LoadingButton
+```
+
+Pour un import via `<input type="file">` caché : wrapper le déclencheur en `LoadingButton` (ou label stylé + état `loading` qui bloque + spinner visible à côté / sur un bouton « Importer »).
 
 ## Onglets / chip-tabs / toggle group
 
@@ -223,7 +252,7 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 - ❌ `<select>` natif pour l’UI principale (utiliser `CustomSelect`)
 - ❌ Onglets pastilles sans fond `#ede9fe` / actif hors `#6366f1`
 - ❌ Texte « Chargement… » sans `PageLoader`
-- ❌ Bouton Sauvegarder sans `loading` / disable pendant l’appel API
+- ❌ Bouton Sauvegarder / Importer / Exporter sans `LoadingButton` (spinner + disable comme « Se connecter »)
 - ❌ `if (loading) return <PageLoader />` / remplacer toute la page (menu ou chrome disparu)
 - ❌ Message « Aucun… » pendant le fetch — toujours `!loading && length===0`
 - ❌ Spinner plein écran dans une page sous Layout (sauf login / gate auth hors shell)

@@ -917,23 +917,27 @@ export default function Classes() {
   const creerDevoir = async (e) => {
     e.preventDefault();
     if (!detailClasse?.id || !devoirForm.titre.trim()) return;
+    setSaving(true);
     try {
       await apiClient.post('/devoirs', { ...devoirForm, classe_id: detailClasse.id }, { headers });
       setShowDevoirForm(false);
       setDevoirForm({ titre: '', matiere: '', date_devoir: '', date_remise: '' });
       await chargerDevoirs(detailClasse.id);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSaving(false); }
   };
 
   const sauverEditionDevoir = async (e) => {
     e.preventDefault();
     if (!devoirEditId || !devoirEditForm.titre.trim()) return;
+    setSaving(true);
     try {
       await apiClient.put('/devoirs/' + devoirEditId, devoirEditForm, { headers });
       setDevoirEditId(null);
       if (devoirActif?.id === devoirEditId) setDevoirActif(prev => ({ ...prev, ...devoirEditForm }));
       await chargerDevoirs(detailClasse.id);
     } catch (err) { alert('Erreur: ' + (err.response?.data?.message || err.message)); }
+    finally { setSaving(false); }
   };
 
   const supprimerDevoir = async (id) => {
@@ -1907,7 +1911,7 @@ export default function Classes() {
                   </div>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
                     <button type="button" style={{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:7,cursor:'pointer',fontSize:13}} onClick={() => setShowDevoirForm(false)}>Annuler</button>
-                    <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Créer</button>
+                    <LoadingButton type="submit" loading={saving} loadingLabel="En cours de sauvegarde…" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Créer</LoadingButton>
                   </div>
                 </form>
               </div>
@@ -1946,7 +1950,7 @@ export default function Classes() {
                   </div>
                   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:18}}>
                     <button type="button" style={{padding:'8px 16px',background:'#f5f5f5',border:'none',borderRadius:7,cursor:'pointer',fontSize:13}} onClick={() => setDevoirEditId(null)}>Annuler</button>
-                    <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Enregistrer</button>
+                    <LoadingButton type="submit" loading={saving} loadingLabel="En cours de sauvegarde…" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight:700}}>Enregistrer</LoadingButton>
                   </div>
                 </form>
               </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { PageLoader } from '../components/LoadingUI';
+import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 
 const fmt = (v) => {
@@ -165,9 +165,9 @@ export default function Archives() {
               <h1 style={s.titre}>Archives</h1>
               <p style={s.sousTitre}>Données des années précédentes — lecture seule, classées par année. Export Excel + PDF disponible pour chaque archive.</p>
             </div>
-            <button type="button" onClick={exporter} disabled={!archiveId || exporting} style={s.btnExport} title="Télécharge un ZIP contenant les fichiers Excel et PDF de l’année">
-              {exporting ? 'Export…' : 'Exporter Excel + PDF'}
-            </button>
+            <LoadingButton type="button" onClick={exporter} loading={exporting} loadingLabel="Export en cours…" disabled={!archiveId} style={s.btnExport} title="Télécharge un ZIP contenant les fichiers Excel et PDF de l’année">
+              Exporter Excel + PDF
+            </LoadingButton>
           </div>
         </div>
 

@@ -2291,14 +2291,15 @@ export default function Parametres() {
                     <p style={{fontSize:13,color:'#7c2d12',marginBottom:14,lineHeight:1.55}}>
                       Vous devez d’abord transférer toutes les données de l’année (élèves, notes, affectations, plannings, présences, comptabilité et documents) vers le menu Archive. Elles y resteront en lecture seule, classées par année. La confirmation n’est possible qu’après ce transfert.
                     </p>
-                    <button
+                    <LoadingButton
                       type="button"
                       onClick={handleArchiverRentree}
-                      disabled={archiveLoading}
-                      style={{padding:'10px 20px',background:'#0f766e',color:'white',border:'none',borderRadius:8,cursor: archiveLoading ? 'wait' : 'pointer',fontWeight:700,marginBottom:14,width: isMobile ? '100%' : undefined,opacity: archiveLoading ? 0.75 : 1}}
+                      loading={archiveLoading}
+                      loadingLabel="Transfert en cours…"
+                      style={{padding:'10px 20px',background:'#0f766e',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,marginBottom:14,width: isMobile ? '100%' : undefined}}
                     >
-                      {archiveLoading ? '⏳ Transfert en cours…' : (archiveId ? 'Mettre à jour le transfert' : 'Transférer l’année vers Archives')}
-                    </button>
+                      {archiveId ? 'Mettre à jour le transfert' : 'Transférer l’année vers Archives'}
+                    </LoadingButton>
                     {archiveId && archiveNom && (
                       <p style={{fontSize:12,color:'#166534',fontWeight:700,marginBottom:14}}>
                         Année transférée : {archiveNom} — consultable dans le menu Archive (lecture seule).

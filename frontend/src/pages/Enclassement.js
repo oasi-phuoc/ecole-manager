@@ -129,6 +129,7 @@ export default function Enclassement() {
   const [alertes, setAlertes] = useState([]);
   const [nomEnclassement, setNomEnclassement] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingExport, setLoadingExport] = useState(false);
 
   // Drag-drop
   const [dragEleve, setDragEleve] = useState(null); // {eleve, sourceStr, sourceIdx}
@@ -307,8 +308,10 @@ export default function Enclassement() {
     setDragEleve(null);
   };
 
-  const exporterPDF = (enc) => {
-    if (!enc?.classes) return;
+  const exporterPDF = async (enc) => {
+    if (!enc?.classes || loadingExport) return;
+    setLoadingExport(true);
+    try {
     const classesHTML = enc.classes.map(c => {
       const elevesHTML = (c.eleves || []).map((e, i) => `
         <tr>
@@ -354,6 +357,7 @@ export default function Enclassement() {
 
     const finalHtml = injectForcedPrintCss(html, 'A4 portrait', '12mm');
     openPrintPopup(finalHtml, { title: enc.nom, width: 1100, height: 820 });
+    } finally { setLoadingExport(false); }
   };
 
   // ─── Vues ────────────────────────────────────────────────────────────────────
@@ -373,7 +377,7 @@ export default function Enclassement() {
               {' · '}<span style={{ color: detailEnc.statut === 'archivé' ? '#94a3b8' : '#16a34a', fontWeight: 700 }}>{detailEnc.statut}</span>
             </div>
           </div>
-          <button style={{ ...s.btnAction, background: '#6366f1' }} onClick={() => exporterPDF(detailEnc)}>🖨 Export PDF</button>
+          <LoadingButton style={{ ...s.btnAction, background: '#6366f1' }} onClick={() => exporterPDF(detailEnc)} loading={loadingExport} loadingLabel="Export en cours…">🖨 Export PDF</LoadingButton>
           {detailEnc.statut === 'validé' && <button style={{ ...s.btnAction, background: '#94a3b8' }} onClick={() => archiverEnclassement(detailEnc)}>📦 Archiver</button>}
           <button style={{ ...s.btnAction, background: '#ef4444' }} onClick={() => supprimerEnclassement(detailEnc.id)}>🗑 Supprimer</button>
         </div>

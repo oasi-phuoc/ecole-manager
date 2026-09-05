@@ -519,9 +519,9 @@ export default function Presences() {
             </LoadingButton>
           </>)}
           {isAdmin() && (
-            <button onClick={exporterLORA} disabled={exportLoading} style={{padding:'0 20px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white',opacity:exportLoading?0.7:1}}>
-              {exportLoading ? 'Export...' : 'Exporter LORA'}
-            </button>
+            <LoadingButton onClick={exporterLORA} loading={exportLoading} loadingLabel="Export en cours…" style={{padding:'0 20px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:'pointer',fontWeight:700,fontSize:13,background:'#6366f1',color:'white'}}>
+              Exporter LORA
+            </LoadingButton>
           )}
         </div>
       </div>

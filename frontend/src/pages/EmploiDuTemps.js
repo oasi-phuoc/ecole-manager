@@ -4604,35 +4604,27 @@ export default function EmploiDuTemps() {
                   >
                     Imprimer A3 semaine
                   </button>
-                  {exportPdfEnCours ? (
-                    <>
-                      <button
-                        type="button"
-                        style={{...styles.btnImprimer, opacity: 0.85, cursor: 'default'}}
-                        disabled
-                      >
-                        Export en cours…
-                      </button>
-                      <button
-                        type="button"
-                        style={{...styles.btnImprimer, background: '#fee2e2', borderColor: '#fecaca', color: '#991b1b'}}
-                        onClick={() => {
-                          exportPdfAnnulerRef.current = true;
-                          setExportPdfProgress('Annulation…');
-                        }}
-                        title="Annuler l'export"
-                      >
-                        Annuler
-                      </button>
-                    </>
-                  ) : (
+                  <LoadingButton
+                    type="button"
+                    style={styles.btnImprimer}
+                    onClick={exporterTousPlanningsPdf}
+                    loading={exportPdfEnCours}
+                    loadingLabel="Export en cours…"
+                    title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                  >
+                    Exporter tous les PDF
+                  </LoadingButton>
+                  {exportPdfEnCours && (
                     <button
                       type="button"
-                      style={styles.btnImprimer}
-                      onClick={exporterTousPlanningsPdf}
-                      title="Enregistrer tous les PDF (classes, salles, professeurs, général) dans un dossier"
+                      style={{...styles.btnImprimer, background: '#fee2e2', borderColor: '#fecaca', color: '#991b1b'}}
+                      onClick={() => {
+                        exportPdfAnnulerRef.current = true;
+                        setExportPdfProgress('Annulation…');
+                      }}
+                      title="Annuler l'export"
                     >
-                      Exporter tous les PDF
+                      Annuler
                     </button>
                   )}
                 </>

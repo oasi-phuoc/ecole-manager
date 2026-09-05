@@ -39,6 +39,7 @@ export default function Eleves() {
   const [loraUpdateLoading, setLoraUpdateLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [photoZoom, setPhotoZoom] = useState(null);
+  const loraFileRef = useRef(null);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
@@ -115,7 +116,7 @@ export default function Eleves() {
       alert(r.data.message);
       chargerTout();
     } catch(err) { alert('Erreur mise à jour LORA: ' + (err.response?.data?.message || err.message)); }
-    setLoraUpdateLoading(false);
+    finally { setLoraUpdateLoading(false); }
   };
 
   const chargerTout = async () => {
@@ -446,7 +447,7 @@ export default function Eleves() {
       });
       setImportResult(r.data); chargerTout();
     } catch(err) { setImportResult({ message: 'Erreur: '+(err.response?.data?.message||err.message) }); }
-    setImportLoading(false);
+    finally { setImportLoading(false); }
   };
 
   const inp = {padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:12,outline:'none',color:'#1e293b',width:'100%',boxSizing:'border-box'};
@@ -535,10 +536,18 @@ export default function Eleves() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Gestion des élèves</h2>
         <div className="page-actions" style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
           {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => { resetForm(); setEleveEdit(null); setShowForm(true); }}>+ Ajouter</button>}
-          {isAdmin() && <label style={{padding:'8px 14px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
-            {loraUpdateLoading ? 'Mise à jour...' : 'Mise à jour LORA'}
-            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
-          </label>}
+          {isAdmin() && <>
+            <LoadingButton
+              type="button"
+              loading={loraUpdateLoading}
+              loadingLabel="Mise à jour…"
+              style={{padding:'8px 14px',background:'#64748b',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}
+              onClick={() => loraFileRef.current?.click()}
+            >
+              Mise à jour LORA
+            </LoadingButton>
+            <input ref={loraFileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e => { if(e.target.files[0]) mettreAJourLORA(e.target.files[0]); e.target.value=''; }} />
+          </>}
           {isAdmin() && <button style={{padding:'8px 14px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} onClick={() => setShowImport(true)}>Importer LORA</button>}
         </div>
       </div>
@@ -619,7 +628,7 @@ export default function Eleves() {
                 {importFile && <div style={{marginTop:8,fontSize:12,color:'#10b981'}}>✅ {importFile.name}</div>}
                 <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24}}>
                   <button type="button" style={{padding:'8px 16px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13}} onClick={() => setShowImport(false)}>Annuler</button>
-                  <button type="submit" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}} disabled={importLoading}>{importLoading?'⏳...':'📥 Importer'}</button>
+                  <LoadingButton type="submit" loading={importLoading} loadingLabel="Import en cours…" style={{padding:'8px 16px',background:'#6366f1',color:'white',border:'none',borderRadius:8,cursor:'pointer',fontWeight:600,fontSize:13}}>📥 Importer</LoadingButton>
                 </div>
               </form>
             )}
