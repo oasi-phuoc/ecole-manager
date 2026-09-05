@@ -5,6 +5,7 @@ import apiClient from '../lib/apiClient';
 import TimePicker from '../components/TimePicker';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { listerNomsResponsablesEcole } from '../utils/responsablesEcole';
@@ -4151,14 +4152,10 @@ export default function TCF() {
       <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         <h2 style={styles.title}>Test de connaissances</h2>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {(onglet === 'pool' || onglet === 'affectation' || onglet === 'classes' || onglet === 'roles' || onglet === 'resultat') && (
             <>
-              {saveToast && (
-                <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>
-                  {saveToast}
-                </span>
-              )}
+              {saveToast && <Toast message={saveToast} />}
               {onglet === 'pool' && (
                 <button onClick={ajouterSite} style={styles.btnSauver}>+ Ajouter</button>
               )}

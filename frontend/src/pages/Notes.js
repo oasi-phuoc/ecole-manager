@@ -8,6 +8,7 @@ import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import { getResponsableNiveauEcole } from '../utils/responsablesEcole';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 
 const TYPES = ['Ecrit', 'Oral', 'Projet', 'TP', 'Devoir'];
 /** Même largeur fixe que la colonne œil (détail) dans Gestion des classes */
@@ -898,15 +899,17 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           <div style={{ flex: 1 }}>
             <h2 style={s.titre}>{evaluationOuverte.nom}</h2>
           </div>
-          {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
           <div style={{ ...s.moyenneBox, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={s.moyenneLabel}>Moy. classe</span>
             <span style={{ ...s.moyenneValeur, fontSize: 14 }}>{(() => { const m = getMoyenneClasse(); return m === '—' ? '—' : fmtNote(m); })()}</span>
           </div>
-          {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
-            <LoadingButton style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
-              disabled={!ok} loading={sauvegarde} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</LoadingButton>
-          ); })()}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {toast.message && <Toast message={toast.message} />}
+            {(() => { const bloque = sem1Bloque && String(evaluationOuverte?.semestre) === '1' && !isAdmin(); const ok = peutModifierNotes() && !bloque; return (
+              <LoadingButton style={{ ...s.btnSauver, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed' }}
+                disabled={!ok} loading={sauvegarde} onClick={handleSauvegarderNotes}>{bloque ? '🔒 1er sem. bloqué' : 'Enregistrer'}</LoadingButton>
+            ); })()}
+          </div>
         </div>
         {elevesNotes.length === 0 && <div style={{ background: '#fff3cd', color: '#856404', padding: '12px 20px', borderRadius: 8, marginBottom: 12 }}>Aucun élève actif trouvé dans cette classe.</div>}
         <div style={s.tableContainer}>
@@ -1810,9 +1813,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           <button style={s.btnRetour} onClick={() => { setSearchParams({}); setVue('classes'); }}>← Retour</button>
           <h2 style={s.titre}>{bulletinOnglet === 'criteres' ? 'Comportements' : vueClasseAction === 'attestation' ? 'Attestations' : 'Bulletin de notes'} — {classeNom}</h2>
           {bulletinOnglet === 'criteres' && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {isAdmin() && <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, whiteSpace: 'nowrap' }}>Mode admin — accès complet</span>}
-              {toast.message && <div style={{ padding: '8px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontWeight: 700, fontSize: 13 }}>{toast.message}</div>}
+              {toast.message && <Toast message={toast.message} />}
               <LoadingButton
                 onClick={sauvegarderTousCriteres}
                 loading={savingCriteres}

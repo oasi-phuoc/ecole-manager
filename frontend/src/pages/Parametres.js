@@ -25,6 +25,7 @@ import {
 } from '../utils/disponibilites';
 import { buildOtpAuthUrl, otpauthQrDataUrl, secretGroupePar4 } from '../utils/qrMfa';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 import {
   TYPES_SPECIAL_DEFAUT,
   normaliserTypesSpecial,
@@ -945,15 +946,15 @@ export default function Parametres() {
         <div style={chromeStyle}>
         <div style={{ ...styles.topBar, marginBottom: isMobile ? 12 : 24, alignItems: isMobile ? 'stretch' : 'center' }}>
           <h1 style={{ ...styles.titre, fontSize: isMobile ? 20 : 22 }}>Paramètres</h1>
-          <div style={{ ...styles.topBarRight, width: isMobile ? '100%' : undefined, flexWrap: 'wrap' }}>
+          <div style={{ ...styles.topBarRight, width: isMobile ? '100%' : undefined, flexWrap: isMobile ? 'wrap' : 'nowrap', justifyContent: isMobile ? 'flex-end' : undefined }}>
             {onglet === 'profil' && (<>
-              {(msgProfil === 'success' || msgProfil === 'success-affectations') && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{msgProfil === 'success-affectations' ? 'Profil mis à jour. Cours retirés des créneaux indisponibles.' : 'Profil mis à jour.'}</span>}
-              {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
+              {(msgProfil === 'success' || msgProfil === 'success-affectations') && <Toast message={msgProfil === 'success-affectations' ? 'Profil mis à jour. Cours retirés des créneaux indisponibles.' : 'Profil mis à jour.'} />}
+              {msgProfil === 'error' && <Toast message="Erreur" />}
               {!loadingProfil && <LoadingButton type="submit" form="form-profil" loading={savingProfil} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>}
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
-              {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Paramètres mis à jour.</span>}
-              {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
+              {msgEcole === 'success' && <Toast message="Paramètres mis à jour." />}
+              {msgEcole === 'error' && <Toast message="Erreur" />}
               {!loadingEcole && <LoadingButton type="submit" form="form-ecole" loading={savingEcole} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>}
             </>)}
           </div>

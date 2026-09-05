@@ -8,6 +8,7 @@ import { stickyPageChrome } from '../styles/pageShell';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 
 function mapSuiviNotesClasse(rows) {
   const map = {};
@@ -1272,11 +1273,11 @@ export default function Classes() {
         <div className="modal-overlay" style={s.overlay}>
           <div style={{...s.modal, width:'90vw', maxWidth:1050, maxHeight:'90vh', overflowY:'auto', padding:24}}>
             <div style={s.modalHeader}>
-              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                <h3 style={s.modalTitle}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
-                {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+              <h3 style={s.modalTitle}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                {sanctionToast && <Toast message={sanctionToast} />}
+                <button style={s.btnCancel} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
               </div>
-              <button style={s.btnCancel} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
               <PageLoader label="Chargement..." compact style={{padding:30}} />
@@ -1596,8 +1597,8 @@ export default function Classes() {
         <button style={s.btnBack} onClick={() => { setDetailClasse(null); setSearchParams({}); }}>← Retour</button>
         <h2 style={s.title}>Classe {detailClasse.nom}{detailClasse.prof_prenom ? ' — Titulaire : '+detailClasse.prof_prenom+' '+detailClasse.prof_nom : ''}</h2>
         {classeVueTab === 'plan' && (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}}>
-            {planToast && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Plan sauvegardé !</div>}
+          <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:'auto',flexWrap:'wrap',justifyContent:'flex-end'}}>
+            {planToast && <Toast message="Plan sauvegardé !" />}
             <LoadingButton loading={saving} style={{...s.btnAdd,background:'#6366f1'}} onClick={sauverPlanClasse}>Sauvegarder</LoadingButton>
             <button style={{...s.btnAdd,background:'#6366f1'}} onClick={imprimerPlanClasse}>Imprimer</button>
             <button style={{...s.btnAdd,background:'#ef4444'}} onClick={() => setPlanPositions({})}>Réinitialiser</button>

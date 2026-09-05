@@ -31,6 +31,7 @@ import {
 import { libelleCourtPrint, lignesNomDepuisComplet, lignesPrenomPuisNom, largeurCarteTitulariatPrint } from '../utils/nomsPrint';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
   TYPES_SPECIAL_DEFAUT,
@@ -4581,40 +4582,32 @@ export default function EmploiDuTemps() {
 
   return (
     <div style={styles.page}>
-      {toast.message && (
-        <div style={{
-          position:'fixed',
-          top:20,
-          right:20,
-          zIndex:9999,
-          padding:'12px 18px',
-          borderRadius:10,
-          background:'#ede9fe',
-          color:'#4c1d95',
-          border:'1px solid #c7d2fe',
-          boxShadow:'0 8px 24px rgba(15,23,42,0.15)',
-          fontSize:13,
-          fontWeight:600,
-          maxWidth:420,
-          lineHeight:1.4
-        }}>
-          {toast.message}
-        </div>
-      )}
       <div style={{...stickyPageChrome(), paddingBottom:0, marginBottom:0}}>
       <div style={styles.header}>
         {onglet === 'disponibilites' && profSelectionne && (
           <button style={styles.btnRetour} onClick={() => { setProfSelectionne(null); setDispos({}); setRemarquesDispo(''); }}>← Retour</button>
         )}
         <h2 style={styles.titre}>Emploi du temps</h2>
+        {toast.message && !(
+          (isAdmin() && onglet === 'pools')
+          || onglet === 'plannings'
+          || (onglet === 'disponibilites' && profSelectionne && isAdmin() && !disposLoading)
+          || onglet === 'affectations'
+        ) && (
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center'}}>
+            <Toast message={toast.message} />
+          </div>
+        )}
         {isAdmin() && onglet === 'pools' && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {toast.message && <Toast message={toast.message} />}
             <button style={styles.btnVert} onClick={() => { const {poolHoraires, pauses} = getHoraireForLieu(''); setShowPoolForm(true); setPoolEdit(null); setPoolForm({nom:'',site:'',couleur:'#6366f1',niveau:'',prof_ids:[],classe_ids:[],branche_ids:[],horaires:poolHoraires}); setPausesParPeriodeForm(pauses); }}>+ Ajouter</button>
           </div>
         )}
         {onglet === 'plannings' && (
-          <div className="page-actions" style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(720px,100%)'}}>
+          <div className="page-actions" style={{marginLeft:'auto',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,minWidth:0,maxWidth:'min(820px,100%)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
+              {toast.message && <Toast message={toast.message} />}
               {sousOngletPlanning !== 'general' && (
                 <button type="button" style={styles.btnImprimer} onClick={imprimerPlanningTout}>Tout imprimer</button>
               )}
@@ -4675,11 +4668,13 @@ export default function EmploiDuTemps() {
         )}
         {onglet === 'disponibilites' && profSelectionne && isAdmin() && !disposLoading && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+            {toast.message && <Toast message={toast.message} />}
             <LoadingButton type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos} loading={savingDispos}>Sauvegarder</LoadingButton>
           </div>
         )}
         {onglet === 'affectations' && (
-          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto',flexWrap:'wrap',justifyContent:'flex-end'}}>
+            {toast.message && <Toast message={toast.message} />}
             {sousOngletAff === 'classes' && isAdmin() && (
               <>
                 <button

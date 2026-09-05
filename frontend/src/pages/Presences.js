@@ -5,6 +5,7 @@ import apiClient from '../lib/apiClient';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
 const OPTS = ['', 'P', 'A', 'R', 'E', 'C'];
@@ -515,7 +516,7 @@ export default function Presences() {
         <h2 style={{fontSize:22,fontWeight:800,color:'#0f172a',flex:1,margin:0}}>Contrôle des présences</h2>
         <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',minHeight:36}}>
           {onglet === 'saisie' && classeSelectionnee && (<>
-            {sauvegarde && <div style={{padding:'8px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95',fontWeight:700,fontSize:13}}>Présences sauvegardées !</div>}
+            {sauvegarde && <Toast message="Présences sauvegardées !" />}
             <LoadingButton loading={saving} loadingLabel="En cours de sauvegarde…" onClick={handleSauvegarder} disabled={!valide} style={{padding:'0 18px',height:36,boxSizing:'border-box',borderRadius:9,border:'none',cursor:valide?'pointer':'not-allowed',fontWeight:700,fontSize:13,background:valide?'#6366f1':'#e2e8f0',color:valide?'white':'#94a3b8',transition:'all 0.2s'}}>
               Sauvegarder
             </LoadingButton>

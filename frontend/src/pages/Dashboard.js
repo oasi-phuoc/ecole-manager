@@ -5,7 +5,7 @@ import { stickyPageChrome } from '../styles/pageShell';
 import { getSessionUser, fetchSessionUser } from '../utils/session';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { LoadingButton, PageLoader } from '../components/LoadingUI';
-
+import Toast from '../components/Toast';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -194,10 +194,8 @@ export default function Dashboard() {
             placeholder="Écrivez vos notes, rappels, mémos ici..."
             style={{ width: '100%', minHeight: 120, border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box', color: '#1e293b', lineHeight: 1.6 }}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            {toast.message && (
-              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{toast.message}</span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+            {toast.message && <Toast message={toast.message} />}
             <LoadingButton loading={saving} loadingLabel="En cours de sauvegarde…" onClick={sauvegarderMemo} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Sauvegarder
             </LoadingButton>

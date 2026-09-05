@@ -1,16 +1,17 @@
 ---
 name: ui-composants
 description: >-
-  Design system ecole-manager (toasts violet, CustomSelect, LoadingUI,
-  onglets chip-tabs, toggles, boutons Trier, menus). Chargement = shell
-  (menu + chrome) → spinner zone données → données. Utiliser pour UI
-  frontend, toasts, listes déroulantes, onglets, boutons, LoadingButton, PageLoader.
+  Design system ecole-manager (toasts violet inline à gauche des boutons,
+  CustomSelect, LoadingUI, onglets chip-tabs, toggles, boutons Trier, menus).
+  Chargement = shell → spinner zone données → données. Utiliser pour UI
+  frontend, nouvelles pages, toasts, listes, onglets, LoadingButton, PageLoader.
 ---
 
 # UI composants — ecole-manager
 
-Toujours lire ce skill avant d’ajouter / modifier un toast, une liste déroulante,
-un onglet, un toggle, un bouton Trier, un loader ou un bouton de sauvegarde.
+Toujours lire ce skill avant d’ajouter / modifier une **page**, un toast, une
+liste déroulante, un onglet, un toggle, un bouton Trier, un loader ou un bouton
+de sauvegarde.
 
 ## Palette thème (violet)
 
@@ -30,21 +31,27 @@ Fichier tokens : `frontend/src/styles/theme.js` (`colors.primary`, `toastBg`, �
 **Règle** : tous les toasts (succès, info, erreur) utilisent le même style violet.
 Ne pas utiliser vert (`#dcfce7`) ni rouge pour les toasts de feedback.
 
+### Placement (OBLIGATOIRE)
+
+Le toast s’affiche **inline, à gauche des boutons d’action** (Sauvegarder, Imprimer, + Ajouter, etc.) dans la barre d’actions / header — **jamais** en `position: fixed` par-dessus les boutons.
+
+```jsx
+{/* ✅ BON — même rangée flex, toast puis boutons */}
+<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+  {toast.message && <Toast message={toast.message} />}
+  <LoadingButton loading={saving} …>Sauvegarder</LoadingButton>
+</div>
+
+{/* ❌ INTERDIT */}
+{toast.message && <div style={{ position: 'fixed', top: 20, right: 20, … }}>…</div>}  // chevauche les boutons
+<Toast fixed />  // déprécié
+```
+
 ```js
 // Composant : frontend/src/components/Toast.js
-import Toast, { toastStyle, toastStyleFixed, TOAST } from '../components/Toast';
+import Toast from '../components/Toast';
 
-// Inline (à côté d’un bouton)
 {toast.message && <Toast message={toast.message} />}
-
-// Ou styles manuels (équivalent)
-{toast.message && (
-  <span style={{ fontSize:13, fontWeight:600, padding:'6px 14px', borderRadius:8, background:'#ede9fe', color:'#4c1d95' }}>
-    {toast.message}
-  </span>
-)}
-
-// Toast fixe (coin écran) → toastStyleFixed / fixed prop
 ```
 
 Pattern state local courant :
@@ -58,6 +65,8 @@ const showToast = (message, type = 'success') => {
 // Le `type` peut rester pour la logique ; le style reste violet.
 ```
 
+- Toujours le composant `Toast` (pas de `<span>` / `<div>` manuels `#ede9fe`).
+- `toastStyleFixed` / `fixed` : **dépréciés** — ne plus utiliser pour le feedback page.
 ## Listes déroulantes — CustomSelect
 
 **Toujours** `CustomSelect` (pas de `<select>` natif pour les filtres/formulaires UI).
@@ -84,19 +93,24 @@ Fichier : `frontend/src/components/CustomSelect.js` (violet `#6366f1` / `#ede9fe
 import { PageLoader, LoadingButton, LoadingSpinner } from '../components/LoadingUI';
 ```
 
-### Pattern shell → spinner → données (partout)
+### Principe (toute page, y compris nouvelle)
 
-À chaque navigation / onglet / sous-vue (liste, détail classe, tableau, etc.) :
+L’utilisateur ne doit **jamais** se demander si ça charge. Règle unique :
 
-1. **Afficher tout de suite le shell** : menu latéral Layout (toujours monté), titre, boutons, filtres, en-têtes de tableau / structure de la page.
-2. **Spinner uniquement dans la zone de données** (corps du tableau, liste, grille) — jamais remplacer toute la page ni le menu.
-3. **Quand le fetch est fini** : afficher les lignes / cartes. Empty state (« Aucun… ») **uniquement** si `!loading && length === 0`.
+1. **Shell immédiat** : menu Layout + titre + boutons + filtres / sélecteurs + en-têtes de tableau restent visibles tout de suite.
+2. **Spinner dans la zone de données seulement** (`PageLoader compact`) pendant le fetch.
+3. **Données ou empty state** : « Aucun… » **uniquement** si `!loading && length === 0`.
+4. **Chargements secondaires** : dès qu’un choix (CustomSelect, clic œil, onglet, semestre…) déclenche un nouvel appel API, un état `loadingXxx` + spinner dans la zone concernée — **pas** laisser l’ancien contenu figé ni le message « Sélectionnez… » pendant le fetch.
+
+Références : `EmploiDuTemps` (`planningProfLoading`, `planningClasseLoading`, `disposLoading`), `Notes` (`loadingEvals`, `loadingBulletin`, `loadingSaisie`), `Parametres` (`loadingProfil`, `loadingEcole`, …), `Classes` (`loadingElevesClasse`), `Archives` (`loadingTable`).
+
+### Pattern shell → spinner → données
 
 ```jsx
 {/* ✅ BON — chrome toujours visible */}
 <div style={stickyPageChrome()}>
   <h2>…</h2>
-  {/* boutons, filtres, onglets */}
+  {/* boutons, filtres, onglets, CustomSelect */}
 </div>
 <div style={tableWrap}>
   <table>
@@ -119,7 +133,62 @@ if (loading) return <PageLoader />;           // remplace toute la page
 {rows.length === 0 && <div>Aucun…</div>}       // pendant le fetch (sans !loading)
 ```
 
-Même logique pour un **détail** (ex. classe CSC 2 → liste élèves) : garder en-tête / onglets de la classe, spinner dans le tableau élèves (`loadingEleves`), pas « Aucun élève » avant la fin du fetch.
+### Chargements secondaires (sélection / sous-vue)
+
+Quand l’utilisateur choisit un élément pour charger un détail (prof → planning, classe → élèves, matière → évaluations, onglet paramètres, etc.) :
+
+```js
+const [selectionId, setSelectionId] = useState('');
+const [detail, setDetail] = useState(null);
+const [loadingDetail, setLoadingDetail] = useState(false);
+
+const chargerDetail = async (id) => {
+  if (!id) {
+    setDetail(null);
+    setLoadingDetail(false);
+    return;
+  }
+  setLoadingDetail(true);
+  setDetail(null); // évite d’afficher l’ancien détail d’une autre sélection
+  try {
+    const r = await apiClient.get('/…/' + id, { headers });
+    setDetail(r.data || null);
+  } catch (err) {
+    setDetail(null);
+    // toast erreur éventuel
+  } finally {
+    setLoadingDetail(false);
+  }
+};
+```
+
+```jsx
+{!selectionId && <div style={msgVide}>Sélectionnez…</div>}
+{selectionId && loadingDetail && (
+  <PageLoader compact label="Chargement…" style={msgVide} />
+)}
+{selectionId && !loadingDetail && !detail && (
+  <div style={msgVide}>Impossible de charger…</div>
+)}
+{selectionId && !loadingDetail && detail && (
+  /* contenu */
+)}
+```
+
+- Un état de loading **par zone** si plusieurs fetches indépendants (`loadingListe` vs `loadingDetail`).
+- Masquer les boutons Sauvegarder de la zone pendant son load (comme Paramètres / dispos EDT).
+- `setLoading(true)` en début de fetch ; `finally { setLoading(false) }` toujours.
+
+### Checklist nouvelle page
+
+1. Titre + chrome (`stickyPageChrome` si pertinent) rendus **avant** la fin du fetch initial.
+2. `loading` initial `true` → `PageLoader` dans le corps (tableau / grille), pas `if (loading) return …`.
+3. Tout `CustomSelect` / bouton qui recharge des données → son `loadingXxx` + spinner.
+4. Empty state uniquement après `!loading`.
+5. Actions longues → `LoadingButton`.
+6. Toasts violet ; listes → `CustomSelect` ; onglets → chip-tabs violet.
+7. Pas de prefetch / cache GET menu ; pas de keep-alive Outlet.
+8. Réponses API listes : toujours `Array.isArray(…)` avant `.map` / `.filter`.
 
 ### Layout / navigation
 
@@ -245,6 +314,9 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 ## Anti-patterns
 
 - ❌ Toast vert / rouge / bleu selon le type
+- ❌ Toast `position: fixed` / coin écran / `Toast fixed` — se superpose aux boutons
+- ❌ Toast au-dessus des boutons (wrap qui pousse le message sur une ligne couvrant les actions) — le garder **à gauche** dans le même flex
+- ❌ `<span>` / `<div>` toast manuel au lieu du composant `Toast`
 - ❌ `<select>` natif pour l’UI principale (utiliser `CustomSelect`)
 - ❌ Onglets pastilles sans fond `#ede9fe` / actif hors `#6366f1`
 - ❌ Texte « Chargement… » sans `PageLoader`
@@ -252,6 +324,8 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 - ❌ `if (loading) return <PageLoader />` / remplacer toute la page (menu ou chrome disparu)
 - ❌ Message « Aucun… » pendant le fetch — toujours `!loading && length===0`
 - ❌ Spinner plein écran dans une page sous Layout (sauf login / gate auth hors shell)
+- ❌ Sélection (prof, classe, onglet…) qui fetch **sans** spinner — UI figée / doute « ça marche ? »
+- ❌ Garder l’ancien détail visible pendant le load d’une autre sélection (réinitialiser ou spinner)
 - ❌ Inventer une nouvelle palette hors violet thème
 
 ## Empty vs chargement (dans la zone données)

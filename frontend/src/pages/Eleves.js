@@ -7,6 +7,7 @@ import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 import { NATIONALITY_OPTIONS } from '../constants/nationalities';
 
 const FONT = "'Century Gothic', CenturyGothic, 'Apple Gothic', Futura, 'Trebuchet MS', sans-serif";
@@ -850,12 +851,12 @@ export default function Eleves() {
       {showSanctions && sanctionsEleve && (
         <div className="modal-overlay" style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(15,23,42,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1200}}>
           <div style={{background:'white',padding:24,borderRadius:16,width:'90vw',maxWidth:1050,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
-                {sanctionToast && <span style={{background:'#ede9fe',color:'#4c1d95',padding:'4px 12px',borderRadius:8,fontWeight:600,fontSize:12}}>{sanctionToast}</span>}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,gap:12,flexWrap:'wrap'}}>
+              <h3 style={{margin:0,fontSize:18,fontWeight:800}}>Sanctions — {sanctionsEleve.prenom} {sanctionsEleve.nom}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                {sanctionToast && <Toast message={sanctionToast} />}
+                <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
               </div>
-              <button style={{padding:'6px 14px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,cursor:'pointer',fontSize:13,color:'#64748b',fontWeight:600}} onClick={() => { setShowSanctions(false); setPendingCell(null); }}>Fermer</button>
             </div>
             {sanctionsLoading ? (
               <PageLoader label="Chargement..." compact style={{padding:30}} />

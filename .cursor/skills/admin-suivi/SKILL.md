@@ -49,7 +49,9 @@ Routes : `frontend/src/App.js`. Layout : `components/Layout.js`.
 
 Voir le skill **ui-composants** (`.cursor/skills/ui-composants/SKILL.md`) :
 toasts toujours violet `#ede9fe` / `#4c1d95`, `CustomSelect`, `LoadingUI`, chip-tabs, bouton Trier.
-**Chargement** : shell (menu + chrome page) → spinner dans la zone données → données ; jamais « Aucun… » pendant le fetch.
+
+**Toute nouvelle page** : suivre la checklist « nouvelle page » + chargements secondaires dans ui-composants.
+Shell (menu + chrome) → spinner zone données → données ; spinner aussi à chaque sélection qui fetch (prof, classe, onglet…) ; jamais « Aucun… » pendant le fetch.
 
 ## API / Backend
 

@@ -5,6 +5,7 @@ import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseC
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import Toast from '../components/Toast';
 import {
   normaliserBranchesSpecialites,
   regrouperBranchesParCode,
@@ -318,13 +319,11 @@ export default function Professeurs({
         <div className="modal-overlay" style={s.overlay}>
           <div style={s.modal}>
             <div style={{ ...s.modalHeader, gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                <h3 style={s.modalTitle}>{profEdit?'Modifier':'Ajouter'} un {nomEntite}</h3>
-                {formToast.message && (
-                  <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>{formToast.message}</span>
-                )}
+              <h3 style={{ ...s.modalTitle, flex: 1, minWidth: 0 }}>{profEdit?'Modifier':'Ajouter'} un {nomEntite}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {formToast.message && <Toast message={formToast.message} />}
+                <button type="button" style={s.btnCancel} onClick={fermerFormulaire}>Fermer</button>
               </div>
-              <button type="button" style={s.btnCancel} onClick={fermerFormulaire}>Fermer</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div style={{display:'grid',gridTemplateColumns:colsForm,gap:24,alignItems:'stretch'}}>

@@ -8,6 +8,7 @@ export const TOAST = {
   accent: '#6366f1',
 };
 
+/** Style inline (défaut) — à placer à gauche des boutons d’action du header. */
 export const toastStyle = {
   fontSize: 13,
   fontWeight: 600,
@@ -15,8 +16,16 @@ export const toastStyle = {
   borderRadius: 8,
   background: TOAST.bg,
   color: TOAST.color,
+  maxWidth: 360,
+  lineHeight: 1.35,
+  flexShrink: 1,
+  minWidth: 0,
 };
 
+/**
+ * @deprecated Ne plus utiliser pour le feedback page (chevauche les boutons).
+ * Gardé uniquement pour d’éventuels cas hors chrome (modales flottantes rares).
+ */
 export const toastStyleFixed = {
   ...toastStyle,
   position: 'fixed',
@@ -32,7 +41,11 @@ export const toastStyleFixed = {
 };
 
 /**
- * Message toast violet (inline, à côté d’un bouton Sauvegarder).
+ * Message toast violet.
+ * Placement obligatoire : **inline, à gauche des boutons** dans un flex
+ * `display:flex; alignItems:center; gap:8|10` (header / barre d’actions).
+ * Ne pas utiliser `fixed` — le toast ne doit jamais se superposer aux boutons.
+ *
  * @param {{ message?: string, children?: React.ReactNode, fixed?: boolean, style?: object }} props
  */
 export default function Toast({ message, children, fixed = false, style, as: Tag = 'span' }) {

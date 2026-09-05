@@ -5,7 +5,7 @@ import { isAdmin } from '../utils/permissions';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
-
+import Toast from '../components/Toast';
 
 const fmtNote = (n) => {
   if (n === null || n === undefined) return '—';
@@ -402,12 +402,8 @@ export default function Bulletins() {
         <button style={s.btnRetour} onClick={() => { setClasseSelectionnee(''); setClasseObj(null); }}>← Retour</button>
         <h2 style={s.titre}>{onglet === 'comportements' ? 'Comportements' : 'Bulletins de notes'} — {classeNom}</h2>
         {onglet === 'comportements' && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {toast.message && (
-              <span style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95' }}>
-                {toast.message}
-              </span>
-            )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {toast.message && <Toast message={toast.message} />}
             <button onClick={validerCriteres}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 99, border: '2px solid ' + (criteresValides ? '#10b981' : '#e2e8f0'), background: criteresValides ? '#ecfdf5' : 'white', color: criteresValides ? '#059669' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
               <div style={{ width: 36, height: 20, borderRadius: 10, background: criteresValides ? '#10b981' : '#e2e8f0', position: 'relative' }}>
