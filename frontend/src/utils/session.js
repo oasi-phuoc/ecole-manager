@@ -2,18 +2,44 @@ import { supabase, supabaseConfigured } from '../lib/supabase';
 import apiClient, { clearLegacyToken } from '../lib/apiClient';
 import { clearApiCache } from '../lib/apiCache';
 
+const SESSION_STORAGE_KEY = 'oasis_session_user';
+
 let sessionUser = null;
 let fetchInflight = null;
 
-export const getSessionUser = () => sessionUser;
+function readStoredUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredUser(user) {
+  try {
+    if (user) sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch { /* ignore quota / private mode */ }
+}
+
+export const getSessionUser = () => {
+  if (sessionUser) return sessionUser;
+  sessionUser = readStoredUser();
+  return sessionUser;
+};
 
 export const setSessionUser = (user) => {
   sessionUser = user || null;
+  writeStoredUser(sessionUser);
 };
 
 export const clearSessionUser = () => {
   sessionUser = null;
   fetchInflight = null;
+  writeStoredUser(null);
   clearLegacyToken();
   clearApiCache();
   if (supabaseConfigured && supabase) {
@@ -22,6 +48,11 @@ export const clearSessionUser = () => {
 };
 
 export const fetchSessionUser = async ({ force = false } = {}) => {
+  if (!force && sessionUser) return sessionUser;
+  if (!force) {
+    const stored = readStoredUser();
+    if (stored) sessionUser = stored;
+  }
   if (!force && sessionUser) return sessionUser;
   if (!force && fetchInflight) return fetchInflight;
 
@@ -32,23 +63,23 @@ export const fetchSessionUser = async ({ force = false } = {}) => {
         const { data, error } = await supabase.rpc('get_me');
         if (error || !data) {
           const res = await apiClient.get('/auth/moi');
-          sessionUser = res.data || null;
+          setSessionUser(res.data || null);
           return sessionUser;
         }
-        sessionUser = data;
+        setSessionUser(data);
         return sessionUser;
       }
       try {
         const res = await apiClient.get('/auth/moi');
-        sessionUser = res.data || null;
+        setSessionUser(res.data || null);
         return sessionUser;
       } catch {
-        sessionUser = null;
+        setSessionUser(null);
         return null;
       }
     }
     const res = await apiClient.get('/auth/moi');
-    sessionUser = res.data || null;
+    setSessionUser(res.data || null);
     return sessionUser;
   })();
 

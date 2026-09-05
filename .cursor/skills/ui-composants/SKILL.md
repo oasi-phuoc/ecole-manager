@@ -124,8 +124,9 @@ Même logique pour un **détail** (ex. classe CSC 2 → liste élèves) : garder
 ### Layout / navigation
 
 - Le **menu latéral** vit dans `Layout.js` et doit rester monté pendant les changements de page.
-- `MfaGate` wrappe **seulement** le contenu (`KeepAliveOutlet`), pas tout le Layout.
-- Keep-alive : clé = **pathname** (pas la query) — voir `KeepAliveOutlet.js`.
+- Contenu des routes : `<Outlet />` (pas de keep-alive `display:none` — provoquait des pages blanches).
+- `MfaGate` + `PageErrorBoundary` wrappent **seulement** le contenu, pas tout le Layout.
+- Session utilisateur : `session.js` persiste dans `sessionStorage` pour éviter un flash plein écran au refresh.
 - Ne pas remonter `PageLoader` plein écran dans une page métier (réservé login / 1er check session hors Layout).
 
 ### Bouton sauvegarde
@@ -247,6 +248,7 @@ const [loading, setLoading] = useState(() => !peekCachedGet('/ressource'));
 | `components/Toast.js` | Toast violet |
 | `components/CustomSelect.js` | Liste déroulante |
 | `components/LoadingUI.js` | Spinner, PageLoader, LoadingButton |
+| `components/PageErrorBoundary.js` | Erreur page sans blanchir le menu |
 | `components/MobilePageEnhancer.js` | chip-tabs mobile, scroll tableaux |
 | `styles/theme.js` | Tokens couleurs |
 | `styles/pageShell.js` | stickyPageChrome |
