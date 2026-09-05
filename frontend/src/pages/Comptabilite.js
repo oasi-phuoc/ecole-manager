@@ -1,7 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
-import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ICONS_MATERIELS } from '../components/DashboardIcons';
 import CustomSelect from '../components/CustomSelect';
@@ -92,10 +91,10 @@ export default function Comptabilite() {
   const [paiements, setPaiements] = useState([]);
   const [loadingPaiements, setLoadingPaiements] = useState(true);
   const [stats, setStats] = useState(null);
-  const [eleves, setEleves] = useState(() => peekCachedGet('/eleves') || []);
-  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
-  const [loadingClasses, setLoadingClasses] = useState(() => !peekCachedGet('/classes'));
-  const [loadingEleves, setLoadingEleves] = useState(() => !peekCachedGet('/eleves'));
+  const [eleves, setEleves] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingEleves, setLoadingEleves] = useState(true);
   const [materiels, setMateriels] = useState([]);
   const [loadingMateriels, setLoadingMateriels] = useState(true);
 

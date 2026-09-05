@@ -2,7 +2,6 @@
 import { isAdmin, peutModifierNotes } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
-import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -16,7 +15,7 @@ const COL_OEIL_DETAIL = 52;
 
 function mapSuiviNotesClasseNotes(rows) {
   const map = {};
-  (rows || []).forEach((x) => {
+  (Array.isArray(rows) ? rows : []).forEach((x) => {
     const pid = x.prof_id != null && x.prof_id !== '' ? String(x.prof_id) : 'null';
     map[`${x.classe_id}-${x.matiere_id}-${pid}`] = parseInt(x.nb_evaluations, 10) || 0;
   });
@@ -117,8 +116,8 @@ const getMention = (moyenne) => {
 
 export default function Notes() {
   const [vue, setVue] = useState('classes');
-  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
-  const [loading, setLoading] = useState(() => !peekCachedGet('/classes'));
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [matieres, setMatieres] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const [evaluationOuverte, setEvaluationOuverte] = useState(null);
@@ -133,7 +132,7 @@ export default function Notes() {
   const [matiereSelectionnee, setMatiereSelectionnee] = useState('');
   const [classeSelectionnee, setClasseSelectionnee] = useState('');
   const [classeObj, setClasseObj] = useState(null);
-  const [ecoleParams, setEcoleParams] = useState(() => peekCachedGet('/parametres/ecole') || {});
+  const [ecoleParams, setEcoleParams] = useState({});
   const [matiereObj, setMatiereObj] = useState(null);
   const [rapport, setRapport] = useState(null);
   const [rapportChargement, setRapportChargement] = useState(false);
@@ -158,16 +157,12 @@ export default function Notes() {
   const [attestationPopupEleve, setAttestationPopupEleve] = useState(null);
   const [attestationMode, setAttestationMode] = useState('eleve');
   const [evalSemestre, setEvalSemestre] = useState('1');
-  const [sem1Bloque, setSem1Bloque] = useState(() => peekCachedGet('/notes/semestre-config')?.sem1_bloque === true);
+  const [sem1Bloque, setSem1Bloque] = useState(false);
   const [evalNiveauFiltre, setEvalNiveauFiltre] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
-  const [suiviNotesClasse, setSuiviNotesClasse] = useState(() =>
-    mapSuiviNotesClasseNotes(peekCachedGet('/notes/suivi-classes')),
-  );
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
   const [branches, setBranches] = useState([]);
-  const [classesResponsables, setClassesResponsables] = useState(
-    () => peekCachedGet('/notes/classes-responsables') || [],
-  );
+  const [classesResponsables, setClassesResponsables] = useState([]);
   const [generaleSemestre, setGeneraleSemestre] = useState('1');
   const [showForm, setShowForm] = useState(false);
   const [sauvegarde, setSauvegarde] = useState(false);
@@ -241,7 +236,12 @@ export default function Notes() {
     // Si la classe est déjà chargée, changer de vue selon l'onglet cliqué
     if (classeSelectionnee && String(classeSelectionnee) === String(classeId)) {
       if (tab === 'generale') { setVue('generale'); setVueClasseAction('generale'); setVueContexte('detail'); }
-      else if (tab === 'evaluations') { setVue('matieres'); setVueClasseAction('evaluations'); setVueContexte('detail'); }
+      else if (tab === 'evaluations') {
+        // Ne pas écraser le détail d'une branche (évaluations / saisie)
+        setVue((prev) => (prev === 'evaluations' || prev === 'saisie' ? prev : 'matieres'));
+        setVueClasseAction('evaluations');
+        setVueContexte('detail');
+      }
       else if (tab === 'comportements') { setVue('bulletin'); setVueClasseAction('comportements'); setVueContexte('bulletin'); setBulletinOnglet('criteres'); }
       else if (tab === 'bulletin') { setVue('bulletin'); setVueClasseAction('bulletin'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
       else if (tab === 'attestation') { setVue('bulletin'); setVueClasseAction('attestation'); setVueContexte('bulletin'); setBulletinOnglet('notes'); }
@@ -251,11 +251,11 @@ export default function Notes() {
   useEffect(() => {
     chargerClasses(); chargerMatieres(); chargerParametresEcole();
     // Données pour le tableau des classes
-    apiClient.get('/emploi-du-temps/matieres', { headers }).then(r => setBranches(r.data || [])).catch(() => {});
+    apiClient.get('/emploi-du-temps/matieres', { headers }).then(r => setBranches(Array.isArray(r.data) ? r.data : [])).catch(() => {});
     apiClient.get('/notes/suivi-classes', { headers }).then(r => {
       setSuiviNotesClasse(mapSuiviNotesClasseNotes(r.data));
     }).catch(() => {});
-    apiClient.get('/notes/classes-responsables', { headers }).then(r => setClassesResponsables(r.data || [])).catch(() => {});
+    apiClient.get('/notes/classes-responsables', { headers }).then(r => setClassesResponsables(Array.isArray(r.data) ? r.data : [])).catch(() => {});
     apiClient.get('/notes/semestre-config', { headers }).then(r => {
       const bloque = r.data?.sem1_bloque === true;
       setSem1Bloque(bloque);
@@ -266,16 +266,16 @@ export default function Notes() {
   const chargerClasses = async () => {
     try {
       const res = await apiClient.get('/classes', { headers });
-      setClasses(res.data);
-    } catch (err) { console.error(err); }
+      setClasses(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { console.error(err); setClasses([]); }
     finally { setLoading(false); }
   };
 
   const chargerMatieres = async () => {
     try {
       const res = await apiClient.get('/emploi-du-temps/matieres', { headers });
-      setMatieres(res.data);
-    } catch (err) { console.error(err); }
+      setMatieres(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { console.error(err); setMatieres([]); }
   };
 
   const chargerParametresEcole = async () => {
@@ -292,9 +292,9 @@ export default function Notes() {
       const s = sem !== undefined ? sem : evalSemestre;
       if (s) url += '&semestre=' + s;
       const res = await apiClient.get(url, { headers });
-      setEvaluations(res.data);
-      return res.data;
-    } catch (err) { console.error(err); return []; }
+      setEvaluations(Array.isArray(res.data) ? res.data : []);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (err) { console.error(err); setEvaluations([]); return []; }
   };
 
   const chargerRapport = async (classeId, sem) => {
@@ -366,18 +366,20 @@ export default function Notes() {
   const ouvrirClasse = async (cl) => {
     setClasseObj(cl);
     setClasseSelectionnee(cl.id);
+    // Afficher tout de suite la liste des branches — ne pas remettre vue=matieres
+    // après les awaits (sinon ça écrase l'ouverture d'une branche en cours).
+    setVue('matieres');
     await chargerEvaluationsId(cl.id, null);
     await chargerBulletinId(cl.id);
-    setVue('matieres');
   };
 
   const ouvrirMatiere = async (m) => {
     setMatiereObj(m);
     setMatiereSelectionnee(m.id);
+    setVue('evaluations');
     await chargerEvaluationsId(classeSelectionnee, m.id);
     setShowForm(false);
     setForm({ nom: '', matiere_id: m.id, date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, editId: null });
-    setVue('evaluations');
   };
 
   const ouvrirEvaluation = async (evaluation) => {
@@ -833,7 +835,12 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                     setCriteresModifies(false);
                   }
                 }
-                setSearchParams({ tab: k });
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set('tab', k);
+                  if (classeSelectionnee) next.set('classeId', String(classeSelectionnee));
+                  return next;
+                });
                 setVueClasseAction(k);
                 if (k === 'comportements') setBulletinOnglet('criteres');
                 else if (k === 'bulletin') { setBulletinOnglet('notes'); setBulletinMode('eleve'); setEleveSelectionne(''); }

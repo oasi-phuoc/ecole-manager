@@ -2,7 +2,6 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect } from 'react';
 import apiClient from '../lib/apiClient';
-import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { stickyPageChrome } from '../styles/pageShell';
@@ -12,30 +11,25 @@ import { PageLoader, LoadingButton } from '../components/LoadingUI';
 
 function mapSuiviNotesClasse(rows) {
   const map = {};
-  (rows || []).forEach((x) => {
+  (Array.isArray(rows) ? rows : []).forEach((x) => {
     map[`${x.classe_id}-${x.matiere_id}`] = parseInt(x.nb_evaluations, 10) || 0;
   });
   return map;
 }
 
 export default function Classes() {
-  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
-  const [loading, setLoading] = useState(() => !peekCachedGet('/classes'));
-  const [profs, setProfs] = useState(() => {
-    const cached = peekCachedGet('/profs');
-    return cached ? cached.filter((p) => p.actif !== false) : [];
-  });
-  const [branches, setBranches] = useState(() => peekCachedGet('/branches') || []);
-  const [suiviNotesClasse, setSuiviNotesClasse] = useState(() =>
-    mapSuiviNotesClasse(peekCachedGet('/notes/suivi-classes')),
-  );
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [profs, setProfs] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [suiviNotesClasse, setSuiviNotesClasse] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [classeEdit, setClasseEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [showInactif, setShowInactif] = useState(false);
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
-  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
   const [elevesClasse, setElevesClasse] = useState([]);

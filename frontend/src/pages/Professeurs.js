@@ -1,7 +1,6 @@
 import { isAdmin, getUser } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
-import { peekCachedGet } from '../lib/apiCache';
 import { isAvsValide, telephoneDigitsOnly, NPA_PATTERN } from '../utils/adresseCh';
 import NpaAutocomplete from '../components/NpaAutocomplete';
 import CustomSelect from '../components/CustomSelect';
@@ -32,8 +31,8 @@ export default function Professeurs({
   searchPlaceholder = 'Rechercher un professeur...',
   showRoleToggle = false,
 } = {}) {
-  const [profs, setProfs] = useState(() => peekCachedGet(apiBase) || []);
-  const [loading, setLoading] = useState(() => !peekCachedGet(apiBase));
+  const [profs, setProfs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');

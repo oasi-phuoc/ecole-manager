@@ -2,7 +2,6 @@
 import { isAdmin } from '../utils/permissions';
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../lib/apiClient';
-import { peekCachedGet } from '../lib/apiCache';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/session';
 import { injectForcedPrintCss, openPrintPopup } from '../utils/print';
@@ -21,9 +20,9 @@ const Champ = ({ lbl, children }) => (
 );
 
 export default function Eleves() {
-  const [eleves, setEleves] = useState(() => peekCachedGet('/eleves') || []);
-  const [loading, setLoading] = useState(() => !peekCachedGet('/eleves'));
-  const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
+  const [eleves, setEleves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [eleveEdit, setEleveEdit] = useState(null);
   const [recherche, setRecherche] = useState('');
@@ -31,7 +30,7 @@ export default function Eleves() {
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
   const [classeFiltreNiveau, setClasseFiltreNiveau] = useState('');
   const [showInactif, setShowInactif] = useState(true);
-  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);

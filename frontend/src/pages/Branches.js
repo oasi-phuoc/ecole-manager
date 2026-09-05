@@ -4,12 +4,11 @@ import { stickyPageChrome } from '../styles/pageShell';
 import apiClient from '../lib/apiClient';
 import CustomSelect from '../components/CustomSelect';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
-import { peekCachedGet } from '../lib/apiCache';
 
 
 export default function Branches() {
-  const [branches, setBranches] = useState(() => peekCachedGet('/branches') || []);
-  const [loading, setLoading] = useState(() => !peekCachedGet('/branches'));
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [brancheEdit, setBrancheEdit] = useState(null);
@@ -18,7 +17,7 @@ export default function Branches() {
   const [recherche, setRecherche] = useState('');
   const [filtreNiveau, setFiltreNiveau] = useState('tous');
   const [showNiveauxFiltres, setShowNiveauxFiltres] = useState(false);
-  const [niveauxDB, setNiveauxDB] = useState(() => peekCachedGet('/donnees/niveaux') || []);
+  const [niveauxDB, setNiveauxDB] = useState([]);
   const headers = {};
 
   useEffect(() => {
