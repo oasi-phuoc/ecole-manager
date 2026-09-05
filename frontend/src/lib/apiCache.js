@@ -150,7 +150,10 @@ export function prefetchUrls(client, urls) {
 /** Prefetch des GET d’une page menu (hover / mousedown / navigation). */
 export function prefetchRoute(client, path) {
   const base = String(path || '').split('?')[0];
-  return prefetchUrls(client, PREFETCH_BY_ROUTE[base] || []);
+  const urls = PREFETCH_BY_ROUTE[base] || [];
+  if (!urls.length) return Promise.resolve([]);
+  // Échecs silencieux : ne jamais faire planter la navigation
+  return prefetchUrls(client, urls).catch(() => []);
 }
 
 /**

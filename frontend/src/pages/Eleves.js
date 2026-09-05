@@ -125,8 +125,8 @@ export default function Eleves() {
         apiClient.get('/eleves', {headers}),
         apiClient.get('/classes', {headers}),
       ]);
-      setEleves(el.data);
-      setClasses(cl.data);
+      setEleves(Array.isArray(el.data) ? el.data : []);
+      setClasses(Array.isArray(cl.data) ? cl.data : []);
     } catch(err) { console.error(err); }
     finally { setLoading(false); }
   };

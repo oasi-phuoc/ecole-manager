@@ -172,13 +172,16 @@ export default function Layout() {
       const cached = getSessionUser();
       if (cached) setUser(cached);
       try {
-        const u = cached || await fetchSessionUser();
+        // Toujours revalider le token — ne pas prefetch sur un profil fantôme
+        const u = await fetchSessionUser({ force: true });
         setUser(u || null);
         if (u) {
           prefetchUrls(apiClient, REFERENCE_PREFETCH_URLS);
           prefetchUrls(apiClient, HEAVY_PREFETCH_URLS);
         }
-      } catch {}
+      } catch {
+        setUser(null);
+      }
       try {
         const res = await apiClient.get('/parametres/acces-profs');
         setAccesProfs(res.data || {});

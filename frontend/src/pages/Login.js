@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSessionUser, setSessionUser } from '../utils/session';
 import { redirectAfterAuth } from '../utils/mfa';
 import apiClient, { setLegacyToken } from '../lib/apiClient';
+import { clearApiCache } from '../lib/apiCache';
 import { supabaseConfigured } from '../lib/supabase';
 import { LoadingButton } from '../components/LoadingUI';
 import { passkeySupported, startAuthentication } from '../lib/webauthnClient';
@@ -55,6 +56,9 @@ export default function Login() {
     setLoginLoading(true);
     try {
       if (!mfaRequired) {
+        // Évite de mélanger un ancien profil / cache avec une nouvelle connexion
+        setSessionUser(null);
+        clearApiCache();
         const res = await apiClient.post('/auth/login', { email, mot_de_passe: motDePasse });
         if (res.data?.mfa_required) {
           setMfaToken(res.data.mfa_token || '');

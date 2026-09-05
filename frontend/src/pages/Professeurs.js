@@ -153,9 +153,15 @@ export default function Professeurs({
   }, [form.prenom, form.nom, showForm, profEdit]);
 
   const chargerProfs = async () => {
-    try { const res = await apiClient.get(apiUrl,{headers}); setProfs(res.data); }
-    catch(err) { console.error(err); }
-    finally { setLoading(false); }
+    try {
+      const res = await apiClient.get(apiUrl, { headers });
+      setProfs(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      setProfs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTauxChange = (val) => {

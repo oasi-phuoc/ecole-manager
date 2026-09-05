@@ -26,9 +26,11 @@ export default class PageErrorBoundary extends React.Component {
 
   render() {
     if (this.state.error) {
+      const detail = this.state.error?.message || String(this.state.error);
       return (
-        <div style={{ padding: 32, textAlign: 'center' }}>
+        <div style={{ padding: 32, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
           <PageLoader label="Erreur d’affichage — rechargez la page" />
+          <p style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', wordBreak: 'break-word' }}>{detail}</p>
           <button
             type="button"
             onClick={() => this.setState({ error: null })}
