@@ -149,18 +149,22 @@ export default function Layout() {
   const [pinnedPaths, setPinnedPaths] = useState(() => {
     try {
       const saved = localStorage.getItem('sidebar_pinned');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch {}
     return ALL_MODULES.map(m => m.path);
   });
 
   useEffect(() => {
     setPinnedPaths((prev) => {
-      const next = prev.map((p) => (
+      const base = Array.isArray(prev) ? prev : ALL_MODULES.map(m => m.path);
+      const next = base.map((p) => (
         (p === '/visite-classes' || p === '/sondage' || p === '/statistiques') ? '/controle-qualite' : p
       ));
       const dedup = [...new Set(next)];
-      if (JSON.stringify(dedup) !== JSON.stringify(prev)) {
+      if (JSON.stringify(dedup) !== JSON.stringify(base)) {
         try { localStorage.setItem('sidebar_pinned', JSON.stringify(dedup)); } catch {}
       }
       return dedup;

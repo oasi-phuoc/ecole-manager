@@ -282,14 +282,16 @@ export default function Presences() {
   const chargerCalendrier = async () => {
     try {
       const res = await apiClient.get('/calendrier', { headers });
-      setEvenementsCalendrier(res.data.filter(e => e.categorie === 'vacance'));
+      const list = Array.isArray(res.data) ? res.data : [];
+      setEvenementsCalendrier(list.filter(e => e.categorie === 'vacance'));
     } catch (err) { console.error(err); }
   };
 
   const chargerClasseHoraires = async (classe_id) => {
     try {
       const res = await apiClient.get('/planning/classe-horaires', { headers });
-      setClasseHoraires(res.data.filter(h => String(h.classe_id) === String(classe_id)));
+      const list = Array.isArray(res.data) ? res.data : [];
+      setClasseHoraires(list.filter(h => String(h.classe_id) === String(classe_id)));
     } catch (err) { console.error(err); }
   };
 

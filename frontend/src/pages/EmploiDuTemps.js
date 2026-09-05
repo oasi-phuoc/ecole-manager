@@ -385,7 +385,10 @@ export default function EmploiDuTemps() {
 
   useEffect(() => {
     if (onglet === 'disponibilites') {
-      apiClient.get('/profs', { headers }).then(r => setProfs(r.data.filter(x => x.actif !== false))).catch(() => {});
+      apiClient.get('/profs', { headers }).then(r => {
+        const list = Array.isArray(r.data) ? r.data : [];
+        setProfs(list.filter(x => x.actif !== false));
+      }).catch(() => {});
       apiClient.get('/planning/disponibilites', { headers }).then(r => setAllDispos(r.data)).catch(() => {});
     }
     if (onglet === 'plannings') setSousOngletPlanning('classes');
@@ -399,9 +402,9 @@ export default function EmploiDuTemps() {
         apiClient.get('/donnees/lieux-travail', { headers }),
         apiClient.get('/donnees/salles', { headers }),
       ]);
-      setNiveauxDB(niv.data || []);
-      setLieuxTravailDB(lieux.data || []);
-      setSallesDB(salles.data || []);
+      setNiveauxDB(Array.isArray(niv.data) ? niv.data : []);
+      setLieuxTravailDB(Array.isArray(lieux.data) ? lieux.data : []);
+      setSallesDB(Array.isArray(salles.data) ? salles.data : []);
     } catch(err) { console.error(err); }
     try {
       const par = await apiClient.get('/parametres/ecole', { headers });
@@ -516,30 +519,32 @@ export default function EmploiDuTemps() {
         apiClient.get('/planning/prof-couleurs', { headers }),
         apiClient.get('/planning/branche-couleurs', { headers }),
       ]);
-      setProfs(p.data.filter(x => x.actif !== false));
-      setClasses(trierClassesParNom(cl.data));
-      setMatieres(m.data);
-      setCreneaux(cr.data);
-      setPools((po.data || []).map((pool) => ({
+      setProfs(Array.isArray(p.data) ? p.data.filter(x => x.actif !== false) : []);
+      setClasses(trierClassesParNom(Array.isArray(cl.data) ? cl.data : []));
+      setMatieres(Array.isArray(m.data) ? m.data : []);
+      setCreneaux(Array.isArray(cr.data) ? cr.data : []);
+      setPools((Array.isArray(po.data) ? po.data : []).map((pool) => ({
         ...pool,
         classes: trierClassesParNom(pool.classes),
       })));
-      setAffectations(af.data);
-      setAffectationsDraft(af.data || []);
-      setClasseHoraires(ch.data);
-      setClasseHorairesSaved(ch.data || []);
-      setCoursEmploiDuTemps(edt.data || []);
-      const couleursMap = (cc.data || []).reduce((acc, row) => {
+      const affs = Array.isArray(af.data) ? af.data : [];
+      setAffectations(affs);
+      setAffectationsDraft(affs);
+      const chList = Array.isArray(ch.data) ? ch.data : [];
+      setClasseHoraires(chList);
+      setClasseHorairesSaved(chList);
+      setCoursEmploiDuTemps(Array.isArray(edt.data) ? edt.data : []);
+      const couleursMap = (Array.isArray(cc.data) ? cc.data : []).reduce((acc, row) => {
         acc[String(row.classe_id)] = row.couleur;
         return acc;
       }, {});
       setCouleursClassesMap(couleursMap);
-      const couleursProfs = (pc.data || []).reduce((acc, row) => {
+      const couleursProfs = (Array.isArray(pc.data) ? pc.data : []).reduce((acc, row) => {
         acc[String(row.prof_id)] = row.couleur;
         return acc;
       }, {});
       setCouleursProfsMap(couleursProfs);
-      const couleursBranches = (bc.data || []).reduce((acc, row) => {
+      const couleursBranches = (Array.isArray(bc.data) ? bc.data : []).reduce((acc, row) => {
         acc[String(row.matiere_id)] = row.couleur;
         return acc;
       }, {});

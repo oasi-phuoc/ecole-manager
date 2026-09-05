@@ -367,15 +367,15 @@ export default function TCF() {
         apiClient.get('/parametres/ecole', { headers }).catch(() => ({ data: {} })),
         apiClient.get('/donnees/niveaux').catch(() => ({ data: [] })),
       ]);
-      setProfs(rp.data || []);
-      setPools(rPools.data || []);
-      setCreneaux(rCreneaux.data || []);
-      setClasses((rClasses.data || []).filter(c => c.actif !== false));
-      setEleves((rEleves.data || []).filter(e => e.statut !== 'inactif'));
+      setProfs(Array.isArray(rp.data) ? rp.data : []);
+      setPools(Array.isArray(rPools.data) ? rPools.data : []);
+      setCreneaux(Array.isArray(rCreneaux.data) ? rCreneaux.data : []);
+      setClasses((Array.isArray(rClasses.data) ? rClasses.data : []).filter(c => c.actif !== false));
+      setEleves((Array.isArray(rEleves.data) ? rEleves.data : []).filter(e => e.statut !== 'inactif'));
       setAnneeScolaire(String(rParametres?.data?.annee_scolaire || '').trim());
       const respNames = listerNomsResponsablesEcole(rParametres?.data || {});
       setResponsablesTCF(respNames.map((name, i) => ({ id: `resp_${i}`, nom: name, prenom: '' })));
-      setNiveauxDB(rNiveaux.data || []);
+      setNiveauxDB(Array.isArray(rNiveaux.data) ? rNiveaux.data : []);
 
       const aMap = {};
       (rGeneral.data?.affectations || []).forEach(a => {

@@ -332,7 +332,8 @@ export default function Parametres() {
   useEffect(() => {
     if (!isAdmin || onglet !== 'ecole' || sousOngletEcole !== 'responsables') return;
     apiClient.get('/employes-administratifs', { headers }).then(r => {
-      const list = (r.data || []).filter(u => String(u.role_acces) === 'responsable' && u.actif !== false);
+      const raw = Array.isArray(r.data) ? r.data : [];
+      const list = raw.filter(u => String(u.role_acces) === 'responsable' && u.actif !== false);
       setEmployesResponsablesListe(list.sort((a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr')));
     }).catch(() => setEmployesResponsablesListe([]));
   }, [isAdmin, onglet, sousOngletEcole]);
@@ -354,9 +355,9 @@ export default function Parametres() {
         apiClient.get('/donnees/lieux-travail', { headers }),
         apiClient.get('/donnees/salles', { headers }),
       ]);
-      setNiveauxDB(niv.data || []);
-      setLieuxTravailDB(lieux.data || []);
-      setSallesDB(salles.data || []);
+      setNiveauxDB(Array.isArray(niv.data) ? niv.data : []);
+      setLieuxTravailDB(Array.isArray(lieux.data) ? lieux.data : []);
+      setSallesDB(Array.isArray(salles.data) ? salles.data : []);
     } catch(err) { console.error(err); }
     finally { setLoadingDonnees(false); }
   };
@@ -364,7 +365,8 @@ export default function Parametres() {
   const chargerBranchesProfil = async (niveaux = []) => {
     try {
       const r = await apiClient.get('/branches', { headers });
-      const filtrees = (r.data || []).filter((b) => !niveaux.length || niveaux.includes(b.niveau));
+      const raw = Array.isArray(r.data) ? r.data : [];
+      const filtrees = raw.filter((b) => !niveaux.length || niveaux.includes(b.niveau));
       setBranchesDisponiblesProfil(regrouperBranchesParCode(filtrees, { labelComplet: true }));
     } catch { setBranchesDisponiblesProfil([]); }
   };
@@ -383,11 +385,13 @@ export default function Parametres() {
         apiClient.get('/planning/disponibilites/' + profId, { headers }),
         apiClient.get('/planning/disponibilites/' + profId + '/remarque', { headers }).catch(() => ({ data: { remarque: '' } })),
       ]);
-      setCreneauxDispoProfil(cr.data || []);
+      const creneaux = Array.isArray(cr.data) ? cr.data : [];
+      const disposRows = Array.isArray(d.data) ? d.data : [];
+      setCreneauxDispoProfil(creneaux);
       const map = {};
-      (d.data || []).forEach((row) => { map[row.creneau_id] = statutDepuisDispoRow(row); });
+      disposRows.forEach((row) => { map[row.creneau_id] = statutDepuisDispoRow(row); });
       // Défaut : disponible si aucune entrée
-      (cr.data || []).forEach((c) => {
+      creneaux.forEach((c) => {
         if (!Object.prototype.hasOwnProperty.call(map, c.id)) map[c.id] = true;
       });
       setDisposProfil(map);
@@ -467,8 +471,8 @@ export default function Parametres() {
   const chargerProfs = async () => {
     try {
       const res = await apiClient.get('/parametres/profs', { headers });
-      setProfs(res.data);
-    } catch (err) { console.error(err); }
+      setProfs(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { console.error(err); setProfs([]); }
   };
 
   const initRole = (roleData, defaultVal) => {

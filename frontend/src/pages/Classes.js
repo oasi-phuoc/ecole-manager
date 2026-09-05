@@ -82,11 +82,13 @@ export default function Classes() {
         apiClient.get('/branches', {headers}),
         apiClient.get('/notes/suivi-classes', {headers}),
       ]);
-      if (cl.status === 'fulfilled') setClasses(cl.value.data);
+      if (cl.status === 'fulfilled') setClasses(Array.isArray(cl.value.data) ? cl.value.data : []);
       else console.error('Erreur classes:', cl.reason);
-      if (pr.status === 'fulfilled') setProfs(pr.value.data.filter(p => p.actif !== false));
-      else console.error('Erreur profs:', pr.reason);
-      if (br.status === 'fulfilled') setBranches(br.value.data || []);
+      if (pr.status === 'fulfilled') {
+        const list = Array.isArray(pr.value.data) ? pr.value.data : [];
+        setProfs(list.filter(p => p.actif !== false));
+      } else console.error('Erreur profs:', pr.reason);
+      if (br.status === 'fulfilled') setBranches(Array.isArray(br.value.data) ? br.value.data : []);
       else console.error('Erreur branches:', br.reason);
       if (sn.status === 'fulfilled') {
         setSuiviNotesClasse(mapSuiviNotesClasse(sn.value.data));
