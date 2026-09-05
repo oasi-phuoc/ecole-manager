@@ -6,7 +6,7 @@ import { MFA_SETUP_PATH } from '../utils/mfa';
 import { PageLoader } from './LoadingUI';
 
 /**
- * Gate MFA autour du contenu (KeepAliveOutlet), pas du Layout :
+ * Gate MFA autour du contenu (Outlet), pas du Layout :
  * le menu latéral reste visible pendant le check.
  */
 export default function MfaGate({ children }) {

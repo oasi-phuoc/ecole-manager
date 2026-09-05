@@ -32,8 +32,8 @@ export default function Professeurs({
   searchPlaceholder = 'Rechercher un professeur...',
   showRoleToggle = false,
 } = {}) {
-  const [profs, setProfs] = useState(() => (apiBase === '/profs' ? peekCachedGet('/profs') : null) || []);
-  const [loading, setLoading] = useState(() => (apiBase === '/profs' ? !peekCachedGet('/profs') : true));
+  const [profs, setProfs] = useState(() => peekCachedGet(apiBase) || []);
+  const [loading, setLoading] = useState(() => !peekCachedGet(apiBase));
   const [showForm, setShowForm] = useState(false);
   const [profEdit, setProfEdit] = useState(null);
   const [recherche, setRecherche] = useState('');

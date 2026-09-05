@@ -10,6 +10,7 @@ const CACHE_RULES = [
   { pattern: /^\/donnees\/salles$/, ttl: 10 * 60 * 1000 },
   { pattern: /^\/classes$/, ttl: 3 * 60 * 1000 },
   { pattern: /^\/profs$/, ttl: 3 * 60 * 1000 },
+  { pattern: /^\/employes-administratifs$/, ttl: 3 * 60 * 1000 },
   { pattern: /^\/branches$/, ttl: 5 * 60 * 1000 },
   { pattern: /^\/eleves$/, ttl: 2 * 60 * 1000 },
   { pattern: /^\/notes\/suivi-classes$/, ttl: 2 * 60 * 1000 },
@@ -55,6 +56,7 @@ function invalidateForMutation(url = '') {
     prefixes.add('/notes');
   }
   if (path.startsWith('/profs')) prefixes.add('/profs');
+  if (path.startsWith('/employes-administratifs')) prefixes.add('/employes-administratifs');
   if (path.startsWith('/branches')) prefixes.add('/branches');
   if (path.startsWith('/donnees')) prefixes.add('/donnees');
   if (path.startsWith('/parametres')) prefixes.add('/parametres');
@@ -111,10 +113,44 @@ export const REFERENCE_PREFETCH_URLS = [
 
 export const HEAVY_PREFETCH_URLS = ['/eleves'];
 
+/**
+ * Prefetch ciblé par route du menu — remplace l’ancien keep-alive UI.
+ * Les pages lisent peekCachedGet() au mount → liste souvent déjà prête.
+ */
+export const PREFETCH_BY_ROUTE = {
+  '/eleves': ['/eleves', '/classes', '/donnees/niveaux'],
+  '/classes': ['/classes', '/profs', '/branches', '/notes/suivi-classes', '/donnees/niveaux'],
+  '/professeurs': ['/profs', '/branches', '/donnees/niveaux', '/donnees/lieux-travail'],
+  '/employes-administratifs': ['/employes-administratifs', '/donnees/niveaux', '/donnees/lieux-travail'],
+  '/branches': ['/branches', '/donnees/niveaux'],
+  '/notes': [
+    '/classes',
+    '/notes/suivi-classes',
+    '/notes/classes-responsables',
+    '/notes/semestre-config',
+    '/parametres/ecole',
+  ],
+  '/comptabilite': ['/classes', '/eleves'],
+  '/presences': ['/classes', '/eleves'],
+  '/bulletins': ['/classes'],
+  '/emploi-du-temps': ['/profs', '/classes', '/branches', '/planning/creneaux', '/parametres/ecole'],
+  '/tcf': ['/profs', '/classes', '/branches'],
+  '/documents-administratifs': ['/classes'],
+  '/enclassement': ['/classes', '/eleves'],
+  '/calendrier': ['/classes', '/profs'],
+  '/parametres': ['/parametres/ecole', '/parametres/acces-profs', '/donnees/niveaux'],
+};
+
 export function prefetchUrls(client, urls) {
-  return Promise.allSettled(
-    urls.map((url) => client.get(url)),
-  );
+  const list = [...new Set((urls || []).filter(Boolean))];
+  if (!list.length) return Promise.resolve([]);
+  return Promise.allSettled(list.map((url) => client.get(url)));
+}
+
+/** Prefetch des GET d’une page menu (hover / mousedown / navigation). */
+export function prefetchRoute(client, path) {
+  const base = String(path || '').split('?')[0];
+  return prefetchUrls(client, PREFETCH_BY_ROUTE[base] || []);
 }
 
 /**

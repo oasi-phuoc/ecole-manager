@@ -124,10 +124,14 @@ Même logique pour un **détail** (ex. classe CSC 2 → liste élèves) : garder
 ### Layout / navigation
 
 - Le **menu latéral** vit dans `Layout.js` et doit rester monté pendant les changements de page.
-- Contenu des routes : `<Outlet />` (pas de keep-alive `display:none` — provoquait des pages blanches).
+- Contenu des routes : `<Outlet />` — **pas de keep-alive** (`display:none`) : provoquait des pages blanches.
+- Optimisation navigation (à la place du keep-alive) :
+  1. **Cache GET** (`apiCache.js` + `peekCachedGet` au mount des pages)
+  2. **Prefetch au survol / mousedown** du menu → `prefetchRoute(apiClient, path)` (`PREFETCH_BY_ROUTE`)
+  3. Prefetch global au login (`REFERENCE_PREFETCH_URLS` + `HEAVY_PREFETCH_URLS`)
 - `MfaGate` + `PageErrorBoundary` wrappent **seulement** le contenu, pas tout le Layout.
-- Session utilisateur : `session.js` persiste dans `sessionStorage` pour éviter un flash plein écran au refresh.
-- Ne pas remonter `PageLoader` plein écran dans une page métier (réservé login / 1er check session hors Layout).
+- Session : `sessionStorage` via `session.js` pour éviter un flash plein écran au refresh.
+- Ne pas remonter `PageLoader` plein écran dans une page métier.
 
 ### Bouton sauvegarde
 

@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import MfaGate from './MfaGate';
 import PageErrorBoundary from './PageErrorBoundary';
 import apiClient from '../lib/apiClient';
-import { HEAVY_PREFETCH_URLS, prefetchUrls, REFERENCE_PREFETCH_URLS } from '../lib/apiCache';
+import { HEAVY_PREFETCH_URLS, prefetchRoute, prefetchUrls, REFERENCE_PREFETCH_URLS } from '../lib/apiCache';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
 import { ICONS_BY_PATH } from './DashboardIcons';
 import { useIsMobile, MOBILE_BREAKPOINT } from '../hooks/useIsMobile';
@@ -257,6 +257,7 @@ export default function Layout() {
   const currentPageTitle = getCurrentPageTitle(location.pathname);
 
   const navigateToModule = (m, onAfterNavigate) => {
+    prefetchRoute(apiClient, m.path);
     if (m.path === '/comptabilite') {
       navigate('/comptabilite?tab=classes');
     } else if (m.path === '/documents-administratifs') {
@@ -268,6 +269,10 @@ export default function Layout() {
       navigate(m.path);
     }
     onAfterNavigate?.();
+  };
+
+  const prefetchModule = (path) => {
+    prefetchRoute(apiClient, path);
   };
 
   const isModuleActive = (path) =>
@@ -290,7 +295,10 @@ export default function Layout() {
               <button
                 style={{ ...s.navItem, background: isActive ? '#ede9fe' : isHov ? '#f5f3ff' : 'transparent' }}
                 onClick={() => navigateToModule(m, onAfterNavigate)}
-                onMouseEnter={() => setHoveredPath(m.path)}
+                onMouseEnter={() => { setHoveredPath(m.path); prefetchModule(m.path); }}
+                onFocus={() => prefetchModule(m.path)}
+                onMouseDown={() => prefetchModule(m.path)}
+                onTouchStart={() => prefetchModule(m.path)}
                 onMouseLeave={() => setHoveredPath(null)}>
                 {IconComp && <IconComp size={16} active={isActive} />}
                 <span style={{ ...s.navLabel, color: isActive ? '#4c1d95' : '#6d6d8a', fontWeight: isActive ? 700 : 600 }}>
@@ -478,8 +486,13 @@ export default function Layout() {
                   const isActive = isModuleActive(m.path);
                   return (
                     <div key={m.path} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 7, cursor: 'pointer', background: isActive ? '#ede9fe' : 'transparent' }}
-                      onMouseEnter={e => e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff'}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = isActive ? '#ede9fe' : '#f5f3ff';
+                        prefetchModule(m.path);
+                      }}
                       onMouseLeave={e => e.currentTarget.style.background = isActive ? '#ede9fe' : 'transparent'}
+                      onMouseDown={() => prefetchModule(m.path)}
+                      onTouchStart={() => prefetchModule(m.path)}
                       onClick={() => {
                         navigateToModule(m, () => {
                           setShowMoreMenu(false);
