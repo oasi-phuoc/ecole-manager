@@ -307,9 +307,11 @@ export default function EmploiDuTemps() {
   const [afficherCouleursBranchesProf, setAfficherCouleursBranchesProf] = useState(false);
   const [afficherCouleursBranchesClasse, setAfficherCouleursBranchesClasse] = useState(false);
   const [planningProf, setPlanningProf] = useState(null);
+  const [planningProfLoading, setPlanningProfLoading] = useState(false);
   const [profPlanningId, setProfPlanningId] = useState('');
   const [planningClasse, setPlanningClasse] = useState(null);
   const [planningClasseLoading, setPlanningClasseLoading] = useState(false);
+  const [disposLoading, setDisposLoading] = useState(false);
   const [classePlanningId, setClassePlanningId] = useState('');
   const [classePlanningPoolId, setClassePlanningPoolId] = useState('');
   const [sallesLieuTravailId, setSallesLieuTravailId] = useState('');
@@ -581,16 +583,32 @@ export default function EmploiDuTemps() {
   }, [sallesLieuTravailId]);
 
   const chargerDispos = async (prof_id) => {
-    const [rDispos, rRemarque] = await Promise.all([
-      apiClient.get('/planning/disponibilites/' + prof_id, { headers }),
-      apiClient.get('/planning/disponibilites/' + prof_id + '/remarque', { headers }),
-    ]);
-    const map = {};
-    creneaux.forEach(c => { map[c.id] = true; });
-    rDispos.data.forEach(d => { map[d.creneau_id] = statutDepuisDispoRow(d); });
-    setDispos(map);
-    setRemarquesDispo(rRemarque?.data?.remarque || '');
+    if (!prof_id) {
+      setProfSelectionne(null);
+      setDispos({});
+      setRemarquesDispo('');
+      setDisposLoading(false);
+      return;
+    }
     setProfSelectionne(prof_id);
+    setDisposLoading(true);
+    try {
+      const [rDispos, rRemarque] = await Promise.all([
+        apiClient.get('/planning/disponibilites/' + prof_id, { headers }),
+        apiClient.get('/planning/disponibilites/' + prof_id + '/remarque', { headers }),
+      ]);
+      const map = {};
+      creneaux.forEach(c => { map[c.id] = true; });
+      (Array.isArray(rDispos.data) ? rDispos.data : []).forEach(d => { map[d.creneau_id] = statutDepuisDispoRow(d); });
+      setDispos(map);
+      setRemarquesDispo(rRemarque?.data?.remarque || '');
+    } catch (err) {
+      setDispos({});
+      setRemarquesDispo('');
+      showToast(err.response?.data?.message || err.message || 'Erreur lors du chargement des disponibilités.', 'error');
+    } finally {
+      setDisposLoading(false);
+    }
   };
 
   const sauverDispos = async () => {
@@ -847,8 +865,22 @@ export default function EmploiDuTemps() {
   };
 
   const chargerPlanningProf = async (id) => {
-    const r = await apiClient.get('/planning/prof/' + id, { headers });
-    setPlanningProf(r.data);
+    if (!id) {
+      setPlanningProf(null);
+      setPlanningProfLoading(false);
+      return;
+    }
+    setPlanningProfLoading(true);
+    setPlanningProf(null);
+    try {
+      const r = await apiClient.get('/planning/prof/' + id, { headers });
+      setPlanningProf(r.data || null);
+    } catch (err) {
+      setPlanningProf(null);
+      showToast(err.response?.data?.message || err.message || 'Erreur lors du chargement du planning du professeur.', 'error');
+    } finally {
+      setPlanningProfLoading(false);
+    }
   };
 
   const chargerPlanningClasse = async (id, pool_id) => {
@@ -4641,7 +4673,7 @@ export default function EmploiDuTemps() {
             )}
           </div>
         )}
-        {onglet === 'disponibilites' && profSelectionne && isAdmin() && (
+        {onglet === 'disponibilites' && profSelectionne && isAdmin() && !disposLoading && (
           <div style={{display:'flex',alignItems:'center',gap:10,marginLeft:'auto'}}>
             <LoadingButton type="button" style={styles.btnSauvegarderAff} onClick={sauverDispos} loading={savingDispos}>Sauvegarder</LoadingButton>
           </div>
@@ -4826,7 +4858,8 @@ export default function EmploiDuTemps() {
               options={profsTriesPrenomNom.map(p => ({value: p.id, label: `${p.prenom} ${nomSansSuffixe(p.nom)}`}))}
               onChange={(id) => {
                 setProfPlanningId(id);
-                if (id) chargerPlanningProf(id); else setPlanningProf(null);
+                if (id) chargerPlanningProf(id);
+                else { setPlanningProf(null); setPlanningProfLoading(false); }
               }}
             />
             {renderTogglePlanning({
@@ -5085,7 +5118,10 @@ export default function EmploiDuTemps() {
             </div>
             </div>
           )}
-          {profSelectionne && (
+          {profSelectionne && disposLoading && (
+            <PageLoader label="Chargement des disponibilités…" style={styles.msgVide} />
+          )}
+          {profSelectionne && !disposLoading && (
             <div style={styles.card}>
               <div style={styles.rowBetween}>
                 <h3 style={styles.cardTitre}>
@@ -6776,7 +6812,13 @@ export default function EmploiDuTemps() {
           {!profPlanningId && (
             <div style={styles.msgVide}>Sélectionnez d'abord un professeur pour afficher son planning.</div>
           )}
-          {planningProf && profPlanningId && (
+          {profPlanningId && planningProfLoading && (
+            <PageLoader label="Chargement du planning du professeur…" style={styles.msgVide} />
+          )}
+          {profPlanningId && !planningProfLoading && !planningProf && (
+            <div style={styles.msgVide}>Impossible de charger le planning de ce professeur.</div>
+          )}
+          {planningProf && profPlanningId && !planningProfLoading && (
             <div style={{overflowX:'auto'}}>
               <div style={{position:'relative',fontSize:18,marginBottom:12,color:'#0f172a',minHeight:28,textAlign:'center'}}>
                 {titreGaucheTitulaireProf(planningProf.classesTitulaire) ? (
@@ -6879,7 +6921,13 @@ export default function EmploiDuTemps() {
           {!classePlanningId && (
             <div style={styles.msgVide}>Sélectionnez d'abord une classe pour afficher son planning.</div>
           )}
-          {planningClasse && classePlanningId && (
+          {classePlanningId && planningClasseLoading && (
+            <PageLoader label="Chargement du planning de la classe…" style={styles.msgVide} />
+          )}
+          {classePlanningId && !planningClasseLoading && !planningClasse && (
+            <div style={styles.msgVide}>Impossible de charger le planning de cette classe.</div>
+          )}
+          {planningClasse && classePlanningId && !planningClasseLoading && (
             <div>
               <div style={{position:'relative',fontSize:18,marginBottom:12,color:'#0f172a',minHeight:28,textAlign:'center'}}>
                 {titreGaucheTitulaireClasse(planningClasse.classe?.titulaire_nom) ? (

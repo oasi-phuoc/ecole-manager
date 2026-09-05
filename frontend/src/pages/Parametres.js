@@ -206,6 +206,10 @@ export default function Parametres() {
   const [lieuxTravailDB, setLieuxTravailDB] = useState([]);
   const [sallesDB, setSallesDB] = useState([]);
   const [loadingDonnees, setLoadingDonnees] = useState(true);
+  const [loadingProfil, setLoadingProfil] = useState(true);
+  const [loadingEcole, setLoadingEcole] = useState(true);
+  const [loadingMail, setLoadingMail] = useState(true);
+  const [loadingAcces, setLoadingAcces] = useState(true);
   const [donneesNiveauForm, setDonneesNiveauForm] = useState({ nom: '', periodes_normales: '20', periodes_soutien: '0' });
   const [donneesLieuForm, setDonneesLieuForm] = useState({ nom: '' });
   const [donneesSalleForm, setDonneesSalleForm] = useState({ nom: '', lieu_travail_id: '' });
@@ -342,13 +346,16 @@ export default function Parametres() {
   }, [isAdmin, profil?.email, mailTestTo]);
 
   const chargerProfil = async () => {
+    setLoadingProfil(true);
     try {
       const res = await apiClient.get('/parametres/profil', { headers });
       setProfil(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoadingProfil(false); }
   };
 
   const chargerDonnees = async () => {
+    setLoadingDonnees(true);
     try {
       const [niv, lieux, salles] = await Promise.all([
         apiClient.get('/donnees/niveaux', { headers }),
@@ -446,6 +453,7 @@ export default function Parametres() {
   };
 
   const chargerEcole = async () => {
+    setLoadingEcole(true);
     try {
       const res = await apiClient.get('/parametres/ecole', { headers });
       if (res.data) {
@@ -466,6 +474,7 @@ export default function Parametres() {
         setTypesSpecialAffectation(normaliserTypesSpecial(res.data.types_special_affectation));
       }
     } catch (err) { console.error(err); }
+    finally { setLoadingEcole(false); }
   };
 
   const chargerProfs = async () => {
@@ -486,6 +495,7 @@ export default function Parametres() {
   };
 
   const chargerAccesProfs = async () => {
+    setLoadingAcces(true);
     try {
       const res = await apiClient.get('/parametres/acces-profs', { headers });
       const data = res.data || {};
@@ -498,6 +508,7 @@ export default function Parametres() {
         admins:      initRole(hasNested ? (data.admins      || {}) : {}, true),
       });
     } catch {}
+    finally { setLoadingAcces(false); }
   };
 
   const toggleModule = (m) => {
@@ -518,6 +529,7 @@ export default function Parametres() {
   };
 
   const chargerMail = async () => {
+    setLoadingMail(true);
     try {
       const res = await apiClient.get('/parametres/mail', { headers });
       const data = res.data || {};
@@ -529,6 +541,7 @@ export default function Parametres() {
       }));
       setMailTestTo(data.smtp_from_email || profil.email || '');
     } catch (err) { console.error(err); }
+    finally { setLoadingMail(false); }
   };
 
   const handleSauverProfil = async (e) => {
@@ -936,12 +949,12 @@ export default function Parametres() {
             {onglet === 'profil' && (<>
               {(msgProfil === 'success' || msgProfil === 'success-affectations') && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>{msgProfil === 'success-affectations' ? 'Profil mis à jour. Cours retirés des créneaux indisponibles.' : 'Profil mis à jour.'}</span>}
               {msgProfil === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <LoadingButton type="submit" form="form-profil" loading={savingProfil} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>
+              {!loadingProfil && <LoadingButton type="submit" form="form-profil" loading={savingProfil} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>}
             </>)}
             {onglet === 'ecole' && isAdmin && (<>
               {msgEcole === 'success' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Paramètres mis à jour.</span>}
               {msgEcole === 'error' && <span style={{fontSize:13,fontWeight:600,padding:'6px 14px',borderRadius:8,background:'#ede9fe',color:'#4c1d95'}}>Erreur</span>}
-              <LoadingButton type="submit" form="form-ecole" loading={savingEcole} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>
+              {!loadingEcole && <LoadingButton type="submit" form="form-ecole" loading={savingEcole} style={{ ...styles.btnSauverHeader, width: isMobile ? '100%' : undefined }}>Sauvegarder</LoadingButton>}
             </>)}
           </div>
         </div>
@@ -963,6 +976,9 @@ export default function Parametres() {
                 setSousOngletProfil
               )}
               <div style={{ paddingTop: isMobile ? 0 : 20 }}>
+                {loadingProfil ? (
+                  <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+                ) : (<>
                 {msgProfil === 'success' && <div style={styles.msgSuccess}>Profil mis à jour.</div>}
                 {msgProfil === 'success-affectations' && <div style={styles.msgSuccess}>Profil mis à jour. Les cours sur les créneaux indisponibles ont été retirés de l'emploi du temps.</div>}
                 {msgProfil === 'error' && <div style={styles.msgError}>Erreur lors de la mise à jour</div>}
@@ -1530,6 +1546,7 @@ export default function Parametres() {
                   )}
 
                 </form>
+                </>)}
               </div>
             </div>
           )}
@@ -1569,6 +1586,9 @@ export default function Parametres() {
               )}
               <div style={{ paddingTop: (isMobile || sousOngletEcole === 'horaires' || sousOngletEcole === 'special') ? 0 : 20 }}>
 
+              {loadingEcole ? (
+                <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+              ) : (<>
               <form id="form-ecole" onSubmit={handleSauverEcole}>
 
                 {/* Section Adresse */}
@@ -2081,6 +2101,7 @@ export default function Parametres() {
                 </div>
               )}
 
+              </>)}
               </div>{/* fin paddingTop */}
             </div>
           )}
@@ -2092,6 +2113,9 @@ export default function Parametres() {
                 Pour un compte Outlook avec double authentification, utilisez un <b>mot de passe d'application</b>
                 (et non votre mot de passe normal).
               </p>
+              {loadingMail ? (
+                <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+              ) : (<>
               {msgMail === 'success' && <div style={styles.msgSuccess}>Configuration email enregistrée</div>}
               {msgMail && msgMail !== 'success' && <div style={styles.msgError}>{msgMail === 'error' ? "Erreur lors de l'enregistrement" : msgMail}</div>}
 
@@ -2183,6 +2207,7 @@ export default function Parametres() {
                   </div>
                 )}
               </div>
+              </>)}
             </div>
           )}
 
@@ -2198,6 +2223,9 @@ export default function Parametres() {
                 (key) => { setAccesRoleOnglet(key); setModuleOuvert(null); }
               )}
 
+              {loadingAcces ? (
+                <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+              ) : (<>
               {msgAccesProfs === 'success' && <div style={styles.msgSuccess}>Accès mis à jour.</div>}
               {msgAccesProfs === 'error' && <div style={styles.msgError}>Erreur</div>}
               <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 14px' }}>
@@ -2252,6 +2280,7 @@ export default function Parametres() {
               }}>
                 Sauvegarder les accès
               </LoadingButton>
+              </>)}
             </div>
           )}
           {onglet === 'danger' && isAdmin && (

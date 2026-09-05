@@ -118,6 +118,9 @@ export default function Notes() {
   const [vue, setVue] = useState('classes');
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingEvals, setLoadingEvals] = useState(false);
+  const [loadingBulletin, setLoadingBulletin] = useState(false);
+  const [loadingSaisie, setLoadingSaisie] = useState(false);
   const [matieres, setMatieres] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const [evaluationOuverte, setEvaluationOuverte] = useState(null);
@@ -287,6 +290,7 @@ export default function Notes() {
   };
 
   const chargerEvaluationsId = async (classeId, matiereId, sem) => {
+    setLoadingEvals(true);
     try {
       let url = '/notes?classe_id=' + classeId;
       if (matiereId) url += '&matiere_id=' + matiereId;
@@ -296,6 +300,7 @@ export default function Notes() {
       setEvaluations(Array.isArray(res.data) ? res.data : []);
       return Array.isArray(res.data) ? res.data : [];
     } catch (err) { console.error(err); setEvaluations([]); return []; }
+    finally { setLoadingEvals(false); }
   };
 
   const chargerRapport = async (classeId, sem) => {
@@ -331,6 +336,7 @@ export default function Notes() {
   }, [searchParams, classes, sem1Bloque, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chargerBulletinId = async (classeId, sem) => {
+    setLoadingBulletin(true);
     try {
       const semVal = sem !== undefined ? sem : bulletinSemestre;
       const today = new Date(); const annee = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1;
@@ -362,6 +368,7 @@ export default function Notes() {
       setCriteresSem1(cr1Res.data || []);
       setCriteresSem2(cr2Res.data || []);
     } catch (err) { console.error(err); }
+    finally { setLoadingBulletin(false); }
   };
 
   const ouvrirClasse = async (cl) => {
@@ -384,6 +391,7 @@ export default function Notes() {
   };
 
   const ouvrirEvaluation = async (evaluation) => {
+    setLoadingSaisie(true);
     try {
       const res = await apiClient.get('/notes/' + evaluation.id + '/notes', { headers });
       setEvaluationOuverte(res.data.evaluation);
@@ -398,6 +406,7 @@ export default function Notes() {
       })));
       setVue('saisie');
     } catch (err) { console.error(err); }
+    finally { setLoadingSaisie(false); }
   };
 
   const formVide = { nom: '', matiere_id: matiereObj?.id || '', date: new Date().toISOString().split('T')[0], type: 'Ecrit', coefficient: '1', sur: '6', points_max: '', sans_points: false, nb_exercices: '', editId: null };
@@ -1908,7 +1917,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                   </tr>
                 </thead>
                 <tbody>
-                  {bulletins.length === 0 ? (
+                  {loadingBulletin ? (
+                    <tr><td colSpan={14}><PageLoader compact label="Chargement…" /></td></tr>
+                  ) : bulletins.length === 0 ? (
                     <tr><td colSpan={14} style={s.vide}>Aucun élève</td></tr>
                   ) : bulletins.map((b, idx) => {
                     const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
@@ -2079,7 +2090,10 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           </>
         )}
 
-        {vueClasseAction === 'attestation' && bulletinOnglet === 'notes' && (() => {
+        {vueClasseAction === 'attestation' && bulletinOnglet === 'notes' && loadingBulletin && (
+          <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+        )}
+        {vueClasseAction === 'attestation' && bulletinOnglet === 'notes' && !loadingBulletin && (() => {
           const seen = new Set(); const elevsAtt = [];
           for (const b of [...bulletinsSem1, ...bulletinsSem2]) { if (!seen.has(b.eleve.id)) { seen.add(b.eleve.id); elevsAtt.push(b.eleve); } }
           const renderAttestationDoc = (eleveId) => {
@@ -2196,7 +2210,10 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           );
         })()}
 
-        {vueClasseAction !== 'attestation' && bulletinOnglet === 'notes' && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
+        {vueClasseAction !== 'attestation' && bulletinOnglet === 'notes' && loadingBulletin && (
+          <PageLoader compact label="Chargement…" style={{ padding: 40 }} />
+        )}
+        {vueClasseAction !== 'attestation' && bulletinOnglet === 'notes' && !loadingBulletin && (bulletinsSem1.length > 0 || bulletinsSem2.length > 0) && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
             {bulletinMode === 'eleve' && (
               <div className="no-print" style={{ width: 210, flexShrink: 0, position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
@@ -2545,7 +2562,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             </tr>
           </thead>
           <tbody>
-            {evaluations.length === 0 ? (
+            {loadingEvals || loadingSaisie ? (
+              <tr><td colSpan="10"><PageLoader compact label="Chargement…" /></td></tr>
+            ) : evaluations.length === 0 ? (
               <tr><td colSpan="10" style={s.vide}>Aucune évaluation — cliquez sur + Nouvelle évaluation</td></tr>
             ) : evaluations.map((ev, i) => (
               <tr key={ev.id} style={{ ...s.tr, background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
@@ -2651,7 +2670,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             </tr>
           </thead>
           <tbody>
-            {matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
+            {loadingEvals ? (
+              <tr><td colSpan="4"><PageLoader compact label="Chargement…" /></td></tr>
+            ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).length === 0 ? (
               <tr><td colSpan="4" style={s.vide}>Aucune matière disponible pour ce niveau</td></tr>
             ) : matieres.filter(m => (!classeObj?.niveau || m.niveau === classeObj.niveau) && m.suivi_notes !== false).map((m, i) => {
               const evalsMatiere = evaluations.filter(ev => ev.matiere_id === m.id && String(ev.semestre) === evalSemestre);
