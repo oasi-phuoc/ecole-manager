@@ -788,7 +788,7 @@ export default function Presences() {
       {onglet === 'apercu' && (
         <div style={{background:'white',borderRadius:12,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9',overflow:'hidden'}}>
           {loadingApercu ? (
-            <PageLoader />
+            <PageLoader compact label="Chargement..." />
           ) : !apercuMois.eleves ? (
             <div style={{padding:40,textAlign:'center',color:'#94a3b8'}}>
               {apercuMois.erreur

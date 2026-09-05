@@ -39,6 +39,7 @@ export default function Classes() {
   const [form, setForm] = useState({ nom:'', niveau:'', annee_scolaire:'', prof_principal_id:'' });
   const [detailClasse, setDetailClasse] = useState(null);
   const [elevesClasse, setElevesClasse] = useState([]);
+  const [loadingElevesClasse, setLoadingElevesClasse] = useState(false);
   const [observations, setObservations] = useState([]);
   const [eleveDetail, setEleveDetail] = useState(null);
   const [showObsForm, setShowObsForm] = useState(false);
@@ -176,6 +177,7 @@ export default function Classes() {
     setBranchesInventaire([]);
     setBrancheInventaireActive(null);
     setElevesClasse([]);
+    setLoadingElevesClasse(true);
     setPlanPositions({});
     setDevoirActif(null);
     setDevoirs([]);
@@ -199,6 +201,7 @@ export default function Classes() {
       const elevesRes = await apiClient.get('/classes/'+c.id+'/eleves', {headers});
       setElevesClasse(elevesRes.data);
     } catch(err) { console.error('Erreur chargement élèves:', err); }
+    finally { setLoadingElevesClasse(false); }
     try {
       const branchesRes = await apiClient.get('/inventaire-branches/'+c.id+'/branches', {headers});
       let brs = branchesRes.data?.branches || [];
@@ -450,6 +453,14 @@ export default function Classes() {
     const elevesNonPlaces = elevesClasse.filter(el => !Object.values(planPositions).includes(String(el.id)));
     const elementsSpeciaux = ELEMENTS_SPECIAUX_PLAN;
 
+    if (loadingElevesClasse) {
+      return (
+        <div style={{marginTop:30}}>
+          <PageLoader label="Chargement..." compact style={{padding:40}} />
+        </div>
+      );
+    }
+
     return (
       <div style={{marginTop:30}}>
         <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
@@ -523,7 +534,9 @@ export default function Classes() {
 
   const renderTrombinoscopeOnglet = () => (
     <div style={s.trombiGrid}>
-      {elevesClasse.length === 0 ? (
+      {loadingElevesClasse ? (
+        <PageLoader label="Chargement..." compact style={{padding:30,gridColumn:'1/-1'}} />
+      ) : elevesClasse.length === 0 ? (
         <div style={s.empty}>Aucun élève dans cette classe</div>
       ) : elevesClasse.map(el => (
         <div key={el.id} style={s.trombiCard}>
@@ -1636,9 +1649,15 @@ export default function Classes() {
               </tr>
             </thead>
             <tbody>
-              {elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase())).length===0 ? (
-                <tr><td colSpan="7" style={s.empty}>Aucun élève trouvé</td></tr>
-              ) : elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase())).map(el => (
+              {(() => {
+                const elevesFiltres = elevesClasse.filter(el => ((el.nom||'')+' '+(el.prenom||'')).toLowerCase().includes(rechercheElevesClasse.toLowerCase()));
+                if (loadingElevesClasse) {
+                  return <tr><td colSpan="8"><PageLoader label="Chargement..." compact /></td></tr>;
+                }
+                if (elevesFiltres.length === 0) {
+                  return <tr><td colSpan="8" style={s.empty}>Aucun élève trouvé</td></tr>;
+                }
+                return elevesFiltres.map(el => (
                 <tr key={el.id} style={s.tr}>
                   <td style={{...s.td,width:56,minWidth:56,maxWidth:56,padding:'8px 4px',textAlign:'center'}}>
                     <button title="Détail élève" onClick={() => { setEleveReadOnly(el); setShowEleveReadOnly(true); }} style={{padding:6,background:'#e0e7ff',color:'#3730a3',border:'none',borderRadius:8,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
@@ -1697,7 +1716,8 @@ export default function Classes() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ));
+              })()}
             </tbody>
           </table>
           </div>
@@ -1817,7 +1837,9 @@ export default function Classes() {
                       </tr>
                     </thead>
                     <tbody>
-                      {elevesClasse.length === 0 ? (
+                      {loadingElevesClasse ? (
+                        <tr><td colSpan="3"><PageLoader label="Chargement..." compact /></td></tr>
+                      ) : elevesClasse.length === 0 ? (
                         <tr><td colSpan="3" style={{padding:30,textAlign:'center',color:'#94a3b8'}}>Aucun élève</td></tr>
                       ) : elevesClasse.map((el, idx) => {
                         const suivi = suiviDevoirs.find(s => s.eleve_id === el.id);
@@ -1935,7 +1957,9 @@ export default function Classes() {
           {/* Sous-onglet Stats */}
           {devoirSousOnglet === 'stats' && (
             <div style={{background:'white',borderRadius:'10px 10px 0 0',boxShadow:'0 2px 8px rgba(0,0,0,0.07)',overflow:'hidden',marginTop:15}}>
-              {devoirsFiltres.length === 0 || elevesClasse.length === 0 ? (
+              {devoirsLoading || loadingElevesClasse ? (
+                <PageLoader label="Chargement..." compact style={{padding:40}} />
+              ) : devoirsFiltres.length === 0 || elevesClasse.length === 0 ? (
                 <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:14}}>Aucune donnée</div>
               ) : (
                 <table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -2214,9 +2238,6 @@ export default function Classes() {
       )}
 
       <div style={{...s.tableWrap, marginTop:4}}>
-        {loading ? (
-          <PageLoader />
-        ) : (
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
@@ -2230,7 +2251,9 @@ export default function Classes() {
             </tr>
           </thead>
           <tbody>
-            {!loading && classesFiltrees.length===0 ? (
+            {loading ? (
+              <tr><td colSpan={6}><PageLoader label="Chargement..." compact /></td></tr>
+            ) : classesFiltrees.length===0 ? (
               <tr><td colSpan={6} style={s.empty}>Aucune classe trouvée</td></tr>
             ) : classesFiltrees.map(c => {
               const badgesNotes = getSuiviNotesBadges(c);
@@ -2317,7 +2340,6 @@ export default function Classes() {
           </tbody>
         </table>
         </div>
-        )}
       </div>
     </div>
   );

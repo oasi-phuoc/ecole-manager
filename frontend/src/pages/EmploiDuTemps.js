@@ -5405,14 +5405,14 @@ export default function EmploiDuTemps() {
           )}
 
           {loadingInitial ? (
-            <PageLoader label="Chargement…" />
+            <PageLoader label="Chargement…" compact style={{...styles.msgVide, padding: 40}} />
           ) : pools.length === 0 ? (
             <div style={styles.msgVide}>
               Aucun pool créé. Cliquez sur <strong>+ Ajouter</strong> pour créer votre premier pool.
             </div>
-          ) : null}
+          ) : (
           <div style={styles.poolsGrid}>
-            {!loadingInitial && pools.map((pool, idx) => (
+            {pools.map((pool, idx) => (
               <div key={pool.id}
                 draggable
                 onDragStart={() => { dragPoolIdx.current = idx; }}
@@ -5489,6 +5489,7 @@ export default function EmploiDuTemps() {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 

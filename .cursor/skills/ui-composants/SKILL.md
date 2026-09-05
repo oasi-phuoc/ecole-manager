@@ -2,8 +2,9 @@
 name: ui-composants
 description: >-
   Design system ecole-manager (toasts violet, CustomSelect, LoadingUI,
-  onglets chip-tabs, toggles, boutons Trier, menus). Utiliser pour UI frontend,
-  toasts, listes déroulantes, onglets, boutons, LoadingButton, PageLoader.
+  onglets chip-tabs, toggles, boutons Trier, menus). Chargement = shell
+  (menu + chrome) → spinner zone données → données. Utiliser pour UI
+  frontend, toasts, listes déroulantes, onglets, boutons, LoadingButton, PageLoader.
 ---
 
 # UI composants — ecole-manager
@@ -77,16 +78,59 @@ import CustomSelect from '../components/CustomSelect';
 
 Fichier : `frontend/src/components/CustomSelect.js` (violet `#6366f1` / `#ede9fe`).
 
-## Chargement — LoadingUI
+## Chargement — LoadingUI (OBLIGATOIRE)
 
 ```js
 import { PageLoader, LoadingButton, LoadingSpinner } from '../components/LoadingUI';
+```
 
-// Chargement page / section
-{loading && <PageLoader label="Chargement…" />}
-{loading && <PageLoader compact />}
+### Pattern shell → spinner → données (partout)
 
-// Bouton sauvegarde (bloque + spinner)
+À chaque navigation / onglet / sous-vue (liste, détail classe, tableau, etc.) :
+
+1. **Afficher tout de suite le shell** : menu latéral Layout (toujours monté), titre, boutons, filtres, en-têtes de tableau / structure de la page.
+2. **Spinner uniquement dans la zone de données** (corps du tableau, liste, grille) — jamais remplacer toute la page ni le menu.
+3. **Quand le fetch est fini** : afficher les lignes / cartes. Empty state (« Aucun… ») **uniquement** si `!loading && length === 0`.
+
+```jsx
+{/* ✅ BON — chrome toujours visible */}
+<div style={stickyPageChrome()}>
+  <h2>…</h2>
+  {/* boutons, filtres, onglets */}
+</div>
+<div style={tableWrap}>
+  <table>
+    <thead>{/* colonnes toujours visibles */}</thead>
+    <tbody>
+      {loading ? (
+        <tr><td colSpan={n}><PageLoader compact label="Chargement…" /></td></tr>
+      ) : rows.length === 0 ? (
+        <tr><td colSpan={n} style={empty}>Aucun élément</td></tr>
+      ) : (
+        rows.map(…)
+      )}
+    </tbody>
+  </table>
+</div>
+
+{/* ❌ INTERDIT */}
+if (loading) return <PageLoader />;           // remplace toute la page
+{loading ? <PageLoader /> : <PageWithChrome />} // flash blanc / shell disparu
+{rows.length === 0 && <div>Aucun…</div>}       // pendant le fetch (sans !loading)
+```
+
+Même logique pour un **détail** (ex. classe CSC 2 → liste élèves) : garder en-tête / onglets de la classe, spinner dans le tableau élèves (`loadingEleves`), pas « Aucun élève » avant la fin du fetch.
+
+### Layout / navigation
+
+- Le **menu latéral** vit dans `Layout.js` et doit rester monté pendant les changements de page.
+- `MfaGate` wrappe **seulement** le contenu (`KeepAliveOutlet`), pas tout le Layout.
+- Keep-alive : clé = **pathname** (pas la query) — voir `KeepAliveOutlet.js`.
+- Ne pas remonter `PageLoader` plein écran dans une page métier (réservé login / 1er check session hors Layout).
+
+### Bouton sauvegarde
+
+```js
 <LoadingButton
   type="submit"
   loading={saving}
@@ -175,19 +219,24 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 - ❌ Onglets pastilles sans fond `#ede9fe` / actif hors `#6366f1`
 - ❌ Texte « Chargement… » sans `PageLoader`
 - ❌ Bouton Sauvegarder sans `loading` / disable pendant l’appel API
-- ❌ Message « Aucun… » pendant le fetch (flash empty) — toujours `loading` puis empty si `!loading && length===0`
+- ❌ `if (loading) return <PageLoader />` / remplacer toute la page (menu ou chrome disparu)
+- ❌ Message « Aucun… » pendant le fetch — toujours `!loading && length===0`
+- ❌ Spinner plein écran dans une page sous Layout (sauf login / gate auth hors shell)
 - ❌ Inventer une nouvelle palette hors violet thème
 
-## Empty vs chargement
+## Empty vs chargement (dans la zone données)
 
 ```js
 const [loading, setLoading] = useState(() => !peekCachedGet('/ressource'));
 // fetch: try { … } finally { setLoading(false); }
 
-{loading ? <PageLoader /> : list.length === 0 ? (
+// Shell (titre, boutons, <thead>) toujours rendu au-dessus
+{loading ? (
+  <PageLoader compact label="Chargement…" />
+) : list.length === 0 ? (
   <div>Aucun élément…</div>
 ) : (
-  /* liste */
+  /* lignes */
 )}
 ```
 

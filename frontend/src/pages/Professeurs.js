@@ -764,9 +764,6 @@ export default function Professeurs({
       )}
 
       <div style={{ ...s.tableWrap, marginTop: 4, background: 'white' }}>
-        {loading ? (
-          <PageLoader />
-        ) : (
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
           <thead>
@@ -781,7 +778,9 @@ export default function Professeurs({
             </tr>
           </thead>
           <tbody>
-            {!loading && profsFiltres.length===0 ? (
+            {loading ? (
+              <tr><td colSpan={7}><PageLoader compact label="Chargement…" /></td></tr>
+            ) : profsFiltres.length===0 ? (
               <tr><td colSpan={7} style={s.empty}>Aucun {nomEntite} trouvé</td></tr>
             ) : profsFiltres.map(p => (
               <tr key={p.id} style={s.tr}>
@@ -838,7 +837,6 @@ export default function Professeurs({
           </tbody>
         </table>
         </div>
-        )}
       </div>
     </div>
   );

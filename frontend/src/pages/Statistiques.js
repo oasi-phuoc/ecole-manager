@@ -15,6 +15,7 @@ export default function Statistiques() {
   }, []);
 
   const chargerStats = async () => {
+    setLoading(true);
     try {
       const res = await apiClient.get('/statistiques', { headers });
       setStats(res.data);
@@ -22,11 +23,8 @@ export default function Statistiques() {
     finally { setLoading(false); }
   };
 
-  if (loading) return <PageLoader label="Chargement des statistiques…" />;
-  if (!stats) return <div style={styles.loading}>❌ Erreur de chargement</div>;
-
-  const presJour = stats.presences_aujourd || { presents: 0, absents: 0, retards: 0, total: 0 };
-  const paiements = stats.paiements || { encaisse: 0, en_attente: 0, en_retard: 0 };
+  const presJour = stats?.presences_aujourd || { presents: 0, absents: 0, retards: 0, total: 0 };
+  const paiements = stats?.paiements || { encaisse: 0, en_attente: 0, en_retard: 0 };
   const tauxPresence = Number(presJour.total) > 0
     ? Math.round((Number(presJour.presents) / Number(presJour.total)) * 100)
     : null;
@@ -40,6 +38,12 @@ export default function Statistiques() {
       </div>
       </div>
 
+      {loading ? (
+        <PageLoader compact label="Chargement des statistiques…" />
+      ) : !stats ? (
+        <div style={styles.loading}>❌ Erreur de chargement</div>
+      ) : (
+        <>
       {/* Chiffres clés */}
       <div style={styles.sectionTitre}>🏫 Chiffres clés</div>
       <div style={styles.statsGrid}>
@@ -115,7 +119,7 @@ export default function Statistiques() {
         <div style={styles.col}>
           <div style={styles.sectionTitre}>👨‍🎓 Élèves par classe</div>
           <div style={styles.card}>
-            {stats.eleves_par_classe.length === 0 ? (
+            {(stats.eleves_par_classe || []).length === 0 ? (
               <div style={styles.vide}>Aucune classe</div>
             ) : stats.eleves_par_classe.map((c, i) => (
               <div key={i} style={styles.classeRow}>
@@ -133,7 +137,7 @@ export default function Statistiques() {
         <div style={styles.col}>
           <div style={styles.sectionTitre}>📝 Moyennes par classe</div>
           <div style={styles.card}>
-            {stats.moyennes_par_classe.length === 0 ? (
+            {(stats.moyennes_par_classe || []).length === 0 ? (
               <div style={styles.vide}>Aucune note saisie</div>
             ) : stats.moyennes_par_classe.map((c, i) => {
               const moy = parseFloat(c.moyenne);
@@ -153,7 +157,7 @@ export default function Statistiques() {
       </div>
 
       {/* Prochains événements */}
-      {stats.prochains_evenements.length > 0 && (
+      {(stats.prochains_evenements || []).length > 0 && (
         <>
           <div style={styles.sectionTitre}>📆 Prochains événements</div>
           <div style={styles.card}>
@@ -165,6 +169,8 @@ export default function Statistiques() {
               </div>
             ))}
           </div>
+        </>
+      )}
         </>
       )}
     </div>

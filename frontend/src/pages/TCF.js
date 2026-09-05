@@ -1189,7 +1189,11 @@ export default function TCF() {
         });
         return (
           <>
-            {chargement ? <PageLoader label="Chargement..." style={styles.empty} /> : profsParNiveauFiltres.map(([niveau, liste]) => (
+            {chargement ? (
+              <PageLoader compact label="Chargement..." style={styles.empty} />
+            ) : profsParNiveauFiltres.length === 0 ? (
+              <div style={styles.empty}>Aucun professeur</div>
+            ) : profsParNiveauFiltres.map(([niveau, liste]) => (
         <div key={niveau} style={styles.niveauBlock}>
           <div style={styles.niveauTitle}>Niveau {niveau}</div>
           <div style={styles.profsList}>

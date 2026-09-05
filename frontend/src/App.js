@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { fetchSessionUser, clearSessionUser } from './utils/session';
+import { fetchSessionUser, clearSessionUser, getSessionUser } from './utils/session';
 import Layout from './components/Layout';
-import MfaGate from './components/MfaGate';
 import { PageLoader } from './components/LoadingUI';
 import Login from './pages/Login';
 import ActiverMfa from './pages/ActiverMfa';
@@ -29,8 +28,9 @@ import Archives from './pages/Archives';
 import SondageRepondre from './pages/SondageRepondre';
 
 const PrivateRoute = ({ children }) => {
-  const [checking, setChecking] = useState(true);
-  const [ok, setOk] = useState(false);
+  const cached = getSessionUser();
+  const [checking, setChecking] = useState(() => !cached);
+  const [ok, setOk] = useState(() => Boolean(cached));
 
   useEffect(() => {
     let active = true;
@@ -49,7 +49,8 @@ const PrivateRoute = ({ children }) => {
     return () => { active = false; };
   }, []);
 
-  if (checking) {
+  // Session déjà en mémoire : pas de flash blanc plein écran (Layout/menu restent).
+  if (checking && !cached) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <PageLoader label="Chargement…" />
@@ -67,7 +68,7 @@ function App() {
         <Route path="/repondre/:token" element={<SondageRepondre />} />
         <Route path="/login" element={<Login />} />
         <Route path="/activer-mfa" element={<PrivateRoute><ActiverMfa /></PrivateRoute>} />
-        <Route element={<PrivateRoute><MfaGate><Layout /></MfaGate></PrivateRoute>}>
+        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/eleves" element={<Eleves />} />
           <Route path="/employes-administratifs" element={<EmployesAdministratifs />} />

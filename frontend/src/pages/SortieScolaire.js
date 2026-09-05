@@ -601,12 +601,6 @@ function SuiviTable({ sorties, loading, onEdit, onDelete, onPrint, onToggleAppro
     const n = parseFloat(String(s.budget).replace(',', '.'));
     return sum + (Number.isFinite(n) ? n : 0);
   }, 0);
-  if (loading) return <PageLoader />;
-  if (!loading && sorties.length === 0) return (
-    <div style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
-      Aucune sortie enregistrée pour cet onglet.
-    </div>
-  );
   const thBase = { padding: '10px 10px', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 2, background: '#6366f1' };
   return (
     <div style={{ borderRadius: 10, border: '1px solid #e8eaf6', overflow: 'hidden' }}>
@@ -633,7 +627,15 @@ function SuiviTable({ sorties, loading, onEdit, onDelete, onPrint, onToggleAppro
           </tr>
         </thead>
         <tbody>
-          {sorties.map((s, i) => {
+          {loading ? (
+            <tr><td colSpan={7}><PageLoader compact label="Chargement…" /></td></tr>
+          ) : sorties.length === 0 ? (
+            <tr>
+              <td colSpan={7} style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
+                Aucune sortie enregistrée pour cet onglet.
+              </td>
+            </tr>
+          ) : sorties.map((s, i) => {
             const classesNoms = s.classes_noms || [s.classe1, s.classe2].filter(Boolean).join(', ') || '—';
             return (
               <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -683,6 +685,7 @@ function SuiviTable({ sorties, loading, onEdit, onDelete, onPrint, onToggleAppro
             );
           })}
         </tbody>
+        {!loading && sorties.length > 0 && (
         <tfoot>
           <tr style={{ background: '#f1f5f9', borderTop: '2px solid #cbd5e1', fontWeight: 700, color: '#0f172a' }}>
             <td colSpan={5} style={{ ...sc.td, textAlign: 'right', padding: '12px 10px' }}>Total budgets (CHF)</td>
@@ -690,6 +693,7 @@ function SuiviTable({ sorties, loading, onEdit, onDelete, onPrint, onToggleAppro
             <td style={{ ...sc.td, padding: '12px 10px' }} />
           </tr>
         </tfoot>
+        )}
       </table>
       </div>
     </div>

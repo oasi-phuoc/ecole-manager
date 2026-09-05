@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import KeepAliveOutlet from './KeepAliveOutlet';
+import MfaGate from './MfaGate';
 import apiClient from '../lib/apiClient';
 import { HEAVY_PREFETCH_URLS, prefetchUrls, REFERENCE_PREFETCH_URLS } from '../lib/apiCache';
 import { clearSessionUser, getSessionUser, fetchSessionUser } from '../utils/session';
@@ -620,7 +621,9 @@ export default function Layout() {
           }}
         >
           <MobilePageEnhancer enabled={isMobile} />
-          <KeepAliveOutlet />
+          <MfaGate>
+            <KeepAliveOutlet />
+          </MfaGate>
         </div>
       </div>
     </div>

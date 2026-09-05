@@ -466,9 +466,6 @@ export default function Bulletins() {
       {/* === COMPORTEMENTS TAB === */}
       {onglet === 'comportements' && (
         <>
-          {chargement ? (
-            <PageLoader />
-          ) : (
             <div style={{ ...s.tableContainer, marginBottom: 24 }}>
               <table style={{ ...s.tbl, fontSize: 12, tableLayout: 'auto' }}>
                 <thead>
@@ -489,7 +486,9 @@ export default function Bulletins() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bulletins.length === 0 ? (
+                  {chargement ? (
+                    <tr><td colSpan={14}><PageLoader compact label="Chargement…" /></td></tr>
+                  ) : bulletins.length === 0 ? (
                     <tr><td colSpan={14} style={s.vide}>Aucun élève</td></tr>
                   ) : bulletins.map((b, idx) => {
                     const st = bulletinStatsPresences.find(s => Number(s.eleve_id) === Number(b.eleve.id));
@@ -538,7 +537,6 @@ export default function Bulletins() {
                 </tbody>
               </table>
             </div>
-          )}
 
           {/* Remarque modal */}
           {remarqueModal && (() => {
@@ -630,12 +628,7 @@ export default function Bulletins() {
               🖨️ Tout imprimer
             </button>
           </div>
-          {chargement ? (
-            <PageLoader />
-          ) : allEleves.length === 0 ? (
-            <div style={s.vide}>Aucun bulletin disponible pour cette classe.</div>
-          ) : (
-            <div style={{ ...s.tblWrap }}>
+          <div style={{ ...s.tblWrap }}>
               <table style={{ ...s.tbl, tableLayout: 'auto' }}>
                 <thead>
                   <tr style={s.theadRow}>
@@ -646,7 +639,11 @@ export default function Bulletins() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allEleves.map((eleve, i) => {
+                  {chargement ? (
+                    <tr><td colSpan={4}><PageLoader compact label="Chargement…" /></td></tr>
+                  ) : allEleves.length === 0 ? (
+                    <tr><td colSpan={4} style={s.vide}>Aucun bulletin disponible pour cette classe.</td></tr>
+                  ) : allEleves.map((eleve, i) => {
                     const crS1 = criteresSem1.find(c => Number(c.eleve_id) === Number(eleve.id));
                     const crS2 = criteresSem2.find(c => Number(c.eleve_id) === Number(eleve.id));
                     const valideS1 = crS1?.valide === true;
@@ -669,7 +666,6 @@ export default function Bulletins() {
                 </tbody>
               </table>
             </div>
-          )}
         </div>
       )}
 

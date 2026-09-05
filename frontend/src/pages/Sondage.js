@@ -222,22 +222,26 @@ export default function Sondage() {
       <div style={s.layout}>
         <aside style={s.aside}>
           <div style={s.asideTitre}>Mes formulaires</div>
-          {loading ? <PageLoader compact /> : null}
-          {!loading && liste.length === 0 ? <div style={s.muted}>Aucun formulaire</div> : null}
-          <ul style={s.liste}>
-            {liste.map((x) => (
-              <li key={x.id}>
-                <button
-                  type="button"
-                  style={{ ...s.listeBtn, ...(selectedId === x.id ? s.listeBtnActif : {}) }}
-                  onClick={() => chargerDetail(x.id)}
-                >
-                  <span style={s.listeTitre}>{x.titre}</span>
-                  <span style={s.listeMeta}>{x.nb_reponses || 0} rép. · {x.actif ? 'actif' : 'inactif'}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {loading ? (
+            <PageLoader compact label="Chargement…" />
+          ) : liste.length === 0 ? (
+            <div style={s.muted}>Aucun formulaire</div>
+          ) : (
+            <ul style={s.liste}>
+              {liste.map((x) => (
+                <li key={x.id}>
+                  <button
+                    type="button"
+                    style={{ ...s.listeBtn, ...(selectedId === x.id ? s.listeBtnActif : {}) }}
+                    onClick={() => chargerDetail(x.id)}
+                  >
+                    <span style={s.listeTitre}>{x.titre}</span>
+                    <span style={s.listeMeta}>{x.nb_reponses || 0} rép. · {x.actif ? 'actif' : 'inactif'}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </aside>
 
         <main style={s.main}>

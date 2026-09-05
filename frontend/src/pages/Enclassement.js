@@ -358,8 +358,6 @@ export default function Enclassement() {
 
   // ─── Vues ────────────────────────────────────────────────────────────────────
 
-  if (loading) return <div style={s.page}><PageLoader /></div>;
-
   // ── Vue détail ──
   if (view === 'detail' && detailEnc) {
     const classesCsc = (detailEnc.classes || []).filter(c => c.structure === 'CSC');
@@ -429,11 +427,7 @@ export default function Enclassement() {
           <button style={s.btnBack} onClick={() => setView('init')}>← Nouvel enclassement</button>
           <h1 style={s.titre}>Historique des enclassements</h1>
         </div>
-        {loadingHistorique && <PageLoader compact label="Chargement…" />}
-        {loadingDetail && <PageLoader compact label="Chargement…" />}
-        {!loadingHistorique && historique.length === 0 && !loadingDetail && <div style={{ ...s.content, ...s.empty }}>Aucun enclassement sauvegardé.</div>}
-        {!loadingHistorique && historique.length > 0 && (
-          <div style={s.tableWrap}>
+        <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
@@ -448,7 +442,11 @@ export default function Enclassement() {
                 </tr>
               </thead>
               <tbody>
-                {historique.map(enc => (
+                {loadingHistorique || loadingDetail ? (
+                  <tr><td colSpan={8}><PageLoader compact label="Chargement…" /></td></tr>
+                ) : historique.length === 0 ? (
+                  <tr><td colSpan={8} style={{ ...s.empty, display: 'table-cell' }}>Aucun enclassement sauvegardé.</td></tr>
+                ) : historique.map(enc => (
                   <tr key={enc.id} style={s.tr}>
                     <td style={{ ...s.td, fontWeight: 700 }}>{enc.nom || '—'}</td>
                     <td style={s.td}>{SESSION_LABEL[enc.session_tcf] || enc.session_tcf}</td>
@@ -471,7 +469,6 @@ export default function Enclassement() {
               </tbody>
             </table>
           </div>
-        )}
       </div>
     );
   }
@@ -660,7 +657,21 @@ export default function Enclassement() {
           </div>
 
           {loading ? (
-            <PageLoader label="Chargement…" compact style={{ padding: 32 }} />
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={s.thead}>
+                  <th style={s.th}>Élève</th>
+                  <th style={{ ...s.th, textAlign: 'center', width: 70 }}>Fr.</th>
+                  <th style={{ ...s.th, textAlign: 'center', width: 70 }}>Math</th>
+                  <th style={{ ...s.th, textAlign: 'center', width: 80 }}>Pondéré</th>
+                  <th style={{ ...s.th, textAlign: 'center', width: 80 }}>Structure</th>
+                  <th style={{ ...s.th, width: 80 }}>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colSpan={6}><PageLoader label="Chargement…" compact style={{ padding: 32 }} /></td></tr>
+              </tbody>
+            </table>
           ) : elevesAvecScores.length === 0 ? (
             <div style={{ padding: 32, color: '#94a3b8', textAlign: 'center', fontSize: 14 }}>
               Aucun élève avec scores TCF pour la session « {SESSION_LABEL[session] || session} ».<br />

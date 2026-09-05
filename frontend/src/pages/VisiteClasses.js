@@ -715,10 +715,7 @@ export default function VisiteClasses() {
       </div>
 
       {/* Liste des visites ; détail visite et détail feedback en modales */}
-      {loading ? (
-        <PageLoader label="Chargement…" />
-      ) : (
-        <div style={s.splitRow}>
+      <div style={s.splitRow}>
           <div style={s.splitMain}>
             <div style={s.tableListWrap}>
               <table style={s.tableList}>
@@ -736,14 +733,20 @@ export default function VisiteClasses() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 && (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={cqTab === 'feedback' ? 7 : 6}>
+                        <PageLoader compact label="Chargement…" />
+                      </td>
+                    </tr>
+                  ) : rows.length === 0 ? (
                     <tr>
                       <td colSpan={cqTab === 'feedback' ? 7 : 6} style={{ padding: '20px 14px', color: '#94a3b8', textAlign: 'center', background: 'white' }}>
                         {cqTab === 'feedback' ? 'Aucune visite validée pour le moment.' : 'Aucune visite'}
                       </td>
                     </tr>
-                  )}
-                  {rows.map((v, i) => {
+                  ) : null}
+                  {!loading && rows.map((v, i) => {
                     const hasFeedback = (() => { try { const f = JSON.parse(v.feedback || '{}'); return Object.values(f).some((val) => String(val || '').trim()); } catch { return !!(v.feedback && String(v.feedback).trim()); } })();
                     const selVisite = cqTab === 'visites' && detailId === v.id;
                     const selFb = cqTab === 'feedback' && feedbackDetailVisite?.id === v.id;
@@ -857,7 +860,6 @@ export default function VisiteClasses() {
             </div>
           </div>
         </div>
-      )}
 
       {/* Détail visite de classe : modale centrée (comme le feedback) */}
       {cqTab === 'visites' && detailVisite && (

@@ -174,7 +174,7 @@ export default function Archives() {
         {erreur && <div style={s.erreur}>{erreur}</div>}
 
         {loading ? (
-          <PageLoader />
+          <PageLoader compact label="Chargement…" />
         ) : archives.length === 0 ? (
           <div style={s.vide}>
             Aucune année archivée pour le moment. Lors de la réinitialisation de rentrée, les données sont d’abord transférées ici.
@@ -266,45 +266,49 @@ export default function Archives() {
 
             {groupe !== 'documents' && (
               <div style={s.card}>
-                {loadingTable ? (
-                  <PageLoader compact label="Lecture des données…" />
-                ) : !tableData ? (
-                  <div style={s.vide}>Sélectionnez une table.</div>
-                ) : (
-                  <>
-                    <div style={s.tableHead}>
-                      <b>{tableData.table_name}</b>
-                      <span style={{ color: '#64748b', fontSize: 12 }}>
-                        {tableData.n_lignes} ligne{tableData.n_lignes > 1 ? 's' : ''}
-                        {tableData.n_lignes > PAGE ? ` · lignes ${offset + 1}–${offset + lignes.length}` : ''}
-                        {' · non modifiable'}
-                      </span>
-                    </div>
-                    <div className="table-scroll">
-                      <table style={s.table}>
-                        <thead>
-                          <tr>
-                            {colonnes.map((c) => <th key={c} style={s.th}>{c}</th>)}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lignes.length === 0 ? (
-                            <tr><td style={s.td} colSpan={Math.max(colonnes.length, 1)}>Aucune donnée</td></tr>
-                          ) : lignes.map((row, i) => (
-                            <tr key={i}>
-                              {colonnes.map((c) => <td key={c} style={s.td}>{fmt(row[c])}</td>)}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {tableData.n_lignes > PAGE && (
-                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                        <button type="button" disabled={offset <= 0} onClick={() => setOffset((v) => Math.max(0, v - PAGE))} style={s.btnDoc}>Précédent</button>
-                        <button type="button" disabled={offset + PAGE >= tableData.n_lignes} onClick={() => setOffset((v) => v + PAGE)} style={s.btnDoc}>Suivant</button>
-                      </div>
+                {tableName && (
+                  <div style={s.tableHead}>
+                    <b>{tableData?.table_name || tableName}</b>
+                    <span style={{ color: '#64748b', fontSize: 12 }}>
+                      {loadingTable
+                        ? 'Chargement…'
+                        : tableData
+                          ? `${tableData.n_lignes} ligne${tableData.n_lignes > 1 ? 's' : ''}${tableData.n_lignes > PAGE ? ` · lignes ${offset + 1}–${offset + lignes.length}` : ''} · non modifiable`
+                          : 'non modifiable'}
+                    </span>
+                  </div>
+                )}
+                <div className="table-scroll">
+                  <table style={s.table}>
+                    {(colonnes.length > 0 || !loadingTable) && (
+                      <thead>
+                        <tr>
+                          {colonnes.length > 0
+                            ? colonnes.map((c) => <th key={c} style={s.th}>{c}</th>)
+                            : <th style={s.th}>—</th>}
+                        </tr>
+                      </thead>
                     )}
-                  </>
+                    <tbody>
+                      {loadingTable ? (
+                        <tr><td colSpan={Math.max(colonnes.length, 1)}><PageLoader compact label="Lecture des données…" /></td></tr>
+                      ) : !tableData ? (
+                        <tr><td style={s.td} colSpan={1}>Sélectionnez une table.</td></tr>
+                      ) : lignes.length === 0 ? (
+                        <tr><td style={s.td} colSpan={Math.max(colonnes.length, 1)}>Aucune donnée</td></tr>
+                      ) : lignes.map((row, i) => (
+                        <tr key={i}>
+                          {colonnes.map((c) => <td key={c} style={s.td}>{fmt(row[c])}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!loadingTable && tableData?.n_lignes > PAGE && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button type="button" disabled={offset <= 0} onClick={() => setOffset((v) => Math.max(0, v - PAGE))} style={s.btnDoc}>Précédent</button>
+                    <button type="button" disabled={offset + PAGE >= tableData.n_lignes} onClick={() => setOffset((v) => v + PAGE)} style={s.btnDoc}>Suivant</button>
+                  </div>
                 )}
               </div>
             )}

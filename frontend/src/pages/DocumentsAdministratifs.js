@@ -330,9 +330,6 @@ export default function DocumentsAdministratifs() {
           </div>
         )}
 
-        {loading ? (
-          <PageLoader label="Chargement..." compact style={{ padding: 12 }} />
-        ) : (
           <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0', marginTop: 4 }}>
           <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 290px)', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -357,14 +354,15 @@ export default function DocumentsAdministratifs() {
               </tr>
             </thead>
             <tbody>
-              {documentsTries.length === 0 && (
+              {loading ? (
+                <tr><td colSpan={5}><PageLoader compact label="Chargement…" /></td></tr>
+              ) : documentsTries.length === 0 ? (
                 <tr style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
-                  <td colSpan={activeTab === 'pedagogiques' ? 5 : 5} style={{ padding: '11px 14px', color: '#94a3b8' }}>
+                  <td colSpan={5} style={{ padding: '11px 14px', color: '#94a3b8' }}>
                     Aucun document
                   </td>
                 </tr>
-              )}
-              {documentsTries.map((doc, i) => {
+              ) : documentsTries.map((doc, i) => {
                 const visa = [doc.auteur_prenom, doc.auteur_nom].filter(Boolean).map(s => s.charAt(0).toUpperCase()).join('');
                 return (
                 <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? 'white' : '#f8fafc' }}>
@@ -410,7 +408,6 @@ export default function DocumentsAdministratifs() {
           </table>
           </div>
           </div>
-        )}
       </div>
       )}
 

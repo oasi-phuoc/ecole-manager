@@ -94,6 +94,8 @@ export default function Comptabilite() {
   const [stats, setStats] = useState(null);
   const [eleves, setEleves] = useState(() => peekCachedGet('/eleves') || []);
   const [classes, setClasses] = useState(() => peekCachedGet('/classes') || []);
+  const [loadingClasses, setLoadingClasses] = useState(() => !peekCachedGet('/classes'));
+  const [loadingEleves, setLoadingEleves] = useState(() => !peekCachedGet('/eleves'));
   const [materiels, setMateriels] = useState([]);
   const [loadingMateriels, setLoadingMateriels] = useState(true);
 
@@ -206,12 +208,14 @@ export default function Comptabilite() {
       const res = await apiClient.get('/eleves', { headers });
       setEleves(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoadingEleves(false); }
   };
   const chargerClasses = async () => {
     try {
       const res = await apiClient.get('/classes', { headers });
       setClasses(res.data);
     } catch (err) { console.error(err); }
+    finally { setLoadingClasses(false); }
   };
   const chargerMateriels = async () => {
     try {
@@ -877,7 +881,11 @@ export default function Comptabilite() {
                     </tr>
                   </thead>
                   <tbody>
-                    {classesNiveau.map((c, idx) => {
+                    {loadingClasses ? (
+                      <tr><td colSpan={6}><PageLoader label="Chargement..." compact /></td></tr>
+                    ) : classesNiveau.length === 0 ? (
+                      <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
+                    ) : classesNiveau.map((c, idx) => {
                       const elevesC = eleves.filter(e => String(e.classe_id) === String(c.id));
                       const total = elevesC.length;
                       const valides = elevesC.filter(e => toutesValidations[e.id]).length;
@@ -902,9 +910,6 @@ export default function Comptabilite() {
                         </tr>
                       );
                     })}
-                    {classesNiveau.length === 0 && (
-                      <tr><td colSpan={6} style={styles.vide}>Aucune classe pour ce niveau</td></tr>
-                    )}
                   </tbody>
                 </table></div></div>
               );
@@ -961,6 +966,9 @@ export default function Comptabilite() {
                     </thead>
                     <tbody>
                       {(() => {
+                        if (loadingEleves) {
+                          return <tr><td colSpan={materielsFacturation.length + 5}><PageLoader label="Chargement..." compact /></td></tr>;
+                        }
                         const elevesFiltres = elevesClasseFacturation.filter(e => {
                           if (rechercheClasseFacture.trim()) {
                             const q = rechercheClasseFacture.toLowerCase();
@@ -1551,7 +1559,9 @@ export default function Comptabilite() {
                           </tr>
                         </thead>
                         <tbody>
-                          {elevesClasseFacturation.length === 0 ? (
+                          {loadingEleves ? (
+                            <tr><td colSpan={materielsFacturation.length + 4}><PageLoader label="Chargement..." compact /></td></tr>
+                          ) : elevesClasseFacturation.length === 0 ? (
                             <tr><td colSpan={materielsFacturation.length + 4} style={styles.vide}>Aucun élève dans cette classe</td></tr>
                           ) : elevesClasseFacturation.map((e, idx) => (
                             <tr key={e.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa' }}>

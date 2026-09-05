@@ -49,6 +49,7 @@ Routes : `frontend/src/App.js`. Layout : `components/Layout.js`.
 
 Voir le skill **ui-composants** (`.cursor/skills/ui-composants/SKILL.md`) :
 toasts toujours violet `#ede9fe` / `#4c1d95`, `CustomSelect`, `LoadingUI`, chip-tabs, bouton Trier.
+**Chargement** : shell (menu + chrome page) → spinner dans la zone données → données ; jamais « Aucun… » pendant le fetch.
 
 ## API / Backend
 
@@ -77,6 +78,7 @@ npx supabase functions serve api-proxy --env-file frontend/.env.local
 - ❌ `axios` + URL Render hardcodée (utiliser `apiClient`)
 - ❌ Impression sans `injectForcedPrintCss`
 - ❌ Modifier `backend/src` sans recopier vers `_shared/ecole-backend`
+- ❌ `if (loading) return <PageLoader />` sous Layout (voir ui-composants : shell → spinner → données)
 
 ## Repo sibling — soutien-scolaire
 

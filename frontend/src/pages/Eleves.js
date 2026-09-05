@@ -1142,9 +1142,6 @@ export default function Eleves() {
 
       {/* Tableau */}
       <div style={{marginTop:4}}>
-        {loading ? (
-          <PageLoader />
-        ) : (
         <div style={{borderRadius:12,overflow:'hidden',background:'white'}}>
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={{width:'100%',borderCollapse:'collapse',background:'white'}}>
@@ -1161,8 +1158,10 @@ export default function Eleves() {
             </tr>
           </thead>
           <tbody>
-            {!loading && elevesFiltres.length===0 ? (
-              <tr><td colSpan="9" style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
+            {loading ? (
+              <tr><td colSpan={8}><PageLoader compact label="Chargement…" /></td></tr>
+            ) : elevesFiltres.length===0 ? (
+              <tr><td colSpan={8} style={{padding:40,textAlign:'center',color:'#94a3b8'}}>Aucun élève trouvé</td></tr>
             ) : elevesFiltres.map(el => (
               <tr key={el.id} style={{borderBottom:'1px solid #f8fafc'}}>
                 <td style={{padding:'10px 10px',width:62,minWidth:62,maxWidth:62,textAlign:'center'}}>
@@ -1262,7 +1261,6 @@ export default function Eleves() {
         </table>
         </div>
         </div>
-        )}
       </div>
     </div>
   );

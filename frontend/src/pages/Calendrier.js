@@ -634,7 +634,20 @@ export default function Calendrier() {
           </form>
         )}
         {loadingProf ? (
-          <PageLoader compact style={{padding:20}} />
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: '#6366f1' }}>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left', borderRadius: '8px 0 0 0' }}>Date</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Titre</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Type</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'left' }}>Description</th>
+                <th style={{ padding: '8px 12px', color: 'white', fontWeight: 600, textAlign: 'center', width: 1, borderRadius: '0 8px 0 0' }} aria-label="Actions" />
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colSpan={5}><PageLoader compact style={{padding:20}} /></td></tr>
+            </tbody>
+          </table>
         ) : !loadingProf && calendrierProf.length === 0 ? (
           <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0', fontSize: 14 }}>Aucun élément — cliquez sur "+ Ajouter" pour commencer</div>
         ) : (

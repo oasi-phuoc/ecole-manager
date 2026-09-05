@@ -123,12 +123,7 @@ export default function ClasseInventaire() {
       <div style={s.grid}>
         <div style={s.card}>
           <div style={s.cardTitle}>Branches</div>
-          {loadingBranches ? (
-            <PageLoader label="Chargement..." compact />
-          ) : branches.length === 0 ? (
-            <div style={s.empty}>Aucune branche trouvée</div>
-          ) : (
-            <div style={s.tableWrap}>
+          <div style={s.tableWrap}>
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
@@ -137,7 +132,11 @@ export default function ClasseInventaire() {
                 </tr>
               </thead>
               <tbody>
-                {branches.map(b => (
+                {loadingBranches ? (
+                  <tr><td colSpan={2}><PageLoader label="Chargement..." compact /></td></tr>
+                ) : branches.length === 0 ? (
+                  <tr><td colSpan={2} style={s.empty}>Aucune branche trouvée</td></tr>
+                ) : branches.map(b => (
                   <tr key={b.id} style={brancheActive?.id === b.id ? s.trActive : s.tr}>
                     <td style={s.td}>
                       <div style={{ fontWeight: 700 }}>{(b.designation_courte || b.code || b.nom || '—').trim()}</div>
@@ -150,8 +149,7 @@ export default function ClasseInventaire() {
                 ))}
               </tbody>
             </table>
-            </div>
-          )}
+          </div>
         </div>
 
         <div style={s.card}>
@@ -171,8 +169,6 @@ export default function ClasseInventaire() {
 
           {!brancheActive ? (
             <div style={s.empty}>Sélectionnez une branche dans le tableau.</div>
-          ) : loadingInventaire ? (
-            <PageLoader label="Chargement..." compact />
           ) : (
             <div style={s.tableWrap}>
             <table style={s.table}>
@@ -183,7 +179,9 @@ export default function ClasseInventaire() {
                 </tr>
               </thead>
               <tbody>
-                {inventaire.length === 0 ? (
+                {loadingInventaire ? (
+                  <tr><td colSpan={canEdit ? 5 : 4}><PageLoader label="Chargement..." compact /></td></tr>
+                ) : inventaire.length === 0 ? (
                   <tr><td colSpan={canEdit ? 5 : 4} style={s.empty}>Aucune ligne d'inventaire</td></tr>
                 ) : inventaire.map(l => (
                   <tr key={l.id} style={s.tr}>

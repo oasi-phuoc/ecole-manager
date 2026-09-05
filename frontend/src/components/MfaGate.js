@@ -5,7 +5,10 @@ import { getSessionUser, setSessionUser } from '../utils/session';
 import { MFA_SETUP_PATH } from '../utils/mfa';
 import { PageLoader } from './LoadingUI';
 
-
+/**
+ * Gate MFA autour du contenu (KeepAliveOutlet), pas du Layout :
+ * le menu latéral reste visible pendant le check.
+ */
 export default function MfaGate({ children }) {
   const [state, setState] = useState('checking');
 
@@ -34,11 +37,7 @@ export default function MfaGate({ children }) {
   }, []);
 
   if (state === 'checking') {
-    return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <PageLoader label="Chargement…" />
-      </div>
-    );
+    return <PageLoader label="Chargement…" />;
   }
   if (state === 'need') return <Navigate to={MFA_SETUP_PATH} replace />;
   return children;

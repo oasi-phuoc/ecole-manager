@@ -1148,8 +1148,8 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
         </div>
         </div>
 
-        {/* Chargement / erreur */}
-        {rapportChargement && <PageLoader label="Chargement des données…" />}
+        {/* Chargement / erreur — spinner dans la zone données uniquement */}
+        {rapportChargement && <PageLoader compact label="Chargement des données…" />}
         {rapportErreur && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px 20px', borderRadius: 8, marginBottom: 12, fontWeight: 600 }}>Erreur : {rapportErreur}</div>}
 
         {/* ---- VUE TOUS ---- */}
@@ -2732,11 +2732,8 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
           )}
         </div>
 
-        {/* Tableau des classes */}
+        {/* Tableau des classes — thead toujours visible, spinner dans tbody */}
         <div style={s.tblWrap}>
-          {loading ? (
-            <PageLoader />
-          ) : (
           <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
           <table style={{ ...s.tbl, tableLayout: 'auto', width: '100%' }}>
             <thead>
@@ -2748,7 +2745,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
               </tr>
             </thead>
             <tbody>
-              {!loading && classesFiltrees.length === 0 ? (
+              {loading ? (
+                <tr><td colSpan={4}><PageLoader compact label="Chargement…" /></td></tr>
+              ) : !loading && classesFiltrees.length === 0 ? (
                 <tr><td colSpan={4} style={s.vide}>Aucune classe disponible.</td></tr>
               ) : classesFiltrees.map((cl, i) => {
                 const respClasse = classesResponsables.filter(r => String(r.classe_id) === String(cl.id));
@@ -2820,7 +2819,6 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             </tbody>
           </table>
           </div>
-          )}
         </div>
     </div>
   );

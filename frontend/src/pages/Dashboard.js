@@ -80,7 +80,6 @@ export default function Dashboard() {
 
   const heure = new Date().getHours();
   const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
-  if (loading) return <PageLoader label="Chargement…" />;
   const fmtDate = (raw) => {
     if (!raw) return '—';
     const d = new Date(raw);
@@ -100,7 +99,7 @@ export default function Dashboard() {
         }}>
         <div style={{ ...styles.topBar, ...(isMobile ? { marginBottom: 16 } : {}) }}>
           <div>
-            <h1 style={styles.greeting}>{salut}, {user?.prenom} 👋</h1>
+            <h1 style={styles.greeting}>{salut}{user?.prenom ? `, ${user.prenom}` : ''} 👋</h1>
             <p style={styles.subGreeting}>Bienvenue sur votre tableau de bord</p>
           </div>
           <div style={styles.topBarRight}>
@@ -109,6 +108,10 @@ export default function Dashboard() {
         </div>
         </div>
 
+        {loading ? (
+          <PageLoader compact label="Chargement…" />
+        ) : (
+        <>
         <div style={styles.sectionTitle}>Informations utiles</div>
         <div style={styles.infoRow}>
           <div style={styles.infoCard}>
@@ -200,6 +203,8 @@ export default function Dashboard() {
             </LoadingButton>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {observationDetail && (

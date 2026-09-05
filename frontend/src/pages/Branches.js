@@ -181,9 +181,6 @@ export default function Branches() {
       )}
 
       <div style={{marginTop:4}}>
-        {loading ? (
-          <PageLoader />
-        ) : (
         <div style={s.tableWrap}>
         <div style={{overflow:'auto',maxHeight:'calc(100vh - 230px)',WebkitOverflowScrolling:'touch'}}>
         <table style={s.table}>
@@ -198,8 +195,10 @@ export default function Branches() {
             </tr>
           </thead>
           <tbody>
-            {branchesFiltrees.length===0 ? (
-              <tr><td colSpan="6" style={{...s.empty, borderBottomLeftRadius:12, borderBottomRightRadius:12}}>Aucune branche trouvée</td></tr>
+            {loading ? (
+              <tr><td colSpan={6}><PageLoader compact label="Chargement…" /></td></tr>
+            ) : branchesFiltrees.length===0 ? (
+              <tr><td colSpan={6} style={{...s.empty, borderBottomLeftRadius:12, borderBottomRightRadius:12}}>Aucune branche trouvée</td></tr>
             ) : branchesFiltrees.map((b, bi) => {
               const last = bi === branchesFiltrees.length - 1;
               return (
@@ -226,7 +225,6 @@ export default function Branches() {
         </table>
         </div>
         </div>
-        )}
       </div>
     </div>
   );
