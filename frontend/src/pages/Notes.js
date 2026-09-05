@@ -145,6 +145,7 @@ export default function Notes() {
   const [rapportEleveId, setRapportEleveId] = useState('');
   const [bulletinMode, setBulletinMode] = useState('eleve');
   const [showAppreciations, setShowAppreciations] = useState(false);
+  const [showBulletinNotes, setShowBulletinNotes] = useState(true);
   const [bulletinOnglet, setBulletinOnglet] = useState('criteres');
   const [bulletinNiveau, setBulletinNiveau] = useState('');
   const [bulletinSemestre, setBulletinSemestre] = useState('1');
@@ -567,8 +568,8 @@ export default function Notes() {
           <div class="bul-date">Vétroz, le ${dateStr}</div>
           <div style="font-size:12pt;color:#1e293b;margin-bottom:6px;line-height:1.35;padding-left:10px"><span style="font-weight:700">Nom Prénom :</span><span style="margin-left:6px">${eleve.prenom} ${eleve.nom}</span></div>
           <div style="font-size:12pt;color:#1e293b;margin-bottom:16px;line-height:1.35;padding-left:10px"><span style="font-weight:700">Classe :</span><span style="margin-left:6px">${classeNom}</span></div>
-          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;width:100%;">
-            <div style="display:flex;flex-direction:column;gap:20px;min-width:0;">
+          <div style="display:grid;grid-template-columns:${showBulletinNotes ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)'};gap:6px;width:100%;">
+            ${showBulletinNotes ? `<div style="display:flex;flex-direction:column;gap:20px;min-width:0;">
               <table><thead><tr><th style="${th}">Branches principales</th><th style="${thCmid}">S1</th><th style="${thClast}">S2</th></tr></thead><tbody>
                 ${prin.length===0?`<tr><td colspan="3" style="${td};border-right:${blockBorder};color:#aaa">—</td></tr>`:prin.map(brRow).join('')}
                 <tr><td style="${tdBottomL};font-weight:700">Moyenne</td><td style="${tdBottomNoDiv};font-weight:700">${fv(mP1)}</td><td style="${tdBottomCR};font-weight:700">${showS2?fv(mP2):'—'}</td></tr>
@@ -580,8 +581,8 @@ export default function Notes() {
                 <tr><td style="${tdTopL};font-weight:700">Moyenne semestrielle</td><td style="${tdTopNoDiv};font-weight:700">${fv(mG1)}</td><td style="${tdTopCR};font-weight:700">${showS2?fv(mG2):'—'}</td></tr>
                 <tr><td style="${tdBottomL};font-weight:700">Moyenne annuelle</td><td style="${tdBottomCR};font-weight:900" colspan="2">${showS2&&mAnn!=null?fv(mAnn):'—'}</td></tr>
               </tbody></table>
-            </div>
-            <div style="display:flex;flex-direction:column;min-width:0;">
+            </div>` : ''}
+            <div style="display:flex;flex-direction:column;min-width:0;${showBulletinNotes ? '' : 'max-width:420px;'}">
               <div style="flex:1;min-width:0;">
                 <table style="max-width:100%;"><colgroup><col/><col style="width:34px"/><col style="width:34px"/></colgroup><thead><tr><th style="${th}">Comportements</th><th style="${thC};width:34px;">S1</th><th style="${thC};width:34px;">S2</th></tr></thead><tbody>
                   ${BULLETIN_CRITERES_LABELS.map((label,idx)=>`<tr><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomL : td}">${label.join(' ')}</td><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomNoDiv : tdNoDiv}">${dotH(cr1['c'+(idx+1)])}</td><td style="${idx===BULLETIN_CRITERES_LABELS.length-1 ? tdBottomCR : tdCR}">${showS2?dotH(cr2['c'+(idx+1)]):'<span style="color:#aaa">—</span>'}</td></tr>`).join('')}
@@ -593,7 +594,7 @@ export default function Notes() {
               </tbody></table>
             </div>
           </div>
-          ${showAppreciations?`<div style="font-size:10px;color:#94a3b8;margin-top:20px;padding-left:10px;">INS : Insuffisant &nbsp;·&nbsp; S : Suffisant &nbsp;·&nbsp; AB : Assez bien &nbsp;·&nbsp; B : Bien &nbsp;·&nbsp; TB : Très bien &nbsp;·&nbsp; EXC : Excellent</div>`:''}
+          ${showBulletinNotes && showAppreciations?`<div style="font-size:10px;color:#94a3b8;margin-top:20px;padding-left:10px;">INS : Insuffisant &nbsp;·&nbsp; S : Suffisant &nbsp;·&nbsp; AB : Assez bien &nbsp;·&nbsp; B : Bien &nbsp;·&nbsp; TB : Très bien &nbsp;·&nbsp; EXC : Excellent</div>`:''}
           <div style="border:1px solid #e8e8e8;padding:6px 14px;margin-top:40px;min-height:70px;"><div style="font-size:13px;font-weight:700;margin-bottom:4px;">Observations</div>${obsHtml()}</div>
           <div style="margin-top:auto;padding-top:16px;">
             <div style="display:flex;gap:16px;margin-bottom:40px;">${sigHtml}</div>
@@ -1848,10 +1849,17 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
             })}
           </div>
           {bulletinOnglet === 'notes' && (
-            <button type="button" onClick={() => setShowAppreciations(v => !v)}
-              style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAppreciations ? '#6366f1' : '#e2e8f0'), background: showAppreciations ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showAppreciations ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', minWidth: 170 }}>
-              {showAppreciations ? 'Afficher notes' : 'Afficher appréciations'}
-            </button>
+            <>
+              <button type="button" onClick={() => setShowBulletinNotes((v) => !v)}
+                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showBulletinNotes ? '#6366f1' : '#e2e8f0'), background: showBulletinNotes ? '#e0e7ff' : 'white', cursor: 'pointer', fontWeight: 600, color: showBulletinNotes ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                Afficher les notes
+              </button>
+              <button type="button" onClick={() => setShowAppreciations((v) => !v)}
+                disabled={!showBulletinNotes}
+                style={{ padding: '7px 14px', borderRadius: 17, border: '1.5px solid ' + (showAppreciations && showBulletinNotes ? '#6366f1' : '#e2e8f0'), background: showAppreciations && showBulletinNotes ? '#e0e7ff' : 'white', cursor: showBulletinNotes ? 'pointer' : 'not-allowed', fontWeight: 600, color: showAppreciations && showBulletinNotes ? '#4338ca' : '#94a3b8', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: showBulletinNotes ? 1 : 0.5 }}>
+                Afficher appréciations
+              </button>
+            </>
           )}
           {bulletinOnglet === 'criteres' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2277,9 +2285,10 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                       <div style={{ marginBottom: 6, lineHeight: 1.35 }}><span style={{ fontWeight: 700 }}>Nom Prénom :</span><span style={{ marginLeft: 6 }}>{eleve.prenom} {eleve.nom}</span></div>
                       <div style={{ lineHeight: 1.35 }}><span style={{ fontWeight: 700 }}>Classe :</span><span style={{ marginLeft: 6 }}>{classeNom}</span></div>
                     </div>
-                    {/* 2 colonnes : éviter 50 % + 50 % + gap au-delà de la largeur utile (bordure PDF) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 6, width: '100%' }}>
+                    {/* 2 colonnes notes+comportement, ou comportement seul */}
+                    <div style={{ display: 'grid', gridTemplateColumns: showBulletinNotes ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 6, width: '100%' }}>
                       {/* Colonne gauche : branches principales + secondaires empilées */}
+                      {showBulletinNotes && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
                         <table style={{ ...s.tbl, width: '100%', tableLayout: 'fixed', border: 'none' }}>
                           <thead><tr style={{ background: 'white' }}>
@@ -2334,8 +2343,9 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                           </tbody>
                         </table>
                       </div>
+                      )}
                       {/* Colonne droite : comportement */}
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: showBulletinNotes ? undefined : 420 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                         <table style={{ ...s.tbl, width: '100%', maxWidth: '100%', tableLayout: 'fixed', border: 'none' }}>
                           <thead><tr style={{ background: 'white' }}>
@@ -2366,7 +2376,7 @@ body{font-family:'Century Gothic',CenturyGothic,AppleGothic,sans-serif;margin:0;
                         </table>
                       </div>
                     </div>
-                    {showAppreciations && (
+                    {showBulletinNotes && showAppreciations && (
                       <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 20, paddingLeft: 10 }}>
                         INS : Insuffisant &nbsp;·&nbsp; S : Suffisant &nbsp;·&nbsp; AB : Assez bien &nbsp;·&nbsp; B : Bien &nbsp;·&nbsp; TB : Très bien &nbsp;·&nbsp; EXC : Excellent
                       </div>

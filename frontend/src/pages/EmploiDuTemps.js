@@ -36,6 +36,7 @@ import {
   TYPES_SPECIAL_DEFAUT,
   normaliserTypesSpecial,
   libelleTypeSpecial,
+  estTypeSpecialSansClasse,
 } from '../utils/typesSpecialAffectation';
 import {
   regrouperBranchesParCode,
@@ -914,10 +915,7 @@ export default function EmploiDuTemps() {
     if (recu) lignes.push(`${recu} est en soutien`);
     return lignes.filter(Boolean).join('\n');
   };
-  const estAffectationSpecialSansClasse = (aff) => {
-    const t = String(aff?.type_special || '').toLowerCase();
-    return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
-  };
+  const estAffectationSpecialSansClasse = (aff) => estTypeSpecialSansClasse(aff?.type_special);
   /** True si chaque classe (hors soutien) a une affectation normale sur ce créneau. */
   const periodeClassesNormalesCompletes = (creneauId, classesListe) => {
     if (!classesListe?.length) return false;
@@ -3005,10 +3003,7 @@ export default function EmploiDuTemps() {
     const profsP = pool?.profs || [];
     const niveauxP = parseNiveaux(pool?.niveau);
     const estSoutien = (a) => String(a?.type_special || '').toLowerCase() === 'soutien';
-    const estSpecial = (a) => {
-      const t = String(a?.type_special || '').toLowerCase();
-      return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
-    };
+    const estSpecial = (a) => estTypeSpecialSansClasse(a?.type_special);
     return classesP.map((cl) => {
       const fallbackNiveau = niveauxP.length === 1 ? niveauxP[0] : '';
       const niveauClasse = resoudreNiveauClasse(cl, fallbackNiveau);
@@ -3070,10 +3065,7 @@ export default function EmploiDuTemps() {
     });
     const groupes = regrouperBranchesParCode(matieresPool);
     const idsClasses = new Set(classesP.map((c) => String(c.id)));
-    const estSpecial = (a) => {
-      const t = String(a?.type_special || '').toLowerCase();
-      return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
-    };
+    const estSpecial = (a) => estTypeSpecialSansClasse(a?.type_special);
     const affsPref = (affectationsListe || []).filter((a) =>
       idsClasses.has(String(a.classe_id)) && !estSpecial(a)
     );

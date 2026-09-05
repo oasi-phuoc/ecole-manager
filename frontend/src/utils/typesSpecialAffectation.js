@@ -7,6 +7,12 @@ export const TYPES_SPECIAL_DEFAUT = [
   { id: 'autre', label: 'Autre' },
 ];
 
+/** Tout type_special non vide hors « soutien » = affectation Spécial (sans classe). */
+export function estTypeSpecialSansClasse(typeSpecial) {
+  const t = String(typeSpecial || '').trim().toLowerCase();
+  return Boolean(t) && t !== 'soutien';
+}
+
 export function slugTypeSpecial(label, usedIds = []) {
   const base = String(label || '')
     .normalize('NFD')
@@ -54,10 +60,9 @@ export function libelleTypeSpecial(typeSpecial, typesList) {
   const list = normaliserTypesSpecial(typesList);
   const found = list.find((x) => x.id === t);
   if (found) return found.label;
-  // rétrocompat anciennes valeurs
   if (t === 'titulariat') return 'Titulariat';
   if (t === 'atelier') return 'Atelier';
   if (t === 'mediation') return 'Médiation';
   if (t === 'autre') return 'Autre';
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  return t.charAt(0).toUpperCase() + t.slice(1).replace(/-/g, ' ');
 }

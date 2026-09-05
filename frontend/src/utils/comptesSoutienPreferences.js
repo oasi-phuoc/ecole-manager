@@ -1,4 +1,5 @@
 import { estMatiereSoutien } from './branchesSpecialites';
+import { estTypeSpecialSansClasse } from './typesSpecialAffectation';
 
 /** Décompte Préférences : soutien donné (FR/MA du cours jumelé) et SOUTIEN REÇU. */
 
@@ -28,10 +29,7 @@ const estBrancheMath = (m) => {
   return /math/.test(`${nom} ${courte}`);
 };
 
-const estSpecialSansClasse = (a) => {
-  const t = String(a?.type_special || '').toLowerCase();
-  return t === 'titulariat' || t === 'atelier' || t === 'mediation' || t === 'autre';
-};
+const estSpecialSansClasse = (a) => estTypeSpecialSansClasse(a?.type_special);
 
 const estCoursSoutienSlot = (a) => String(a?.type_special || '').toLowerCase() === 'soutien';
 

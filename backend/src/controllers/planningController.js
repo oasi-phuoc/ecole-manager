@@ -285,6 +285,8 @@ const getAffectations = async (req, res) => {
         WHEN a.type_special='atelier' THEN 'Atelier'
         WHEN a.type_special='mediation' THEN 'Médiation'
         WHEN a.type_special='autre' THEN 'Autre'
+        WHEN a.type_special IS NOT NULL AND a.type_special <> '' AND a.type_special <> 'soutien'
+          THEN INITCAP(REPLACE(a.type_special, '-', ' '))
         ELSE NULL
       END) as classe_nom,
       m.nom as matiere_nom,
@@ -329,9 +331,11 @@ const getAffectations = async (req, res) => {
 
 const saveAffectation = async (req, res) => {
   const { prof_id, classe_id, matiere_id, creneau_id, type_special, pool_id } = req.body;
-  const specialSansClasse = ['titulariat', 'atelier', 'mediation', 'autre'].includes(type_special);
-  const estSoutien = type_special === 'soutien';
-  const typeFinal = specialSansClasse || estSoutien ? type_special : null;
+  const typeRaw = String(type_special || '').trim();
+  const estSoutien = typeRaw === 'soutien';
+  // Tout type non vide hors soutien = Spécial sans classe (liste dynamique Paramètres)
+  const specialSansClasse = Boolean(typeRaw) && !estSoutien;
+  const typeFinal = specialSansClasse || estSoutien ? typeRaw : null;
   const classeIdFinal = specialSansClasse ? null : (classe_id || null);
   let poolIdFinal = pool_id != null && pool_id !== '' ? Number(pool_id) : null;
   if (!Number.isInteger(poolIdFinal) || poolIdFinal <= 0) poolIdFinal = null;
@@ -457,6 +461,8 @@ const getPlanningGeneral = async (req, res) => {
             WHEN a.type_special='atelier' THEN 'Atelier'
             WHEN a.type_special='mediation' THEN 'Médiation'
             WHEN a.type_special='autre' THEN 'Autre'
+            WHEN a.type_special IS NOT NULL AND a.type_special <> '' AND a.type_special <> 'soutien'
+              THEN INITCAP(REPLACE(a.type_special, '-', ' '))
             ELSE NULL
           END) as classe_nom,
           m.nom as matiere_nom,
@@ -506,6 +512,8 @@ const getPlanningGeneral = async (req, res) => {
             WHEN a.type_special='atelier' THEN 'Atelier'
             WHEN a.type_special='mediation' THEN 'Médiation'
             WHEN a.type_special='autre' THEN 'Autre'
+            WHEN a.type_special IS NOT NULL AND a.type_special <> '' AND a.type_special <> 'soutien'
+              THEN INITCAP(REPLACE(a.type_special, '-', ' '))
             ELSE NULL
           END) as classe_nom,
           m.nom as matiere_nom,
@@ -573,6 +581,8 @@ const getPlanningProf = async (req, res) => {
         WHEN a.type_special='atelier' THEN 'Atelier'
         WHEN a.type_special='mediation' THEN 'Médiation'
         WHEN a.type_special='autre' THEN 'Autre'
+        WHEN a.type_special IS NOT NULL AND a.type_special <> '' AND a.type_special <> 'soutien'
+          THEN INITCAP(REPLACE(a.type_special, '-', ' '))
         ELSE NULL
       END) as classe_nom,
       m.nom as matiere_nom,
