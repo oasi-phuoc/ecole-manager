@@ -1210,11 +1210,13 @@ export default function Eleves() {
                 <td style={{padding:'10px 14px',fontWeight:700,color:'#1e293b',fontSize:13,width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.nom||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151',width:170,minWidth:170,whiteSpace:'nowrap'}}>{el.prenom||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13}}>
-                  <select value={el.classe_id||''} onChange={e => handleClasseChange(el.id, e.target.value)}
-                    style={{padding:'5px 8px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,background:'white',cursor:'pointer',maxWidth:120}}>
-                    <option value="">— Aucune —</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={el.classe_id ? String(el.classe_id) : ''}
+                    placeholder="— Aucune —"
+                    options={classes.map(c => ({ value: String(c.id), label: c.nom }))}
+                    onChange={(v) => handleClasseChange(el.id, v)}
+                    style={{ minWidth: 120, maxWidth: 160 }}
+                  />
                 </td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.nationalite||el.oasi_nationalite||'—'}</td>
                 <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{el.date_naissance?new Date(el.date_naissance).toLocaleDateString('fr-CH'):el.oasi_nais?new Date(el.oasi_nais).toLocaleDateString('fr-CH'):'—'}</td>

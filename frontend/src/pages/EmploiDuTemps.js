@@ -6305,32 +6305,26 @@ export default function EmploiDuTemps() {
                   <div style={{marginBottom:12}}>
                     <h3 style={{...styles.suiviGrandTitre,color:'#0f172a',textTransform:'none',letterSpacing:'normal'}}>Affectation rapide</h3>
                     <div style={{display:'flex',alignItems:'center',gap:8,minHeight:40,flexWrap:'nowrap',overflowX:'auto'}}>
-                      <select
-                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
-                        value={classeRapideId}
-                        onChange={e => setClasseRapideId(e.target.value)}
+                      <CustomSelect
+                        style={{ minWidth: 260 }}
+                        value={classeRapideId || ''}
+                        placeholder="Choisir classe 1"
                         disabled={!sallesLieuTravailId}
-                      >
-                        <option value="">Choisir classe 1</option>
-                        {classesPourSalles
-                        .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
-                        .map(cl => (
-                          <option key={cl.id} value={String(cl.id)}>{cl.nom}</option>
-                        ))}
-                      </select>
-                      <select
-                        style={{...styles.sel, minWidth:260, height:38, textAlign:'center', textAlignLast:'center'}}
-                        value={classeRapideId2}
-                        onChange={e => setClasseRapideId2(e.target.value)}
+                        options={classesPourSalles
+                          .filter(cl => !classeRapideId2 || String(cl.id) !== String(classeRapideId2) || String(cl.id) === String(classeRapideId))
+                          .map(cl => ({ value: String(cl.id), label: cl.nom }))}
+                        onChange={(v) => setClasseRapideId(v)}
+                      />
+                      <CustomSelect
+                        style={{ minWidth: 260 }}
+                        value={classeRapideId2 || ''}
+                        placeholder="Choisir classe 2 (optionnel)"
                         disabled={!sallesLieuTravailId}
-                      >
-                        <option value="">Choisir classe 2 (optionnel)</option>
-                        {classesPourSalles
-                        .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
-                        .map(cl => (
-                          <option key={`classe2-${cl.id}`} value={String(cl.id)}>{cl.nom}</option>
-                        ))}
-                      </select>
+                        options={classesPourSalles
+                          .filter(cl => !classeRapideId || String(cl.id) !== String(classeRapideId) || String(cl.id) === String(classeRapideId2))
+                          .map(cl => ({ value: String(cl.id), label: cl.nom }))}
+                        onChange={(v) => setClasseRapideId2(v)}
+                      />
                       <button
                         type="button"
                         style={{...styles.btnBleu, opacity: (!isAdmin() || (!classeRapideId && !classeRapideId2) || !salleSelectionnee) ? 0.65 : 1}}

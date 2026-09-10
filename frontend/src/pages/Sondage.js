@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import apiClient from '../lib/apiClient';
 import { stickyPageChrome } from '../styles/pageShell';
 import { PageLoader, LoadingButton } from '../components/LoadingUI';
+import CustomSelect from '../components/CustomSelect';
 
 const getHeaders = () => {
   const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -292,9 +293,13 @@ export default function Sondage() {
                   {(detail.questions || []).map((q, idx) => (
                     <div key={q._key || q.id} style={s.qCard}>
                       <div style={s.qRow}>
-                        <select style={s.sel} value={q.type} onChange={(e) => majQuestion(idx, { type: e.target.value, options: ['choix_unique', 'choix_multiple'].includes(e.target.value) ? (q.options?.length >= 2 ? q.options : ['Option A', 'Option B']) : [] })}>
-                          {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                        </select>
+                        <CustomSelect
+                          style={{ ...s.sel, minWidth: 180 }}
+                          value={q.type}
+                          allowClear={false}
+                          options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                          onChange={(v) => majQuestion(idx, { type: v, options: ['choix_unique', 'choix_multiple'].includes(v) ? (q.options?.length >= 2 ? q.options : ['Option A', 'Option B']) : [] })}
+                        />
                         <label style={s.chk}>
                           <input type="checkbox" checked={!!q.obligatoire} onChange={(e) => majQuestion(idx, { obligatoire: e.target.checked })} />
                           Obligatoire

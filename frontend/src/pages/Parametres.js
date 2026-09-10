@@ -1895,6 +1895,7 @@ export default function Parametres() {
                     <div style={styles.label}>Salles</div>
                     <form onSubmit={async e => {
                       e.preventDefault();
+                      if (!donneesSalleForm.lieu_travail_id) { alert('Choisir un lieu.'); return; }
                       try {
                         if (donneesSalleEdit) {
                           await apiClient.put('/donnees/salles/' + donneesSalleEdit.id, donneesSalleForm, { headers });
@@ -1907,10 +1908,14 @@ export default function Parametres() {
                       } catch(err) { alert(err.response?.data?.message || err.message); }
                     }} style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
                       <input style={{ ...styles.input, flex: 1, margin: 0, padding: '7px 10px', minWidth: isMobile ? '100%' : undefined }} placeholder="Nom salle" value={donneesSalleForm.nom} onChange={e => setDonneesSalleForm(f => ({ ...f, nom: e.target.value }))} required />
-                      <select style={{ ...styles.input, minWidth: isMobile ? 0 : 130, flex: isMobile ? 1 : undefined, margin: 0, padding: '7px 8px' }} value={donneesSalleForm.lieu_travail_id} onChange={e => setDonneesSalleForm(f => ({ ...f, lieu_travail_id: e.target.value }))} required>
-                        <option value="">Lieu</option>
-                        {lieuxTravailDB.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
-                      </select>
+                      <CustomSelect
+                        style={{ minWidth: isMobile ? 0 : 130, flex: isMobile ? 1 : undefined }}
+                        value={donneesSalleForm.lieu_travail_id || ''}
+                        placeholder="Lieu"
+                        allowClear={false}
+                        options={lieuxTravailDB.map(l => ({ value: String(l.id), label: l.nom }))}
+                        onChange={(v) => setDonneesSalleForm(f => ({ ...f, lieu_travail_id: v }))}
+                      />
                       <button type="submit" style={{ padding: '7px 12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>{donneesSalleEdit ? '✓' : '+'}</button>
                       {donneesSalleEdit && <button type="button" onClick={() => { setDonneesSalleEdit(null); setDonneesSalleForm({ nom: '', lieu_travail_id: '' }); }} style={{ padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer' }}>✕</button>}
                     </form>

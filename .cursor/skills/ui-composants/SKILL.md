@@ -67,9 +67,17 @@ const showToast = (message, type = 'success') => {
 
 - Toujours le composant `Toast` (pas de `<span>` / `<div>` manuels `#ede9fe`).
 - `toastStyleFixed` / `fixed` : **dépréciés** — ne plus utiliser pour le feedback page.
-## Listes déroulantes — CustomSelect
+## Listes déroulantes — CustomSelect (OBLIGATOIRE)
 
-**Toujours** `CustomSelect` (pas de `<select>` natif pour les filtres/formulaires UI).
+**Toujours** `CustomSelect` pour filtres, formulaires et barres d’outils (pas de `<select>` natif).
+Référence visuelle : Emploi du temps → Affectations → « Choisir un pool… ».
+
+### Comportement obligatoire
+
+1. **Pastille** (bordure arrondie `borderRadius: 999`), bordure violette à l’ouverture.
+2. **Recherche** : `searchable` est **activé par défaut** — on peut taper dans le champ pour filtrer les propositions.
+3. À l’ouverture : champ de saisie + placeholder (ex. « Choisir un pool… ») + liste déroulante blanche arrondie avec survol violet soft.
+4. `allowClear` pour effacer (sauf si `allowClear={false}`).
 
 ```js
 import CustomSelect from '../components/CustomSelect';
@@ -80,12 +88,22 @@ import CustomSelect from '../components/CustomSelect';
   options={[{ value: 'a', label: 'Label A' }, …]}
   placeholder="Choisir…"
   allowClear
-  searchable
+  searchable   // défaut true — ne pas désactiver pour les filtres
   style={{ minWidth: 160 }}
 />
 ```
 
 Fichier : `frontend/src/components/CustomSelect.js` (violet `#6366f1` / `#ede9fe`).
+
+### Exceptions (select natif autorisé)
+
+Uniquement les **cellules denses** dans une grille (ex. statut P/A/R d’une période, affectation cellule EDT, cases sanctions) où un CustomSelect pastille casserait la mise en page. Pour tout filtre / formulaire / choix de pool / classe / mois → **CustomSelect**.
+
+### Anti-patterns listes
+
+- ❌ `<select>` natif pour un filtre ou un formulaire
+- ❌ `searchable={false}` sur un filtre (sauf liste très courte figée < 5 options sans besoin de recherche)
+- ❌ Liste déroulante maison hors `CustomSelect`
 
 ## Chargement — LoadingUI (OBLIGATOIRE)
 
@@ -317,7 +335,8 @@ Ne pas confondre avec **chip-tabs** (choix exclusif multi-options).
 - ❌ Toast `position: fixed` / coin écran / `Toast fixed` — se superpose aux boutons
 - ❌ Toast au-dessus des boutons (wrap qui pousse le message sur une ligne couvrant les actions) — le garder **à gauche** dans le même flex
 - ❌ `<span>` / `<div>` toast manuel au lieu du composant `Toast`
-- ❌ `<select>` natif pour l’UI principale (utiliser `CustomSelect`)
+- ❌ `<select>` natif pour l’UI principale (utiliser `CustomSelect` searchable)
+- ❌ CustomSelect filtre sans recherche (`searchable={false}`) alors que la liste est longue
 - ❌ Onglets pastilles sans fond `#ede9fe` / actif hors `#6366f1`
 - ❌ Texte « Chargement… » sans `PageLoader`
 - ❌ Bouton Sauvegarder / Importer / Exporter sans `LoadingButton` (spinner + disable comme « Se connecter »)

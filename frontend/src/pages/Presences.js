@@ -99,10 +99,6 @@ export default function Presences() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
   useEffect(() => {
-    if (onglet === 'apercu') chargerApercuMois();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onglet uniquement
-  }, [onglet]);
-  useEffect(() => {
     const classeDepuisDashboard = location.state?.classe_id;
     if (classeDepuisDashboard && classes.length > 0) {
       const ok = classes.find(c => String(c.id) === String(classeDepuisDashboard));
@@ -121,7 +117,7 @@ export default function Presences() {
       setApercuMois({});
       setValide(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- recharger élèves / horaires quand classe ou date change
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recharger élèves / présences quand classe ou date change
   }, [classeSelectionnee, date]);
 
   useEffect(() => {
@@ -133,8 +129,8 @@ export default function Presences() {
     if (!classeSelectionnee) return;
     if (onglet === 'apercu') chargerApercuMois();
     if (onglet === 'stats') chargerStats();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onglet / classe
-  }, [classeSelectionnee, onglet]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- aperçu / stats selon onglet, classe et date (mois)
+  }, [classeSelectionnee, onglet, date]);
 
   const JOURS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const STATUT_OASI = { 'P':'01 Présent', 'R':'02 Retard', 'A':'03 Absent', 'E':'04 Excusé', 'C':'05 Congé' };
@@ -161,8 +157,11 @@ export default function Presences() {
         apiClient.get('/presences/mois?classe_id=' + classeSelectionnee + '&mois=' + mois, { headers }),
       ]);
 
-      const eleves = elevesRes.data;
-      const presences = presRes.data;
+      // Uniquement catégorie OASI (jamais EUCMS) — filtre API + filet de sécurité client
+      const eleves = (Array.isArray(elevesRes.data) ? elevesRes.data : []).filter(
+        (e) => String(e.categorie || '').trim().toUpperCase() === 'OASI'
+      );
+      const presences = Array.isArray(presRes.data) ? presRes.data : [];
       const rows = [];
 
       // En-têtes exactes pour import DB externe

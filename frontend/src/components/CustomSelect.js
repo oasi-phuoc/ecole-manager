@@ -70,10 +70,10 @@ const CustomSelect = ({
   const selectedOption = normOptions.find(o => o.value === currentValue) || null;
 
   const filtered = useMemo(() => {
-    if (!query) return normOptions;
+    if (!searchable || !query) return normOptions;
     const q = strip(query);
-    return normOptions.filter(o => strip(o.label).includes(q));
-  }, [normOptions, query]);
+    return normOptions.filter(o => strip(o.label).includes(q) || strip(o.value).includes(q));
+  }, [normOptions, query, searchable]);
 
   const closeAll = useCallback(() => {
     setOpen(false);
@@ -166,8 +166,8 @@ const CustomSelect = ({
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontSize: 13,
     fontFamily: 'inherit',
-    color: hasValue ? GREY_TEXT : GREY_PLACEHOLDER,
-    fontWeight: hasValue ? 600 : 500,
+    color: hasValue && !open ? GREY_TEXT : GREY_PLACEHOLDER,
+    fontWeight: hasValue && !open ? 600 : 500,
     minHeight: 34,
     boxSizing: 'border-box',
     boxShadow: open ? `0 0 0 2px ${VIOLET_SOFT}` : 'none',
@@ -215,7 +215,7 @@ const CustomSelect = ({
           disabled={disabled}
           readOnly={!searchable}
           value={open ? query : (selectedOption ? selectedOption.label : '')}
-          placeholder={selectedOption ? selectedOption.label : placeholder}
+          placeholder={placeholder}
           onFocus={() => { if (!disabled && !open) setOpen(true); }}
           onChange={(e) => {
             if (!searchable) return;
@@ -236,7 +236,9 @@ const CustomSelect = ({
             fontFamily: 'inherit',
             fontSize: 13,
             fontWeight: open ? 500 : (hasValue ? 600 : 500),
-            color: open ? GREY_TEXT : (hasValue ? GREY_TEXT : GREY_PLACEHOLDER),
+            color: open
+              ? (query ? GREY_TEXT : GREY_PLACEHOLDER)
+              : (hasValue ? GREY_TEXT : GREY_PLACEHOLDER),
             cursor: disabled ? 'not-allowed' : (searchable ? 'text' : 'pointer'),
             textOverflow: 'ellipsis',
           }}
