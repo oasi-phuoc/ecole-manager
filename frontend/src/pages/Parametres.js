@@ -109,6 +109,7 @@ const MODULES_ACCES_PROFS = [
   { key: 'emploi_du_temps', label: 'Emploi du temps',  defaut: false, onglets: [{ key: 'emploi_du_temps_planification', label: 'Planification — Pools, disponibilités, affectations' }, { key: 'emploi_du_temps_plannings', label: 'Vue des plannings' }] },
   { key: 'presences',       label: 'Présences',        defaut: true,  onglets: [{ key: 'presences_base', label: 'Base — Tout sauf importation LORA' }, { key: 'presences_import', label: 'Importer LORA' }] },
   { key: 'notes',           label: 'Notes',            defaut: true,  onglets: [{ key: 'notes_notes', label: 'Notes' }, { key: 'notes_evaluations', label: 'Évaluations' }] },
+  { key: 'bulletins',       label: 'Bulletins',        defaut: true,  onglets: [] },
   { key: 'tcf',             label: 'TCF',              defaut: false, onglets: [{ key: 'tcf_liste', label: 'Liste' }] },
   { key: 'calendrier',      label: 'Calendrier',       defaut: true,  onglets: [{ key: 'calendrier_scolaire', label: 'Calendrier scolaire' }, { key: 'calendrier_agenda', label: 'Agenda personnel' }] },
   { key: 'comptabilite',    label: 'Comptabilité',     defaut: false, onglets: [{ key: 'comptabilite_factures', label: 'Factures' }, { key: 'comptabilite_paiements', label: 'Paiements' }, { key: 'comptabilite_prix', label: 'Liste de prix' }] },
@@ -2220,6 +2221,24 @@ export default function Parametres() {
           {onglet === 'acces' && isAdmin && (
             <div style={cardStyle}>
               <h3 style={{ ...styles.cardTitre, fontSize: isMobile ? 17 : 20 }}>Gestion des accès</h3>
+
+              <div style={{ marginBottom: 22, padding: 16, border: '1px solid #ddd6fe', borderRadius: 12, background: '#fafaff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#312e81', fontSize: 16 }}>Détail des pages par rôle</h4>
+                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 12 }}>Vue d&apos;ensemble des pages accessibles. Les changements se font dans les onglets ci-dessous.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, color: '#64748b', fontSize: 11 }}><span><b style={{ color: '#15803d' }}>●</b> Accessible</span><span><b style={{ color: '#dc2626' }}>●</b> Non accessible</span></div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', minWidth: 620, borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead><tr style={{ borderBottom: '2px solid #ddd6fe', color: '#475569', textAlign: 'left' }}><th style={{ padding: '8px 6px' }}>Page</th>{[['employes', 'Employés admin.'], ['professeurs', 'Professeurs'], ['responsables', 'Responsables'], ['admins', 'Administrateurs']].map(([key, label]) => <th key={key} style={{ padding: '8px 6px', textAlign: 'center', whiteSpace: 'nowrap' }}>{label}</th>)}</tr></thead>
+                    <tbody>
+                      {[{ key: 'dashboard', label: 'Tableau de bord', defaut: true }, ...MODULES_ACCES_PROFS].map((page) => <tr key={page.key} style={{ borderBottom: '1px solid #ede9fe' }}><td style={{ padding: '8px 6px', color: '#334155', fontWeight: 600 }}>{page.label}</td>{['employes', 'professeurs', 'responsables', 'admins'].map((role) => { const accessible = role === 'admins' || page.key === 'dashboard' || (page.key === 'employes_admin' && role !== 'employes') || Boolean((accesParRole[role]?.[page.key] ?? (role === 'professeurs' ? page.defaut : false))); return <td key={role} style={{ padding: '8px 6px', textAlign: 'center', color: accessible ? '#15803d' : '#dc2626', fontSize: 16, fontWeight: 700 }} aria-label={`${page.label}: ${accessible ? 'accessible' : 'non accessible'}`}>{accessible ? '✓' : '—'}</td>; })}</tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
               {barSousOnglets(
                 isMobile
