@@ -2602,9 +2602,8 @@ export default function TCF() {
             <div><div>Département de la santé, des affaires sociales et de la culture</div><div>Service de l'action sociale</div><div>Office de l'asile</div><div>Centre de formation "Le Botza"</div></div>
           </div>
           <div style="text-align:right;">
-            <div class="conv-scai" style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">SCAI</div>
+            <div class="conv-scai" style="font-size:26px;font-weight:800;line-height:1;color:#1e293b;">CLASSES D'ACCUEIL</div>
             <div style="font-size:12px;font-weight:700;color:#374151;">${anneeScolaire || '—'}</div>
-            <div style="font-size:10px;font-weight:700;color:#475569;">CLASSES D'ACCUEIL</div>
           </div>
         </div>
         <div class="conv-titre" style="text-align:center;font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;margin-bottom:40px;margin-top:60px;color:#0f172a;">
@@ -2745,9 +2744,8 @@ export default function TCF() {
           </div>
         </div>
         <div class="header-right">
-          <div class="header-scai">SCAI</div>
+          <div class="header-scai">CLASSES D'ACCUEIL</div>
           <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
-          <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>`;
     const footerHtml = `
@@ -2935,9 +2933,8 @@ export default function TCF() {
           </div>
         </div>
         <div class="header-right">
-          <div class="header-scai">SCAI</div>
+          <div class="header-scai">CLASSES D'ACCUEIL</div>
           <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
-          <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>
       <div class="page-title">Répartition des tâches<span class="page-date-line">${dateStr ? `${dateStr} — ` : ''}${escapeHtml(demi.jour)} ${momentLabel}</span></div>
@@ -2959,9 +2956,8 @@ export default function TCF() {
           </div>
         </div>
         <div class="header-right">
-          <div class="header-scai">SCAI</div>
+          <div class="header-scai">CLASSES D'ACCUEIL</div>
           <div class="header-year">${escapeHtml(anneeScolaire || '—')}</div>
-          <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>
       <div style="font-size:14pt;font-weight:700;color:#334155;margin:18px 0 16px">Description des rôles</div>
@@ -3045,9 +3041,8 @@ export default function TCF() {
           </div>
         </div>
         <div class="header-right">
-          <div class="header-scai">SCAI</div>
+          <div class="header-scai">CLASSES D'ACCUEIL</div>
           <div class="header-year">${anneeScolaire || '—'}</div>
-          <div class="header-sub">CLASSES D'ACCUEIL</div>
         </div>
       </div>`;
     const pagesWithLayout = charts.map((c) => {
@@ -3473,9 +3468,8 @@ export default function TCF() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: embedPanel ? 18 : 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                <div style={{ fontSize: embedPanel ? 18 : 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>CLASSES D'ACCUEIL</div>
                 <div style={{ fontSize: embedPanel ? 10 : 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
-                <div style={{ fontSize: embedPanel ? 8 : 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
               </div>
             </div>
             {/* Titre */}
@@ -4411,9 +4405,8 @@ export default function TCF() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>SCAI</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: '#1e293b' }}>CLASSES D'ACCUEIL</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>{anneeScolaire || '—'}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>CLASSES D'ACCUEIL</div>
                 </div>
               </div>
               {/* Titre */}
