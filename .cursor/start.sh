@@ -49,14 +49,18 @@ fi
 echo "==> Ensuring demo admin account (dev only)"
 # The frontend forces MFA setup for any account that is neither mfa_enabled nor
 # mfa_exempt, so a brand-new environment has no directly usable login. Seed a
-# development admin (admin@demo.test / Admin1234) that is mfa_exempt so the app
-# is immediately usable. bcrypt hash of "Admin1234" (bcryptjs, cost 10):
-DEMO_ADMIN_HASH='$2b$10$YjlHojlVrX.jpnz8IbSbnOKg2s6dbq4jR.Vl9nDTqD8TLjBpDzvaW'
+# development admin (identifiant « admin » ou admin@demo.test / admin123) mfa_exempt.
+# bcrypt hash of "admin123" (bcryptjs, cost 10):
+DEMO_ADMIN_HASH='$2b$10$NcZSugCV.W9/JwoDmV.nNexpHZaGuabTWIwfZOE4Xta/dQu.gn.rW'
 PGPASSWORD=ecole psql -h localhost -U ecole -d ecole_db -v ON_ERROR_STOP=1 -q \
   -v hash="$DEMO_ADMIN_HASH" <<'SQL'
-INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role, actif, mfa_exempt)
-VALUES ('Admin', 'Demo', 'admin@demo.test', :'hash', 'admin', true, true)
-ON CONFLICT (email) DO UPDATE SET mfa_exempt = true, actif = true;
+INSERT INTO utilisateurs (nom, prenom, email, identifiant, mot_de_passe, role, actif, mfa_exempt)
+VALUES ('Admin', 'Demo', 'admin@demo.test', 'admin', :'hash', 'admin', true, true)
+ON CONFLICT (email) DO UPDATE SET
+  identifiant = EXCLUDED.identifiant,
+  mot_de_passe = EXCLUDED.mot_de_passe,
+  mfa_exempt = true,
+  actif = true;
 SQL
 
 echo "==> start.sh completed; PostgreSQL is ready on localhost:5432"
